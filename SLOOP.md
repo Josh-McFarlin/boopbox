@@ -1,12 +1,14 @@
 <p align="center"><img src="assets/logo/sloop-logo.png" alt="SLOOP" width="480"></p>
 
-# SLOOP 2.8.1
+# SLOOP 2.8.3
 
 **A live groovebox firmware for the M-VAVE FM-1 — for any style.** Four tracks — three synths and a drum machine with 16 sounds on the white keys — twelve synthesis engines (six-operator FM with DX7 patches, and now physical models and noise), 153 sounds, 37 drum kits (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, reggaeton, synthwave, chiptune, ambient, jazz…), your own samples, ghost notes and ratchets, parameter locks, micro timing and fills, note repeat, one-key chords, 27 punch-in effects, a vinyl / sidechain / DJ-filter master, and a clear, colour-coded screen that always shows what your hands can do next. No factory patterns, nothing to load: everything you hear, you play.
 
 SLOOP is free and open source (GPL-3.0), based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments.
 
-> **Status:** 2.8.1, running on the FM-1. Still a beta: install at your own risk, and please report what you find (GitHub issues).
+> **Status:** 2.8.3, running on the FM-1. Still a beta: install at your own risk, and please report what you find (GitHub issues).
+
+> **2.8.3:** hold a note under others. On a POLY track, a note you hold while you play others over it keeps sounding while you record and when you play it back, in a free take too (it used to restart and cut out), it goes on through steps that already have notes when you overdub, and in SEQ → NOTES its LEN now runs on under the notes after it (a long bass under a melody) instead of stopping at *NOTE AHEAD*. On a MONO or LEGATO sound (track 1's 808 BOOM), the screen says *MONO: SET VOICE POLY*. MIDI in: a burst too fast to keep no longer leaves a note stuck. A quick tap on a button no longer flashes its layer page: a layer shows after 0.35 s held (0.14 s before), or at once when you use a key or knob. Drums: on a busy beat the kick (and the other hits) no longer drop out: a drum sound hit again takes its own voice before another's, and the kick is taken last. Samples (SAMPLE, SLICE): a sample played again on a voice still sounding (the same chop again on POLY, every note on MONO, LEGATO or UNISON) now starts from silence with its ATK; it used to start at the level the voice had, with a click, and ATK did nothing. The second core: on some FM-1s it can misread a word under heavy USB traffic (a backup over USB); it now checks every job before running it and refuses a wrong one, and SLOOP goes on with one core until the next power-off instead of crashing (a fault on the second core used to leave the crash screen until a power cycle).
 
 > **2.8.1:** the per-step note sheet (hold **OCT+**) is now a strip along the bottom of the screen instead of a box over the sequencer, so the piano roll and the drum grid stay fully visible; and it reopens on the row you last used, for a quick MOVE.
 
@@ -225,7 +227,7 @@ The four dials at the bottom of the screen show what KNOB 1–4 do now. White al
 
 ## The panel: tap, hold, layers
 
-Every function button has two lives. **Tap** it (press and let go, touching nothing else): its pages open, as on any FM-1 firmware. **Hold** it: a **layer** — the 16 white keys and KNOB 1–4 change job while it is held, and after 0.14 s the screen shows the 16 keys as tiles and the knobs as dials. Let go: back to playing.
+Every function button has two lives. **Tap** it (press and let go, touching nothing else): its pages open, as on any FM-1 firmware. **Hold** it: a **layer** — the 16 white keys and KNOB 1–4 change job while it is held, and after 0.35 s (or at once when you use a key or knob) the screen shows the 16 keys as tiles and the knobs as dials. Let go: back to playing.
 
 The tiles are four rows of four, keys 1–4, 5–8, 9–12, 13–16. To find them without looking at the screen, the first key of each row (1, 5, 9, 13) glows dimly while a layer is held, and on the drum track; the keys at full light are what is on.
 
