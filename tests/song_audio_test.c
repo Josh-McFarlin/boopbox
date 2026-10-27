@@ -6,7 +6,6 @@
 #undef main
 #include <assert.h>
 #define PROJ_HOST 1
-static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? i : 0; }
 #include "../firmware/src/project.c"
 static struct { uint8_t force; } ui;
 static uint8_t sync_reload;
@@ -83,7 +82,7 @@ int main(int argc, char **argv)
     assert(at_stop >= FS*8u && at_stop < FS*8u + CTL);
     assert(trk[0].step[0].note[0] == 41);
     assert(trk[2].engine == 0 && song.g[G_DRLVL] == 80);
-    assert(drum_kit() == 4);
+    assert(drum_kit(TDRUM) == 4);
     for (i = 0; i < NPART; i++) {
         assert(trk[i].seq_n == 0);
         for (k = 0; k < NVOICE; k++) assert(!trk[i].v[k].gate);

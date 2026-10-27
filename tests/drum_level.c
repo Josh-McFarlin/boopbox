@@ -21,7 +21,7 @@ int main(int argc, char **argv)
             memset(&drums, 0, sizeof drums);
             drums.set = -2;
             TDRUM->p[P_E0] = (int16_t)kit;
-            drum_on(LANE_GM[ln], 110);
+            drum_on(TDRUM, LANE_GM[ln], 110);
             for (b = 0; b < FS * 2u / CTL; b++) {
                 int32_t l[CTL] = {0}, r[CTL] = {0}, rv[CTL] = {0};
                 drums_render(l, r, rv, rv, CTL);

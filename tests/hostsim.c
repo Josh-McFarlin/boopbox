@@ -33,6 +33,11 @@ static volatile uint32_t fm1_remote_btn;           /* (2.7, fm1_input.h: the but
 static void fm1_irq_off(void) {}                 /* (the host: one thread) */
 static void fm1_irq_on(void) {}
 #include "../firmware/src/core.h"
+/* the four-track layout most tests were written for: synths on tracks 1..3, drums on 4 (the default project keeps it;
+ * tracks 5..8 are there too, power-on synths 5..7 and drums on 8, host_tracks_init) */
+#define TRK_DRUM TRK_DRUM_V6
+#define TDRUM (&trk[TRK_DRUM])
+#define NPART 3u
 #include "../firmware/src/cpu1.h"
 #include "cpu1_host.c"                  /* the second core on the host: CORES=1 inline, CORES=2 a thread */
 #include "../firmware/src/engines.c"
@@ -49,6 +54,11 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 #endif
 #include "../firmware/src/seq.c"
 #define inst (trk[0])                   /* the single-part renders below: part 1 */
+/* the drum track's voices straight into the mix and the sends (drums.c drums_mix; the tests' renders of the kits) */
+static void drums_render(int32_t *ml, int32_t *mr, int32_t *rev, int32_t *dly, uint32_t n)
+{
+    drums_mix(TDRUM, 0, 0, ml, mr, rev, dly, 0, n);
+}
 
 static void wav_hdr(FILE *f, uint32_t frames)
 {
@@ -83,8 +93,14 @@ static void host_tracks_init(void)                /* as felucca_init: defaults, 
         song.g[i] = GP[i].def;
     song.g[G_BPM] = 120;                         /* (the tests' tempo; SLOOP powers on at 90) */
     for (k = 0; k < NTRK; k++) {
+        trk[k].kind = (uint8_t)trk_def_kind(k);  /* (the default layout: drums on 4 and 8) */
         for (i = 0; i < P_E0; i++)
             trk[k].p[i] = TP[i].def;
+        if (is_drum(&trk[k])) {
+            trk[k].p[P_LEVEL] = track_desc(&trk[k], P_LEVEL)->def;
+            trk[k].p[P_REV] = track_desc(&trk[k], P_REV)->def;
+            trk[k].p[P_DLY] = track_desc(&trk[k], P_DLY)->def;
+        }
         steps_clear(&trk[k]);
     }
     song.master_q12 = 4096;
@@ -319,7 +335,7 @@ static double tracks_cost(const uint8_t parts[NPART][3], uint32_t *busy_max)
         for (k = 0; k < 2u * FS / CTL + nblk; k++) {   /* 2 s to settle (attacks), then measure */
             uint64_t t0;
             if ((k * CTL) % (FS / 8u) < CTL)          /* 16ths at 120 BPM */
-                drum_on((k * CTL) % (FS / 2u) < CTL ? 36u : ((k * CTL) / (FS / 8u)) % 4u == 2u ? 38u : 42u, 100u);
+                drum_on(TDRUM, (k * CTL) % (FS / 2u) < CTL ? 36u : ((k * CTL) / (FS / 8u)) % 4u == 2u ? 38u : 42u, 100u);
             t0 = now_ns();
             mix_block(o, CTL);
             if (k >= 2u * FS / CTL) {                  /* (the host's own noise only ever adds) */
@@ -870,7 +886,7 @@ int main(int argc, char **argv)
             fm1_in.notes = (fp > FS / 10 && fp < FS * 3 / 2) ? n : 0;
         }
         if (getenv("DRUMS") && fp % (FS / 4u) < CTL)   /* kick / closed hat / snare on 8ths */
-            drum_on(fp % (FS / 2u) < CTL ? 36u : (fp / (FS / 4u)) % 4u == 3u ? 38u : 42u, 100u);
+            drum_on(TDRUM, fp % (FS / 2u) < CTL ? 36u : (fp / (FS / 4u)) % 4u == 3u ? 38u : 42u, 100u);
         if (getenv("DIST"))
             inst.p[P_DIST] = (int16_t)atoi(getenv("DIST"));
         if (getenv("LEVEL"))

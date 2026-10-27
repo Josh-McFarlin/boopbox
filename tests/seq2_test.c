@@ -20,7 +20,6 @@
 #undef main
 #include <assert.h>
 #define PROJ_HOST 1
-static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? i : 0; }
 #include "../firmware/src/project.c"
 static struct { uint8_t force; } ui;
 static uint8_t sync_reload;
@@ -1243,20 +1242,20 @@ static void t_recquant(void)
     transport_req = 1;
     run_block();
     GO_TO(2, 0.25);                                  /* a quarter step late on step 3 */
-    drum_input(0, LV_NORM, 0, 1);
+    drum_input(TDRUM, 0, LV_NORM, 0, 1);
     ok = d->dstep[2].on[0] & 1u;
     k = (uint32_t)(d->micro[2] + 64);
     ok &= d->micro[2] >= 15 && d->micro[2] <= 17;
-    drum_input(3, LV_NORM, 0, 1);                    /* a second sound a little later on that step: the first's nudge */
+    drum_input(TDRUM, 3, LV_NORM, 0, 1);                    /* a second sound a little later on that step: the first's nudge */
     ok &= d->micro[2] >= 15 && d->micro[2] <= 17 && (d->dstep[2].on[0] & 8u);
     check(ok, "2.7 QUANT OFF: a hit a quarter step late: step 3, nudge +16; a second sound on it keeps it");
     GO_TO(6, -0.25);                                 /* a quarter step early, before step 7 */
-    drum_input(1, LV_NORM, 0, 1);
+    drum_input(TDRUM, 1, LV_NORM, 0, 1);
     check((d->dstep[6].on[0] & 2u) && d->micro[6] >= -17 && d->micro[6] <= -15 && !(d->dstep[5].on[0] & 2u),
           "2.7 QUANT OFF: a hit a quarter step early: into the next step (7), nudge -16");
     rec_quant_off = 0;
     GO_TO(10, 0.25);
-    drum_input(0, LV_NORM, 0, 1);
+    drum_input(TDRUM, 0, LV_NORM, 0, 1);
     check((d->dstep[10].on[0] & 1u) && d->micro[10] == 0, "2.7 QUANT ON (as before): on the grid, no nudge");
     transport_req = 2; run_block();
     /* a synth part, played by hand (input_on) and by the arp */

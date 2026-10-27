@@ -204,9 +204,24 @@ static const param_desc_t GP[G_COUNT] = {
     [G_RMCH] = PE("REMOTE", N_MCH, 0),           /* 2.7, GLO > MIDI 3: the buttons over MIDI (CC 102..115, seq.c remote_cc) */        /* 2.7, GLO > MIDI 3: MIDI notes -> drum sounds (seq.c midi_drum_lane) */            /* 2.7, GLO > MIDI 3: the punch-in FX's channel (seq.c midi_fx) */
     [G_BEND] = PD("BEND", F_SEMI, 1, 12, 2),      /* 2.6, GLO > MIDI 2: MIDI pitch bend's range (a setting of the FM-1) */
     [G_FXFADE] = PD("FADE", F_INT, 0, 15, 0),     /* 2.7.2: the punch-in FX fade (FX layer SELECT), 0 off .. 15 (punch.c) */
+    [G_CH5] = PE("CH5", N_MCH, 0),                /* eight tracks, GLO > MIDI 4: tracks 5..8 (OFF: no MIDI in or out, as a */
+    [G_CH6] = PE("CH6", N_MCH, 0),                /* four-track SLOOP left those channels to OTHER) */
+    [G_CH7] = PE("CH7", N_MCH, 0),
+    [G_CH8] = PE("CH8", N_MCH, 0),
 };
 
+/* the globals that are settings of the FM-1, not of a project: a NEW project and a load leave them */
+static int g_setting(uint32_t i)
+{
+    return i == G_SLOT || i == G_DRCH || i == G_SYNC || i == G_MIDI || i == G_ROUTE || (i >= G_CH1 && i <= G_CHOTH) ||
+           i == G_BEND || i == G_FXCH || i == G_DRMAP || i == G_RMCH || i == G_CLKOUT || i == G_FXFADE ||
+           (i >= G_CH5 && i <= G_CH8);
+}
 static const param_desc_t DRUM_KIT_DESC = PE("KIT", DRUM_KIT_NAMES, 0);
+/* a drum track's LEVEL, REV and DLY (its P_LEVEL, P_REV, P_DLY): as GLO > DRUMS had them for the one drum track (linear
+ * 0..127, 100 = as loud as a sound of the kit is made) */
+static const param_desc_t DRUM_MIX_DESC[3] = {PD("LVL", F_INT, 0, 127, 100), PD("REV", F_INT, 0, 127, 16),
+                                              PD("DLY", F_INT, 0, 127, 0)};
 /* the INSERT's A B C as its TYPE means them (TP's ranges and defaults): the drives DRIVE TONE LEVEL, CRUSH BITS RATE
  * LPF, the swept ones RATE DEPTH FDBK; OFF TP's own */
 #define PU(l, f, df, n, u) {l, f, 0, 127, df, n, u}
@@ -230,7 +245,12 @@ static const param_desc_t ESYNC_DESC[3] = {   /* ATK DEC REL with ENV SYNC on: t
 
 static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
-    if(is_drum(t) && id==P_E0) return &DRUM_KIT_DESC;
+    if (is_drum(t)) {                                 /* a drum track: its kit, its drum mix */
+        if (id == P_E0)
+            return &DRUM_KIT_DESC;
+        if (id == P_LEVEL || id == P_REV || id == P_DLY)
+            return &DRUM_MIX_DESC[id == P_LEVEL ? 0 : id == P_REV ? 1 : 2];
+    }
     if (id >= P_IA && id <= P_IC)                     /* the INSERT's values as its TYPE names them */
         return ins_desc(t->p[P_ITYPE], id - P_IA);
     if (t->p[P_ESYNC] && (id == P_ATK || id == P_DEC || id == P_REL))   /* ENV SYNC: note values */
@@ -241,6 +261,59 @@ static const param_desc_t *track_desc(const track_t *t, uint32_t id)
         return d ? d : &e->edit[id - P_E0];
     }
     return &TP[id];
+}
+
+/* the tracks at power-on and in a NEW project (kind, then the engine and preset, or the kit): bass, keys, lead, drums;
+ * then a pad, a pluck, a lead and a second kit (eight tracks). Tracks 1..4 are the four-track SLOOP's */
+static const uint8_t TRK_DEF[NTRK][3] = {
+    {TK_SYNTH, 0, 0},                    /* ANALOG 808 BOOM */
+    {TK_SYNTH, 1, 0},                    /* DIGITAL RHODES */
+    {TK_SYNTH, 4, 5},                    /* SAMPLE LOFI FLUTE */
+    {TK_DRUM, DRUM_DEFAULT_KIT, 0},      /* the 808 kit */
+    {TK_SYNTH, 0, 12},                   /* ANALOG WARM PAD */
+    {TK_SYNTH, 1, 9},                    /* DIGITAL KALIMBA */
+    {TK_SYNTH, 0, 16},                   /* ANALOG FAT LEAD */
+    {TK_DRUM, DRUM_SAMPLED + 1u, 0},     /* the 909 kit */
+};
+static uint32_t trk_def_kind(uint32_t i) { return TRK_DEF[i % NTRK][0]; }
+static uint32_t trk_def_engine(uint32_t i) { return trk_def_kind(i) == TK_SYNTH ? TRK_DEF[i % NTRK][1] : 0u; }
+/* the parameters of track i as at power-on (its TRK_DEF kind and sound: what ui.c track_power_on leaves, with no
+ * side effect: the song sections apply it from the audio ISR, a project of four tracks leaving 5..8 so) */
+static void pon_params(uint32_t i, int16_t *p)
+{
+    uint32_t k;
+    i %= NTRK;
+    for (k = 0; k < P_E0; k++)
+        p[k] = TP[k].def;
+    if (trk_def_kind(i) == TK_DRUM) {
+        p[P_LEVEL] = DRUM_MIX_DESC[0].def, p[P_REV] = DRUM_MIX_DESC[1].def, p[P_DLY] = DRUM_MIX_DESC[2].def;
+        p[P_E0] = TRK_DEF[i][1];
+        for (k = 1; k < 8u; k++)
+            p[P_E0 + k] = 0;
+        return;
+    }
+    {
+        static const uint8_t FX_DEF[4] = {0, 24, 28, 36};   /* (as ui.c apply_preset_to) */
+        const engine_t *e = ENGINES[TRK_DEF[i][1] % NENGINES];
+        uint32_t pi = e->npresets ? TRK_DEF[i][2] % e->npresets : 0u;
+        const preset_t *pr;
+        for (k = 0; k < 8u; k++)
+            p[P_E0 + k] = e->edit[k].def;
+        if (!e->npresets)
+            return;
+        pr = &e->presets[pi];
+        for (k = 0; k < 8u; k++)
+            p[P_E0 + k] = (int16_t)pr->e[k];
+        p[P_ATK] = pr->env[0], p[P_DEC] = pr->env[1], p[P_SUS] = pr->env[2], p[P_REL] = pr->env[3];
+        p[P_ED_FLT] = pr->fenv;
+        p[P_ED_FX] = preset_trim(TRK_DEF[i][1] % NENGINES, pi);
+        p[P_VOICE] = pr->mono ? V_LEGATO : V_POLY;
+        for (k = 0; k < 4u; k++) {
+            p[P_DIST + k] = (int16_t)(pr->fx[k] ? pr->fx[k] - 1 : FX_DEF[k]);
+            p[P_AMODE + k] = (int16_t)(pr->arp[k] ? pr->arp[k] - 1 : TP[P_AMODE + k].def);
+        }
+        preset_extras(p, pr);
+    }
 }
 
 /* a knob turned `steps` on an F_INT with a 0-terminated name list (ENV SYNC's note values, the INSERT's BITS and
@@ -424,6 +497,7 @@ static const page_t PAGES[] = {
                                                                            * setting in these two pages (IN and OUT on
                                                                            * SYSTEM too, the drums' channel on DRUMS) */
     {"MIDI 3", FAM_GLO, SC_GLOBAL, GR_NONE, {G_FXCH, G_DRMAP, G_RMCH, G_CLKOUT}},   /* 2.7: the punch-in FX over MIDI */
+    {"MIDI 4", FAM_GLO, SC_GLOBAL, GR_NONE, {G_CH5, G_CH6, G_CH7, G_CH8}},   /* eight tracks: tracks 5..8's channels */
     {"TEXTURE", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXSRC, G_TXLVL, G_TXTONE, G_TXMOVE}},   /* 2.6: the bed under the mix */
     {"TEXTURE 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXRATE, G_TXWHEN, G_TXDUCK, 0xFF}},
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
@@ -473,6 +547,16 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
         return 0;
     }
     if (pg->scope == SC_GLOBAL) {
+        if (id == G_DRLVL || id == G_DRREV || id == G_DRDLY) {   /* GLO > DRUMS: the drum track shown (core.h drum_focus) */
+            track_t *d = drum_focus();
+            uint32_t pid = id == G_DRLVL ? P_LEVEL : id == G_DRREV ? P_REV : P_DLY;
+            if (!d) {
+                *valp = 0;
+                return 0;
+            }
+            *valp = &d->p[pid];
+            return track_desc(d, pid);
+        }
         *valp = &song.g[id];
         return &GP[id];
     }

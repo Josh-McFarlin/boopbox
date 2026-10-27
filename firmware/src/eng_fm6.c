@@ -23,7 +23,7 @@
  * ENV DEST do nothing here. The track's FLT moves MLVL (LFO -> FLT), SHP the feedback, PIT the pitch (glide,
  * tune: the voice's pitch and fine factor). Six voices per part at most (engine_t.poly).
  *
- * State (RAM, NPART parts: the drum track runs no engine): per voice an fm6_note_t (fm6_note, 244 bytes, a
+ * State (RAM, per track: a drum track runs no engine): per voice an fm6_note_t (fm6_note, 244 bytes, a
  * side array in the pool: voice_t.s[] is too small), per part the patch, the patch through the macros
  * (fm6_eff, rebuilt in the audio ISR when either changes) and the LFO (once a block). Adapted from Felucca
  * 1.0.1: no modulation matrix, the velocity is the voice's (UNISON scales it), the fine factor comes in
@@ -40,17 +40,17 @@ typedef struct {                 /* a part's FM6 state: its engine arena (engine
 #define FM6_NSLOT (FM6_NFACTORY + FM6_BANK_N)   /* PTCH: F1..F8, B1..B27 */
 #define FM6_PACKED 128u
 
-static uint8_t fm6_patch[NPART][FP_SIZE + 1u];  /* the parts' patches (main loop writes, then fm6_pgen) */
-static volatile uint8_t fm6_pgen[NPART];         /* +1 after each write of fm6_patch[t] */
-static uint8_t fm6_slot[NPART];                  /* the PTCH value last loaded (main loop); 0xFF = none */
+static uint8_t fm6_patch[NTRK][FP_SIZE + 1u];  /* the parts' patches (main loop writes, then fm6_pgen) */
+static volatile uint8_t fm6_pgen[NTRK];         /* +1 after each write of fm6_patch[t] */
+static uint8_t fm6_slot[NTRK];                  /* the PTCH value last loaded (main loop); 0xFF = none */
 static struct {                                  /* the patch through the macros: the audio ISR's copy */
     uint8_t p[FP_SIZE + 1u];
     uint8_t gen, alg, fb, ok;
     int16_t e[7];                                /* P_E0..P_E6 it was made with */
     int32_t dt[6];                               /* DTUN: per operator, Q24 log2 */
-} fm6_eff[NPART];
-static fm6_lfo_t fm6_lfo[NPART];
-static int32_t fm6_lfo_v[NPART], fm6_lfo_d[NPART];   /* this block's LFO value and delay (Q24) */
+} fm6_eff[NTRK];
+static fm6_lfo_t fm6_lfo[NTRK];
+static int32_t fm6_lfo_v[NTRK], fm6_lfo_d[NTRK];   /* this block's LFO value and delay (Q24) */
 /* the voices' fm6_note_t: the part's engine arena (engines.c eng_arena_of) */
 
 /* ------------------------------------------------------- patch formats --- */
@@ -151,7 +151,7 @@ static int (*fm6_bank_read)(uint32_t k, uint8_t *pk);
 static void fm6_set_patch(uint32_t tr, const uint8_t *v)
 {
     uint8_t s[FP_SIZE + 1u];
-    if (tr >= NPART)
+    if (tr >= NTRK)
         return;
     memcpy(s, v, FP_SIZE);
     fm6_sanitize(s);                                /* not in place: fm6_sync must never copy an unsanitized byte */
@@ -172,7 +172,7 @@ static void fm6_slot_get(uint32_t s, uint8_t *pk)
 static void fm6_load_slot(uint32_t tr, uint32_t s)
 {
     uint8_t pk[FM6_PACKED], v[FP_SIZE + 1u];
-    if (tr >= NPART)
+    if (tr >= NTRK)
         return;
     fm6_slot_get(s, pk);
     fm6_unpack(pk, v);
@@ -185,7 +185,7 @@ static uint8_t fm6_pend;                            /* (2.6) bit per part: a pre
 static void fm6_track_loaded(const track_t *t)
 {
     uint32_t tr = (uint32_t)(t - trk);
-    if (tr < NPART && t->eng_req == ENGI_FM6) {
+    if (tr < NTRK && t->eng_req == ENGI_FM6) {
         uint32_t i, any = 0;
         for (i = 0; i < NVOICE; i++)
             any |= t->v[i].active;
@@ -203,7 +203,7 @@ static void fm6_init(void)
     uint8_t v[FP_SIZE + 1u];
     uint32_t tr;
     fm6_unpack(FM6_INIT, v);
-    for (tr = 0; tr < NPART; tr++) {
+    for (tr = 0; tr < NTRK; tr++) {
         fm6_set_patch(tr, v);
         fm6_slot[tr] = 0xFFu;
     }
@@ -213,7 +213,7 @@ static void fm6_init(void)
 static void fm6_poll(void)
 {
     uint32_t tr;
-    for (tr = 0; tr < NPART; tr++) {
+    for (tr = 0; tr < NTRK; tr++) {
         if ((trk[tr].pold || trk[tr].xf_on) && !(trk[tr].xf_on && !trk[tr].xf))
             continue;                                   /* (a fade under way: the patch after it; faded out, the
                                                          * notes wait for it: voice.c engine_block) */
@@ -230,7 +230,7 @@ static void fm6_sync(const track_t *t)
     uint32_t tr = (uint32_t)(t - trk), k, j, car, n = 0;
     const int16_t *e = &t->p[P_E0];
     int32_t meg, step;
-    if (tr >= NPART)
+    if (tr >= NTRK)
         return;
     if (fm6_eff[tr].ok && fm6_eff[tr].gen == fm6_pgen[tr]) {
         for (k = 0; k < 7u && fm6_eff[tr].e[k] == e[k]; k++)
@@ -273,7 +273,7 @@ static void fm6_sync(const track_t *t)
 /* --------------------------------------------------------------- voice --- */
 static fm6_part_t *fm6_part_of(track_t *t)
 {
-    return t < &trk[0] || t >= &trk[NPART] ? 0 : (fm6_part_t *)eng_arena_of(t, ENGI_FM6);
+    return t < &trk[0] || t >= &trk[NTRK] ? 0 : (fm6_part_t *)eng_arena_of(t, ENGI_FM6);
 }
 static fm6_note_t *fm6_note_of(track_t *t, voice_t *v)
 {
@@ -302,7 +302,7 @@ static void fm6_note_on(track_t *t, voice_t *v)
 static void fm6_block(track_t *t)       /* once a block and part: the macros, the LFO */
 {
     uint32_t tr = (uint32_t)(t - trk);
-    if (tr >= NPART)
+    if (tr >= NTRK)
         return;
     fm6_sync(t);
     fm6_lfo_v[tr] = fm6_lfo_sample(&fm6_lfo[tr]);

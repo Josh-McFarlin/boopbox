@@ -284,11 +284,11 @@ static void t_mutes(void)
     TDRUM->p[P_SLEN] = 16;
     transport_req = 1;
     on = kick_hits(2800);                             /* 2 s at 120 BPM: 16 steps, one with a ratchet */
-    drum_mute = 1u << 0;
+    drum_mute[TRK_DRUM] = 1u << 0;
     snare = 0;
     off = kick_hits(2800);
     sn = snare;
-    drum_mute = 0;
+    drum_mute[TRK_DRUM] = 0;
     printf("  kick hits: %u, muted %u (the snare meanwhile: %u)\n", on, off, sn);
     check(on >= 17u && off == 0u && sn >= 15u,
           "the drum track's live mute: the sequencer skips the muted sound (ratchets too), the others play");
@@ -654,15 +654,15 @@ static void t_glide(void)
     check(r[0] > 0.8 && r[1] < r[0] && fabs(r[24] - rt) < 0.01 && fabs(r[63] - rt) < 0.005 && trk[0].gpl == 4096 - 63 * 64,
           "PAN: a jump glides too (the left fades over a few blocks), then lands exactly");
     song.g[G_DRLVL] = 100;
-    drums.gon = 0;
-    drums_mix(ml, mr, rv, dl, 0, CTL);
-    g0 = drums.glv;
+    TDRUM->mix_on = 0;
+    drums_mix(TDRUM, 0, 0, ml, mr, rv, dl, 0, CTL);
+    g0 = TDRUM->lvl;
     song.g[G_DRLVL] = 20;
-    drums_mix(ml, mr, rv, dl, 0, CTL);
-    g1 = drums.glv;
+    drums_mix(TDRUM, 0, 0, ml, mr, rv, dl, 0, CTL);
+    g1 = TDRUM->lvl;
     for (b = 0; b < 40u; b++)
-        drums_mix(ml, mr, rv, dl, 0, CTL);
-    check(g0 == 100 * 200 && g1 > 20 * 200 + (g0 - 20 * 200) / 2 && drums.glv == 20 * 200,
+        drums_mix(TDRUM, 0, 0, ml, mr, rv, dl, 0, CTL);
+    check(g0 == 100 * 200 && g1 > 20 * 200 + (g0 - 20 * 200) / 2 && TDRUM->lvl == 20 * 200,
           "drums: LEVEL glides the same way (a quarter a block), then lands exactly");
     check(mix_glide(1000, 1008) == 1008 && mix_glide(1000, 2000) == 1250 && mix_glide(2000, 1000) == 1750,
           "mix_glide: a quarter of the way a block, the last 8 units at once");

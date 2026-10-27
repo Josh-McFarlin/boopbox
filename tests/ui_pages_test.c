@@ -63,10 +63,10 @@ static void arrangement_save(void) {}
 static uint32_t arrangement_ready(void) { return 3; }
 static void arrangement_apply(uint32_t s) { (void)s; }
 static uint32_t section_bars(uint32_t s) { return s == 1u ? 2u : 1u; }   /* (B: two bars) */
-static void song_backup(void) {}
+static int song_backup(void) { return 1; }
 static void song_restore(void) {}
 static uint32_t sec_stores, sec_loads;
-static void section_store(uint32_t s) { sec_stores++; live_sec = (int8_t)s; }
+static int section_store(uint32_t s) { sec_stores++; live_sec = (int8_t)s; return 1; }
 static void section_load(uint32_t s) { sec_loads++; live_sec = (int8_t)s; }
 static int up_used(uint32_t k) { return k < 2; }
 static int up_load(uint32_t k) { (void)k; return 0; }
@@ -615,8 +615,8 @@ int main(int argc, char **argv)
         for (j = 0; j < 16u; j += 3u) { trk[0].step[j].n = 1; trk[0].step[j].note[0] = 36; trk[0].step[j].time = ST_NOTE; }
         for (j = 0; j < 16u; j += 4u) { trk[1].step[j].n = 3; trk[1].step[j].time = ST_NOTE; }
         drum_lane = 4; drum_cursor = 6; drum_page = 0; ui.force = 1; ui.msg_t = 0;
-        drums.hits = 1u | 1u << 4; frame(); ppm("live-grid");
-        drum_page = 1; ui.force = 1; drums.hits = 1u | 1u << 4; frame(); ppm("live-kit");
+        drums.hits[TRK_DRUM] = 1u | 1u << 4; frame(); ppm("live-grid");
+        drum_page = 1; ui.force = 1; drums.hits[TRK_DRUM] = 1u | 1u << 4; frame(); ppm("live-kit");
         drum_page = 0; song.sel = 1; go_home(); ui.force = 1;
         transport_req = 1; frames(30); song.rec = 2u; frame(); ui.force = 1; frame(); ppm("live-tracks");
         song.rec = 0; transport_req = 2; frames(2);
@@ -1314,12 +1314,12 @@ int main(int argc, char **argv)
             key(key_of_white(2)); frame();
             encs[panel.enc[EN_K2]] = 3; frame();
             encs[panel.enc[EN_K3]] = -2; frame();
-            check(drum_lane == 2 && drum_tune[2] == 3 && drum_dec[2] == -2, "sound: a key picks its sound, KNOB 2 its TUNE (+3), KNOB 3 its DECAY (-2)");
+            check(drum_lane == 2 && drum_tune[TRK_DRUM][2] == 3 && drum_dec[TRK_DRUM][2] == -2, "sound: a key picks its sound, KNOB 2 its TUNE (+3), KNOB 3 its DECAY (-2)");
             ui.force = 1; frame(); ppm("live-sound");
             encs[panel.enc[EN_K2]] = 20; frame();
             encs[panel.enc[EN_K1]] = 1; frame();
             encs[panel.enc[EN_K4]] = -3; frame();
-            check(drum_lane == 3 && drum_tune[2] == 7 && song.g[G_DRLVL] == lv0 - 3, "sound: TUNE stops at +7; KNOB 1 the next sound, KNOB 4 the drums' level");
+            check(drum_lane == 3 && drum_tune[TRK_DRUM][2] == 7 && song.g[G_DRLVL] == lv0 - 3, "sound: TUNE stops at +7; KNOB 1 the next sound, KNOB 4 the drums' level");
             song.g[G_DRLVL] = (int16_t)lv0;
             memset(drum_tune, 0, sizeof drum_tune), memset(drum_dec, 0, sizeof drum_dec);
             encs[panel.enc[EN_SELECT]] = -1; frame();
@@ -1639,20 +1639,20 @@ int main(int argc, char **argv)
         key(1);                                           /* a black key: mute mode */
         check(er_mute == 1u, "EDIT + a black key (drum track): MUTE mode");
         key(0);                                           /* the kick's key */
-        check(drum_mute == 1u && dstep_has(&TDRUM->dstep[0], 0), "MUTE mode + the kick's key: the kick muted, its steps kept");
+        check(drum_mute[TRK_DRUM] == 1u && dstep_has(&TDRUM->dstep[0], 0), "MUTE mode + the kick's key: the kick muted, its steps kept");
         ui.force = 1; frame(); ppm("layer-erase-mute");
         key(0);
-        check(drum_mute == 0u, "the kick's key again: unmuted");
+        check(drum_mute[TRK_DRUM] == 0u, "the kick's key again: unmuted");
         key(0);
         release(B_EDIT); frames(2);
-        check(er_mute == 1u && drum_mute == 1u, "2.7: EDIT let go: MUTE mode stays, the mute stays");
+        check(er_mute == 1u && drum_mute[TRK_DRUM] == 1u, "2.7: EDIT let go: MUTE mode stays, the mute stays");
         press(B_EDIT); frames(10);
         key(0);                                           /* EDIT again + the kick's key: unmutes at once (no black key) */
-        check(drum_mute == 0u && dstep_has(&TDRUM->dstep[0], 0), "2.7: EDIT again + a white key: mutes / unmutes at once");
+        check(drum_mute[TRK_DRUM] == 0u && dstep_has(&TDRUM->dstep[0], 0), "2.7: EDIT again + a white key: mutes / unmutes at once");
         key(1);                                           /* a black key: back to erasing */
         release(B_EDIT); frames(2);
         check(er_mute == 0u, "2.7: a black key again: back to erasing, also after EDIT is let go");
-        drum_mute = 0;
+        drum_mute[TRK_DRUM] = 0;
         TDRUM->dstep[0] = (dstep_t){0};
         WALK(FAM_FX, "INSERT", ins_d);
         check(ins_d, "the drum track: the INSERT page in FX");
@@ -1917,8 +1917,8 @@ int main(int argc, char **argv)
             live(10, 0, 0, 0); ok &= thr_ed == 0u;
             live(11, 63, 0, 0); ok &= ed_master == 64u && lv_out[32] == 64u && ed_master_k == 0xFFFFu;
             live(11, 127, 0, 0); ok &= ed_master == 0u;
-            live(12, 2, 11, 2); ok &= drum_tune[2] == 3 && drum_dec[2] == -2 && lv_out[36] == (11u | 2u << 4);
-            live(12, 2, 8, 4); ok &= !drum_tune[2] && !drum_dec[2];
+            live(12, 2, 11, 2); ok &= drum_tune[TRK_DRUM][2] == 3 && drum_dec[TRK_DRUM][2] == -2 && lv_out[36] == (11u | 2u << 4);
+            live(12, 2, 8, 4); ok &= !drum_tune[TRK_DRUM][2] && !drum_dec[TRK_DRUM][2];
             check(ok, "LIVE: THROW (as FX + OCT), the master level (the knob takes it back), a drum sound's TUNE / DECAY");
             len0 = trk_len(&trk[0]);
             live(8, 0, 1, 1); ok = trk_len(&trk[0]) == (len0 * 2u > NSTEP ? len0 : len0 * 2u);
