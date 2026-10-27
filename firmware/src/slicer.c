@@ -17,7 +17,10 @@
  * in time), restarted with the transport (seq_start -> slicer_start: step 0 starts with the
  * sequencer's step 0), in the transport clock's units (fx.c BEAT_U: exact at any tempo, no drift
  * from the steps), the track's + the global SWING as the sequencer has them (seq.c trk_grid); sample
- * exact. With the SLICER OFF and no ramp left, the signal is not touched. */
+ * exact. With the SLICER OFF and no ramp left, the signal is not touched.
+ * Eight tracks: STUT's recordings are SL_NBUF buffers (8 KB each, the pool has room for four), lent to the tracks in
+ * STUT mode in the order they ask (sl_buf_of); a fifth track in STUT gets none and plays live (gate and clock as
+ * usual, no repeat) until one is free. GATE needs no buffer: every track can gate. */
 #define SL_NPAT 16
 #define SL_LEN 4096u                    /* recording, 22.05 kHz samples a track: 186 ms, 8 KB */
 #define SL_RAMP_LOG2 7
@@ -46,7 +49,9 @@ static const uint16_t SL_PAT[SL_NPAT] = {
 };
 static const uint8_t SL_DEN[6] = {2, 4, 8, 3, 6, 12};   /* P_SLRATE (N_SLDIV): a step = 1 / DEN beats */
 
-static int16_t sl_buf[NTRK][SL_LEN] __attribute__((section(".pool")));
+#define SL_NBUF 4u
+static int16_t sl_buf[SL_NBUF][SL_LEN] __attribute__((section(".pool")));
+static uint8_t sl_buf_trk[SL_NBUF];      /* the track + 1 a buffer is lent to, 0 = free */
 typedef struct {
     uint32_t pos, len;           /* clock units into the step, its length */
     uint32_t base;               /* the step without swing (units) */
@@ -61,7 +66,27 @@ typedef struct {
     uint8_t rec_on;              /* recording this step */
 } sl_t;
 static sl_t sl[NTRK];
-static int32_t sl_dbuf[CTL];     /* the drum track's dry mono signal (slicer_drums) */
+/* track k's STUT buffer: its own, a free one (taken), 0 when all are lent; a track not in STUT gives its back */
+static int16_t *sl_buf_of(const track_t *t, uint32_t k)
+{
+    uint32_t i, f = SL_NBUF;
+    for (i = 0; i < SL_NBUF; i++) {
+        if (sl_buf_trk[i] == k + 1u) {
+            if (t->p[P_SLCR] == SL_STUT || sl[k].loop || sl[k].w)
+                return sl_buf[i];
+            sl_buf_trk[i] = 0;                      /* (no longer in STUT, nothing repeating: free) */
+            return 0;
+        }
+        if (!sl_buf_trk[i] && f == SL_NBUF)
+            f = i;
+    }
+    if (t->p[P_SLCR] != SL_STUT || f == SL_NBUF)
+        return 0;
+    sl_buf_trk[f] = (uint8_t)(k + 1u);
+    sl[k].rec = 0;                                  /* (a fresh buffer: nothing recorded in it for this track) */
+    sl[k].loop = 0;
+    return sl_buf[f];
+}
 
 static void slicer_start(uint32_t pos)   /* seq_start: step 0 of every track, pos units in */
 {
@@ -109,7 +134,11 @@ static void sl_seg(const track_t *t, sl_t *s, int16_t *buf, int32_t *b, uint32_t
     int32_t depth = t->p[P_SLDEPTH] * 258;          /* Q15, 0..32766 */
     int32_t tc = mode == SL_GATE && !s->bit ? depth : 0;           /* gate closure of this step */
     int32_t tn = mode == SL_GATE && !nbit ? depth : 0;             /* .. of the next one */
-    int32_t tw = mode == SL_STUT && s->loop ? depth : 0;           /* repeat level */
+    int32_t tw = mode == SL_STUT && s->loop && buf ? depth : 0;    /* repeat level (no buffer lent: live) */
+    if (!buf) {
+        s->rec_on = 0;
+        s->loop = 0;
+    }
     for (j = 0; j < m; j++) {
         int32_t x = b[j], y, tg = tc;
         uint32_t left = left0 - j;                  /* samples to the step end, >= 1 */
@@ -152,9 +181,14 @@ static void sl_seg(const track_t *t, sl_t *s, int16_t *buf, int32_t *b, uint32_t
 /* the step clock over n samples and the SLICER on b (0: the clock only, the track is silent) */
 static void slicer_track(const track_t *t, int32_t *b, uint32_t n)
 {
-    uint32_t k = (uint32_t)(t - trk), i = 0, bpm = (uint32_t)song.g[G_BPM];
+    uint32_t k = (uint32_t)(t - trk) % NTRK, i = 0, bpm = (uint32_t)song.g[G_BPM];
     sl_t *s = &sl[k];
     int act = b && (t->p[P_SLCR] != SL_OFF || s->gc || s->w);
+    if (!act && t->p[P_SLCR] != SL_STUT && !s->w)
+        for (i = 0; i < SL_NBUF; i++)
+            if (sl_buf_trk[i] == k + 1u)
+                sl_buf_trk[i] = 0;                  /* (out of STUT: its buffer back to the others) */
+    i = 0;
     while (i < n) {
         uint32_t m, left;
         while (s->pos >= s->len)
@@ -162,7 +196,7 @@ static void slicer_track(const track_t *t, int32_t *b, uint32_t n)
         left = (s->len - s->pos + bpm - 1u) / bpm;  /* samples to the boundary */
         m = left < n - i ? left : n - i;
         if (act)
-            sl_seg(t, s, sl_buf[k], b + i, m, left);
+            sl_seg(t, s, sl_buf_of(t, k), b + i, m, left);
         s->pos += m * bpm;
         i += m;
     }
@@ -171,36 +205,13 @@ static void slicer_track(const track_t *t, int32_t *b, uint32_t n)
 /* a silent part must still be rendered: a repeat is playing or fading (fx.c mix_part) */
 static int slicer_busy(const track_t *t)
 {
-    const sl_t *s = &sl[t - trk];
+    const sl_t *s = &sl[(uint32_t)(t - trk) % NTRK];
     return s->w || (t->p[P_SLCR] == SL_STUT && s->loop);
 }
 
-/* the drum track: as drums_render, through the SLICER when it is on (or still fading) */
-static void slicer_drums(int32_t *ml, int32_t *mr, int32_t *rev, int32_t *dly, uint32_t n)
+/* a drum track's SLICER is on (or still fading): its voices go through it on a mono bus (fx.c mix_drums) */
+static int slicer_on(const track_t *t)
 {
-    const track_t *t = TDRUM;
-    const sl_t *s = &sl[TRK_DRUM];
-    uint32_t i;
-    if (t->p[P_SLCR] == SL_OFF && !s->gc && !s->w) {
-        slicer_track(t, 0, n);
-        drums_render(ml, mr, rev, dly, n);
-        return;
-    }
-    for (i = 0; i < n; i++)
-        sl_dbuf[i] = 0;
-    drums_render_mono(sl_dbuf, n);
-    slicer_track(t, sl_dbuf, n);
-    {
-        int32_t send = send_thr(song.g[G_DRREV] * 258, thr_rev), dsend = send_thr(song.g[G_DRDLY] * 258, thr_dly), pan = t->p[P_PAN];
-        int32_t gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
-        for (i = 0; i < n; i++) {
-            int32_t x = sl_dbuf[i];
-            ml[i] += (x * gl) >> 12;
-            mr[i] += (x * gr) >> 12;
-            if (send)
-                rev[i] += mulq15(x, send);
-            if (dsend)
-                dly[i] += mulq15(x, dsend);
-        }
-    }
+    const sl_t *s = &sl[(uint32_t)(t - trk) % NTRK];
+    return t->p[P_SLCR] != SL_OFF || s->gc || s->w;
 }

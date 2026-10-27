@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """An estimate of the firmware's code and RAM size without the JieLi toolchain.
 
-  tools/proxy_size.py [--json]
+  tools/proxy_size.py [--json] [--obj OUT.o]
 
 Compiles firmware/src/felucca.c (the whole firmware: one unit) with the host clang for a stand-in 32-bit target
 (RISC-V RV32IMC, -Os, the build's flags), the HAL's inline assembly emptied (the pi32v2 instructions do not exist
@@ -45,6 +45,9 @@ def main():
         subprocess.run(["clang", *flags, "-Os", "-ffunction-sections", "-fdata-sections", "-fno-builtin", "-c",
                         str(pre), "-o", str(obj)], check=True)
         s = sections(obj)
+        if "--obj" in sys.argv:                     # keep the object (tools/proxy_diff.py compares two)
+            import shutil
+            shutil.copy(obj, sys.argv[sys.argv.index("--obj") + 1])
     code = sum(v for k, v in s.items() if k.startswith(".text"))
     ro = sum(v for k, v in s.items() if k.startswith(".rodata") or k.startswith(".srodata"))
     ram = sum(v for k, v in s.items() if re.match(r"\.(s?data|s?bss)", k))

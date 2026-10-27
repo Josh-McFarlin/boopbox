@@ -429,22 +429,22 @@ int main(void)
          * track's free E1..E7, a check in G_SAVE); a project of an older SLOOP (no check): every sound as the kit has it */
         uint32_t l;
         for (l = 0; l < DRUM_LANES; l++)
-            drum_tune[l] = (int8_t)((int32_t)(l * 5u % 16u) - 8), drum_dec[l] = (int8_t)((int32_t)(l * 3u % 8u) - 4);
+            drum_tune[TRK_DRUM][l] = (int8_t)((int32_t)(l * 5u % 16u) - 8), drum_dec[TRK_DRUM][l] = (int8_t)((int32_t)(l * 3u % 8u) - 4);
         proj_capture(&q2);
         memset(drum_tune, 0, sizeof drum_tune), memset(drum_dec, 0, sizeof drum_dec);
         proj_apply(&q2, 0);                        /* (a section) */
         ok = 1;
         for (l = 0; l < DRUM_LANES; l++)
-            ok &= drum_tune[l] == (int8_t)((int32_t)(l * 5u % 16u) - 8) && drum_dec[l] == (int8_t)((int32_t)(l * 3u % 8u) - 4);
+            ok &= drum_tune[TRK_DRUM][l] == (int8_t)((int32_t)(l * 5u % 16u) - 8) && drum_dec[TRK_DRUM][l] == (int8_t)((int32_t)(l * 3u % 8u) - 4);
         q2.g[G_SAVE] = 0;                           /* (as an older SLOOP saves it) */
         proj_apply(&q2, 1);
         for (l = 0; l < DRUM_LANES; l++)
-            ok &= !drum_tune[l] && !drum_dec[l];
-        drum_tune[3] = 7, drum_dec[9] = -4;
+            ok &= !drum_tune[TRK_DRUM][l] && !drum_dec[TRK_DRUM][l];
+        drum_tune[TRK_DRUM][3] = 7, drum_dec[TRK_DRUM][9] = -4;
         proj_capture(&q2);
         q2.t[TRK_DRUM].e[2] ^= 0x10;                 /* (a value of an older SLOOP's engine there: the check fails) */
         proj_apply(&q2, 1);
-        ok &= !drum_tune[3] && !drum_dec[9];
+        ok &= !drum_tune[TRK_DRUM][3] && !drum_dec[TRK_DRUM][9];
         memset(drum_tune, 0, sizeof drum_tune), memset(drum_dec, 0, sizeof drum_dec);
         bad += check("2.7 drum SOUND page: TUNE and DECAY of the 16 sounds kept in a project and a section; an older one: none", ok);
     }

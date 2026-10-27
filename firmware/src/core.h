@@ -1,16 +1,17 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Felucca core types: tracks, voices, engines, parameters.
- * Four tracks: tracks 1..3 are synth parts (each its own engine, preset, parameters,
- * voices and 64-step pattern), track 4 is the GM drum part (drums.c; its own voices,
- * pattern and the pattern parameters of its track_t). The parts share one budget of
- * NVOICE sounding voices (voice.c). */
+ * NTRK tracks, each of a kind (track_t.kind): a SYNTH track plays an engine (its own preset, parameters, voices
+ * and 64-step pattern), a DRUM track a drum kit (drums.c: 16 sounds, its own pattern of lanes). No track index is
+ * special: the default project has synths on 1..3 and 5..7, drums on 4 and 8. The synth tracks share one budget
+ * of NVOICE sounding voices (voice.c), the drum tracks one pool of NDRUM voices (drums.c). */
 #include <stdint.h>
-#define NVOICE 8                 /* voices per part, and the budget shared by all parts */
+#define NVOICE 8                 /* voices per synth track, and the budget shared by all of them */
 #define NPOLY 8
-#define NPART 3                  /* synth parts: tracks 1..3 */
-#define NTRK 4                   /* + the drum track */
-#define TRK_DRUM 3
+#define NTRK 8                   /* tracks */
+enum { TK_SYNTH, TK_DRUM };      /* track_t.kind */
+#define NARENA 3                 /* engine arenas (engines.c): tracks playing GRAIN, DRAWBAR, FM6 or PHYS at once */
+#define TRK_DRUM_V6 3u           /* the drum track of projects of formats 1..6 (four tracks, drums on 4) */
 enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
 #define NSTEP 64
 #define HALF_FRAMES 256          /* I2S half buffer: 5.8 ms at 44.1 kHz */
@@ -105,6 +106,8 @@ enum {                          /* global parameters */
                                  * while SYNC is INT (seq.c clkout_block; a setting of the FM-1, kept in DR MAP's byte) */
     G_FXFADE,                   /* SLOOP 2.7.2, the FX layer (FX held), SELECT: how fast a punch-in FX fades in and out, 0 (instant, as
                                  * before) .. 15 (punch.c; a setting of the FM-1, kept in BEND's byte) */
+    G_CH5, G_CH6, G_CH7, G_CH8, /* eight tracks, GLO > MIDI 4: the MIDI channel of tracks 5..8 (0 OFF, 1..16; in and out; track 4's
+                                 * is G_DRCH, "CH4"). Settings of the FM-1, as CH1..CH3 (panel.c midi_set) */
     G_COUNT
 };
 
@@ -233,6 +236,8 @@ enum { FC_NORM, FC_FILL, FC_NOFILL };     /* (3: as FC_NORM) */
 
 typedef struct track {
     int16_t p[P_COUNT];
+    uint8_t kind;                /* TK_SYNTH / TK_DRUM (the UI changes it with the IRQ off, every voice ended) */
+    uint8_t arena;               /* the engine arena it holds + 1 (engines.c eng_arena_of), 0 = none */
     uint8_t engine, preset;      /* engine: what the audio ISR renders */
     uint8_t eng_req;             /* engine the UI asked for (the ISR switches at a block start) */
     uint8_t user;                /* user preset slot + 1 the sound came from (UI), 0 = none */
@@ -392,9 +397,28 @@ static volatile uint8_t ed_master;
 static volatile uint16_t ed_master_k = 0xFFFFu;
 static int32_t thr_rev, thr_dly;
 static inline int32_t send_thr(int32_t s, int32_t g) { return g ? s + (((127 * 258 - s) * g) >> 15) : s; }   /* s 0..32766 */
-#define TSEL (&trk[song.sel])    /* the selected track */
-#define TDRUM (&trk[TRK_DRUM])
-static int is_drum(const track_t *t) { return t == TDRUM; }
+#define TSEL (&trk[song.sel % NTRK])   /* the selected track */
+static int is_drum(const track_t *t) { return t->kind == TK_DRUM; }
+static uint32_t trk_drums(void)          /* the drum tracks, bit per track */
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < NTRK; i++)
+        m |= (uint32_t)(trk[i].kind == TK_DRUM) << i;
+    return m;
+}
+/* the drum track a drum control acts on (GLO > DRUMS, the kit, a drum MIDI note without a track): the selected
+ * track when it is one, else the first drum track; 0: there is none */
+static track_t *drum_focus(void)
+{
+    uint32_t m = trk_drums(), i;
+    if (is_drum(TSEL))
+        return TSEL;
+    for (i = 0; i < NTRK; i++)
+        if ((m >> i) & 1u)
+            return &trk[i];
+    return 0;
+}
+#define DFOC (drum_focus() ? drum_focus() : TSEL)   /* the drum screens' track (they show only with one: never TSEL) */
 /* silent: MUTE, or another track is soloed */
 static int trk_silent(const track_t *t)
 {

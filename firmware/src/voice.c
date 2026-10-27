@@ -3,14 +3,14 @@
 /* Voice allocation, envelopes, LFO and per-track rendering. Runs in the
  * audio ISR.
  *
- * Each synth part has its own NVOICE voices (so MONO / LEGATO / UNISON keep using
- * v[0..]), but only NVOICE of all the parts' voices sound at once: a part that starts
+ * Each synth track (part) has its own NVOICE voices (so MONO / LEGATO / UNISON keep using
+ * v[0..]), but only NVOICE of all the parts' voices sound at once (eight tracks or four): a part that starts
  * a voice while the budget is full takes one from any part (voice_victim): the oldest
  * released voice, else the oldest extra UNISON voice, else the oldest held voice of a
  * POLY part that is not its lowest note. A voice taken from another part fades out
  * over one block (stage 4: the envelope goes to 0, the block's amplitude ramp
  * declicks it); one of the part's own is restarted in place. Extra UNISON
- * voices only start when there is room. The drum track has its own voices (drums.c). */
+ * voices only start when there is room. The drum tracks have their own pool of voices (drums.c). */
 static uint32_t vage;                                   /* voice ages: one clock for every part */
 /* engines that play recorded material (a position, not a phase): no phases kept or spread */
 #if FELUCCA_SLICE
@@ -76,8 +76,8 @@ static uint32_t trk_nvoice(const track_t *t)
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
-    for (p = 0; p < NPART; p++)
-        for (i = 0; i < NVOICE; i++)
+    for (p = 0; p < NTRK; p++)
+        for (i = 0; i < NVOICE; i++)                    /* (a drum track's own v[] never sounds) */
             n += trk[p].v[i].active && trk[p].v[i].stage != 4u;
     return n;
 }
@@ -96,7 +96,7 @@ static uint32_t lowest_held(const track_t *t)           /* index of the lowest h
 static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
 {
     uint32_t p, i, best = NVOICE, cat = 4;
-    for (p = 0; p < NPART; p++) {
+    for (p = 0; p < NTRK; p++) {
         track_t *t = &trk[p];
         uint32_t mode = (uint32_t)t->p[P_VOICE], nu = mode == V_UNISON ? trk_nvoice(t) : 1u;
         uint32_t low = mode == V_POLY ? lowest_held(t) : NVOICE;
@@ -147,7 +147,7 @@ static void shed_voice(void)
 {
     uint32_t p, i;
     voice_t *best = 0;
-    for (p = 0; p < NPART; p++)
+    for (p = 0; p < NTRK; p++)
         for (i = 0; i < NVOICE; i++) {
             voice_t *v = &trk[p].v[i];
             if (v->active && !v->gate && v->stage != 4u && (!best || v->env < best->env))
@@ -158,7 +158,7 @@ static void shed_voice(void)
         shed_count++;
         return;
     }
-    for (p = 0; p < NPART; p++) {
+    for (p = 0; p < NTRK; p++) {
         const track_t *t = &trk[p];
         uint32_t mode = (uint32_t)t->p[P_VOICE], low = mode == V_POLY ? lowest_held(t) : 0u;
         for (i = 0; i < NVOICE; i++) {
@@ -416,7 +416,7 @@ static void mono_remove(track_t *t, uint32_t note)
 /* the notes each synth part started since the UI last looked (menu NOTES: a short note lights its key
  * for a few frames, as a drum hit does; ui_studio.c pads_tick). Set here (mostly the audio ISR), taken
  * by the UI with the IRQ off */
-static volatile uint32_t note_hits[NPART][4];
+static volatile uint32_t note_hits[NTRK][4];
 /* the visualiser (ui_vis.c): the tracks a note started on (bit per track), each one's last note, a kick */
 static volatile uint8_t vis_hit, vis_kick_hit, vis_note[NTRK];
 
@@ -425,15 +425,15 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
     uint32_t any = 0, i, mode = (uint32_t)t->p[P_VOICE];
     if (trk_silent(t))
         return;                                         /* MUTE, or another track soloed */
-    vis_hit |= (uint8_t)(1u << ((uint32_t)(t - trk) & 3u));
-    vis_note[(uint32_t)(t - trk) & 3u] = (uint8_t)note;
-    if (is_drum(t)) {                                   /* the drum track: GM drums (drums.c) */
+    vis_hit |= (uint8_t)(1u << ((uint32_t)(t - trk) % NTRK));
+    vis_note[(uint32_t)(t - trk) % NTRK] = (uint8_t)note;
+    if (is_drum(t)) {                                   /* a drum track: its kit (drums.c) */
         if (note == 35u || note == 36u)
             vis_kick_hit = 1;
-        drum_on(note, vel);
+        drum_on(t, note, vel);
         return;
     }
-    if ((uint32_t)(t - trk) < NPART && note < 128u)
+    if ((uint32_t)(t - trk) < NTRK && note < 128u)
         note_hits[t - trk][note >> 5] |= 1u << (note & 31u);
     if (t->xf_on || t->eng_req != t->engine || t->pold) {   /* engine switch / preset under way: after the fade */
         for (i = 0; i < t->xp_n && t->xp_note[i] != note; i++)
@@ -632,9 +632,13 @@ static void engine_block(track_t *t)
             v->stage = 0;
             v->env = v->env_out = 0;
         }
-        if (t->xf_on && t->eng_req == ENGI_FM6 && ((fm6_pend >> ((uint32_t)(t - trk) % NPART)) & 1u))
+        if (t->xf_on && t->eng_req == ENGI_FM6 && ((fm6_pend >> ((uint32_t)(t - trk) % NTRK)) & 1u))
             return;                                     /* (2.6) FM6: the new notes wait for the preset's patch
                                                          * (eng_fm6.c fm6_poll, main loop): not a note of the old */
+        if (eng_big(t->eng_req % NENGINES) && !eng_arena_take(t))
+            return;                                     /* every engine arena lent to other tracks: the switch waits
+                                                         * (the UI refuses a fourth big engine; a song section's tracks
+                                                         * free theirs as their own switches end) */
         t->engine = t->eng_req % NENGINES;
         t->xf_on = 0;
         t->pold = 0;
@@ -649,6 +653,8 @@ static void engine_block(track_t *t)
     }
     for (i = 0; i < 8u; i++)                            /* the engine's own values, for a later fade */
         t->pe_old[i] = t->p[P_E0 + i];
+    if (t->arena && (!eng_big(t->engine) || is_drum(t)))
+        eng_arena_drop(t);                              /* (another engine now: its arena free for the other tracks) */
 }
 
 /* ENV SYNC (SLOOP 2.6, after Felucca 1.5 by Leo Kuroshita, #175; P_ESYNC, params.c ESYNC_NAMES): ATK DEC REL as

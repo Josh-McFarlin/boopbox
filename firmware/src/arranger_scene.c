@@ -17,7 +17,10 @@ static uint32_t section_bars(uint32_t s)
     if (!proj_ok(p))
         return 1;
     for (k = 0; k < NTRK; k++) {
-        uint32_t len = (uint32_t)clamp(p->t[k].p[P_SLEN], 1, NSTEP), u = div_units((uint32_t)p->t[k].p[P_SDIV] % NDIV_STEP);
+        int32_t l, dv;
+        uint32_t len, u;
+        proj_lendiv(p, k, &l, &dv);
+        len = (uint32_t)clamp(l, 1, NSTEP), u = div_units((uint32_t)clamp(dv, 0, NDIV_STEP - 1));
         uint32_t b = (len * u + 4u * BEAT_U - 1u) / (4u * BEAT_U);   /* (64 x 8 beats fits 32 bits) */
         if (b > bars)
             bars = b;
@@ -49,10 +52,11 @@ static void arrangement_apply(uint32_t scene)
  * over the tracks), STOP (or the song's end) brings it back */
 static project_t song_keep __attribute__((section(".pool")));
 static uint8_t song_kept;
-static void song_backup(void)                  /* (audio ISR: seq_start) */
+static int song_backup(void)                   /* (audio ISR: seq_start) 0: the loop fits no project, song mode
+                                                * cannot keep it: it does not start (seq.c) */
 {
-    proj_capture(&song_keep);
-    song_kept = 1;
+    song_kept = (uint8_t)proj_capture(&song_keep);
+    return song_kept;
 }
 static void song_restore(void)                 /* (audio ISR: seq_stop) */
 {
@@ -67,7 +71,7 @@ static void song_restore(void)                 /* (audio ISR: seq_stop) */
         trk[i].arp_ch[0] = trk[i].arp_ch[1] = trk[i].arp_ch[2] = 0;
     }
     proj_apply(&song_keep, 1);
-    song.sel = (uint8_t)(song_keep.sel < NTRK ? song_keep.sel : 0u);
+    song.sel = (uint8_t)proj_sel(&song_keep);
     sync_reload = 1;
     ui.force = 1;
 }

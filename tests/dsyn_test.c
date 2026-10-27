@@ -109,7 +109,7 @@ static void hit_render(uint32_t note, double *zc, double *tail)
     drums.set = -2;
     memset(L, 0, sizeof L), memset(R, 0, sizeof R), memset(RV, 0, sizeof RV), memset(DL, 0, sizeof DL);
     rng_state = 0x1234567u;
-    drum_on(note, 110);
+    drum_on(TDRUM, note, 110);
     for (i = 0; i < n; i += CTL)
         drums_render(L + i, R + i, RV + i, DL + i, CTL);
     for (i = 1; i < hit_win; i++)                        /* (half a second: past the kicks' pitch drop) */
@@ -148,11 +148,11 @@ int main(void)
         for (i = 0; i < NDRUM; i++)
             drums.v[i].active = 0;
         TDRUM->p[P_E0] = (int16_t)(DRUM_SYN + 2u);
-        drum_on(38, 100);
+        drum_on(TDRUM, 38, 100);
         for (i = 0; i < NDRUM; i++)
             act += drums.v[i].active && drums.synth[i] && drums.ds[i].d == &dsu.k[2].s[1] && drums.kit[i] == DRUM_SYN + 2u;
         TDRUM->p[P_E0] = (int16_t)(DRUM_SAMPLED + 5u);
-        drum_on(38, 100);
+        drum_on(TDRUM, 38, 100);
         for (i = 0; i < NDRUM; i++)
             act += drums.v[i].active && drums.synth[i] && drums.ds[i].d == &DS_KITS[5].s[1];
         check(act == 2u, "KIT = SYN3 plays its own sounds (RAM); the factory kits theirs");
@@ -225,7 +225,7 @@ int main(void)
             }
             dsu.k[t & 3u].crush = (uint8_t)(rng_s >> 40);
             TDRUM->p[P_E0] = (int16_t)(DRUM_SYN + (t & 3u));
-            drum_on(DS_LANE_NOTE[t % DS_LANES], 30u + t % 98u);
+            drum_on(TDRUM, DS_LANE_NOTE[t % DS_LANES], 30u + t % 98u);
             for (blk = 0; blk < 6u; blk++) {
                 mix_block(b, CTL);
                 for (i = 0; i < CTL * 2u; i++) {
@@ -269,12 +269,12 @@ int main(void)
             hit_win = k == 1u ? 3528u : 22050u;
             memset(drum_tune, 0, sizeof drum_tune); memset(drum_dec, 0, sizeof drum_dec);
             hit_render(36, &z0, &t0);                   /* the kick */
-            drum_tune[lane_of_note(36)] = 7; hit_render(36, &zu, 0);
-            drum_tune[lane_of_note(36)] = -8; hit_render(36, &zd, 0);
-            drum_tune[lane_of_note(36)] = 0;
-            drum_dec[lane_of_note(36)] = -4; hit_render(36, 0, &ts);
-            drum_dec[lane_of_note(36)] = 3; hit_render(36, 0, &tl);
-            drum_dec[lane_of_note(36)] = 0;
+            drum_tune[TRK_DRUM][lane_of_note(36)] = 7; hit_render(36, &zu, 0);
+            drum_tune[TRK_DRUM][lane_of_note(36)] = -8; hit_render(36, &zd, 0);
+            drum_tune[TRK_DRUM][lane_of_note(36)] = 0;
+            drum_dec[TRK_DRUM][lane_of_note(36)] = -4; hit_render(36, 0, &ts);
+            drum_dec[TRK_DRUM][lane_of_note(36)] = 3; hit_render(36, 0, &tl);
+            drum_dec[TRK_DRUM][lane_of_note(36)] = 0;
             printf("  %-8s kick: crossings %.0f / +7 %.0f / -8 %.0f; tail %.4f / DECAY -4 %.4f / +3 %.4f\n", KN[k], z0, zu, zd, t0, ts, tl);
             check(zu > z0 * 1.2 && zd < z0 * 0.85 && ts < t0 * 0.5 && (k == 1u ? tl >= t0 * 0.99 : tl > t0 * 1.3),
                   k == 1u ? "SOUND page, a sampled kit: TUNE up / down, DECAY -4 fades it (+3: as the sample is)"
@@ -282,9 +282,9 @@ int main(void)
             memset(drum_tune, 0, sizeof drum_tune);
             {   /* another sound's settings leave this one as it is */
                 double z1, t1;
-                drum_tune[lane_of_note(38)] = 7; drum_dec[lane_of_note(38)] = -4;
+                drum_tune[TRK_DRUM][lane_of_note(38)] = 7; drum_dec[TRK_DRUM][lane_of_note(38)] = -4;
                 hit_render(36, &z1, &t1);
-                drum_tune[lane_of_note(38)] = 0; drum_dec[lane_of_note(38)] = 0;
+                drum_tune[TRK_DRUM][lane_of_note(38)] = 0; drum_dec[TRK_DRUM][lane_of_note(38)] = 0;
                 check(z1 == z0 && t1 == t0, "SOUND page: the snare's TUNE and DECAY leave the kick as it is");
             }
         }
@@ -297,9 +297,9 @@ int main(void)
             hit_win = 2205u;                            /* 0.1 s: the hat's burst */
             memset(drum_tune, 0, sizeof drum_tune); memset(drum_dec, 0, sizeof drum_dec);
             hit_render(42, &z0, 0);
-            drum_tune[lane_of_note(42)] = 7; hit_render(42, &zu, 0);
-            drum_tune[lane_of_note(42)] = -8; hit_render(42, &zd, 0);
-            drum_tune[lane_of_note(42)] = 0;
+            drum_tune[TRK_DRUM][lane_of_note(42)] = 7; hit_render(42, &zu, 0);
+            drum_tune[TRK_DRUM][lane_of_note(42)] = -8; hit_render(42, &zd, 0);
+            drum_tune[TRK_DRUM][lane_of_note(42)] = 0;
             hit_win = 22050u;
             printf("  808 closed hat: crossings %.0f / TUNE +7 %.0f / -8 %.0f\n", z0, zu, zd);
             check(zu > z0 * 1.03 && zd < z0 * 0.97, "SOUND page (2.7.2): TUNE shifts a noise sound's brightness (the 808 hat)");

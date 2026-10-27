@@ -70,7 +70,7 @@ static void fm6_bank_boot(void) { fm6_bank_scan(); }   /* persist_boot */
 static void fm6_bank_changed(void)
 {
     uint32_t t;
-    for (t = 0; t < NPART; t++)
+    for (t = 0; t < NTRK; t++)
         if (fm6_slot[t] >= FM6_NFACTORY && fm6_slot[t] != 0xFFu)
             fm6_slot[t] = 0xFFu;
 }

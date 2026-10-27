@@ -148,13 +148,13 @@ UI_SMALL static uint32_t keys_lit(void)
         break;
     }
     if (kb_grid) {                                 /* the DRUMS grid page: the sound's steps of this page */
-        uint32_t len = trk_len(TDRUM), b0 = drum_cursor / 16u * 16u;
+        uint32_t len = trk_len(DFOC), b0 = drum_cursor / 16u * 16u;
         for (i = 0; i < 16u; i++) {
             uint32_t idx = b0 + i, on;
             if (idx >= len)
                 continue;
-            on = dstep_has(&TDRUM->dstep[idx], drum_lane);
-            if (song.playing && idx == TDRUM->seq_idx)
+            on = dstep_has(&DFOC->dstep[idx], drum_lane);
+            if (song.playing && idx == DFOC->seq_idx)
                 on = !on || blink;
             if (on)
                 m |= 1u << key_of_white(i);
@@ -468,23 +468,23 @@ UI_SMALL static void project_new(void)
         track_t *t = &trk[i];
         undo_mark(t, (undo_sess += 4u) | 3u);
         fm1_irq_off();
-        if (i < NPART)
+        if (!is_drum(t))
             sound_change(t);                            /* (2.6: what sounds fades out with its own sound) */
-        track_defaults(t);
-        if (i < NPART) {
-            set_engine_of(t, TRK_DEF[i][0]);
-            apply_preset_to(t, TRK_DEF[i][1]);
+        if (t->kind != trk_def_kind(i)) {               /* (eight tracks: back to its kind; its voices end now) */
+            uint32_t j;
+            for (j = 0; j < NVOICE; j++)
+                t->v[j].active = t->v[j].gate = t->v[j].stage = 0;
+            t->xf_on = t->xf = t->pold = 0;
+            eng_arena_drop(t);
         }
         fm1_irq_on();
+        track_power_on(i);
+        memset(drum_tune[i], 0, sizeof drum_tune[i]);   /* (2.7) every drum sound as the kit has it */
+        memset(drum_dec[i], 0, sizeof drum_dec[i]);
+        drum_mute[i] = 0;                               /* (2.6: the live mutes) */
     }
-    TDRUM->p[P_E0] = DRUM_DEFAULT_KIT;
-    memset(drum_tune, 0, sizeof drum_tune);             /* (2.7) every drum sound as the kit has it */
-    memset(drum_dec, 0, sizeof drum_dec);
-    drum_mute = 0;                                      /* (2.6: the live mutes) */
     for (i = 0; i < G_COUNT; i++)
-        if (i != G_SLOT && i != G_DRCH && i != G_SYNC && i != G_MIDI && i != G_ROUTE && (i < G_CH1 || i > G_CHOTH) &&
-            i != G_BEND && i != G_FXCH && i != G_DRMAP && i != G_RMCH && i != G_CLKOUT && i != G_FXFADE)                                                                     /* (the
-                                                                 * FM-1's settings: GLO > MIDI 2.6) */
+        if (!g_setting(i))                              /* (the FM-1's settings: GLO > MIDI 2.6) */
             song.g[i] = GP[i].def;
     song.solo = 0;
     song.octave = 0;
@@ -1268,7 +1268,7 @@ UI_SMALL static void ui_input(void)
          * being edited. Every detent counts */
         uint32_t total, cur = preset_pos(&total);
         if (is_drum(TSEL))
-            TDRUM->p[P_E0] = (int16_t)clamp(TDRUM->p[P_E0] + s, 0, DRUM_KITS - 1);
+            DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
         else if (total)
             preset_go((uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total));
     }

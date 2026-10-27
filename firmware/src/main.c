@@ -163,7 +163,7 @@ UI_SMALL static void fm1_fault(const fm1_crash_t *c)
     fm1_reboot();
 }
 
-/* power-on: three parts with their default sounds (TRK_DEF), the drum track, empty patterns */
+/* power-on: the tracks with their default sounds and kits (ui.c TRK_DEF), empty patterns */
 UI_SMALL static void felucca_init(void)
 {
     uint32_t i;
@@ -171,16 +171,9 @@ UI_SMALL static void felucca_init(void)
         song.g[i] = GP[i].def;
     fm6_init();                               /* every part's FM6 patch: the init voice */
     for (i = 0; i < NTRK; i++) {
-        track_t *t = &trk[i];
-        track_defaults(t);
-        if (i < NPART) {
-            set_engine_of(t, TRK_DEF[i][0]);
-            apply_preset_to(t, TRK_DEF[i][1]);   /* with its sends */
-            t->engine = t->eng_req;
-        }
-        track_defaults_steps(t);              /* the sequencers start empty */
+        track_power_on(i);
+        trk[i].engine = trk[i].eng_req;       /* (nothing sounds yet: no fade) */
     }
-    TDRUM->p[P_E0] = DRUM_DEFAULT_KIT;        /* the 808 kit */
     song.sel = 0;
     song.master_q12 = 2048;
     autosave_resume();                        /* the project as it was left (project.c) */
@@ -193,6 +186,8 @@ UI_SMALL static void felucca_init(void)
     song.g[G_DRMAP] = midi_set[7];                   /* (2.7) GLO > MIDI 3: DR MAP */
     song.g[G_CLKOUT] = midi_set[9];                  /* (2.7) GLO > MIDI 3: CLK OUT */
     song.g[G_RMCH] = midi_set[8];                    /* (2.7) GLO > MIDI 3: REMOTE */
+    song.g[G_CH5] = midi_set[10], song.g[G_CH6] = midi_set[11];   /* (eight tracks) GLO > MIDI 4 */
+    song.g[G_CH7] = midi_set[12], song.g[G_CH8] = midi_set[13];
     song.g[G_FXFADE] = fxfade;                        /* (2.7.2) GLO > MASTER 2: the punch-in FX fade */                    /* (2.7) GLO > MIDI 3: FX CH */   /* settings of the FM-1) */
     layers_init();                            /* the panel's layer buttons for the keys (ui_layers.c) */
     go_home();

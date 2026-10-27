@@ -198,11 +198,11 @@ static void scene_block(uint32_t s, uint32_t b)          /* what the UI would do
         if (b == 800u)
             TDRUM->p[P_TFLT] = 0;                        /* the drums' INSERT without the FILTER */
         if (b == 1000u)
-            drum_mute = 0x5;                             /* lanes 0 and 2 muted live (EDIT + a black key) */
+            drum_mute[TRK_DRUM] = 0x5;                             /* lanes 0 and 2 muted live (EDIT + a black key) */
         if (b == 1100u)
             trk[0].bend = 5000;
         if (b == 1200u)
-            drum_mute = 0;
+            drum_mute[TRK_DRUM] = 0;
     }
 }
 

@@ -220,12 +220,10 @@ static void vis_update(void)
     }
     /* the tracks' peaks since the last look (as the TRACKS meters take them) and the notes that started */
     fm1_irq_off();
-    for (i = 0; i < NPART; i++) {
-        pk[i] = trk[i].peak;
-        trk[i].peak = 0;
+    for (i = 0; i < 4u; i++) {                      /* (eight tracks: two in each of the four colours, 1 + 5 .. 4 + 8) */
+        pk[i] = trk[i].peak > trk[i + 4u].peak ? trk[i].peak : trk[i + 4u].peak;
+        trk[i].peak = trk[i + 4u].peak = 0;
     }
-    pk[3] = drums.peak;
-    drums.peak = 0;
     hit = vis_hit;
     vis_hit = 0;
     if (vis_kick_hit) {
@@ -234,11 +232,11 @@ static void vis_update(void)
     }
     fm1_irq_on();
     for (i = 0; i < 4u; i++) {
-        int32_t v = trk_level(i) && !trk[i].p[P_MUTE] ? vis_lvl(pk[i]) : 0;   /* (as the TRACKS meters) */
-        vs.lvl[i] = (int16_t)v;
-        if ((hit >> i) & 1u) {
+        int32_t v = (trk_level(i) && !trk[i].p[P_MUTE]) || (trk_level(i + 4u) && !trk[i + 4u].p[P_MUTE]) ? vis_lvl(pk[i]) : 0;
+        vs.lvl[i] = (int16_t)v;                     /* (as the TRACKS meters) */
+        if (((hit | hit >> 4) >> i) & 1u) {
             vs.flash[i] = 8;
-            vs.wn[i] = (uint8_t)(2u + vis_note[i] % 12u / 2u);
+            vs.wn[i] = (uint8_t)(2u + vis_note[(hit >> i) & 1u ? i : i + 4u] % 12u / 2u);
             if (vs.wamp[i] < 1000) vs.wamp[i] = 1000;
             if (vs.bh[i] < 8 * 256)                 /* BOUNCE: a kick, unless already high up */
                 vs.bv[i] = (int16_t)(3 * 256 + 51 * (int32_t)i);
