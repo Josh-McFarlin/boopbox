@@ -92,10 +92,11 @@ run "live UI: pages, layers (punch, steps, erase, roll, key, mix), holds, drums,
 UBSAN="${CC_UB:-cc} -O1 -w -fsanitize=integer-divide-by-zero -fno-sanitize-recover=integer-divide-by-zero -Ibuild/gen -Ifirmware/src -Ifirmware/hal"
 $UBSAN -o "$OUT/ui_pages_ub" tests/ui_pages_test.c -lm && $UBSAN -o "$OUT/seq2_ub" tests/seq2_test.c -lm &&
     $UBSAN -o "$OUT/project_ub" tests/project_test.c -lm && $UBSAN -o "$OUT/soak_ub" tests/soak_test.c -lm &&
-    $UBSAN -o "$OUT/comp_ub" tests/comp_test.c -lm && $UBSAN -o "$OUT/lock_ub" tests/lock_test.c -lm || fail=1
+    $UBSAN -o "$OUT/comp_ub" tests/comp_test.c -lm && $UBSAN -o "$OUT/lock_ub" tests/lock_test.c -lm &&
+    $UBSAN -o "$OUT/pat_ub" tests/pat_test.c -lm || fail=1
 mkdir -p "$OUT/ub"
-run "no divide by zero (UBSan): UI fuzz, sequencer, projects, step components, locks, a minute of live use" \
-    sh -c "'$OUT/ui_pages_ub' '$OUT/ub' >/dev/null && '$OUT/seq2_ub' >/dev/null && '$OUT/project_ub' >/dev/null && '$OUT/comp_ub' >/dev/null && '$OUT/lock_ub' >/dev/null && '$OUT/soak_ub' 1 >/dev/null && echo 'no divide by zero'"
+run "no divide by zero (UBSan): UI fuzz, sequencer, projects, step components, locks, patterns, a minute of live use" \
+    sh -c "'$OUT/ui_pages_ub' '$OUT/ub' >/dev/null && '$OUT/seq2_ub' >/dev/null && '$OUT/project_ub' >/dev/null && '$OUT/comp_ub' >/dev/null && '$OUT/lock_ub' >/dev/null && '$OUT/pat_ub' >/dev/null && '$OUT/soak_ub' 1 >/dev/null && echo 'no divide by zero'"
 
 # the second core's host double (tests/cpu1_host.c, firmware/src/cpu1.h): inline, a thread, a slow thread, a lost
 # job; and the thread under ThreadSanitizer (the render's shared state shows up here once it uses core 1)
@@ -174,6 +175,8 @@ $CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/comp_test" tests/c
 run "step components: each type, directions, seeds, drums, other lengths beside, nothing hanging, stores, damage" "$OUT/comp_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/lock_test" tests/lock_test.c -lm
 run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" "$OUT/lock_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/pat_test" tests/pat_test.c -lm
+run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" "$OUT/pat_test"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/project_test" tests/project_test.c -lm
 run "project formats: FUN7 (eight tracks) round trips, damage, too big refused whole, FUN6 fallback; FUN1..FUN6 converted" "$OUT/project_test"
 $CC -O1 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -o "$OUT/arena_test" tests/arena_test.c -lm

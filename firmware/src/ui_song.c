@@ -24,7 +24,8 @@ UI_SMALL static void song_screen_draw(void)
     const uint16_t *SC = UI_COL;                    /* the tracks' colours (2.7.2: your theme's, when it is on) */
     uint32_t sig = song_cursor + 17u * arrangement_enabled + 37u * song.playing +
                    71u * arrangement_clock.index + 127u * arrangement_clock.bar +
-                   257u * arrangement.count + 509u * song.g[G_BPM];
+                   257u * arrangement.count + 509u * song.g[G_BPM] + 1021u * arrangement.loop +
+                   2053u * arr_loop_first(&arrangement) + 4099u * arr_loop_end(&arrangement);
     char b[30];
     for (i = 0; i < arrangement.count; i++)
         sig = sig * 31u + arrangement.entry[i].scene + 7u * arrangement.entry[i].bars;
@@ -35,6 +36,13 @@ UI_SMALL static void song_screen_draw(void)
     cv_begin(240, 40, C_BLACK);
     cv_text(4, 4, &FONT_L, "SONG", C_WHITE);
     cv_text(76, 20, &FONT_S, arrangement_enabled ? "song mode" : "loop mode", arrangement_enabled ? SC[3] : UI_G3);
+    if (arrangement.loop) {                         /* (groovebox) the song's loop region: entries a..b */
+        str_cpy(b, "loop ", 6);
+        fmt_int(b + str_len(b), (int32_t)arr_loop_first(&arrangement) + 1);
+        str_cpy(b + str_len(b), "-", 2);
+        fmt_int(b + str_len(b), (int32_t)arr_loop_end(&arrangement));
+        cv_text(76, 4, &FONT_S, b, SC[2]);
+    }
     fmt_int(b, song.g[G_BPM]);
     cv_text(236 - text_w(&FONT_S, b) - 28, 4, &FONT_S, b, C_WHITE);
     cv_text(236 - 24, 4, &FONT_S, "bpm", UI_G3);
@@ -65,6 +73,11 @@ UI_SMALL static void song_screen_draw(void)
                 cv_rect(226, 9, 9, 9, SC[1]);
             }
             if (selected) cv_rect(0, 1, 240, 1, UI_G2), cv_rect(0, 24, 240, 1, UI_G2);
+            if (arrangement.loop && pos >= arr_loop_first(&arrangement) && pos < arr_loop_end(&arrangement))
+                cv_rect(24, pos == arr_loop_first(&arrangement) ? 3 : 0, 3,
+                        pos + 1u == arr_loop_end(&arrangement) ? 23 - (pos == arr_loop_first(&arrangement) ? 3 : 0) :
+                                                                  26 - (pos == arr_loop_first(&arrangement) ? 3 : 0),
+                        SC[2]);                         /* (the loop region: a bar beside its entries) */
         }
         cv_blit(0, 42 + 26u * i);
     }
@@ -149,6 +162,30 @@ UI_SMALL static void song_screen_input(uint32_t pressed, uint32_t home)
             if (song_cursor >= arrangement.count) song_cursor = arrangement.count - 1;
         }
     }
+    /* (groovebox) the loop: PRESETS right: the song loops, the region ending on the entry under the cursor; left: no
+     * loop (the song ends). ALGORITHM: the region starts on the cursor's entry. Also while playing (the song reads them
+     * at the next entry); kept with the song (arranger.h reserved[]) */
+    if ((steps = panel_enc(EN_PRESET)) != 0) {
+        fm1_irq_off();
+        if (steps > 0) {
+            arrangement.loop = 1;
+            arrangement.reserved[1] = (uint8_t)(song_cursor + 1u);
+            if (arrangement.reserved[0] > song_cursor)
+                arrangement.reserved[0] = song_cursor;
+        } else {
+            arrangement.loop = 0;
+        }
+        fm1_irq_on();
+        ui_message(arrangement.loop ? "LOOP ON" : "LOOP OFF: THE SONG ENDS");
+    }
+    if ((steps = panel_enc(EN_ALGO)) != 0) {
+        fm1_irq_off();
+        arrangement.reserved[0] = song_cursor;
+        if (!arrangement.reserved[1] || arrangement.reserved[1] <= song_cursor)
+            arrangement.reserved[1] = (uint8_t)(song_cursor + 1u);
+        fm1_irq_on();
+        ui_message("LOOP STARTS HERE");
+    }
     /* Unused encoders have no hidden action on this screen. */
-    panel_enc(EN_SELECT); panel_enc(EN_ALGO); panel_enc(EN_PRESET);
+    panel_enc(EN_SELECT);
 }

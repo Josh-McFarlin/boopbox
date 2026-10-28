@@ -103,7 +103,7 @@ New modules (all host-testable, no allocation, bounded loops):
 | --- | --- |
 | `comp.c` | step components: per-step rules, evaluated (`comp_eval`) apart from the scheduling (`seq.c seq_fire`) |
 | `harmony.c` | the harmony track: key, scale, chord progression, per-track opt-in, applied to scheduled notes |
-| `patbank.c` | the compact pattern bank and quantized pattern changes |
+| `patbank.c`, `patcodec.c` | the pattern bank, quantized pattern changes and chains; the pattern codec (moved out of `project.c`) |
 | `perf.c` | the performance layer over the punch-in effects (momentary / latched, quantized) |
 
 ## 5. Progress log
@@ -184,3 +184,30 @@ New modules (all host-testable, no allocation, bounded loops):
     73,948 B.
   - Flash risk: code has grown ~21 KB (proxy) since the baseline, whose image already filled the app slot. A target
     build is needed to know the real figure; `tools/build.py` must shed something (see Milestone H).
+- Milestone E (patterns and arrangement):
+  - `NPAT` (8) patterns a track. The one playing stays decoded in `track_t` (with its LEN); the others are encoded
+    with the format 7 pattern codec (`patcodec.c`, moved out of `project.c` so the audio ISR can use it) in one
+    3,072-byte RAM bank (`patbank.c pb_buf`): `[track << 4 | pattern][size][LEN][bytes]`, empty patterns not stored.
+    3 KB is about what a project object can keep beside eight tracks' sounds and playing patterns.
+  - Changes: `t->pat_req` (UI) is seen once a block (`pat_block`) and made in `seq_tick` on the step it falls on
+    (`pat_due`: G_PATQ LOOP = the track's own loop start, or the first step at or after the next 1/2/4-bar line,
+    computed per track from its DIV, so tracks asked together change on the same block). The change
+    (`pat_swap`) restores the locks, encodes the pattern playing, releases its notes, decodes the new one and resets
+    the components; the new pattern starts at step 1 because each track now keeps the grid step its pattern started
+    on (`seq_org`; every `abs % len` became `(abs - seq_org) % len`, so tracks without a change play exactly as
+    before). A pattern that does not fit refuses the change (`pb_full`, said by the UI); nothing is lost.
+  - Chains (`pat_chain`, 2..8 patterns, one loop each); an asked change goes first and the chain goes on from it.
+  - Cost (host): one change of a 32-step chord pattern 1.5 us, eight at once 12 us (`tests/pat_test.c`).
+  - Storage: format 7 keeps each track's pattern playing and chain at the end of its 'T' chunk and every bank entry as
+    a 'P' chunk (applied after a reset of the bank; a damaged entry, an unknown track or pattern, is dropped).
+    Sections (song mode) are format 7 captures, so they carry their patterns. Format 6 is refused when any track has
+    more than one pattern, a chain, or plays a pattern other than 1.
+  - The song's loop region: the arranger's two reserved bytes (`arranger.h arr_loop_first / arr_loop_end`), set on
+    the SONG screen (PRESETS / ALGORITHM), read at each entry boundary.
+  - The PATTERNS screen (`ui_pats.c`, scope `SC_PATS`, a screen of its own between PLAY and SONG).
+  - The firmware's libc has no `memmove`: the bank closes up with a byte loop (the proxy build caught it; the host
+    tests link the system libc).
+  - Tests: `tests/pat_test.c`; UI cases in `tests/ui_pages_test.c` and `tests/song_ui_test.c`; the soak test asks
+    for pattern changes and chains at random. The soak's end check now shortens REL before waiting: a random preset's
+    release (REL 110, ~10 s) outlasted the 5 s wait (the voices were released, not held).
+  - Proxy sizes against Milestone D: code 287,994 -> 294,398 B (+6.4 KB), RAM 73,948 -> 77,268 B (+3.3 KB: the bank).

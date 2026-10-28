@@ -431,7 +431,7 @@ UI_SMALL static uint32_t str_hash(uint32_t h, const char *s)
 /* a page drawn with its values large (graph_big) */
 UI_SMALL static int big_page(const page_t *pg)            /* (2.6: the INSERT pages too: their middle stayed empty) */
 {
-    return (pg->graph == GR_NONE || pg->graph == GR_INS) && pg->scope != SC_SONG && pg->scope != SC_DRUM;
+    return (pg->graph == GR_NONE || pg->graph == GR_INS) && pg->scope != SC_SONG && pg->scope != SC_DRUM && pg->scope != SC_PATS;
 }
 UI_SMALL static uint32_t graph_signature(void)
 {
@@ -839,7 +839,7 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
     *n = 0;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && (i == ui.page || (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG &&
-                                                         PAGES[i].scope != SC_DRUM))) {
+                                                         PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_PATS))) {
             (*n)++;
             if (i == ui.page)
                 k = *n;
@@ -1120,6 +1120,12 @@ UI_SMALL static void ui_draw(void)
         return;
     }
 #endif
+    if (!ui.menu && on_pats_page()) {
+        pats_screen_draw();
+        ui_timers();
+        ui.force = 0;
+        return;
+    }
     if (ui.menu) {
         draw_menu();
         ui_timers();

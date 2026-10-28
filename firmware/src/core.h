@@ -108,6 +108,8 @@ enum {                          /* global parameters */
                                  * before) .. 15 (punch.c; a setting of the FM-1, kept in BEND's byte) */
     G_CH5, G_CH6, G_CH7, G_CH8, /* eight tracks, GLO > MIDI 4: the MIDI channel of tracks 5..8 (0 OFF, 1..16; in and out; track 4's
                                  * is G_DRCH, "CH4"). Settings of the FM-1, as CH1..CH3 (panel.c midi_set) */
+    G_PATQ,                     /* patterns (patbank.c): when a pattern change asked for happens: LOOP (the track's own loop end),
+                                 * 1, 2 or 4 BARS. The project's */
     G_COUNT
 };
 
@@ -262,6 +264,7 @@ enum {
 #define COMP_FREE 0xFFu          /* comp_t.step of a free slot (its type CP_NONE says it is free) */
 typedef struct { uint8_t step, type; int8_t a, b; } comp_t;
 enum { DIR_FWD, DIR_REV, DIR_PEND, DIR_RAND, DIR_COUNT };   /* a track's play direction (track_t.cp_dir) */
+#define NPAT 8                   /* patterns a track (patbank.c): the one playing in track_t, the others in the bank */
 
 typedef struct track {
     int16_t p[P_COUNT];
@@ -302,6 +305,15 @@ typedef struct track {
     comp_t comp[NCOMP];          /* step components (comp.c), unsorted (type CP_NONE: a free slot) */
     int16_t cp_dir;              /* the play direction, DIR_* (comp.c comp_next; SEQ > PLAY, params.c PS_DIR) */
     int16_t cp_seed;             /* the components' random seed 0..255: every PLAY draws the same numbers (PS_SEED) */
+    /* patterns (patbank.c): the one playing; a change asked for; a chain */
+    uint8_t pat;                 /* the pattern playing, 0..NPAT-1 (its steps are the ones above) */
+    volatile uint8_t pat_req;    /* a change asked for (the UI): pattern + 1, 0 = none (the ISR makes it, clears it) */
+    uint8_t pat_arm;             /* (the ISR) that request seen: pat_at its grid step (SEQ_NONE: the track's loop end) */
+    uint8_t pat_nchain, pat_ci;  /* a chain: its patterns (pat_chain, 2 or more; 0 = none), the one playing in it */
+    uint8_t pat_chain[NPAT];
+    uint32_t pat_at;
+    uint32_t seq_org;            /* the grid step the pattern started on (its step 1): the step of grid step abs is
+                                  * (abs - seq_org) % LEN (seq.c trk_step_of) */
     /* the locks in force (seq.c lock_step): the params overridden now, what they were, what the lock set */
     uint8_t lk_n;
     uint8_t lk_param[NLOCK];

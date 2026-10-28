@@ -81,6 +81,7 @@ static void up_ui(uint32_t op, uint32_t k) { (void)op; (void)k; }
 static void settings_save(void) {}
 #include "../firmware/src/ui_song.c"
 #include "../firmware/src/ui_studio.c"
+#include "../firmware/src/ui_pats.c"
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_draw.c"
 #include "../firmware/src/ui_vis.c"
@@ -897,6 +898,8 @@ int main(int argc, char **argv)
             open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
             ok &= !strcmp(PAGES[ui.page].title, "PLAY");
             ok &= page_pos(&n) == 3u && n == 3u;
+            open_family(FAM_SEQ); frame();            /* SEQ again: PATTERNS (a screen of its own) */
+            ok &= PAGES[ui.page].scope == SC_PATS;
             open_family(FAM_SEQ); frame();            /* SEQ again: the SONG screen (its own) */
             if (PAGES[ui.page].scope == SC_SONG)
                 k3 = page_pos(&n3);
@@ -906,7 +909,8 @@ int main(int argc, char **argv)
             (void)page_pos(&n);                       /* GLO: its ten pages (eight tracks: MIDI 4) */
             go_home(); frame();
             ui.menu = (uint8_t)menu0, ui.menu_sel = (uint8_t)sel0, ui.force = 1; frame();
-            ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;
+            ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;   /* (SONG: 4/4,
+                                                       * the screen shown counts; PATTERNS, its own, not) */
             if (!ok)
                 printf("ui:   counter: STEP %u/%u PATTERN %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
             check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, PATTERN 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
@@ -2212,6 +2216,58 @@ int main(int argc, char **argv)
         ok = t->cp_dir == DIR_RAND && t->cp_seed == 255;
         t->cp_dir = DIR_FWD; t->cp_seed = 0; comp_clear(t);
         check(ok, "SEQ > PLAY: DIR and SEED stop at their ends");
+        go_home(); frame();
+    }
+    {   /* PATTERNS (SEQ, its own screen): ask a pattern on a track, on every track; PAT Q; a chain; copy; clear */
+        track_t *t = &trk[0];
+        uint32_t j, ok;
+        transport_req = 2; frames(2);
+        song.sel = 0; go_home(); frame();
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+        for (j = 0; j < NSTEP; j++) step_clear(&t->step[j]);
+        t->p[P_SLEN] = 8;
+        t->step[0].n = 1; t->step[0].note[0] = 48; t->step[0].time = ST_NOTE;
+        open_family(FAM_SEQ); frame();
+        while (PAGES[ui.page].scope != SC_PATS) { open_family(FAM_SEQ); frame(); }
+        ok = on_pats_page();
+        encs[panel.enc[EN_K1]] = 2; frame();            /* the cursor: pattern 3 */
+        tap(B_OCTUP); frames(2);                         /* stopped: at once */
+        ok &= t->pat == 2u && pat_empty(t) && (pb_used(0) & 1u) && !strcmp(ui.msg, "PATTERN");
+        t->step[1].n = 1; t->step[1].note[0] = 50; t->step[1].time = ST_NOTE;
+        encs[panel.enc[EN_K1]] = -2; frame();
+        tap(B_OCTDN); frames(2);                         /* every track: pattern 1 */
+        ok &= t->pat == 0u && t->step[0].note[0] == 48u && trk[5].pat == 0u && (pb_used(0) & 4u);
+        check(ok, "PATTERNS: OCT+ the cursor's pattern on the track (stopped: at once), OCT- on every track");
+        encs[panel.enc[EN_K2]] = 1; frame();
+        ok = song.g[G_PATQ] == PQ_BAR;
+        encs[panel.enc[EN_K3]] = 3; frame();             /* a chain of 3 from the cursor: 1 2 3 */
+        ok &= t->pat_nchain == 3u && t->pat_chain[0] == 0u && t->pat_chain[2] == 2u;
+        encs[panel.enc[EN_K3]] = -9; frame();
+        ok &= t->pat_nchain == 0u;
+        check(ok, "PATTERNS: KNOB 2 PAT Q (1 BAR), KNOB 3 a chain (3 from the cursor), back to OFF");
+        encs[panel.enc[EN_K1]] = 4; frame();             /* the cursor: pattern 5 */
+        encs[panel.enc[EN_K4]] = 1; frame();
+        encs[panel.enc[EN_K4]] = 1; frame();             /* COPY: pattern 1 into 5 */
+        ok = (pb_used(0) & 16u) && !strcmp(ui.msg, "PATTERN COPIED");
+        ui.force = 1; frame(); ppm("patterns");
+        encs[panel.enc[EN_K4]] = -1; frame();
+        encs[panel.enc[EN_K4]] = -1; frame();            /* CLEAR pattern 5 */
+        ok &= !(pb_used(0) & 16u) && !strcmp(ui.msg, "PATTERN CLEARED");
+        check(ok, "PATTERNS: KNOB 4 right twice COPY the pattern playing into the cursor's, left twice CLEAR it");
+        song.g[G_PATQ] = PQ_LOOP;
+        transport_req = 1; frames(2);
+        encs[panel.enc[EN_K1]] = -2; frame();            /* pattern 3 */
+        tap(B_OCTUP); frames(1);
+        ok = t->pat_req == 3u && t->pat == 0u;
+        ui.force = 1; frame(); ppm("patterns-asked");
+        for (j = 0; j < 400u && t->pat != 2u; j++)       /* (8 steps: the loop ends) */
+            frame();
+        ok &= t->pat == 2u && !t->pat_req && t->step[1].note[0] == 50u && j > 2u;
+        transport_req = 2; frames(2);
+        check(ok, "PATTERNS playing: asked (it waits for the loop's end), then pattern 3 plays");
+        tap(B_ENV); frame();
+        check(!on_pats_page() && PAGES[ui.page].fam == FAM_ENV && !ui.home, "PATTERNS: ENV opens its pages (the one last used)");
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
         go_home(); frame();
     }
     {   /* fuzz: 20000 frames of random buttons (held or tapped), knobs and keys, with the audio running

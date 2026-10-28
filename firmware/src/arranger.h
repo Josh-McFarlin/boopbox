@@ -48,6 +48,16 @@ static int arr_begin(arr_clock_t *r, const arr_config_t *c, uint32_t ready)
     r->running = 1;
     return c->entry[0].scene;
 }
+/* (groovebox) a loop region: reserved[0] its first entry, reserved[1] its last + 1 (0: none, the whole song). With
+ * loop on, the song goes back to the region's first entry after its last (an older SLOOP leaves the bytes alone) */
+static uint32_t arr_loop_first(const arr_config_t *c)
+{
+    return c->reserved[1] && c->reserved[0] < c->reserved[1] && c->reserved[1] <= c->count ? c->reserved[0] : 0u;
+}
+static uint32_t arr_loop_end(const arr_config_t *c)
+{
+    return c->reserved[1] && c->reserved[0] < c->reserved[1] && c->reserved[1] <= c->count ? c->reserved[1] : c->count;
+}
 static int arr_next(arr_clock_t *r, const arr_config_t *c, uint32_t sample_rate)
 {
     int result = ARR_NONE;
@@ -57,9 +67,9 @@ static int arr_next(arr_clock_t *r, const arr_config_t *c, uint32_t sample_rate)
         r->phase -= period;
         if (++r->bar < c->entry[r->index].bars) continue;
         r->bar = 0;
-        if (++r->index >= c->count) {
+        if (++r->index >= (c->loop ? arr_loop_end(c) : c->count)) {
             if (!c->loop) { r->running = 0; return ARR_DONE; }
-            r->index = 0;
+            r->index = (uint8_t)arr_loop_first(c);
         }
         result = c->entry[r->index].scene;
     }
