@@ -281,7 +281,7 @@ UI_SMALL static void steps_held_clear(void)
     }
     fm1_irq_on();
     sync_reload = 1;
-    ui_message(n ? "STEP EXTRAS CLEARED" : "NO NUDGE, LOCK, FILL, COMP");
+    ui_message(n ? "STEP EXTRAS CLEARED" : "NO STEP EXTRAS");
 }
 /* OCT+ with step keys held: their fill condition, round: normal -> fill only -> no fill (the first one's next) */
 UI_SMALL static void steps_held_fill(void)

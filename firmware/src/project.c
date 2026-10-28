@@ -43,7 +43,7 @@
 _Static_assert(G_DRDLY == PROJ_NG && G_TXSRC == PROJ_NG + 5u,
                "the globals a project holds, then G_DRDLY (then 2.6's GLO > MIDI: settings of the FM-1)");
 _Static_assert(G_FXFADE == G_CLKOUT + 1u && G_CH5 == G_FXFADE + 1u && G_PATQ == G_CH8 + 1u && G_HKEY == G_PATQ + 1u &&
-               G_PFXT == G_HPROG + 1u && G_COUNT == G_PFXQ + 1u,
+               G_PFXT == G_HPROG + 1u && G_KIND == G_PFXQ + 1u && G_COUNT == G_KIND + 1u,
                "G_FXFADE (2.7.2), then the eight-track CH5..CH8: settings of the FM-1, the last globals");
 #define PROJ_NC6 ((uint32_t)P_ITYPE)           /* format 6: the parameters kept in 16 bits, P_LEVEL .. P_VLEAD (as 5), */
 #define PROJ_NX6 ((uint32_t)(P_E0 - P_ITYPE))  /* the 2.6 ones in a byte (0..127), then P_E0 .. P_E7 */
@@ -1185,7 +1185,7 @@ UI_SMALL static void autosave_tick(void)                /* main loop */
     autosave_checked = now;
     if (!proj_capture(&autosave_buf)) {                 /* (it fits neither format: the project stays in RAM; said once) */
         if (!autosave_full)
-            ui_message("PROJECT FULL: NO AUTOSAVE");
+            ui_message("TOO BIG TO AUTOSAVE");
         autosave_full = 1;
         return;
     }

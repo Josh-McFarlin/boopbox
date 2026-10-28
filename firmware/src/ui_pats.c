@@ -20,7 +20,7 @@ UI_SMALL static void pats_poll(void)             /* (every frame) a change the I
 {
     if (pb_full) {
         pb_full = 0;
-        ui_message("PATTERNS FULL: NOT CHANGED");
+        ui_message("PATTERNS FULL: KEPT");
     }
 }
 UI_SMALL static void pats_screen_draw(void)
@@ -205,7 +205,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
                     ok = pb_store(sel, pats_cursor);
                     fm1_irq_on();
                 }
-                ui_message(ok ? "PATTERN COPIED" : "PATTERNS FULL: NOT COPIED");
+                ui_message(ok ? "PATTERN COPIED" : "PATTERNS FULL: NO COPY");
             }
         }
     }

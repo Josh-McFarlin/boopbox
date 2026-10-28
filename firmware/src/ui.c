@@ -955,12 +955,16 @@ UI_SMALL static void apply_preset_to(track_t *t, uint32_t pi)
 
 /* the engine's defaults and its first preset. With the audio IRQ off: the ISR sees the old engine with
  * its values or the new one with its own (voice.c engine_block), never one with the other's */
-UI_SMALL static void set_engine_of(track_t *t, uint32_t ei)
+UI_SMALL static int set_engine_of(track_t *t, uint32_t ei)   /* 0: refused (three tracks play GRAIN, DRAWBAR, FM6, PHYS) */
 {
     const engine_t *e = ENGINES[ei % NENGINES];
     uint32_t i;
     if (is_drum(t))
-        return;
+        return 0;
+    if (!eng_room(t, ei)) {
+        eng_refused = 1;                              /* (said: ui_input.c) */
+        return 0;
+    }
     fm1_irq_off();
     locks_restore(t);                                 /* (a lock in force: its base first, then the new sound) */
     sound_change(t);                                  /* (2.6: the sound as it is, before anything new is written) */
@@ -969,10 +973,11 @@ UI_SMALL static void set_engine_of(track_t *t, uint32_t ei)
         t->p[P_E0 + i] = e->edit[i].def;
     apply_preset_to(t, 0);
     fm1_irq_on();
+    return 1;
 }
 
 UI_SMALL static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
-UI_SMALL static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
+UI_SMALL static int set_engine(uint32_t ei) { return set_engine_of(TSEL, ei); }
 
 UI_SMALL static void track_defaults(track_t *t)
 {
@@ -1052,13 +1057,13 @@ UI_SMALL static void track_power_on(uint32_t i)
 }
 
 /* switch engine (its defaults + first preset) and say so */
-UI_SMALL static void select_engine(uint32_t e)
+UI_SMALL static int select_engine(uint32_t e)   /* 0: refused (no engine arena free) */
 {
-    if (is_drum(TSEL))
-        return;
-    set_engine(e);
+    if (is_drum(TSEL) || !set_engine(e))
+        return 0;
     ui_say("ENGINE ", ENGINES[TSEL->eng_req]->name);
     ui.force = 1;
+    return 1;
 }
 
 /* the factory presets as one list by kind (basses, keys, organs, pads, leads, plucks and bells, stabs,
@@ -1356,8 +1361,8 @@ UI_SMALL static void preset_go(uint32_t n)                    /* load list index
         up_load(k);
         return;
     }
-    if (e != TSEL->eng_req)
-        select_engine(e);
+    if (e != TSEL->eng_req && !select_engine(e))
+        return;                                      /* (that engine has no room now: eng_refused says so) */
     apply_preset(k);
     ui.force = 1;
 }

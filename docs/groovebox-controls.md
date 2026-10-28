@@ -14,13 +14,24 @@ so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 | **GLO > MIDI 4** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as GLO > MIDI does for tracks 1-3 and the drum channel (CH4) |
 | **GLO > DRUMS** | LVL, REV and DLY of the selected drum track; on a synth track, of the first drum track |
 
+**SAVE > TOOLS > KIND** (KNOB 3, a GO button as CLRSQ and NEW: one detent arms, *AGAIN: KIND*, a second acts) turns
+the selected track from a synth track into a drum track or back (*NOW A DRUM TRACK*, *NOW A SYNTH TRACK*). Its
+pattern is cleared (a synth step and a drum step hold different things; undo cannot bring it back), its notes end;
+it takes the default kit or sound of that track number; its PAN, MUTE, FILTER, LEN, DIV and SWING stay. It works
+while playing.
+
 The default project: tracks 1-3 and 5-7 are synth tracks, tracks 4 and 8 drum tracks. Each synth track has its own
 engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older SLOOP opens on
 tracks 1-4 as it was; tracks 5-8 start as at power-on.
 
 Limits: the eight synth tracks share **8 sounding voices**; the drum tracks share one pool of drum voices. At most
-**three tracks** play GRAIN, DRAWBAR, FM6 or PHYS at once (a fourth waits until one of them changes engine), and at
-most **four tracks** use the SLICER's STUT mode at once (more play the SLICER without STUT).
+**three tracks** play GRAIN, DRAWBAR, FM6 or PHYS at once: choosing one of them on a fourth track (an engine, a
+preset of it, a user preset) is refused and the screen says *BIG ENGINES: 3 IN USE*; the track keeps its sound. Once
+one of the three plays another engine, the fourth can take it. At most **four tracks** use the SLICER's STUT mode at
+once (more play the SLICER without STUT).
+
+Song mode (SONG screen, OCT−) puts the loop you made aside while the song plays. When that loop is too big to be
+kept (it would not fit a project), PLAY does not start the song and the screen says *LOOP TOO BIG FOR SONG*.
 
 ## Step components
 
@@ -179,7 +190,7 @@ changes are kept when another pattern plays, and come back with it. The header s
 
 The patterns that are not playing share one store of 3 KB (a typical pattern takes 30 to 150 bytes; a 64-step pattern
 of 4-note chords about 700). When the pattern playing does not fit in it, a change is refused: the screen says
-*PATTERNS FULL: NOT CHANGED* and the pattern keeps playing, whole. COPY says *PATTERNS FULL: NOT COPIED*. Clear a
+*PATTERNS FULL: KEPT* and the pattern keeps playing, whole. COPY says *PATTERNS FULL: NO COPY*. Clear a
 pattern you do not need, or shorten one.
 
 ### Saved

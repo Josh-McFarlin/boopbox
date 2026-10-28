@@ -115,6 +115,7 @@ enum {                          /* global parameters */
     G_PFXT, G_PFXL, G_PFXQ,     /* the punch-in FX as performance effects (punch.c, FX > PERF): TARGET (MASTER: the mix, as before;
                                  * SEL: the selected track; DRUMS; SYNTHS), LATCH (an effect stays when its key is let go), Q (it
                                  * starts on the next 1/16, 1/8, 1/4 or bar; OFF: at once). The project's */
+    G_KIND,                     /* SAVE > TOOLS > KIND (a GO button, ui_input.c): the selected track a SYNTH <-> DRUM track */
     G_COUNT
 };
 

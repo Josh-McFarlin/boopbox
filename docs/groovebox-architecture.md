@@ -238,3 +238,11 @@ New modules (all host-testable, no allocation, bounded loops):
     latched when an effect starts (`punch_mask`). `.lowram` +512 B.
   - Tests: `tests/perf_test.c`; a TARGET scene in `tests/mix_split_test.c` (every split, ThreadSanitizer clean).
   - Proxy sizes against Milestone F: code 299,066 -> 299,472 B (+0.4 KB), RAM 77,400 -> 77,432 B.
+- Milestone G (UI integration): every feature above has its controls on the FM-1 (`docs/groovebox-controls.md`):
+  the step sheet's COMP and LOCKS strips, SEQ > PLAY, the PATTERNS screen, the SONG loop region, SCL > HARMONY /
+  FOLLOW and the CHORDS screen, FX > PERF, MENU > SEQ > REC KNOBS, and now SAVE > TOOLS > KIND (a track synth <-> drum,
+  `ui.c track_set_kind`). A fourth big engine is refused where engines are chosen (`engines.c eng_room`, in
+  `set_engine_of` and `up_load_to`; said by the UI: `eng_refused`), instead of the track switching later with the new
+  engine's values on the old engine; song mode's refusal (`song_full`) is said too. Messages kept within the UI's
+  23 characters (`ui.msg`).
+  - Proxy sizes against the performance FX: code 299,472 -> 300,286 B, RAM 77,432 -> 77,440 B.
