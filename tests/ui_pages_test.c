@@ -2270,6 +2270,51 @@ int main(int argc, char **argv)
         fm1_irq_off(); pat_reset_all(); fm1_irq_on();
         go_home(); frame();
     }
+    {   /* SCL > HARMONY (key, scale, Q, PROG), FOLLOW, CHORDS (its own screen: the progression, live chords on the keys) */
+        track_t *t = &trk[0];
+        uint32_t ok, j;
+        transport_req = 2; frames(2);
+        song.sel = 0; go_home(); frame();
+        harm_defaults();
+        open_family(FAM_SCL); frame();
+        while (strcmp(PAGES[ui.page].title, "HARMONY")) { open_family(FAM_SCL); frame(); }
+        encs[panel.enc[EN_K1]] = 2; frame();            /* KEY D */
+        encs[panel.enc[EN_K2]] = 1; frame();            /* SCALE MIN */
+        ok = song.g[G_HKEY] == 2 && song.g[G_HSCL] == 2 && !strcmp(ui.big_v[0], "D");
+        open_family(FAM_SCL); frame();
+        ok &= !strcmp(PAGES[ui.page].title, "FOLLOW");
+        encs[panel.enc[EN_K1]] = 2; frame();            /* FOLLOW SCALE */
+        ok &= t->hfol == HF_SCALE && ui.lock_par != 0xFFu;
+        check(ok, "SCL > HARMONY: KEY D, SCALE MIN; SCL > FOLLOW: the track's, SCALE");
+        open_family(FAM_SCL); frame();
+        ok = on_chords_page();
+        encs[panel.enc[EN_K4]] = 2; frame();            /* three chords */
+        encs[panel.enc[EN_K1]] = 1; frame();
+        encs[panel.enc[EN_K2]] = 3; frame();            /* the second: IV */
+        encs[panel.enc[EN_K3]] = -2; frame();           /* 2 bars */
+        ok &= harm.n == 3u && harm.c[1].deg == 3u && harm.c[1].bars == 2u;
+        tap(B_OCTDN); frame();                          /* PROG ON */
+        ok &= song.g[G_HPROG] == 1;
+        song.sel = 1; frame();
+        tap(B_OCTUP); frame();                          /* track 2: FOLLOW TRANS */
+        ok &= trk[1].hfol == HF_TRANS;
+        song.sel = 0; frame();
+        check(ok, "CHORDS: KNOB 4 three chords, KNOB 2 / 3 the second's degree and bars, OCT- PROG on, OCT+ a track's FOLLOW");
+        key(2); frames(2);                              /* (key 2 = G: V, live) */
+        ok = harm.live == 5u && harm.deg == 4u;         /* (stopped: at once) */
+        for (j = 0; j < NVOICE; j++)
+            ok &= !t->v[j].active;                      /* (the keys are chords here: no note) */
+        ui.force = 1; frame(); ppm("chords");
+        key(1); frames(2);                              /* a black key: back to the progression (I) */
+        ok &= harm.live == 0u && harm.deg == 0u;
+        check(ok, "CHORDS: a white key plays its degree live (G: V, no note sounds), a black key lets go");
+        tap(B_ENV); frame();
+        check(!on_chords_page() && PAGES[ui.page].fam == FAM_ENV, "CHORDS: ENV opens its pages");
+        harm_defaults();
+        song.g[G_HKEY] = 0; song.g[G_HSCL] = 1; song.g[G_HPROG] = 0;
+        for (j = 0; j < NTRK; j++) trk[j].hfol = HF_OFF;
+        go_home(); frame();
+    }
     {   /* fuzz: 20000 frames of random buttons (held or tapped), knobs and keys, with the audio running
          * between frames; every draw stays on the screen (lcd_blit / lcd_fill assert it) */
         uint32_t f, seed = 777, held = 0;

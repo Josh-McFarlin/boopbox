@@ -172,6 +172,7 @@ static uint32_t layer_now(void)
  * events of lk_q, ui_studio.c grid_key) and play nothing */
 #define KB_GRID LY_COUNT
 static volatile uint8_t kb_grid;
+static volatile uint8_t kb_harm;                      /* the CHORDS screen shown (the UI sets it every frame): the keys are chords */
 /* the keys of the layers the UI handles (steps, key, mix): key k down / up, in order */
 #define LKQ 16u
 static volatile uint16_t lk_q[LKQ];
@@ -1428,6 +1429,7 @@ static void steps_clear(track_t *t)           /* an empty pattern (synth: REST s
     comp_clear(t);
 }
 #include "patbank.c"                         /* patterns: NPAT a track, the bank, quantized changes, chains */
+#include "harmony.c"                         /* the song's key, scale and chord, that tracks follow */
 
 /* tempo x 10 of a loop of T blocks holding n bars of 4/4 */
 static uint32_t ft_bpm10(uint32_t T, uint32_t n)
@@ -2372,6 +2374,12 @@ static void key_down(uint32_t k)
     default:
         break;
     }
+    if (layer == LY_PLAY && kb_harm) {                /* the CHORDS screen: the keys play the song's chord (harmony.c) */
+        kb_kind[k] = KS_UI;
+        kb_nt[k][0] = (uint8_t)KB_GRID;
+        harm_key(k);
+        return;
+    }
     if (is_drum(t) && layer == LY_PLAY && kb_grid) {   /* the DRUMS grid page: a step key */
         kb_kind[k] = KS_UI;
         kb_nt[k][0] = (uint8_t)KB_GRID;
@@ -3013,9 +3021,11 @@ static void seq_fire(track_t *t, uint32_t idx, uint32_t again, uint32_t flow, ui
                     if (s->note[i] == t->rskip[k])
                         skip |= 1u << i;
         t->rskip_n = 0;
-        if (again || comp_count(t, idx)) {           /* (the step as its components play it this time) */
+        if (again || comp_count(t, idx) || t->hfol) {   /* (the step as its components and the harmony play it now) */
             t->cp_step = *s;
             comp_apply(t, &t->cp_step, &ev);
+            if (t->hfol)
+                harm_apply(t, &t->cp_step);
             t->cp_on = 1;
             s = &t->cp_step;
         }
@@ -3774,6 +3784,7 @@ static void events_block(uint32_t n)
                     }
         mi_pen[0] = mi_pen[1] = mi_pen[2] = mi_pen[3] = 0;
     }
+    harm_block();                                     /* (harmony: the key, scale and chord on their boundary) */
     pat_block();                                      /* (patterns: a change asked for, its boundary; stopped: made) */
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], adv);

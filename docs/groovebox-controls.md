@@ -201,3 +201,59 @@ On the **SONG** screen (see `GUIDE.md`):
 With a loop on, the song plays from its first entry and, after the region's last entry, goes back to the region's first
 (the header shows *loop a-b*; a bar beside the entries marks the region). This works while the song plays (it is read
 at the next entry). The region is kept with the song. (The web editor's song page saves the song without a region.)
+
+## Harmony
+
+The song has one **key**, one **scale** and one **chord** (a degree of the key's scale, I to VII). The synth tracks
+that **follow** it play their **sequenced** notes in it: the steps, their ratchets and the notes the step components
+make. The keys, the arp and MIDI in play as they are; drum tracks never follow. A track's pattern is taken as written
+in the track's own **ROOT** (SEL page).
+
+| FOLLOW | A note moves |
+| --- | --- |
+| **OFF** (default) | not at all |
+| **TRANS** | by the key's distance from the track's ROOT (the nearer way: up to a tritone up, a fifth down), then by the chord root's semitones: the pattern's shape is kept exactly (C E G on chord V of C major: G B D) |
+| **SCALE** | by the key's distance from the track's ROOT, into the scale (a note outside it goes to the nearest scale tone below), then up the chord's number of scale degrees: the chords of the scale itself (C E G on ii of C major: D F A; in C minor, E becomes Eb) |
+
+A note keeps the pitch it started with until it ends; its note-off is that note's, so a change never leaves a note on.
+
+### Pages (SEL)
+
+Tap **SEL** to walk its pages: SEL, SEL 2, **HARMONY**, **FOLLOW**, then the **CHORDS** screen.
+
+| Page | Knobs |
+| --- | --- |
+| **HARMONY** | **KEY** C … B · **SCALE** (the 16 scales of the SEL page) · **Q** when a change of key, scale or chord takes hold: **NOW**, the next **BEAT**, the next **BAR** (default) · **PROG** the chord progression OFF / ON |
+| **FOLLOW** | **FOLLOW** of the selected track: OFF, TRANS, SCALE (a drum track shows nothing here) |
+
+KEY, SCALE, Q and PROG are saved with the project; each song section carries its own (a section change can change
+the key).
+
+### The CHORDS screen
+
+It shows the key and scale asked for and Q (top right), the chord playing now in large type (*LIVE* when played
+live, *progression* or *no progression*), the key and scale in force, the progression's chords (a roman numeral and
+its bars; the one playing lit) and the eight tracks with their FOLLOW (*-* off, *T* trans, *S* scale).
+
+| Control | Does |
+| --- | --- |
+| **the keys** | play the song's chord **live**: a white key its degree (C I, D II, E III, F IV, G V, A VI, B VII, in every octave), a black key lets the live chord go (back to the progression, or I). On Q's boundary; no note sounds from the keys on this screen |
+| **KNOB 1** | the progression's chord under edit (1 … count) |
+| **KNOB 2** | its degree, I … VII |
+| **KNOB 3** | its length, 1 … 16 bars |
+| **KNOB 4** | how many chords the progression has, 1 … 8 |
+| **PRESETS** | the KEY |
+| **SELECT** | the SCALE |
+| **ALGORITHM** | the track; **OCT+** steps its FOLLOW round (OFF, TRANS, SCALE) |
+| **OCT−** | PROG on / off (*PROGRESSION ON*) |
+| **ENV**, **LFO**, the layer buttons, **HOME** | as everywhere |
+
+With PROG on, while the song plays, the progression's chords follow one another round, each for its bars, counted
+from PLAY. A live chord stays (latched) over the progression until a black key lets it go. Stopped, the first chord of
+the progression (or the live one) is in force.
+
+### Saved
+
+The progression is saved in the project (format 7) and in song sections; FOLLOW with each track. A project with a
+harmony (a follow, a progression, a key or scale other than C major, Q other than BAR, PROG on) is never saved in
+format 6, which has no room for it.

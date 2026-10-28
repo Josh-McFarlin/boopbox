@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         static uint32_t layer_btn;
         if (rnd(40) == 0) {                                   /* an event every ~29 ms on average */
             events++;
-            switch (rnd(25)) {
+            switch (rnd(26)) {
             case 16: layer_btn = rnd(3) ? 0u : ly_bit[1u + rnd(LY_COUNT - 1u)] | (rnd(4) ? 0u : dyn_bit[rnd(2)]); break;   /* a layer held */
             case 17: song.g[G_DUST] = (int16_t)rnd(128); song.g[G_DUCK] = (int16_t)rnd(128); break;
             case 18: song.g[G_FILT] = (int16_t)((int)rnd(128) - 64); song.g[G_ROLL] = (int16_t)rnd(5); break;
@@ -87,6 +87,17 @@ int main(int argc, char **argv)
             }
             case 21: trk[rsyn()].p[P_CHORD] = (int16_t)rnd(6); trk[rsyn()].p[P_VOICE] = (int16_t)rnd(4); break;
             case 22: if (rnd(4) == 0) kind_flip(4u + rnd(4)); break;          /* (eight tracks) a track changes kind */
+            case 25: {                                                             /* the harmony: a follow, a chord, a key */
+                trk[rnd(NTRK)].hfol = (int16_t)rnd(HF_COUNT);
+                harm.live = (uint8_t)rnd(8);
+                if (rnd(3) == 0) song.g[G_HKEY] = (int16_t)rnd(12);
+                if (rnd(4) == 0) song.g[G_HSCL] = (int16_t)rnd(NSCALES);
+                if (rnd(4) == 0) song.g[G_HQ] = (int16_t)rnd(3);
+                if (rnd(5) == 0) song.g[G_HPROG] = (int16_t)rnd(2);
+                if (rnd(6) == 0) harm.n = (uint8_t)(1u + rnd(NHPROG)), harm.c[rnd(NHPROG)].deg = (uint8_t)rnd(7),
+                                 harm.c[rnd(NHPROG)].bars = (uint8_t)(1u + rnd(4));
+                break;
+            }
             case 24: {                                                             /* a pattern change, its quantization, a chain */
                 uint32_t pk = rnd(NTRK);
                 trk[pk].pat_req = (uint8_t)(1u + rnd(4));

@@ -42,7 +42,8 @@
                                                 * so the format and its size do not change */
 _Static_assert(G_DRDLY == PROJ_NG && G_TXSRC == PROJ_NG + 5u,
                "the globals a project holds, then G_DRDLY (then 2.6's GLO > MIDI: settings of the FM-1)");
-_Static_assert(G_FXFADE == G_CLKOUT + 1u && G_CH5 == G_FXFADE + 1u && G_PATQ == G_CH8 + 1u && G_COUNT == G_PATQ + 1u,
+_Static_assert(G_FXFADE == G_CLKOUT + 1u && G_CH5 == G_FXFADE + 1u && G_PATQ == G_CH8 + 1u && G_HKEY == G_PATQ + 1u &&
+               G_COUNT == G_HPROG + 1u,
                "G_FXFADE (2.7.2), then the eight-track CH5..CH8: settings of the FM-1, the last globals");
 #define PROJ_NC6 ((uint32_t)P_ITYPE)           /* format 6: the parameters kept in 16 bits, P_LEVEL .. P_VLEAD (as 5), */
 #define PROJ_NX6 ((uint32_t)(P_E0 - P_ITYPE))  /* the 2.6 ones in a byte (0..127), then P_E0 .. P_E7 */
@@ -574,11 +575,12 @@ static int proj6_fits(void)                            /* the working project is
     for (i = 0; i < 4u; i++)
         if (trk[i].kind != (i == TRK_DRUM_V6 ? TK_DRUM : TK_SYNTH))
             return 0;
-    if (pb_n)
-        return 0;                                       /* (nor more than one pattern a track) */
+    if (pb_n || song.g[G_PATQ] != GP[G_PATQ].def || !harm_default() || song.g[G_HKEY] != GP[G_HKEY].def ||
+        song.g[G_HSCL] != GP[G_HSCL].def || song.g[G_HQ] != GP[G_HQ].def || song.g[G_HPROG] != GP[G_HPROG].def)
+        return 0;                                       /* (nor more than one pattern a track, nor PAT Q, nor a harmony) */
     for (i = 0; i < NTRK; i++) {                        /* (format 6 has no step components, no direction, */
         uint32_t k, n = 0;                              /* NLOCK_V6 locks a track, no SLIDE) */
-        if (comp_count(&trk[i], NSTEP) || trk[i].cp_dir || trk[i].cp_seed || trk[i].pat || trk[i].pat_nchain)
+        if (comp_count(&trk[i], NSTEP) || trk[i].cp_dir || trk[i].cp_seed || trk[i].pat || trk[i].pat_nchain || trk[i].hfol)
             return 0;
         for (k = 0; k < NLOCK; k++)
             if (trk[i].lock[k].step != LOCK_FREE) {
@@ -636,7 +638,10 @@ UI_SMALL static void proj6_capture(project_v6_t *p)    /* tracks 1..4 as format 
 UI_SMALL static __attribute__((noinline)) void proj6_apply(const project_v6_t *p, int all)
 {
     uint32_t i, k;
-    pat_reset_all();                                    /* (format 6: one pattern a track) */
+    pat_reset_all();                                    /* (format 6: one pattern a track, no harmony) */
+    harm_defaults();
+    for (i = 0; i < NTRK; i++)
+        trk[i].hfol = HF_OFF;
     for (i = 0; i < PROJ_NG; i++)
         if (all ? i != G_SLOT && i != G_LOAD && i != G_SAVE && i != G_SYNC && i != G_MIDI && i != G_ROUTE && i != G_DRCH &&
                       i != G_INFO
@@ -764,6 +769,7 @@ UI_SMALL static __attribute__((noinline)) void trk_put(pw_t *w, uint32_t i)
     pw_u8(w, t->pat_nchain);
     for (k = 0; k < t->pat_nchain && k < NPAT; k++)
         pw_u8(w, t->pat_chain[k]);
+    pw_u8(w, (uint32_t)t->hfol);                        /* (harmony: how it follows) */
     pw_close(w, at);
 }
 UI_SMALL static __attribute__((noinline)) void trk_get(pr_t *r)
@@ -814,6 +820,10 @@ UI_SMALL static __attribute__((noinline)) void trk_get(pr_t *r)
             ch[k] = (uint8_t)(pr_u8(r) % NPAT);
         if (!r->bad)
             pat_chain_set(t, ch, k);
+        if (r->i < r->n) {
+            uint32_t h = pr_u8(r);
+            t->hfol = (int16_t)(h < HF_COUNT && !r->bad ? h : HF_OFF);
+        }
     }
     if (kind == TK_SYNTH)
         fm6_track_loaded(t);                            /* FM6: the project keeps PTCH, not the patch: its slot's */
@@ -839,6 +849,15 @@ UI_SMALL static __attribute__((noinline)) void proj7_put(pw_t *w)
     pw_close(w, at);
     for (i = 0; i < NTRK; i++)
         trk_put(w, i);
+    if (!harm_default()) {                              /* the harmony's progression (its key, scale ..: the globals) */
+        at = pw_open(w, 'H');
+        pw_u8(w, harm.n);
+        for (i = 0; i < harm.n && i < NHPROG; i++) {
+            pw_u8(w, harm.c[i].deg);
+            pw_u8(w, harm.c[i].bars);
+        }
+        pw_close(w, at);
+    }
     {   /* the other patterns: one 'P' chunk each (the bank's entry: track << 4 | pattern, LEN, the pattern's bytes) */
         uint32_t o = 0;
         while (o + 4u <= pb_n) {
@@ -854,12 +873,13 @@ UI_SMALL static __attribute__((noinline)) void proj7_put(pw_t *w)
     }
 }
 /* the globals a section takes from its project (a load takes all but the FM-1's settings): the TEXTURE */
-static int g_of_section(uint32_t i) { return i >= G_TXSRC && i <= G_TXDUCK; }
+static int g_of_section(uint32_t i) { return (i >= G_TXSRC && i <= G_TXDUCK) || (i >= G_HKEY && i <= G_HPROG); }   /* (and its harmony) */
 UI_SMALL static __attribute__((noinline)) void proj7_apply(const project_t *p, int all)
 {
     pr_t r = {p->d, p->size - PROJ_HDR, 0, 0};
     uint32_t seen = 0, i;
     pat_reset_all();                                    /* (its patterns replace the ones there were) */
+    harm_defaults();                                    /* (and its progression: none, I) */
     while (r.i + 3u <= r.n && !r.bad) {
         uint32_t tag = pr_u8(&r), len = pr_u8(&r);
         pr_t c;
@@ -890,6 +910,17 @@ UI_SMALL static __attribute__((noinline)) void proj7_apply(const project_t *p, i
             if (ti < NTRK) {
                 trk_get(&c);
                 seen |= 1u << ti;
+            }
+        } else if (tag == 'H' && c.n >= 1u) {
+            uint32_t n = pr_u8(&c), k;
+            if (n >= 1u && n <= NHPROG) {
+                harm.n = (uint8_t)n;
+                for (k = 0; k < n && !c.bad; k++) {
+                    harm.c[k].deg = (uint8_t)(pr_u8(&c) % 7u);
+                    harm.c[k].bars = (uint8_t)clamp((int32_t)pr_u8(&c), 1, 16);
+                }
+                if (c.bad)
+                    harm_defaults();
             }
         } else if (tag == 'P' && c.n >= 2u) {
             pb_add_raw((uint32_t)c.b[0] >> 4, c.b[0] & 15u, c.b[1], c.b + 2, c.n - 2u);
