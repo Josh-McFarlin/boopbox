@@ -170,6 +170,7 @@ UI_SMALL static void felucca_init(void)
     for (i = 0; i < G_COUNT; i++)
         song.g[i] = GP[i].def;
     fm6_init();                               /* every part's FM6 patch: the init voice */
+    harm_defaults();                          /* the harmony: no progression (I), no track follows */
     for (i = 0; i < NTRK; i++) {
         track_power_on(i);
         trk[i].engine = trk[i].eng_req;       /* (nothing sounds yet: no fade) */

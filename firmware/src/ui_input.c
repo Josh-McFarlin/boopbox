@@ -37,6 +37,8 @@ UI_SMALL static uint32_t cur_btn(void)                      /* the button of the
         return B_SEQ;
     if (!ui.home && cur_page()->scope == SC_PATS)
         return B_SEQ;
+    if (!ui.home && cur_page()->scope == SC_HARM)
+        return B_SCL;
     return FAM_BTN[cur_fam()];
 }
 
@@ -511,6 +513,9 @@ UI_SMALL static void project_new(void)
     }
     fm1_irq_off();
     pat_reset_all();                                    /* (one empty pattern a track, the bank empty) */
+    harm_defaults();                                    /* (no progression; no track follows) */
+    for (i = 0; i < NTRK; i++)
+        trk[i].hfol = HF_OFF;
     fm1_irq_on();
     for (i = 0; i < G_COUNT; i++)
         if (!g_setting(i))                              /* (the FM-1's settings: GLO > MIDI 2.6) */
@@ -1182,6 +1187,7 @@ UI_SMALL static void ui_input(void)
         }
     }
     kb_grid = (uint8_t)grid_keys_on();                  /* (seq.c: the keys are the grid's steps) */
+    kb_harm = (uint8_t)(on_chords_page() && !ui.menu);  /* (seq.c: the keys are chords, harmony.c harm_key) */
     if (ui.menu) {                                      /* HOME / REC taps do nothing here */
         punch.hold = 0;
         thr_req = 0;
@@ -1239,6 +1245,10 @@ UI_SMALL static void ui_input(void)
     pats_poll();                                        /* (patterns: a change refused, said) */
     if (on_pats_page()) {
         pats_screen_input(pressed, home);
+        return;
+    }
+    if (on_chords_page()) {
+        chords_screen_input(pressed, home);
         return;
     }
 #if FELUCCA_ARRANGER

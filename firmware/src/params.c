@@ -153,6 +153,8 @@ static void preset_extras(int16_t *p, const preset_t *pr)
 }
 
 
+static const char *const N_HKEY[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};   /* G_HKEY */
+static const char *const N_HQ[] = {"NOW", "BEAT", "BAR"};   /* G_HQ (harmony.c HQ_*) */
 static const char *const N_PATQ[] = {"LOOP", "1 BAR", "2 BAR", "4 BAR"};   /* G_PATQ (patbank.c PQ_*) */
 static const param_desc_t GP[G_COUNT] = {
     [G_BPM] = PD("BPM", F_BPM, 40, 240, 90),
@@ -210,6 +212,10 @@ static const param_desc_t GP[G_COUNT] = {
     [G_CH7] = PE("CH7", N_MCH, 0),
     [G_CH8] = PE("CH8", N_MCH, 0),
     [G_PATQ] = PE("PAT Q", N_PATQ, 0),            /* patterns (patbank.c): a change at the track's loop end, or on 1, 2, 4 bars */
+    [G_HKEY] = PE("KEY", N_HKEY, 0),              /* harmony (harmony.c): the song's key, scale, when a change takes hold, */
+    [G_HSCL] = PE("SCALE", N_SCALE, 1),           /* the chord progression */
+    [G_HQ] = PE("Q", N_HQ, 2),
+    [G_HPROG] = PE("PROG", N_ONOFF, 0),
 };
 
 /* the globals that are settings of the FM-1, not of a project: a NEW project and a load leave them */
@@ -460,14 +466,17 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM,
        SC_PATT,                  /* SC_PATT: the selected track's pattern settings that are not parameters (PS_*) */
-       SC_PATS };                /* the PATTERNS screen (ui_pats.c), a screen of its own as SONG and DRUMS */
+       SC_PATS,                  /* the PATTERNS screen (ui_pats.c), a screen of its own as SONG and DRUMS */
+       SC_HARM };                /* the CHORDS screen (ui_pats.c), the same */
 /* SC_PATT ids: values of the pattern kept in track_t beside p[] (not sound parameters: no lock, no MIDI learn, not in
  * a user preset) */
-enum { PS_DIR, PS_SEED, PS_COUNT };
+enum { PS_DIR, PS_SEED, PS_HFOL, PS_COUNT };   /* (PS_HFOL: the track's, harmony.c: how it follows) */
 static const char *const N_DIR[] = {"FWD", "REV", "PEND", "RAND"};   /* core.h DIR_* */
+static const char *const N_HFOL[] = {"OFF", "TRANS", "SCALE"};      /* harmony.c HF_* */
 static const param_desc_t PS_DESC[PS_COUNT] = {
     [PS_DIR] = PE("DIR", N_DIR, 0),
     [PS_SEED] = {"SEED", F_INT, 0, 255, 0, 0, 0},
+    [PS_HFOL] = PE("FOLLOW", N_HFOL, 0),
 };
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_INS };
@@ -494,6 +503,9 @@ static const page_t PAGES[] = {
     {"REV/CHO", FAM_FX, SC_GLOBAL, GR_NONE, {G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH}},
     {"SEL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, P_CHORD}},
     {"SEL 2", FAM_SCL, SC_TRACK, GR_SCALE, {P_TRANS, P_STRUM, P_VLEAD, 0xFF}},   /* (2.4: the chords played) */
+    {"HARMONY", FAM_SCL, SC_GLOBAL, GR_NONE, {G_HKEY, G_HSCL, G_HQ, G_HPROG}},   /* the song's key, scale (harmony.c) */
+    {"FOLLOW", FAM_SCL, SC_PATT, GR_NONE, {PS_HFOL, 0xFF, 0xFF, 0xFF}},   /* how the track follows it */
+    {"CHORDS", FAM_SCL, SC_HARM, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* the progression, live chords (ui_pats.c) */
     {"EDIT 1", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E0, P_E1, P_E2, P_E3}},
     {"EDIT 2", FAM_EDIT, SC_ENGINE, GR_NONE, {P_E4, P_E5, P_E6, P_E7}},
     {"FILTER", FAM_EDIT, SC_TRACK, GR_NONE, {P_FTYPE, P_E4, P_E5, P_E7}},   /* ANALOG only (2.6, Felucca 1.5): TYPE CUT
@@ -565,7 +577,11 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
             *valp = 0;
             return 0;
         }
-        *valp = id == PS_DIR ? &TSEL->cp_dir : &TSEL->cp_seed;
+        if (id == PS_HFOL && is_drum(TSEL)) {   /* (a drum track never follows the harmony) */
+            *valp = 0;
+            return 0;
+        }
+        *valp = id == PS_DIR ? &TSEL->cp_dir : id == PS_SEED ? &TSEL->cp_seed : &TSEL->hfol;
         return &PS_DESC[id];
     }
     if (pg->scope == SC_GLOBAL) {

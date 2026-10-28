@@ -102,7 +102,9 @@ static void host_tracks_init(void)                /* as felucca_init: defaults, 
             trk[k].p[P_DLY] = track_desc(&trk[k], P_DLY)->def;
         }
         steps_clear(&trk[k]);
+        trk[k].hfol = 0;
     }
+    harm_defaults();
     song.master_q12 = 4096;
 }
 

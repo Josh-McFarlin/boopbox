@@ -102,7 +102,7 @@ New modules (all host-testable, no allocation, bounded loops):
 | File | What |
 | --- | --- |
 | `comp.c` | step components: per-step rules, evaluated (`comp_eval`) apart from the scheduling (`seq.c seq_fire`) |
-| `harmony.c` | the harmony track: key, scale, chord progression, per-track opt-in, applied to scheduled notes |
+| `harmony.c` | the harmony: key, scale, chord, progression, per-track follow, applied to the sequencer's notes |
 | `patbank.c`, `patcodec.c` | the pattern bank, quantized pattern changes and chains; the pattern codec (moved out of `project.c`) |
 | `perf.c` | the performance layer over the punch-in effects (momentary / latched, quantized) |
 
@@ -211,3 +211,19 @@ New modules (all host-testable, no allocation, bounded loops):
     for pattern changes and chains at random. The soak's end check now shortens REL before waiting: a random preset's
     release (REL 110, ~10 s) outlasted the 5 s wait (the voices were released, not held).
   - Proxy sizes against Milestone D: code 287,994 -> 294,398 B (+6.4 KB), RAM 73,948 -> 77,268 B (+3.3 KB: the bank).
+- Milestone F (harmony, `firmware/src/harmony.c`, included by `seq.c` after the pattern bank):
+  - Globals `G_HKEY`, `G_HSCL`, `G_HQ`, `G_HPROG`; the progression (`harm.c[NHPROG]`, 8 chords, degree and bars) and
+    the live chord (`harm.live`, from the CHORDS screen's keys: seq.c `key_down` with `kb_harm` set by the UI each
+    frame, as `kb_grid` is for the drum grid); per track `t->hfol` (OFF / TRANS / SCALE).
+  - `harm_block` (once a block, before the patterns and the tracks' steps) takes the key, scale and chord on their
+    boundary (NOW / the next beat / the next bar; stopped: at once); the progression's chord comes from the bar count
+    since PLAY. `harm_apply` maps the notes of the step's copy (`cp_step`, the same copy the step components use) at
+    note-on, so the ratchets and the note-offs use the mapped notes (`seq_notes`). Bounded: a note is moved with at
+    most 96 scale lookups. A track with FOLLOW OFF takes the same path as before (the golden renders unchanged).
+  - Storage: the globals in 'G' (they also apply with a section: `g_of_section`), the progression in an 'H' chunk
+    (written only when not the default), FOLLOW at the end of each 'T' chunk; format 6 is refused when any of them
+    (or PAT Q) is not the default (format 6 has no byte for them).
+  - UI: SCL > HARMONY (a global page), SCL > FOLLOW (`SC_PATT`, `PS_HFOL`), the CHORDS screen (`ui_pats.c`, `SC_HARM`).
+  - Tests: `tests/harm_test.c` (the mapping alone, played, BEAT / BAR, a progression, a live chord, a note held across
+    a change, ratchets and component notes, the keys untouched, the stores), UI cases in `tests/ui_pages_test.c`.
+  - Proxy sizes against Milestone E: code 294,398 -> 299,066 B (+4.7 KB), RAM 77,268 -> 77,400 B.

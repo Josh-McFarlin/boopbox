@@ -110,6 +110,8 @@ enum {                          /* global parameters */
                                  * is G_DRCH, "CH4"). Settings of the FM-1, as CH1..CH3 (panel.c midi_set) */
     G_PATQ,                     /* patterns (patbank.c): when a pattern change asked for happens: LOOP (the track's own loop end),
                                  * 1, 2 or 4 BARS. The project's */
+    G_HKEY, G_HSCL, G_HQ, G_HPROG,   /* harmony (harmony.c): the song's key and scale, when a change takes hold (NOW, BEAT,
+                                      * BAR), the chord progression OFF / ON. The project's */
     G_COUNT
 };
 
@@ -313,7 +315,8 @@ typedef struct track {
     uint8_t pat_chain[NPAT];
     uint32_t pat_at;
     uint32_t seq_org;            /* the grid step the pattern started on (its step 1): the step of grid step abs is
-                                  * (abs - seq_org) % LEN (seq.c trk_step_of) */
+                                  * (abs - seq_org) % LEN */
+    int16_t hfol;                /* harmony (harmony.c): how the track's sequenced notes follow it, HF_* (SCL > FOLLOW) */
     /* the locks in force (seq.c lock_step): the params overridden now, what they were, what the lock set */
     uint8_t lk_n;
     uint8_t lk_param[NLOCK];
