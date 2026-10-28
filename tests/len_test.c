@@ -63,10 +63,10 @@ static void arrangement_save(void) {}
 static uint32_t arrangement_ready(void) { return 3; }
 static void arrangement_apply(uint32_t s) { (void)s; }
 static uint32_t section_bars(uint32_t s) { return s == 1u ? 2u : 1u; }   /* (B: two bars) */
-static void song_backup(void) {}
+static int song_backup(void) { return 1; }
 static void song_restore(void) {}
 static uint32_t sec_stores, sec_loads;
-static void section_store(uint32_t s) { sec_stores++; live_sec = (int8_t)s; }
+static int section_store(uint32_t s) { sec_stores++; live_sec = (int8_t)s; return 1; }
 static void section_load(uint32_t s) { sec_loads++; live_sec = (int8_t)s; }
 static int up_used(uint32_t k) { return k < 2; }
 static int up_load(uint32_t k) { (void)k; return 0; }
@@ -81,6 +81,7 @@ static void up_ui(uint32_t op, uint32_t k) { (void)op; (void)k; }
 static void settings_save(void) {}
 #include "../firmware/src/ui_song.c"
 #include "../firmware/src/ui_studio.c"
+#include "../firmware/src/ui_pats.c"
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_draw.c"
 #include "../firmware/src/ui_vis.c"

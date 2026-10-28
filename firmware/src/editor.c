@@ -403,7 +403,7 @@ UI_SMALL static const param_desc_t *ed_desc(uint32_t scope, uint32_t id, int16_t
 _Static_assert(sizeof proj_tmp >= sizeof(project_t) && sizeof proj_tmp >= sizeof(up_bank_t) &&
                sizeof proj_tmp >= sizeof(persist_t), "backup staging");
 static persist_t ed_bk_set;                             /* LIST's snapshot of the settings */
-static uint8_t ed_bk_ml[MIDI_PART];                     /* .. and of the MIDI part (2.6, object 10: project.c) */
+static uint8_t ed_bk_ml[MIDI_PART_8];                     /* .. and of the MIDI part (2.6, object 10: project.c) */
 static uint8_t ed_bk_valid, ed_bk_put, ed_bk_id;
 static uint32_t ed_bk_len, ed_bk_crc, ed_bk_pos, ed_bk_ms;
 UI_SMALL static void ed_bk_u32(uint32_t v) { uint32_t i; for (i = 0; i < 5u; i++) ed_b((v >> (7u * i)) & 127u); }
@@ -416,7 +416,7 @@ UI_SMALL static const uint8_t *ed_bk_obj(uint32_t id, uint32_t *len)   /* 0 = no
 {
     *len = 0;
     if (id == 0u) {
-        *len = sizeof(project_t);
+        *len = proj_bytes((const project_t *)ED_BK_RAW);   /* (format 7: as long as it is) */
         return ED_BK_RAW;
     }
     if (id == 1u) {
@@ -425,7 +425,7 @@ UI_SMALL static const uint8_t *ed_bk_obj(uint32_t id, uint32_t *len)   /* 0 = no
     }
     if (id >= 2u && id <= 5u) {
         if (project_used(id - 2u))
-            *len = sizeof proj_slot[0];
+            *len = proj_bytes(&proj_slot[id - 2u]);
         return (const uint8_t *)&proj_slot[id - 2u];
     }
     if (id == 6u || id == 7u) {                           /* a user preset bank, read where it is (upreset.c) */
@@ -449,7 +449,7 @@ UI_SMALL static const uint8_t *ed_bk_obj(uint32_t id, uint32_t *len)   /* 0 = no
                                                          * without it stays one an older editor reads; its restore leaves
                                                          * them as they are) */
         if (!midi_part_default(ed_bk_ml))
-            *len = sizeof ed_bk_ml;
+            *len = midi_part_len(ed_bk_ml);
         return ed_bk_ml;
     }
     if (id == 11u) {                                      /* SLOOP 2.7: your theme (gfx.c), listed only when there is one */
@@ -525,7 +525,7 @@ UI_SMALL static uint32_t ed_bk_commit(void)
         persist_t p;
         if (ed_flash_busy())
             return 3;
-        if (n != MIDI_PART && n != 2u * ML_N && n != 2u * ML_N + 4u)
+        if (n != MIDI_PART && n != MIDI_PART_8 && n != 2u * ML_N && n != 2u * ML_N + 4u)
             return 2;
         midi_part_read(raw, n);                           /* (every entry and channel checked) */
         persist_fill(&p);
@@ -571,8 +571,9 @@ UI_SMALL static int ed_backup(uint32_t cmd, const uint8_t *a, uint32_t na)   /* 
     const uint8_t *p;
     if (cmd == ED_BK_LIST) {
         rc = !flash_ok ? 4u : 0u;
+        if (!rc && !proj_capture((project_t *)ED_BK_RAW))   /* the working project, as it is now (PROJECT FULL: */
+            rc = 6u;                                        /* the editor says it cannot back up) */
         if (!rc) {
-            proj_capture((project_t *)ED_BK_RAW);           /* the working project, as it is now */
             persist_fill(&ed_bk_set);
             midi_part_fill(ed_bk_ml);
             ed_bk_valid = 1;
@@ -975,11 +976,12 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         for (i = 0; i < NTRK; i++) {
             ed_b(ed_eng(&trk[i]));
             ed_b(trk[i].preset);
-            ed_v(i == TRK_DRUM ? song.g[G_DRLVL] : trk[i].p[P_LEVEL]);
+            ed_v(trk[i].p[P_LEVEL]);                      /* (a drum track's: its drum LEVEL) */
             ed_b(trk[i].p[P_MUTE] != 0);
             ed_b((song.rec >> i) & 1u);
         }
-        ed_b(song.solo & 15u);                            /* v5: the tracks soloed */
+        ed_b(song.solo & 127u);                           /* v5: the tracks soloed (eight tracks: 1..7 in the 7 bits; */
+        ed_b(song.solo >> 7);                             /* .. the eighth after, as a v5 editor never reads) */
         break;
     case ED_TRACK_MIX: {                                   /* track [, level v14, mute] -> track, level, mute */
         track_t *t;
@@ -987,14 +989,11 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         if (na < 1u || a[0] >= NTRK)
             return;
         t = &trk[a[0]];
-        lv = a[0] == TRK_DRUM ? &song.g[G_DRLVL] : &t->p[P_LEVEL];
+        lv = &t->p[P_LEVEL];
         if (na >= 4u) {
             *lv = (int16_t)clamp(ed_rv(a + 1), 0, 127);
             t->p[P_MUTE] = (int16_t)(a[3] ? 1 : 0);
-            if (a[0] == TRK_DRUM)                          /* the editor's own change: no push */
-                ed_w.v[P_COUNT + G_DRLVL] = *lv;
-            else
-                ed_known(a[0], P_LEVEL);
+            ed_known(a[0], P_LEVEL);                       /* the editor's own change: no push */
             ed_known(a[0], P_MUTE);
             ui.force = 1;
         }
@@ -1033,7 +1032,7 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         uint32_t on, lv, rt;
         if (na < 1u || a[0] >= NSTEP)
             return;
-        d = &TDRUM->dstep[a[0]];
+        d = &DFOC->dstep[a[0]];                            /* (the drum track shown: core.h drum_focus) */
         if (na >= 14u) {
             on = (uint32_t)a[1] | (uint32_t)a[2] << 7 | (uint32_t)(a[3] & 3u) << 14;
             lv = (uint32_t)a[4] | (uint32_t)a[5] << 7 | (uint32_t)a[6] << 14 | (uint32_t)a[7] << 21 | (uint32_t)(a[8] & 15u) << 28;
@@ -1045,8 +1044,8 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
                     dstep_set(d, i, (lv >> (2u * i)) & 3u, (rt >> (2u * i)) & 3u);
             fm1_irq_on();
             ui.force = 1;
-            if (song.sel == TRK_DRUM)
-                ed_w.st[a[0]] = ed_step_sig(TDRUM, a[0]);
+            if (is_drum(TSEL))
+                ed_w.st[a[0]] = ed_step_sig(TSEL, a[0]);
         }
         on = dstep_mask(d);
         lv = (uint32_t)d->lvl[0] | (uint32_t)d->lvl[1] << 8 | (uint32_t)d->lvl[2] << 16 | (uint32_t)d->lvl[3] << 24;
@@ -1092,7 +1091,7 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         for (i = 0; i < NLOCK; i++)
             if (t->lock[i].step < NSTEP) {
                 ed_b(t->lock[i].step);
-                ed_b(t->lock[i].param);
+                ed_b(t->lock[i].param & LOCK_PID);   /* (its SLIDE: not in this reply) */
                 ed_v(t->lock[i].val);
             }
         break;

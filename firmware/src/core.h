@@ -1,16 +1,17 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Felucca core types: tracks, voices, engines, parameters.
- * Four tracks: tracks 1..3 are synth parts (each its own engine, preset, parameters,
- * voices and 64-step pattern), track 4 is the GM drum part (drums.c; its own voices,
- * pattern and the pattern parameters of its track_t). The parts share one budget of
- * NVOICE sounding voices (voice.c). */
+ * NTRK tracks, each of a kind (track_t.kind): a SYNTH track plays an engine (its own preset, parameters, voices
+ * and 64-step pattern), a DRUM track a drum kit (drums.c: 16 sounds, its own pattern of lanes). No track index is
+ * special: the default project has synths on 1..3 and 5..7, drums on 4 and 8. The synth tracks share one budget
+ * of NVOICE sounding voices (voice.c), the drum tracks one pool of NDRUM voices (drums.c). */
 #include <stdint.h>
-#define NVOICE 8                 /* voices per part, and the budget shared by all parts */
+#define NVOICE 8                 /* voices per synth track, and the budget shared by all of them */
 #define NPOLY 8
-#define NPART 3                  /* synth parts: tracks 1..3 */
-#define NTRK 4                   /* + the drum track */
-#define TRK_DRUM 3
+#define NTRK 8                   /* tracks */
+enum { TK_SYNTH, TK_DRUM };      /* track_t.kind */
+#define NARENA 3                 /* engine arenas (engines.c): tracks playing GRAIN, DRAWBAR, FM6 or PHYS at once */
+#define TRK_DRUM_V6 3u           /* the drum track of projects of formats 1..6 (four tracks, drums on 4) */
 enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
 #define NSTEP 64
 #define HALF_FRAMES 256          /* I2S half buffer: 5.8 ms at 44.1 kHz */
@@ -105,6 +106,16 @@ enum {                          /* global parameters */
                                  * while SYNC is INT (seq.c clkout_block; a setting of the FM-1, kept in DR MAP's byte) */
     G_FXFADE,                   /* SLOOP 2.7.2, the FX layer (FX held), SELECT: how fast a punch-in FX fades in and out, 0 (instant, as
                                  * before) .. 15 (punch.c; a setting of the FM-1, kept in BEND's byte) */
+    G_CH5, G_CH6, G_CH7, G_CH8, /* eight tracks, GLO > MIDI 4: the MIDI channel of tracks 5..8 (0 OFF, 1..16; in and out; track 4's
+                                 * is G_DRCH, "CH4"). Settings of the FM-1, as CH1..CH3 (panel.c midi_set) */
+    G_PATQ,                     /* patterns (patbank.c): when a pattern change asked for happens: LOOP (the track's own loop end),
+                                 * 1, 2 or 4 BARS. The project's */
+    G_HKEY, G_HSCL, G_HQ, G_HPROG,   /* harmony (harmony.c): the song's key and scale, when a change takes hold (NOW, BEAT,
+                                      * BAR), the chord progression OFF / ON. The project's */
+    G_PFXT, G_PFXL, G_PFXQ,     /* the punch-in FX as performance effects (punch.c, FX > PERF): TARGET (MASTER: the mix, as before;
+                                 * SEL: the selected track; DRUMS; SYNTHS), LATCH (an effect stays when its key is let go), Q (it
+                                 * starts on the next 1/16, 1/8, 1/4 or bar; OFF: at once). The project's */
+    G_KIND,                     /* SAVE > TOOLS > KIND (a GO button, ui_input.c): the selected track a SYNTH <-> DRUM track */
     G_COUNT
 };
 
@@ -221,18 +232,50 @@ _Static_assert(sizeof(step_t) == 10 && sizeof(dstep_t) == 10, "a step is 10 byte
 /* SLOOP 2.4: per-step nudge (micro timing) and parameter locks (seq.c seq_tick / lock_step) */
 #define MICRO_MIN (-32)          /* a step's nudge in 1/64 of its length: half a step early .. */
 #define MICRO_MAX 31             /* .. just under half a step late (0 = on the grid) */
-#define NLOCK 24                 /* parameter locks per track (several may share a step: other params) */
-typedef struct {                 /* a lock: on step `step` the track's p[param] is `val` (4 bytes) */
+#define NLOCK 32                 /* parameter locks per track (several may share a step: other params) */
+#define NLOCK_V6 24u             /* .. in a project of format 5 or 6 (SLOOP 2.4 .. 2.8.3) */
+typedef struct {                 /* a lock: on step `step` the track's p[param & LOCK_PID] is `val` (4 bytes) */
     uint8_t step;                /* 0xFF = a free slot */
-    uint8_t param;               /* P_* (a lockable one: p_lockable) */
+    uint8_t param;               /* P_* (a lockable one: p_lockable) | LOCK_SLIDE */
     int16_t val;
 } plock_t;
 #define LOCK_FREE 0xFFu
+#define LOCK_PID 0x7Fu           /* plock_t.param: the parameter */
+#define LOCK_SLIDE 0x80u         /* .. and SLIDE: over its step the parameter glides from what it was to val (seq.c) */
+#define NSLIDE 4                 /* SLIDE locks gliding at once on a track (the step's first four) */
 /* a step's condition (SLOOP 2.4 fill, GLO + key 9 / 10): plays always, only during a fill, never during one */
 enum { FC_NORM, FC_FILL, FC_NOFILL };     /* (3: as FC_NORM) */
+/* Step components (comp.c): rules on a step that change how it plays each time the sequencer reaches it, on top of
+ * what the step holds. Sparse: a track keeps up to NCOMP of them (step, type, two values), several on one step (of
+ * other types). The values (comp.c CP_RANGE): */
+enum {
+    CP_NONE,
+    CP_PULSE,                   /* a 1..8: the step plays again on the next a grid steps, a new hit each, before moving on */
+    CP_HOLD,                    /* a 1..16: the step sounds on through the next a grid steps (held, no new hit) */
+    CP_MULT,                    /* a 2..8: a hits evenly inside the step (a ratchet of the whole step) */
+    CP_VEL,                     /* a 1..127: the velocity of its notes / hits; b 0..64: random, +-b around it */
+    CP_RUP,                     /* a 1..16: each time it plays, b (1..7) scale degrees higher; after a times, back */
+    CP_RDN,                     /* a 1..16: the same, down */
+    CP_RAND,                    /* a 1..12: its notes a random number of scale degrees within +-a away */
+    CP_PORTA,                   /* a 1..127: its notes glide in from the last ones, GLIDE a for the step */
+    CP_BEND,                    /* a -12..12 semitones: the pitch bends over the step; b 0: from the note to a, 1: from a back */
+    CP_TONE,                    /* a -24..24: its notes a semitones away */
+    CP_JUMP,                    /* a 1..64: the sequence goes on at step a after it; b 1..16: every b-th time it plays */
+    CP_PARAM,                   /* a: a lockable parameter (P_*), b 1..100: a random value within +-b % of its range */
+    CP_COND,                    /* a 1..8, b 1..8: plays on loop a of every b (A:B); a -1..-8: on every other loop */
+    CP_TRIG,                    /* a 1..99: plays with a % chance */
+    CP_COUNT
+};
+#define NCOMP 16                 /* components per track */
+#define COMP_FREE 0xFFu          /* comp_t.step of a free slot (its type CP_NONE says it is free) */
+typedef struct { uint8_t step, type; int8_t a, b; } comp_t;
+enum { DIR_FWD, DIR_REV, DIR_PEND, DIR_RAND, DIR_COUNT };   /* a track's play direction (track_t.cp_dir) */
+#define NPAT 8                   /* patterns a track (patbank.c): the one playing in track_t, the others in the bank */
 
 typedef struct track {
     int16_t p[P_COUNT];
+    uint8_t kind;                /* TK_SYNTH / TK_DRUM (the UI changes it with the IRQ off, every voice ended) */
+    uint8_t arena;               /* the engine arena it holds + 1 (engines.c eng_arena_of), 0 = none */
     uint8_t engine, preset;      /* engine: what the audio ISR renders */
     uint8_t eng_req;             /* engine the UI asked for (the ISR switches at a block start) */
     uint8_t user;                /* user preset slot + 1 the sound came from (UI), 0 = none */
@@ -265,11 +308,43 @@ typedef struct track {
     int8_t micro[NSTEP];         /* each step's nudge, MICRO_MIN..MICRO_MAX (1/64 of a step; - early, + late) */
     plock_t lock[NLOCK];         /* parameter locks, unsorted (step LOCK_FREE = a free slot) */
     uint8_t fill[NSTEP / 4];     /* each step's condition, 2 bits (seq.c step_fill): FC_* */
+    comp_t comp[NCOMP];          /* step components (comp.c), unsorted (type CP_NONE: a free slot) */
+    int16_t cp_dir;              /* the play direction, DIR_* (comp.c comp_next; SEQ > PLAY, params.c PS_DIR) */
+    int16_t cp_seed;             /* the components' random seed 0..255: every PLAY draws the same numbers (PS_SEED) */
+    /* patterns (patbank.c): the one playing; a change asked for; a chain */
+    uint8_t pat;                 /* the pattern playing, 0..NPAT-1 (its steps are the ones above) */
+    volatile uint8_t pat_req;    /* a change asked for (the UI): pattern + 1, 0 = none (the ISR makes it, clears it) */
+    uint8_t pat_arm;             /* (the ISR) that request seen: pat_at its grid step (SEQ_NONE: the track's loop end) */
+    uint8_t pat_nchain, pat_ci;  /* a chain: its patterns (pat_chain, 2 or more; 0 = none), the one playing in it */
+    uint8_t pat_chain[NPAT];
+    uint32_t pat_at;
+    uint32_t seq_org;            /* the grid step the pattern started on (its step 1): the step of grid step abs is
+                                  * (abs - seq_org) % LEN */
+    int16_t hfol;                /* harmony (harmony.c): how the track's sequenced notes follow it, HF_* (SCL > FOLLOW) */
     /* the locks in force (seq.c lock_step): the params overridden now, what they were, what the lock set */
     uint8_t lk_n;
     uint8_t lk_param[NLOCK];
     int16_t lk_base[NLOCK];
     int16_t lk_set[NLOCK];
+    uint8_t sl_n, sl_p[NSLIDE];  /* the SLIDE locks of the step playing: their parameters, from what, to what */
+    int16_t sl_from[NSLIDE], sl_to[NSLIDE];
+    /* the components' runtime (comp.c) */
+    uint32_t cp_rng;             /* their random numbers (from cp_seed at PLAY) */
+    uint32_t cp_adv;             /* steps moved on since PLAY (trk_len of them: a loop, CP_COND) */
+    int32_t cp_bend;             /* CP_BEND now: 1/4096 semitone over the track's notes (voice.c) */
+    uint8_t cp_rep;              /* PULSE / HOLD: the grid steps the step playing still takes */
+    uint8_t cp_hold;             /* .. held (HOLD: no new hit); cp_held: such a grid step plays now */
+    uint8_t cp_held;
+    int8_t cp_jump;              /* JUMP: the step after this one, -1 none */
+    uint8_t cp_back;             /* DIR_PEND: on the way back */
+    uint8_t cp_skip;             /* COND / TRIG silenced the step playing (its PULSE repeats too) */
+    uint8_t cp_on;               /* the step playing went through its components: cp_step is it as it plays */
+    uint8_t cp_hits, cp_hdone;   /* MULT: the step's hits, those played */
+    uint8_t cp_vel;              /* a drum step's VEL, 0 = none */
+    int8_t cp_bend_a;            /* the step's BEND: semitones (0 none), its shape */
+    uint8_t cp_bend_b;
+    uint8_t cp_ctr[NCOMP];       /* each component's count: RUP / RDN's place, JUMP's plays */
+    step_t cp_step;
     uint32_t seq_abs;            /* the step of the transport grid last played (seq.c trk_grid), SEQ_NONE */
     int16_t bend, bend_s;        /* 2.6: MIDI pitch bend -8192..8191 (seq.c), and as it glides (voice.c, a block at a time) */
     uint16_t seq_idx;            /* its index in the pattern */
@@ -392,9 +467,28 @@ static volatile uint8_t ed_master;
 static volatile uint16_t ed_master_k = 0xFFFFu;
 static int32_t thr_rev, thr_dly;
 static inline int32_t send_thr(int32_t s, int32_t g) { return g ? s + (((127 * 258 - s) * g) >> 15) : s; }   /* s 0..32766 */
-#define TSEL (&trk[song.sel])    /* the selected track */
-#define TDRUM (&trk[TRK_DRUM])
-static int is_drum(const track_t *t) { return t == TDRUM; }
+#define TSEL (&trk[song.sel % NTRK])   /* the selected track */
+static int is_drum(const track_t *t) { return t->kind == TK_DRUM; }
+static uint32_t trk_drums(void)          /* the drum tracks, bit per track */
+{
+    uint32_t i, m = 0;
+    for (i = 0; i < NTRK; i++)
+        m |= (uint32_t)(trk[i].kind == TK_DRUM) << i;
+    return m;
+}
+/* the drum track a drum control acts on (GLO > DRUMS, the kit, a drum MIDI note without a track): the selected
+ * track when it is one, else the first drum track; 0: there is none */
+static track_t *drum_focus(void)
+{
+    uint32_t m = trk_drums(), i;
+    if (is_drum(TSEL))
+        return TSEL;
+    for (i = 0; i < NTRK; i++)
+        if ((m >> i) & 1u)
+            return &trk[i];
+    return 0;
+}
+#define DFOC (drum_focus() ? drum_focus() : TSEL)   /* the drum screens' track (they show only with one: never TSEL) */
 /* silent: MUTE, or another track is soloed */
 static int trk_silent(const track_t *t)
 {

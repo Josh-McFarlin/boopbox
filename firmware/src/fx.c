@@ -311,12 +311,16 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
  * added before the buses: integer sums commute, so the output is the same, bit for bit, whatever the split
  * (tests/regress.c gives the golden hashes under every mode of the host double: tests/cpu1_modes.sh). */
 static void events_block(uint32_t n);                    /* seq.c */
-typedef struct { int32_t l[CTL], r[CTL], sc[CTL], sd[CTL], sr[CTL]; } mixacc_t;   /* dry L, R; chorus, delay, reverb sends */
+typedef struct { int32_t l[CTL], r[CTL], sc[CTL], sd[CTL], sr[CTL], pl[CTL], pr[CTL]; } mixacc_t;   /* dry L, R; chorus,
+                                                         * delay, reverb sends; the dry of the tracks the punch-in FX
+                                                         * act on (pfx_bus: punch.c) */
 static mixacc_t acc[2] __attribute__((section(".lowram")));          /* core 0's, core 1's (.lowram: app.ld, main.c) */
+/* FX > PERF TARGET other than MASTER: the tracks (a bit each) whose dry goes to the punch-in FX's own bus (acc.pl, pr),
+ * this block (set before the units render, both cores read it); 0: every track to the mix, the effect on the whole mix */
+static uint8_t pfx_bus;
 static int32_t wet_l[CTL], wet_r[CTL];
-static int32_t part_buf[2][CTL] __attribute__((section(".lowram")));   /* a part's scratch, one per core */
-static int32_t drum_buf[4][CTL] __attribute__((section(".lowram")));   /* the drums through the drum track's FILTER: L, R,
-                                                                        * reverb, delay */
+static int32_t part_buf[2][CTL] __attribute__((section(".lowram")));   /* a track's scratch, one per core (a drum track's
+                                                                        * mono bus too: mix_drums) */
 
 /* ---- mute / solo: a track that goes silent fades out over ~6 ms (and back in) */
 #define MUTE_STEP 4096                                  /* Q15 per block: 8 blocks */
@@ -442,8 +446,8 @@ static void tflt_run(djf_t *f, const tsvf_t *c, int32_t *b, uint32_t n, uint32_t
  * effect and less a lighter one. MIX (P_IMIX) blends dry and wet linearly; MIX 0 or TYPE OFF: the track bit for bit
  * as before (nothing runs). MIX glides (2.9 ms, SL_SLOPE); a TYPE change fades the old one out, clears the state,
  * fades the new one in; so does a start from MIX 0 (no stale line or filter).
- * The drum track (SLOOP): its left, right, reverb send and delay send each through their own state, the same settings
- * (fx.c mix_block). State in RAM (.bss): 580 B a channel; noinline, its own loops */
+ * A drum track: on its mono bus, before its pan and sends (mix_drums). State in RAM (.bss): 580 B a track; noinline,
+ * its own loops */
 enum { IT_OFF, IT_SOFT, IT_HARD, IT_FOLD, IT_FUZZ, IT_CRUSH, IT_PHASER, IT_FLANGER, IT_CHORUS, IT_N };
 _Static_assert(IT_N == sizeof N_ITYPE / sizeof N_ITYPE[0], "the INSERT's types as params.c names them");
 #define IL_LEN 256u                     /* FLANG / CHOR: the line, samples (a power of 2: masked) */
@@ -466,7 +470,7 @@ typedef struct {
     int16_t line[IL_LEN];               /* FLANG / CHOR, at a quarter (headroom) */
 } ins_t;
 /* (in .bss, not the pool: tools/build.py keeps 8 KiB of the pool spare; RAM has room) */
-static ins_t ins[NPART + 4u];                    /* the parts; the drum track's L, R, REV, DLY */
+static ins_t ins[NTRK];                          /* one per track */
 
 static inline int32_t ins_mixq(int32_t m) { return m >= 127 ? 32768 : m <= 0 ? 0 : m * 258; }   /* MIX -> Q15 */
 static inline int32_t ins_mix(int32_t x, int32_t y, int32_t w) { return w == 32768 ? y : x + mulq16(y - x, (uint32_t)w << 1); }
@@ -639,12 +643,12 @@ static __attribute__((noinline)) int ins_run(ins_t *s, const int16_t *p, int32_t
 /* a part's INSERT on its block b (mix_part): nothing while TYPE is OFF or MIX is 0 and faded */
 static void track_insert(track_t *t, int32_t *b, uint32_t n)
 {
-    t->ins_run = (uint8_t)ins_run(&ins[(uint32_t)(t - trk) % NPART], t->p, b, n);
+    t->ins_run = (uint8_t)ins_run(&ins[(uint32_t)(t - trk) % NTRK], t->p, b, n);
 }
 /* the INSERT at rest at once (mix_part: TYPE turned OFF while the part was silent, its fade never ran) */
 static __attribute__((noinline)) void ins_rest(track_t *t)
 {
-    memset(&ins[(uint32_t)(t - trk) % NPART], 0, sizeof(ins_t));
+    memset(&ins[(uint32_t)(t - trk) % NTRK], 0, sizeof(ins_t));
     t->ins_run = 0;
 }
 
@@ -713,6 +717,8 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
         lvl0 = t->lvl, gl0 = t->gpl, gr0 = t->gpr;
         t->lvl = mix_glide(lvl0, lvl), t->gpl = mix_glide(gl0, gl), t->gpr = mix_glide(gr0, gr);
         dl = (t->lvl - lvl0) >> CTL_LOG2, dgl = t->gpl - gl0, dgr = t->gpr - gr0;
+        int32_t *ol = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pl : mx->l;   /* (the punch-in FX's bus, or the mix) */
+        int32_t *orr = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pr : mx->r;
         for (i = 0; i < n; i++) {
             int32_t x = ((b[i] >> 2) * (lvl0 + dl * (int32_t)i)) >> 10, a;   /* pre-shift: 8 loud voices */
             int32_t xs, g = ga + (((gb - ga) * (int32_t)i) >> CTL_LOG2);
@@ -729,8 +735,8 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
             if (r)
                 mx->sr[i] += mulq15(xs, r);
             gl = gl0 + ((dgl * (int32_t)i) >> CTL_LOG2), gr = gr0 + ((dgr * (int32_t)i) >> CTL_LOG2);   /* (2.7) */
-            mx->l[i] += ((x >> 4) * gl) >> 8;           /* (x may pass 2^19: >> 4 first) */
-            mx->r[i] += ((x >> 4) * gr) >> 8;
+            ol[i] += ((x >> 4) * gl) >> 8;              /* (x may pass 2^19: >> 4 first) */
+            orr[i] += ((x >> 4) * gr) >> 8;
         }
         t->peak = pk;
     }
@@ -804,75 +810,70 @@ static void djf_process(int32_t *l, int32_t *r, uint32_t n)
 }
 
 #include "punch.c"            /* PUNCH-IN FX on the whole mix (FX held + a white key) */
-/* ---- the render units and the second core. A unit is a synth part (mix_part) or the drum track with the
- * metronome (mix_drums); unit k is bit k of a mask, the drums bit NPART. What a unit on core 1 may not share
+/* ---- the render units and the second core. A unit is a track: a synth track (mix_part) or a drum track (mix_drums);
+ * unit k is bit k of a mask (the metronome: core 0, after the units). What a unit on core 1 may not share
  * with one on core 0: part_buf (one per core); FM6's operator buses (per part, in its arena); the formant
  * engine's breath noise, one xorshift for all its voices (two FORMANT parts stay together, on core 0); and
  * rng() (libc.c): a part whose LFO wraps this block (track_lfo_tick draws) or whose PHYS model changed under
  * a note (phys_render resets with a draw) stays on core 0, where the draws keep their order (units_split).
  * SLOOP 2.6 added two things a part keeps for its block, now per part or per core: the ENV SYNC steps (voice.c
- * esync_k) and the preset fade's sound set aside (mix_part pnew); its INSERT state is per part (ins[]), the drum
- * track's its own; TEXTURE, the THROWs' glide, FREEZE and the look-ahead limiter run on core 0 outside the units. */
-#define U_DRUMS (1u << NPART)
-#define U_ALL ((2u << NPART) - 1u)
+ * esync_k) and the preset fade's sound set aside (mix_part pnew); its INSERT state is per track (ins[]);
+ * TEXTURE, the THROWs' glide, FREEZE and the look-ahead limiter run on core 0 outside the units. The drum voices
+ * are one pool (drums.c), but each is mixed by its own track's unit only (drums.own) */
+#define U_ALL ((1u << NTRK) - 1u)
+_Static_assert(NTRK <= 8, "core 1's job argument carries the unit mask in 8 bits (cpu1_units_job)");
 
-/* the drum track's INSERT (2.6): its left, right and the two sends, each through its own state, the same settings */
-static void drum_insert(int32_t *l, int32_t *r, int32_t *v, int32_t *d, uint32_t n)
-{
-    track_t *t = TDRUM;
-    int run;
-    if (!(t->p[P_ITYPE] | t->ins_run))
-        return;
-    run = ins_run(&ins[NPART], t->p, l, n);
-    run |= ins_run(&ins[NPART + 1u], t->p, r, n);
-    run |= ins_run(&ins[NPART + 2u], t->p, v, n);
-    run |= ins_run(&ins[NPART + 3u], t->p, d, n);
-    t->ins_run = (uint8_t)run;
-}
-/* the drum track with the metronome: drums_render, through the SLICER when it is on (slicer.c), then through its
- * INSERT (2.6) and the track's FILTER when they are on (into drum_buf, left, right and the two sends apart, then added) */
-static void mix_drums(uint32_t n, mixacc_t *mx)
+/* a drum track: its voices (drums.c drums_mix) straight into the mix; with its SLICER, INSERT or FILTER on, on a mono
+ * bus (the scratch b) through them, in that order, then its LEVEL's pan and its sends */
+static void mix_drums(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
 {
     uint32_t i;
     tsvf_t fc;
-    djf_t *f = &tflt[TRK_DRUM];
-    int flt;
-    drums.a0 = TDRUM->att;                              /* the drum track's mute / solo fade */
-    drums.a1 = 32767 - gain_next(TDRUM);
-    flt = n <= CTL && djf_block(f, TDRUM->p[P_TFLT], &fc, tflt_reso());   /* the drum track's FILTER */
-    if (flt || (n <= CTL && (TDRUM->p[P_ITYPE] | TDRUM->ins_run))) {   /* .. or its INSERT: left, right, the sends */
-        int32_t *dl = drum_buf[0], *dr = drum_buf[1], *dv = drum_buf[2], *dd = drum_buf[3];
-        for (i = 0; i < n; i++)
-            dl[i] = dr[i] = dv[i] = dd[i] = 0;
-        slicer_drums(dl, dr, dv, dd, n);
-        drum_insert(dl, dr, dv, dd, n);                 /* (2.6: off, nothing) */
-        if (flt) {
-            tflt_run(f, &fc, dl, n, 0);
-            tflt_run(f, &fc, dr, n, 1);
-            tflt_run(f, &fc, dv, n, 2);
-            tflt_run(f, &fc, dd, n, 3);
-        }
-        for (i = 0; i < n; i++) {
-            mx->l[i] += dl[i];
-            mx->r[i] += dr[i];
-            mx->sr[i] += dv[i];
-            mx->sd[i] += dd[i];
-        }
-    } else {
-        slicer_drums(mx->l, mx->r, mx->sr, mx->sd, n);   /* drums_render, through the SLICER when on */
+    djf_t *f = &tflt[(uint32_t)(t - trk) % NTRK];
+    int32_t a0 = t->att, a1 = 32767 - gain_next(t);    /* the track's mute / solo fade */
+    int flt = n <= CTL && djf_block(f, t->p[P_TFLT], &fc, tflt_reso());   /* its FILTER */
+    int ins_on = n <= CTL && (t->p[P_ITYPE] | t->ins_run);
+    int32_t *ol = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pl : mx->l;   /* (the punch-in FX's bus, or the mix) */
+    int32_t *orr = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pr : mx->r;
+    if (!flt && !ins_on && !slicer_on(t)) {
+        slicer_track(t, 0, n);                          /* (the SLICER's step clock runs on) */
+        drums_mix(t, a0, a1, ol, orr, mx->sr, mx->sd, 0, n);
+        return;
     }
-    click_render(mx->l, mx->r, n);                        /* the metronome: its own voice (drums.c), any kit, any mute */
+    for (i = 0; i < n; i++)
+        b[i] = 0;
+    drums_mix(t, a0, a1, 0, 0, 0, 0, b, n);
+    slicer_track(t, b, n);
+    if (ins_on)
+        track_insert(t, b, n);                          /* (2.6: off, nothing) */
+    if (flt)
+        tflt_run(f, &fc, b, n, 0);
+    {
+        int32_t send = send_thr(t->p[P_REV] * 258, thr_rev), dsend = send_thr(t->p[P_DLY] * 258, thr_dly);
+        int32_t gl = t->gpl, gr = t->gpr;               /* (the pan as drums_mix glided it this block) */
+        for (i = 0; i < n; i++) {
+            int32_t x = b[i];
+            ol[i] += (x * gl) >> 12;
+            orr[i] += (x * gr) >> 12;
+            if (send)
+                mx->sr[i] += mulq15(x, send);
+            if (dsend)
+                mx->sd[i] += mulq15(x, dsend);
+        }
+    }
 }
 
 /* the units of mask into the set mx, in their order */
 static void mix_units(uint32_t mask, uint32_t n, mixacc_t *mx, int32_t *scratch)
 {
     uint32_t k;
-    for (k = 0; k < NPART; k++)
-        if (mask & (1u << k))
-            mix_part(&trk[k], n, mx, scratch);
-    if (mask & U_DRUMS)
-        mix_drums(n, mx);
+    for (k = 0; k < NTRK; k++)
+        if (mask & (1u << k)) {
+            if (is_drum(&trk[k]))
+                mix_drums(&trk[k], n, mx, scratch);
+            else
+                mix_part(&trk[k], n, mx, scratch);
+        }
 }
 
 /* the load figures: core 1's time in its job and core 0's time waiting for it, in ticks over a half (cpu1.h
@@ -896,24 +897,29 @@ static void cpu1_units_job(uint32_t arg)                /* core 1's job: the uni
     cpu1_job_ticks += cpu1_ticks() - t0;
 }
 
-/* the units core 1 renders this block: the last part and the drums (cpu1_units when set: the menu, the tests),
- * less the parts that must stay here (above) */
+/* the units core 1 renders this block: tracks 3, 4, 7 and 8 (cpu1_units when set: the menu, the tests), less the
+ * synth tracks that must stay here (above) */
+#define U_CPU1_DEF 0xCCu
 static uint32_t units_split(void)
 {
-    uint32_t mask = cpu1_units < 0 ? (1u << (NPART - 1u)) | U_DRUMS : (uint32_t)cpu1_units & U_ALL, k, nform = 0;
+    uint32_t mask = cpu1_units < 0 ? U_CPU1_DEF & U_ALL : (uint32_t)cpu1_units & U_ALL, k, nform = 0;
     if (!mask)
         return 0;
-    for (k = 0; k < NPART; k++)
-        nform += ENGINES[trk[k].engine] == &ENG_FORMANT;
-    for (k = 0; k < NPART; k++) {
+    for (k = 0; k < NTRK; k++)
+        nform += !is_drum(&trk[k]) && ENGINES[trk[k].engine] == &ENG_FORMANT;
+    for (k = 0; k < NTRK; k++) {
         const track_t *t = &trk[k];
         const engine_t *e = ENGINES[t->engine];
         uint32_t fade = t->xf_on && t->xf, inc;
         const int16_t *p = fade && t->pold ? t->p_old : t->p;   /* the values this block renders with (mix_part: a
                                                          * preset fading out keeps its old sound; voice.c track_render:
                                                          * an engine fading out its old engine values, pe_old) */
-        if (!(mask & (1u << k)))
+        if (!(mask & (1u << k)) || is_drum(t))
             continue;
+        if (eng_big(t->engine) && !t->arena) {         /* (no arena yet: it may take one as it renders, on core 0 only) */
+            mask &= ~(1u << k);
+            continue;
+        }
         inc = p[P_LSYNC] ? lfo_sync_inc(p) : LFO_INC[p[P_LRATE] & 127];   /* (2.6: LFO 2 SYNC, as track_lfo_tick) */
         if (t->lfo_ph + inc < t->lfo_ph || (e == &ENG_PHYS && phys_render_draws(t, fade ? t->pe_old[0] : p[P_E0])) ||
             (e == &ENG_FORMANT && nform > 1u))
@@ -1175,7 +1181,7 @@ static void mix_block(int32_t *out, uint32_t n)
     uint32_t i, c1;
     int32_t m0, m1, *mix_l = acc[0].l, *mix_r = acc[0].r;
     for (i = 0; i < n; i++)
-        acc[0].l[i] = acc[0].r[i] = acc[0].sc[i] = acc[0].sd[i] = acc[0].sr[i] = 0;
+        acc[0].l[i] = acc[0].r[i] = acc[0].sc[i] = acc[0].sd[i] = acc[0].sr[i] = acc[0].pl[i] = acc[0].pr[i] = 0;
     {   /* REV / ECHO THROW (2.6): the sends glide to full and back over ~12 ms (17 blocks); set before the hand-off:
          * the units on both cores read them (send_thr) */
         uint32_t q = thr_req | thr_ed;                  /* (2.7: the editor's LIVE page too) */
@@ -1183,15 +1189,17 @@ static void mix_block(int32_t *out, uint32_t n)
         thr_dly = (q & 2u) ? (thr_dly + 1928 > 32767 ? 32767 : thr_dly + 1928) : (thr_dly > 1928 ? thr_dly - 1928 : 0);
     }
     events_block(n);
+    pfx_bus = punch.cur >= 0 ? punch_mask : (uint8_t)pfx_mask_now();   /* (an effect playing keeps the tracks it started on) */
     duck_block(n * (uint32_t)song.g[G_BPM]);
     c1 = cpu1_on() ? units_split() : 0;                 /* core 1's units this block */
     if (c1) {
         for (i = 0; i < n; i++)
-            acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = 0;
+            acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = acc[1].pl[i] = acc[1].pr[i] = 0;
         if (!cpu1_run(cpu1_units_job, c1 | n << 8))
             c1 = 0;
     }
     mix_units(U_ALL & ~c1, n, &acc[0], part_buf[0]);    /* this core's units, meanwhile */
+    click_render(acc[0].l, acc[0].r, n);                /* the metronome: its own voice (drums.c), any kit, any mute */
     if (c1) {
         uint32_t w0 = cpu1_ticks();
         int late = cpu1_wait();
@@ -1199,7 +1207,7 @@ static void mix_block(int32_t *out, uint32_t n)
         if (late) {                                     /* core 1 did not finish in time: held from now on (cpu1.h);
                                                          * its units here, once (what it half did is this block's glitch) */
             for (i = 0; i < n; i++)
-                acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = 0;
+                acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = acc[1].pl[i] = acc[1].pr[i] = 0;
             cpu1_units_job(c1 | n << 8);
         }
         for (i = 0; i < n; i++) {
@@ -1208,18 +1216,33 @@ static void mix_block(int32_t *out, uint32_t n)
             acc[0].sc[i] += acc[1].sc[i];
             acc[0].sd[i] += acc[1].sd[i];
             acc[0].sr[i] += acc[1].sr[i];
+            acc[0].pl[i] += acc[1].pl[i];
+            acc[0].pr[i] += acc[1].pr[i];
         }
     }
     texture_mix(mix_l, mix_r, n);                       /* GLO > TEXTURE (2.6): the bed, dry; after both cores' units
                                                          * (what it adds does not depend on them: the same sum) */
-    punch_freeze_feed(acc[0].sr, mix_l, mix_r, n);     /* punch-in FREEZE: the whole dry mix into the held reverb */
-    fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
-    for (i = 0; i < n; i++) {
-        mix_l[i] += wet_l[i];
-        mix_r[i] += wet_r[i];
+    if (!pfx_bus) {                                     /* TARGET MASTER: the effect on the whole mix, as ever */
+        punch_freeze_feed(acc[0].sr, mix_l, mix_r, n); /* punch-in FREEZE: the whole dry mix into the held reverb */
+        fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
+        for (i = 0; i < n; i++) {
+            mix_l[i] += wet_l[i];
+            mix_r[i] += wet_r[i];
+        }
+        dust_process(mix_l, mix_r, n);
+        punch_process(mix_l, mix_r, n);
+    } else {                                            /* a TARGET: the effect on those tracks' dry only, then into the
+                                                         * mix (the sends, the texture and the other tracks pass it by;
+                                                         * idle, the same sum as above) */
+        punch_freeze_feed(acc[0].sr, acc[0].pl, acc[0].pr, n);
+        fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
+        punch_process(acc[0].pl, acc[0].pr, n);
+        for (i = 0; i < n; i++) {
+            mix_l[i] += wet_l[i] + acc[0].pl[i];
+            mix_r[i] += wet_r[i] + acc[0].pr[i];
+        }
+        dust_process(mix_l, mix_r, n);
     }
-    dust_process(mix_l, mix_r, n);
-    punch_process(mix_l, mix_r, n);
     djf_process(mix_l, mix_r, n);
     m1 = (int32_t)song.master_q12;
     m0 = master_cur < 0 ? m1 : master_cur;

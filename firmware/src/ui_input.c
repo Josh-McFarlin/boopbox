@@ -35,6 +35,10 @@ UI_SMALL static uint32_t cur_btn(void)                      /* the button of the
         return B_SAVE;
     if (!ui.home && cur_page()->scope == SC_DRUM)
         return B_SEQ;
+    if (!ui.home && cur_page()->scope == SC_PATS)
+        return B_SEQ;
+    if (!ui.home && cur_page()->scope == SC_HARM)
+        return B_SCL;
     return FAM_BTN[cur_fam()];
 }
 
@@ -148,13 +152,13 @@ UI_SMALL static uint32_t keys_lit(void)
         break;
     }
     if (kb_grid) {                                 /* the DRUMS grid page: the sound's steps of this page */
-        uint32_t len = trk_len(TDRUM), b0 = drum_cursor / 16u * 16u;
+        uint32_t len = trk_len(DFOC), b0 = drum_cursor / 16u * 16u;
         for (i = 0; i < 16u; i++) {
             uint32_t idx = b0 + i, on;
             if (idx >= len)
                 continue;
-            on = dstep_has(&TDRUM->dstep[idx], drum_lane);
-            if (song.playing && idx == TDRUM->seq_idx)
+            on = dstep_has(&DFOC->dstep[idx], drum_lane);
+            if (song.playing && idx == DFOC->seq_idx)
                 on = !on || blink;
             if (on)
                 m |= 1u << key_of_white(i);
@@ -342,8 +346,16 @@ UI_SMALL static void note_sheet_knob(uint32_t slot, int32_t steps)
     track_t *t = TSEL;
     step_t *st = &t->step[ui.cursor];
     uint32_t row = ui.sheet - 1u;
+    if (ui.csheet) {                                      /* the COMP strip */
+        comp_strip_knob(t, ui.cursor, slot, steps);
+        return;
+    }
+    if (ui.lsheet) {                                      /* the LOCKS strip */
+        lock_strip_knob(t, ui.cursor, slot, steps);
+        return;
+    }
     if (slot == 0u) {
-        ui.sheet = (uint8_t)(1 + clamp((int32_t)row + steps, 0, 5));
+        ui.sheet = (uint8_t)(1 + clamp((int32_t)row + steps, 0, NSHEET - 1));
         ui.sheet_last = (uint8_t)(ui.sheet - 1u);          /* (2.8.1) reopen on this row next time */
         return;
     }
@@ -383,6 +395,22 @@ UI_SMALL static void note_sheet_do(void)               /* OCT+ tapped in the she
 {
     track_t *t = TSEL;
     uint32_t row = ui.sheet - 1u;
+    if (ui.csheet) {
+        comp_strip_do(t, ui.cursor);
+        return;
+    }
+    if (ui.lsheet) {
+        lock_strip_do(t, ui.cursor);
+        return;
+    }
+    if (row == SH_COMP) {                                 /* COMP: the step's components */
+        ui.csheet = 1;
+        return;
+    }
+    if (row == SH_LOCKS) {                                /* LOCKS: the step's parameter locks */
+        ui.lsheet = 1;
+        return;
+    }
     note_mark();
     if (row == 0u) {
         t->step[ui.cursor].flags ^= SF_SLIDE;
@@ -468,23 +496,29 @@ UI_SMALL static void project_new(void)
         track_t *t = &trk[i];
         undo_mark(t, (undo_sess += 4u) | 3u);
         fm1_irq_off();
-        if (i < NPART)
+        if (!is_drum(t))
             sound_change(t);                            /* (2.6: what sounds fades out with its own sound) */
-        track_defaults(t);
-        if (i < NPART) {
-            set_engine_of(t, TRK_DEF[i][0]);
-            apply_preset_to(t, TRK_DEF[i][1]);
+        if (t->kind != trk_def_kind(i)) {               /* (eight tracks: back to its kind; its voices end now) */
+            uint32_t j;
+            for (j = 0; j < NVOICE; j++)
+                t->v[j].active = t->v[j].gate = t->v[j].stage = 0;
+            t->xf_on = t->xf = t->pold = 0;
+            eng_arena_drop(t);
         }
         fm1_irq_on();
+        track_power_on(i);
+        memset(drum_tune[i], 0, sizeof drum_tune[i]);   /* (2.7) every drum sound as the kit has it */
+        memset(drum_dec[i], 0, sizeof drum_dec[i]);
+        drum_mute[i] = 0;                               /* (2.6: the live mutes) */
     }
-    TDRUM->p[P_E0] = DRUM_DEFAULT_KIT;
-    memset(drum_tune, 0, sizeof drum_tune);             /* (2.7) every drum sound as the kit has it */
-    memset(drum_dec, 0, sizeof drum_dec);
-    drum_mute = 0;                                      /* (2.6: the live mutes) */
+    fm1_irq_off();
+    pat_reset_all();                                    /* (one empty pattern a track, the bank empty) */
+    harm_defaults();                                    /* (no progression; no track follows) */
+    for (i = 0; i < NTRK; i++)
+        trk[i].hfol = HF_OFF;
+    fm1_irq_on();
     for (i = 0; i < G_COUNT; i++)
-        if (i != G_SLOT && i != G_DRCH && i != G_SYNC && i != G_MIDI && i != G_ROUTE && (i < G_CH1 || i > G_CHOTH) &&
-            i != G_BEND && i != G_FXCH && i != G_DRMAP && i != G_RMCH && i != G_CLKOUT && i != G_FXFADE)                                                                     /* (the
-                                                                 * FM-1's settings: GLO > MIDI 2.6) */
+        if (!g_setting(i))                              /* (the FM-1's settings: GLO > MIDI 2.6) */
             song.g[i] = GP[i].def;
     song.solo = 0;
     song.octave = 0;
@@ -492,6 +526,7 @@ UI_SMALL static void project_new(void)
     ui.force = 1;
 }
 
+static int knob_capture(uint32_t id, int32_t v, int32_t was);
 UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -558,15 +593,19 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         return;
     v = d->names == ESYNC_NAMES || d->names == N_IBITS || d->names == N_IRATE ? names_turn(d, *vp, steps)   /* (a name a detent) */
                                     : clamp(*vp + accel(EN_K1 + slot, steps, d->names ? 0 : d->max - d->min), d->min, d->max);
+    if ((pg->scope == SC_TRACK || pg->scope == SC_ENGINE) && knob_capture(id, v, *vp))
+        return;                                           /* (recorded as the step's lock) */
     *vp = (int16_t)v;
+    if (pg->scope == SC_PATT)
+        return;                                           /* (DIR, SEED: not parameters, nothing more to do) */
     if (pg->scope != SC_GLOBAL && p_lockable(id))
         ui.lock_par = (uint8_t)id;                        /* the SEQ layer's lock parameter: the last one touched */
     if (pg->scope != SC_GLOBAL)
         ml_knob(TSEL, id);                                /* MIDI LEARN: this parameter (2.6) */
     if (!v)
         return;
-    if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ) &&
-        ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
+    if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ ||
+                                   id == G_KIND) && ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
         *vp = 0;
         ui.arm = (uint8_t)id;
         ui.arm_t = 90;
@@ -599,6 +638,19 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         ui_message("SOUND INIT");
         ui.force = 1;
         break;
+    case G_KIND: {                                              /* (eight tracks) the selected track SYNTH <-> DRUM */
+        uint32_t to = is_drum(TSEL) ? TK_SYNTH : TK_DRUM;
+        *vp = 0;
+        if (to == TK_SYNTH && !eng_room(TSEL, trk_def_kind(song.sel % NTRK) == TK_SYNTH ? TRK_DEF[song.sel % NTRK][1] : 0u)) {
+            ui_message("ENGINE BUSY: NO CHANGE");
+            break;
+        }
+        if (undo.valid && undo.trk == song.sel % NTRK)
+            undo.valid = 0;                                     /* (the undo was the other kind's pattern) */
+        track_set_kind(TSEL, to);
+        ui_message(to == TK_DRUM ? "NOW A DRUM TRACK" : "NOW A SYNTH TRACK");
+        break;
+    }
     case G_NEWPRJ:
         *vp = 0;
 #if FELUCCA_ARRANGER
@@ -613,6 +665,24 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
     default:
         break;
     }
+}
+
+/* menu SEQ > REC KNOBS = LOCKS (rec_locks): a sound knob turned while the selected track records becomes a lock on the
+ * step playing (seq.c lock_capture), the track's own value stays. 1: so (the caller writes nothing) */
+UI_SMALL static int knob_capture(uint32_t id, int32_t v, int32_t was)
+{
+    int ok;
+    if (!rec_locks || !song.playing || !((song.rec >> (song.sel % NTRK)) & 1u) || id >= P_COUNT || !p_lockable(id) ||
+        v == was)
+        return 0;
+    fm1_irq_off();
+    ok = lock_capture(TSEL, TSEL->seq_idx % NSTEP, id, v);
+    fm1_irq_on();
+    if (!ok)
+        ui_message("NO LOCK LEFT");
+    ui.lock_par = (uint8_t)id;
+    sync_reload = 1;
+    return 1;
 }
 
 /* SLOOP 2.6: the STEP page's entry from a MIDI keyboard, as from the keys (seq_entry): the notes played together on the
@@ -1130,6 +1200,7 @@ UI_SMALL static void ui_input(void)
         }
     }
     kb_grid = (uint8_t)grid_keys_on();                  /* (seq.c: the keys are the grid's steps) */
+    kb_harm = (uint8_t)(on_chords_page() && !ui.menu);  /* (seq.c: the keys are chords, harmony.c harm_key) */
     if (ui.menu) {                                      /* HOME / REC taps do nothing here */
         punch.hold = 0;
         thr_req = 0;
@@ -1184,6 +1255,25 @@ UI_SMALL static void ui_input(void)
         for (k = 0; k < 4u; k++)                        /* a take / the count-in: KNOB 1..4 edit nothing */
             panel_enc(EN_K1 + k);
     }
+    pats_poll();                                        /* (patterns: a change refused, said) */
+    if (eng_refused) {                                  /* (an engine change refused: three tracks play the big ones) */
+        eng_refused = 0;
+        ui_message("BIG ENGINES: 3 IN USE");
+    }
+#if FELUCCA_ARRANGER
+    if (song_full) {                                    /* (song mode refused: the loop could not be kept aside) */
+        song_full = 0;
+        ui_message("LOOP TOO BIG FOR SONG");
+    }
+#endif
+    if (on_pats_page()) {
+        pats_screen_input(pressed, home);
+        return;
+    }
+    if (on_chords_page()) {
+        chords_screen_input(pressed, home);
+        return;
+    }
 #if FELUCCA_ARRANGER
     if (on_song_page()) {
         song_screen_input(pressed, home);
@@ -1206,14 +1296,19 @@ UI_SMALL static void ui_input(void)
     if (on_notes_page()) {                              /* (2.7.2) OCT+ held: the note's sheet; tapped: as before */
         uint32_t ev, ob = 1u << panel.btn[B_OCTDN];
         pressed = octp_filter(pressed, &ev);
-        if (ev == 2u && !ui.sheet)
+        if (ev == 2u && !ui.sheet) {
             ui.sheet = (uint8_t)(1u + ui.sheet_last);      /* (2.8.1) reopen on the row last used */
-        else if (ev == 1u && ui.sheet)
+            ui.csheet = ui.lsheet = 0;
+        } else if (ev == 1u && ui.sheet) {
             note_sheet_do();
-        else if (ev == 1u)
+        } else if (ev == 1u) {
             pressed |= 1u << panel.btn[B_OCTUP];
+        }
         if (ui.sheet && (pressed & ob)) {
-            ui.sheet = 0;
+            if (ui.csheet || ui.lsheet)
+                ui.csheet = ui.lsheet = 0;                  /* (a strip: back to the sheet) */
+            else
+                ui.sheet = 0;
             pressed &= ~ob;
         }
         if (ev)
@@ -1268,7 +1363,7 @@ UI_SMALL static void ui_input(void)
          * being edited. Every detent counts */
         uint32_t total, cur = preset_pos(&total);
         if (is_drum(TSEL))
-            TDRUM->p[P_E0] = (int16_t)clamp(TDRUM->p[P_E0] + s, 0, DRUM_KITS - 1);
+            DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
         else if (total)
             preset_go((uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total));
     }
@@ -1299,7 +1394,11 @@ UI_SMALL static void ui_input(void)
         if (ui.home) {
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);
-            *vp = (int16_t)clamp(*vp + accel(EN_K1 + k, s, d->names ? 0 : d->max - d->min), d->min, d->max);   /* (a list: no jumps) */
+            int32_t hv = clamp(*vp + accel(EN_K1 + k, s, d->names ? 0 : d->max - d->min), d->min, d->max);   /* (a list: no jumps) */
+            if (!is_drum(TSEL) && vp == &TSEL->p[ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u] % P_COUNT] &&
+                knob_capture(ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u], hv, *vp))
+                continue;                               /* (recorded as the step's lock) */
+            *vp = (int16_t)hv;
             if (!is_drum(TSEL) && p_lockable(ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u]))
                 ui.lock_par = ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u];
             if (!is_drum(TSEL))

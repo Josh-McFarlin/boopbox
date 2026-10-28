@@ -2456,8 +2456,9 @@ function backupObjects(file) {
 /* write it back: banks, projects, the working project, the settings, then the samples */
 /* the project format of a backup object ("FUN6" .. as stored, low byte first: 6 ..), 0 not a project */
 const bkProjFormat = (d) => (d && d.length >= 4 && d[1] === 0x4E && d[2] === 0x55 && d[3] === 0x46 ? d[0] - 0x30 : 0);
-/* the newest project format a device reads, from its INFO: 2.6 (71 parameters) 6, 2.4 .. 2.5 (61) 5, older 4 */
-const bkDevFormat = (info) => (info.pcount >= 71 ? 6 : info.pcount >= 61 ? 5 : 4);
+/* the newest project format a device reads, from its INFO: eight tracks 7 (format 7, variable length), 2.6 (71
+   parameters) 6, 2.4 .. 2.5 (61) 5, older 4 */
+const bkDevFormat = (info) => (info.ntrk >= 8 ? 7 : info.pcount >= 71 ? 6 : info.pcount >= 61 ? 5 : 4);
 /* "SLOOP 2.6" -> true when at least maj.min.patch */
 const bkFwAtLeast = (v, want) => {
   const m = /(\d+)\.(\d+)(?:\.(\d+))?/.exec(String(v || ""));
@@ -4767,7 +4768,7 @@ const TEXT = {
     drumHelp: "ドラムは KICK SNARE CHH のように GM の名前か番号で入力（最大 4 音）。",
     stepDetail: "ステップ", nudge: "ナッジ", locks: "パラメータロック", addLock: "+ ロック", noLock: "ロックなし",
     fillCond: "フィル", fcNorm: "通常", fcFill: "フィル時のみ", fcNoFill: "フィル時は休み",
-    lockFull: "ロックは 1 トラック 24 個まで。", lockRefused: "このパラメータはロックできません。",
+    lockFull: "このトラックのロックはいっぱいです。", lockRefused: "このパラメータはロックできません。",
     lockHelp: "ナッジ：ステップの長さの 1/64 単位で早め（−）／遅め（＋）。ロック：そのステップだけパラメータの値を変え、次のステップで元に戻ります。フィル：「フィル時のみ」のステップは GLO ＋ キー 9 を押している間（またはキー 10 で次の小節）だけ鳴り、「フィル時は休み」はその間だけ休みます（グリッドの F と ×）。本体では SEQ ＋ ステップ長押し ＋ KNOB 4（ナッジ）／PRESETS（ロック、ALGORITHM でパラメータ）／OCT+（フィル）。",
     mixer: "ミキサー", mixHelp: "本体の TRACKS ページと同じ 4 トラック。フェーダーはレベル（ドラムは GLO > DRUMS LEVEL）。パンはどのトラックも選択を変えずに書き込みます（0.8 のファームウェアでは一瞬そのトラックを選びます）。REC は本体での録音待機の表示です。",
     level: "レベル", pan: "パン", mute: "ミュート", rec: "REC", selectTrack: "選択", selectedTrack: "選択中",
@@ -5104,7 +5105,7 @@ const TEXT = {
     drumHelp: "Enter drums by GM name or number, like KICK SNARE CHH (up to 4).",
     stepDetail: "Step", nudge: "Nudge", locks: "Parameter locks", addLock: "+ lock", noLock: "no lock",
     fillCond: "Fill", fcNorm: "normal", fcFill: "fill only", fcNoFill: "no fill",
-    lockFull: "A track holds 24 locks at most.", lockRefused: "This parameter cannot be locked.",
+    lockFull: "This track holds no more locks (24 a track; 32 on an eight-track SLOOP).", lockRefused: "This parameter cannot be locked.",
     lockHelp: "Nudge: the step early (-) or late (+), in 1/64 of a step. A lock gives a parameter another value for this step only; the base comes back at the next one. Fill: a \"fill only\" step plays only while GLO + key 9 is held (or key 10 makes the next bar a fill), a \"no fill\" step is silent then (F and \u00d7 on the grid). On the device: SEQ + a step held + KNOB 4 (nudge) / PRESETS (the lock; ALGORITHM picks its parameter) / OCT+ (the fill condition).",
     mixer: "Mixer", mixHelp: "The four tracks of the device's TRACKS page. The fader is the level (drums: GLO > DRUMS LEVEL). Pan is written to any track without changing the selection (firmware 0.8: by selecting it for a moment). REC shows a track armed for live recording on the device.",
     level: "Level", pan: "Pan", mute: "Mute", rec: "REC", selectTrack: "Select", selectedTrack: "Selected",
@@ -5284,6 +5285,7 @@ let tab = (() => {
   return "sound";
 })();
 const hasTracks = () => !!dev && !!dev.info && !!dev.info.ntrk;
+const devNlock = () => (dev && dev.info && dev.info.ntrk >= 8 ? 32 : 24);   /* locks a track: 32 on the eight-track firmware */
 function showTab(name) {
   if (!TABS.includes(name)) name = "sound";
   const prev = tab;
@@ -7484,7 +7486,7 @@ function renderStepDetail() {
   if (tb.contains(document.activeElement)) return;      /* (a value being typed) */
   tb.replaceChildren(...rows.map((l) => lockRow(i, l)));
   if (!rows.length) tb.append(el("tr", {}, el("td", { class: "dim", text: t("noLock") })));
-  $("sdadd").disabled = dev.locks.length >= 24 || !lockableIds().some((id) => !rows.some((l) => l.param === id));
+  $("sdadd").disabled = dev.locks.length >= devNlock() || !lockableIds().some((id) => !rows.some((l) => l.param === id));
 }
 /* the parameters a lock may hold on this track, by id (the device's DESC labels; the engine's 8 as their current names) */
 function lockableIds() {

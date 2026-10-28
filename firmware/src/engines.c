@@ -4,7 +4,13 @@
 #include "dsp.c"
 /* SLOOP 2.5: the big per-part state of GRAIN, FM6 and PHYS shares one arena per synth part (a part plays one
  * engine at a time: on a switch the old engine fades out, its voices end, then the new one starts, voice.c
- * engine_block). The first engine to ask for it after another one gets it cleared, as at power-on. */
+ * engine_block). The first engine to ask for it after another one gets it cleared, as at power-on.
+ * Eight tracks: the NARENA arenas are lent to the tracks that play one of these engines (eng_big), at most NARENA
+ * at once (the pool has no room for more: 8.6 KB each). A track takes one when its engine switches to a big one
+ * (voice.c engine_block: the switch waits while none is free) and gives it back when it plays another engine or
+ * changes kind (eng_arena_drop). Lent on core 0: before a block's render (engine_block, eng_arena_lend), or at a note
+ * of a track that has none yet (eng_arena_of: an engine set straight, a note before the first block); fx.c units_split
+ * keeps such a track on core 0, so a lending never runs on both cores at once. */
 static void *eng_arena_of(const track_t *t, uint32_t eng);
 static inline int32_t voice_amp(int32_t s, const vmod_t *m, uint32_t i) { return mulq15(mulq15(s, amp_at(m, i)), VOICE_FS); }
 static inline int32_t soft_knee(int32_t y, int32_t k)   /* linear up to k, then only the peaks saturate */
@@ -35,15 +41,81 @@ typedef union {
     fm6_part_t fm6;                      /* eng_fm6.c: six notes and the operator buses */
     uint32_t phys[PHYS_ARENA / 4u];      /* eng_phys.c: two SYMP slots or three small ones */
 } eng_arena_t;
-static eng_arena_t eng_arena[NPART] __attribute__((section(".pool")));
-static uint8_t eng_arena_own[NPART];            /* the engine + 1 whose state is in it, 0 = none */
+static eng_arena_t eng_arena[NARENA] __attribute__((section(".pool")));
+static uint8_t eng_arena_own[NARENA];           /* the engine + 1 whose state is in it, 0 = none */
+static uint8_t eng_arena_trk[NARENA];           /* the track + 1 it is lent to, 0 = free */
 #ifdef ARENA_STATS
 static uint32_t eng_arena_claims, eng_arena_bad;   /* host tests: claims, accesses by an engine the part does not play */
 #endif
+static int eng_big(uint32_t eng)                /* the engines that keep their state in an arena */
+{
+    return eng == ENGI_GRAIN || eng == ENGI_DRAWBAR || eng == ENGI_FM6 || eng == ENGI_PHYS;
+}
+/* arena i is lent: to a track that still holds it (both ways: a track cleared or set up by hand gives it back) */
+static int eng_arena_lent(uint32_t i)
+{
+    uint32_t k = eng_arena_trk[i];
+    return k && k <= NTRK && trk[k - 1u].arena == i + 1u;
+}
+/* track t holds an arena (or takes a free one): 1, or 0 when all NARENA are lent to other tracks */
+static int eng_arena_take(track_t *t)
+{
+    uint32_t i, k = (uint32_t)(t - trk);
+    if (t->arena && eng_arena_trk[(t->arena - 1u) % NARENA] == k + 1u)
+        return 1;
+    for (i = 0; i < NARENA; i++)
+        if (!eng_arena_lent(i)) {
+            if (eng_arena_trk[i] != k + 1u)
+                eng_arena_own[i] = 0;               /* (another track's state in it: cleared at its first use) */
+            eng_arena_trk[i] = (uint8_t)(k + 1u);
+            t->arena = (uint8_t)(i + 1u);
+            return 1;
+        }
+    t->arena = 0;
+    return 0;
+}
+static void eng_arena_drop(track_t *t)          /* t no longer plays a big engine: its arena is free again */
+{
+    if (t->arena && eng_arena_trk[(t->arena - 1u) % NARENA] == (uint32_t)(t - trk) + 1u)
+        eng_arena_trk[(t->arena - 1u) % NARENA] = 0;
+    t->arena = 0;
+}
+/* the arenas lent, to tracks other than t: the UI refuses a big engine on t when this is NARENA */
+static uint32_t eng_arenas_busy(const track_t *t)
+{
+    uint32_t i, n = 0;
+    for (i = 0; i < NARENA; i++)
+        n += eng_arena_lent(i) && eng_arena_trk[i] != (uint32_t)(t - trk) + 1u;
+    return n;
+}
+/* engine e can play on track t now: not a big one, or t holds an arena, or one is free (the UI refuses the change
+ * else, and says so: eng_refused) */
+static volatile uint8_t eng_refused;
+static int eng_room(const track_t *t, uint32_t e)
+{
+    return !eng_big(e % NENGINES) || t->arena || eng_arenas_busy(t) < NARENA;
+}
+/* once a block on core 0, before the render (seq.c events_block): a track playing a big engine without an arena takes
+ * one (an engine set straight, as at power-on or by a test), one that no longer does gives its back; in track order */
+static void eng_arena_lend(void)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++) {
+        track_t *t = &trk[k];
+        uint32_t big = !is_drum(t) && eng_big(t->engine);
+        if (big && !t->arena)
+            eng_arena_take(t);
+        else if (!big && t->arena && !(t->xf_on && t->xf))
+            eng_arena_drop(t);
+    }
+}
 static void *eng_arena_of(const track_t *t, uint32_t eng)
 {
-    uint32_t p = (uint32_t)(t - trk);
-    if (p >= NPART)
+    uint32_t p;
+    if (t < &trk[0] || t >= &trk[NTRK] || (!t->arena && !eng_arena_take((track_t *)t)))
+        return 0;                                   /* (all lent to other tracks: silent) */
+    p = (t->arena - 1u) % NARENA;
+    if (eng_arena_trk[p] != (uint32_t)(t - trk) + 1u)
         return 0;
 #ifdef ARENA_STATS
     if (t->engine != eng)
@@ -64,12 +136,16 @@ static void *eng_arena_of(const track_t *t, uint32_t eng)
  * When the arena or the layout is not PHYS's yet, every slot starts over (phys_slot_of): taken as a draw */
 static int phys_render_draws(const track_t *t, int32_t model)   /* model: the MODEL this block renders with (fx.c) */
 {
-    uint32_t p = (uint32_t)(t - trk), md = (uint32_t)model % PM_COUNT, big = md == PM_SYMP, i;
+    uint32_t p = (uint32_t)(t - trk), md = (uint32_t)model % PM_COUNT, big = md == PM_SYMP, i, a_i;
     uint32_t sz = big ? PHYS_SLOT_BIG : PHYS_SLOT_SMALL;
-    const uint8_t *a = (const uint8_t *)&eng_arena[p % NPART];
-    if (p >= NPART)
+    const uint8_t *a;
+    if (p >= NTRK)
         return 0;
-    if (eng_arena_own[p] != ENGI_PHYS + 1u || phys_lay[p] != big + 1u)
+    if (!t->arena)
+        return 1;                                   /* (no arena yet: it takes one this block, every slot starts over) */
+    a_i = (t->arena - 1u) % NARENA;
+    a = (const uint8_t *)&eng_arena[a_i];
+    if (eng_arena_trk[a_i] != p + 1u || eng_arena_own[a_i] != ENGI_PHYS + 1u || phys_lay[p] != big + 1u)
         return 1;
     for (i = 0; i < phys_poly(t); i++)
         if (t->v[i].active && ((const phys_slot_t *)(a + i * sz))->model != md)

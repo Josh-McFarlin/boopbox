@@ -30,7 +30,17 @@ CC="${CC:-cc} -O1 -Wall -Wno-unused-function"
 fail=0
 run() { echo "== $1"; shift; "$@" || fail=1; }
 
-[ -f build/felucca.fwsc ] || { echo "run ./build.sh first"; exit 1; }
+# HOST_ONLY=1: without the JieLi toolchain (no build/felucca.fwsc), the tests that read the firmware package or its
+# disassembly (M-UPGRADE entry, update loader, target cost, the site in Chromium) are skipped and named; all others run
+skip() { echo "== SKIPPED (HOST_ONLY, no firmware build): $1"; skipped=$((skipped + 1)); }
+skipped=0
+if [ ! -f build/felucca.fwsc ]; then
+    [ -n "$HOST_ONLY" ] || { echo "run ./build.sh first (or HOST_ONLY=1 for the tests that need no firmware build)"; exit 1; }
+    NOFW=1
+    # the generated headers a firmware build would have made (fonts, tables, samples, kits): no toolchain needed
+    [ -f build/gen/felucca_samples.h ] || python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()" ||
+        { echo "generating build/gen failed"; exit 1; }
+fi
 # the generated headers the FM6 engine needs (tools/build.py generate() makes them too; no Pillow needed)
 mkdir -p build/gen
 [ build/gen/felucca_tables.h -nt tools/gen_tables.py ] || python3 tools/gen_tables.py build/gen/felucca_tables.h
@@ -81,10 +91,13 @@ run "live UI: pages, layers (punch, steps, erase, roll, key, mix), holds, drums,
 # silently): the UI fuzz, the sequencer, the projects and a minute of random live use, with UBSan
 UBSAN="${CC_UB:-cc} -O1 -w -fsanitize=integer-divide-by-zero -fno-sanitize-recover=integer-divide-by-zero -Ibuild/gen -Ifirmware/src -Ifirmware/hal"
 $UBSAN -o "$OUT/ui_pages_ub" tests/ui_pages_test.c -lm && $UBSAN -o "$OUT/seq2_ub" tests/seq2_test.c -lm &&
-    $UBSAN -o "$OUT/project_ub" tests/project_test.c -lm && $UBSAN -o "$OUT/soak_ub" tests/soak_test.c -lm || fail=1
+    $UBSAN -o "$OUT/project_ub" tests/project_test.c -lm && $UBSAN -o "$OUT/soak_ub" tests/soak_test.c -lm &&
+    $UBSAN -o "$OUT/comp_ub" tests/comp_test.c -lm && $UBSAN -o "$OUT/lock_ub" tests/lock_test.c -lm &&
+    $UBSAN -o "$OUT/pat_ub" tests/pat_test.c -lm && $UBSAN -o "$OUT/harm_ub" tests/harm_test.c -lm &&
+    $UBSAN -o "$OUT/perf_ub" tests/perf_test.c -lm || fail=1
 mkdir -p "$OUT/ub"
-run "no divide by zero (UBSan): UI fuzz, sequencer, projects, a minute of live use" \
-    sh -c "'$OUT/ui_pages_ub' '$OUT/ub' >/dev/null && '$OUT/seq2_ub' >/dev/null && '$OUT/project_ub' >/dev/null && '$OUT/soak_ub' 1 >/dev/null && echo 'no divide by zero'"
+run "no divide by zero (UBSan): UI fuzz, sequencer, projects, step components, locks, patterns, harmony, performance FX, a minute of live use" \
+    sh -c "'$OUT/ui_pages_ub' '$OUT/ub' >/dev/null && '$OUT/seq2_ub' >/dev/null && '$OUT/project_ub' >/dev/null && '$OUT/comp_ub' >/dev/null && '$OUT/lock_ub' >/dev/null && '$OUT/pat_ub' >/dev/null && '$OUT/harm_ub' >/dev/null && '$OUT/perf_ub' >/dev/null && '$OUT/soak_ub' 1 >/dev/null && echo 'no divide by zero'"
 
 # the second core's host double (tests/cpu1_host.c, firmware/src/cpu1.h): inline, a thread, a slow thread, a lost
 # job; and the thread under ThreadSanitizer (the render's shared state shows up here once it uses core 1)
@@ -139,6 +152,7 @@ run "USB RATE 44.1: the descriptors of a build without 48 kHz (SLOOP 2.4), byte 
 uac_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q uac_service; }
 run "USB audio input: built into the firmware (FELUCCA_UAC set before usb.c)" uac_in_app
 
+if [ -z "$NOFW" ]; then
 $CC -o "$OUT/ota_test" tests/ota_test.c
 run "M-UPGRADE entry" "$OUT/ota_test" build/felucca.fwsc
 
@@ -146,15 +160,32 @@ head -c 200000 build/felucca.bin > "$OUT/old_app.bin"
 python3 tools/fm1pkg_make.py "$OUT/old_app.bin" build/loader/ota.bin "$OUT/old.fwsc" >/dev/null
 $CC -o "$OUT/ldr_test" tests/ldr_test.c
 run "update loader: other app -> this build" "$OUT/ldr_test" "$OUT/old.fwsc" build/felucca.fwsc
+else
+skip "M-UPGRADE entry"; skip "update loader: other app -> this build"
+fi
 
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/hostsim" tests/hostsim.c -lm
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/scale_test" tests/scale_test.c -lm
 run "scales: white-key mapping and note lifecycle" "$OUT/scale_test"
 run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"
 mkdir -p build/tracks_demo
-run "TRACKS: 4-track pattern, live recording (lengths, swing), voice budget, engine switch, cost" env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
+run "TRACKS: 4-track pattern (of eight), live recording (lengths, swing), voice budget, engine switch, cost" env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
+$CC -O2 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/tracks8_test" tests/tracks8_test.c -lm
+run "eight tracks: all at once on their own lengths, the shared voice budget, two drum tracks, kinds, arenas, STUT, MIDI CH5..8" "$OUT/tracks8_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/comp_test" tests/comp_test.c -lm
+run "step components: each type, directions, seeds, drums, other lengths beside, nothing hanging, stores, damage" "$OUT/comp_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/lock_test" tests/lock_test.c -lm
+run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" "$OUT/lock_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/pat_test" tests/pat_test.c -lm
+run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" "$OUT/pat_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/harm_test" tests/harm_test.c -lm
+run "harmony: key, scale, chords (TRANS, SCALE), quantized changes, a progression, live chords, note-offs, stores" "$OUT/harm_test"
+$CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/perf_test" tests/perf_test.c -lm
+run "performance FX: LATCH (keys, MIDI), Q (1/16 .. bar), TARGET (master, drums, synths, the selected track)" "$OUT/perf_test"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/project_test" tests/project_test.c -lm
-run "project formats (FUN4 / FUN3 / FUN2 / FUN1 -> FUN5), capture / apply, autosave" "$OUT/project_test"
+run "project formats: FUN7 (eight tracks) round trips, damage, too big refused whole, FUN6 fallback; FUN1..FUN6 converted" "$OUT/project_test"
+$CC -O1 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -o "$OUT/arena_test" tests/arena_test.c -lm
+run "engine arenas: no stale state, no engine on another's arena, a random session (lent to the tracks)" "$OUT/arena_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/slicer_test" tests/slicer_test.c -lm
 mkdir -p build/slicer_demo
 run "SLICER: no clicks, timing, sync with the sequencer, STUT, cost, demos" "$OUT/slicer_test" build/slicer_demo
@@ -168,8 +199,12 @@ if [ -z "$SKIP_CPU_VALGRIND" ] && command -v valgrind >/dev/null 2>&1; then expo
 run "regression: golden renders, health, voices, CPU budget" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt
 # SLICE (tests/slice_test.c) needs a FELUCCA_SLICE=1 build; the engine is not built by default
 
+if [ -z "$NOFW" ]; then
 run "regression: target cost of the render loops" python3 tests/target_budget.py \
     build/felucca.dis tests/target_budget.txt
+else
+skip "regression: target cost of the render loops"
+fi
 # the render split over the two cores (fx.c mix_units): the golden renders and tests/mix_split_test.c (three
 # FORMANT, FM6 or PHYS parts, S&H LFOs, mutes, the drums through the SLICER and the FILTER, the metronome: every
 # split of the units against none) under every mode of the host double of core 1, and under ThreadSanitizer
@@ -180,8 +215,12 @@ run "the offline editor (one file, nothing next to it); the offline site (sw.js,
 
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, samples, packages, update protocol" node web/test_web.mjs
+    if [ -z "$NOFW" ]; then
     rm -rf "$OUT/pwa-site" && python3 web/make_site.py build/felucca.fwsc 2.7 "$OUT/pwa-site" >/dev/null &&
         run "the site without internet in Chromium (skipped without Playwright)" node tests/pwa_test.mjs "$OUT/pwa-site"
+    else
+    skip "the site without internet in Chromium"
+    fi
 else
     echo "== skip web tests (no node)"
 fi
@@ -191,4 +230,5 @@ fi
 if [ -f build/preview/sloop-preview.wasm ]; then
     run "the editor's audio preview: WASM == host, all 12 engines" sh tests/run_preview_tests.sh
 fi
+[ $skipped -eq 0 ] || echo "($skipped tests skipped: no firmware build)"
 [ $fail -eq 0 ] && echo "ALL HOST TESTS PASSED" || { echo "HOST TESTS FAILED"; exit 1; }

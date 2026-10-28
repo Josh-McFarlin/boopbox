@@ -19,6 +19,9 @@
  *              HP, a preset loaded under the sounding notes of two parts in one block (both fade with their old
  *              sound at once, one on each core), TEXTURE (VINYL, ducked), REV THROW then ECHO THROW, the punch-in
  *              FREEZE, a pitch bend, live drum mutes, the metronome
+ *   eight      eight tracks: six synths (ANALOG, FM6, PHYS with S&H LFOs, DIGITAL, LOFI, GRAIN) and two drum tracks, the
+ *              second through its SLICER (STUT), INSERT and FILTER, both on the one drum voice pool (each voice its
+ *              track's: two drum units on the two cores), a track changing kind in the middle
  * Runs under every mode of the host double of core 1 (tests/cpu1_host.c: CORES, CHAOS, CPU1_TIMEOUT_AT) and
  * under ThreadSanitizer (tests/cpu1_modes.sh). Prints the jobs handed to core 1, to show the split happened.
  *   build/host/mix_split_test [QUICK]       QUICK: the splits 0, 15 and -1 only (the TSan run) */
@@ -27,10 +30,10 @@
 #undef main
 
 #define BLOCKS 1500u                                     /* ~2.2 s at 44.1 kHz */
-static const int32_t MASKS[] = {0, -1, 1, 2, 4, 8, 3, 5, 12, 7, 15};
-static const int32_t MASKS_QUICK[] = {0, 15, -1};
-static const char *const SCENE_NAME[] = {"formant3", "fm6x3", "phys_lfo", "mix", "fx26"};
-#define NSCENE 5u
+static const int32_t MASKS[] = {0, -1, 1, 2, 4, 8, 3, 5, 12, 7, 15, 0x80, 0x88, 0xF0, 0xAA, 0x55, 0xFF};
+static const int32_t MASKS_QUICK[] = {0, 15, 0xAA, 0xFF, -1};
+static const char *const SCENE_NAME[] = {"formant3", "fm6x3", "phys_lfo", "mix", "fx26", "eight"};
+#define NSCENE 6u
 
 static void drums_pattern(void)                          /* kick 4 on the floor, snare 4 / 12, hats, a clap */
 {
@@ -65,9 +68,9 @@ static void scene_setup(uint32_t s)
     uint32_t k;
     host_tracks_init();
     song.g[G_BPM] = 140;
-    song.g[G_DRLVL] = 90;
-    song.g[G_DRREV] = 40;
-    song.g[G_DRDLY] = 30;
+    TDRUM->p[P_LEVEL] = 90;
+    TDRUM->p[P_REV] = 40;
+    TDRUM->p[P_DLY] = 30;
     drums_pattern();
     switch (s) {
     case 0:
@@ -135,6 +138,28 @@ static void scene_setup(uint32_t s)
         song.g[G_TXWHEN] = 1;                            /* ALWAYS */
         song.g[G_TXDUCK] = 1;
         break;
+    case 5: {                                            /* eight tracks */
+        static const uint8_t E[NTRK][2] = {{0, 4}, {ENGI_FM6, 2}, {ENGI_PHYS, 3}, {0, 0}, {1, 9}, {3, 2}, {ENGI_GRAIN, 0}, {0, 0}};
+        for (k = 0; k < NTRK; k++) {
+            if (is_drum(&trk[k]))
+                continue;
+            host_preset(&trk[k], E[k][0], E[k][1]);
+            chords(&trk[k], k % 4u, 4, 44 + 4 * k);
+            trk[k].p[P_LWAVE] = (int16_t)(k % 2u ? 4 : 0);   /* S&H on some: draws at the wraps */
+            trk[k].p[P_LRATE] = (int16_t)(100 + 3 * k);
+            trk[k].p[P_LD_PIT] = 20;
+        }
+        for (k = 0; k < 16u; k++) {                      /* the second kit: hats, a rim, through STUT / FUZZ / LP */
+            uint8_t n[2] = {42, 37};
+            put_step(&trk[7], k, k % 4u == 3u ? 2u : 1u, n, ST_NOTE, 0);
+        }
+        trk[7].p[P_E0] = DRUM_SAMPLED + 1u;
+        trk[7].p[P_SLCR] = SL_STUT, trk[7].p[P_SLPAT] = 5, trk[7].p[P_SLDEPTH] = 90;
+        trk[7].p[P_ITYPE] = 4, trk[7].p[P_IA] = 70, trk[7].p[P_IMIX] = 80;
+        trk[7].p[P_TFLT] = -30, trk[7].p[P_PAN] = 30, trk[7].p[P_REV] = 50;
+        song.g[G_CLOCK] = CLICK_ON;
+        break;
+    }
     default:
         host_preset(&trk[0], 0, 4);                      /* ANALOG */
         host_preset(&trk[1], ENGI_GRAIN, 0);
@@ -198,11 +223,41 @@ static void scene_block(uint32_t s, uint32_t b)          /* what the UI would do
         if (b == 800u)
             TDRUM->p[P_TFLT] = 0;                        /* the drums' INSERT without the FILTER */
         if (b == 1000u)
-            drum_mute = 0x5;                             /* lanes 0 and 2 muted live (EDIT + a black key) */
+            drum_mute[TRK_DRUM] = 0x5;                             /* lanes 0 and 2 muted live (EDIT + a black key) */
         if (b == 1100u)
             trk[0].bend = 5000;
         if (b == 1200u)
-            drum_mute = 0;
+            drum_mute[TRK_DRUM] = 0;
+    }
+
+    if (s == 5u) {
+        if (b == 700u) {                                 /* track 6 becomes a drum track in the middle (a section) */
+            uint8_t n[1] = {36};
+            uint32_t k;
+            trk[5].kind = TK_DRUM;                       /* (as project.c trk_kind_now: its voices end at once) */
+            for (k = 0; k < NVOICE; k++)
+                trk[5].v[k].active = trk[5].v[k].gate = trk[5].v[k].stage = 0;
+            trk[5].p[P_E0] = DRUM_SAMPLED, trk[5].p[P_LEVEL] = 90;
+            steps_clear(&trk[5]);
+            for (k = 0; k < 16u; k += 4u)
+                put_step(&trk[5], k, 1, n, ST_NOTE, 0);
+        }
+        if (b == 1000u)
+            trk[7].p[P_SLCR] = SL_GATE;
+        if (b == 250u) {                                 /* (groovebox) the punch-in FX on a TARGET: the synths' dry through */
+            song.g[G_PFXT] = PT_SYNTHS;                  /* CRUSH on its own bus (units on both cores write it) */
+            punch.req = PX_CRUSH;
+        }
+        if (b == 450u)
+            punch.req = -1;
+        if (b == 520u) {                                 /* .. then a loop of the drums' */
+            song.g[G_PFXT] = PT_DRUMS;
+            punch.req = PX_LOOP8;
+        }
+        if (b == 800u)
+            punch.req = -1;
+        if (b == 900u)
+            song.g[G_PFXT] = PT_MASTER;
     }
 }
 
