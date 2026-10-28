@@ -344,11 +344,17 @@ UI_SMALL static void graph_roll(const track_t *t, uint16_t c)
         cv_rect(x - 2, top, 5, 2, C_HI);
     }
     if (ui.sheet) {                                     /* OCT+ held: the note's sheet */
-        char nu[8];
-        const char *val[6] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", ""};
+        char nu[8], cn[4];
+        const char *val[NSHEET] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", "", cn};
         fmt_int(nu, t->micro[ui.cursor]);
         if (t->micro[ui.cursor] > 0) { nu[0] = '+'; fmt_int(nu + 1, t->micro[ui.cursor]); }
-        sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel & 3u]);
+        str_cpy(cn, "--", 4);
+        if (comp_count(t, ui.cursor))
+            fmt_int(cn, (int32_t)comp_count(t, ui.cursor));
+        if (ui.csheet)
+            comp_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel & 3u]);
+        else
+            sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel & 3u]);
     }
 }
 UI_SMALL static void graph_scale(const track_t *t, uint16_t c)
@@ -450,7 +456,7 @@ UI_SMALL static uint32_t graph_signature(void)
         uint32_t ph = song.playing ? t->seq_idx : 0xFFFFu;
         if (pg->graph == GR_ROLL)                    /* (2.7.2 NOTES: the note under edit, the zoom, the sheet) */
             h ^= ui.note_k * 104729u + ui.zoom * 7u + ui.sheet * 977u + (uint32_t)t->micro[ui.cursor] * 31337u +
-                 step_fill(t, ui.cursor) * 3u + last_note * 65537u;
+                 step_fill(t, ui.cursor) * 3u + last_note * 65537u + comp_sig(t, ui.cursor) * 2654435761u;
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u;
     }
     return h;

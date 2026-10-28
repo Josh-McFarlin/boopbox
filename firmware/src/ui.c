@@ -55,6 +55,8 @@ static struct {
     uint8_t note_k;              /* (2.7.2) NOTES: the note of the cursor's chord (0..n-1) */
     uint8_t zoom;                /* (2.7.2) NOTES: the steps shown, NV_ZOOM[zoom] (PRESETS) */
     uint8_t sheet;               /* (2.7.2) NOTES / DRUMS grid: the sheet (OCT+ held) open: 1 + its row; 0 closed */
+    uint8_t csheet;              /* the sheet's COMP strip open: 1 + the item (the step's components, then ADD); 0 closed */
+    uint8_t cadd;                /* the type its ADD puts on the step (CP_*) */
     uint8_t sheet_last;          /* (2.8.1) the sheet row last used (0..5): OCT+ reopens on it (quick MOVE) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
     uint8_t menu;                /* 0 off, 1 list, 2 about (HOME held) */
@@ -315,9 +317,10 @@ UI_SMALL static void cursor_fix(void)                           /* LEN got short
 static const uint8_t NV_ZOOM[4] = {8, 16, 32, 64};
 static const char *const FORCE_N[5] = {"GHOST", "SOFT", "NORM", "HARD", "ACC"};
 static const uint8_t F_LVL[4] = {LV_GHOST, LV_SOFT, LV_NORM, LV_HARD};
-static const char *const SHEET_N[6] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE"};
+#define NSHEET 7u                /* the sheet's rows; the last, COMP, opens the step's components (comp_strip_*) */
+static const char *const SHEET_N[NSHEET] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP"};
 static const char *const FILL_N[3] = {"NORMAL", "FILL", "NO FILL"};
-static const char *const DSHEET_N[6] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE"};
+static const char *const DSHEET_N[NSHEET] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP"};
 UI_SMALL static void note_walk(int32_t dir)
 {
     track_t *t = TSEL;
@@ -477,23 +480,186 @@ UI_SMALL static uint32_t octp_filter(uint32_t pressed, uint32_t *ev)
 /* (2.8.1) the sheet (NOTES, the drum grid) as a strip along the bottom, over the knob area, so the
  * sequencer itself stays fully visible: the row KNOB 1 picks is lit in the middle with its value, the
  * rows before and after it faint on each side, and six dots for the place in the list. OCT+ acts, OCT- closes. */
-UI_SMALL static void sheet_bar(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint16_t acc)
+UI_SMALL static void sheet_bar_n(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint32_t n, uint16_t acc)
 {
-    uint32_t prev = (sel + 5u) % 6u, next = (sel + 1u) % 6u, i;
+    uint32_t prev = (sel + n - 1u) % n, next = (sel + 1u) % n, i;
     int32_t x = 6, lw = text_w(&FONT_S, lab[sel]);
     int32_t vw = val[sel] && val[sel][0] ? text_w(&FONT_S, val[sel]) + 6 : 0;
     cv_rect(0, y, 240, 16, C_BLACK);                   /* the strip */
     cv_rect(0, y, 240, 1, C_LINE);
-    cv_text(x, y + 2, &FONT_S, lab[prev], C_DIM);      /* the row before (faint) */
-    x += text_w(&FONT_S, lab[prev]) + 10;
+    if (prev != sel) {
+        cv_text(x, y + 2, &FONT_S, lab[prev], C_DIM);  /* the row before (faint) */
+        x += text_w(&FONT_S, lab[prev]) + 10;
+    }
     cv_rect(x - 3, y + 1, lw + vw + 6, 14, acc);       /* the row under edit, lit */
     cv_text(x, y + 2, &FONT_S, lab[sel], C_WHITE);
     if (vw)
         cv_text(x + lw + 6, y + 2, &FONT_S, val[sel], C_WHITE);
     x += lw + vw + 10;
-    cv_text(x, y + 2, &FONT_S, lab[next], C_DIM);      /* the row after (faint) */
-    for (i = 0; i < 6u; i++)                            /* the place in the six */
-        cv_rect(200 + (int32_t)i * 6, y + 6, 4, 4, i == sel ? acc : C_DIM);
+    if (next != sel && next != prev)
+        cv_text(x, y + 2, &FONT_S, lab[next], C_DIM);  /* the row after (faint) */
+    for (i = 0; i < n && n > 1u; i++)                   /* the place in the list */
+        cv_rect(236 - (int32_t)(n - i) * 6, y + 6, 4, 4, i == sel ? acc : C_DIM);
+}
+UI_SMALL static void sheet_bar(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint16_t acc)
+{
+    sheet_bar_n(y, lab, val, sel, NSHEET, acc);
+}
+
+/* ---- the step's components (comp.c), from the sheet's COMP row: a strip as the sheet's. The items: the components on
+ * the step (in the list's order), then ADD. KNOB 1 the item, KNOB 2 its first value (ADD: the type), KNOB 3 its second;
+ * OCT+ adds (ADD) or removes (a component), OCT- goes back to the sheet. t, step: the track and step under edit */
+UI_SMALL static uint32_t comp_items(const track_t *t, uint32_t step, uint8_t *slot)   /* the step's, slot[] their slots */
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE && t->comp[k].step == step)
+            slot[n++] = (uint8_t)k;
+    return n;
+}
+UI_SMALL static uint32_t comp_sig(const track_t *t, uint32_t step)   /* the step's components and the strip (redraws) */
+{
+    uint32_t k, h = ui.csheet * 131u + ui.cadd * 17u;
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE && t->comp[k].step == step)
+            h = h * 33u + t->comp[k].type * 7u + (uint32_t)(uint8_t)t->comp[k].a * 257u + (uint8_t)t->comp[k].b;
+    return h;
+}
+UI_SMALL static void comp_val_text(const track_t *t, const comp_t *c, char *b)   /* its values, short (b: 16 bytes) */
+{
+    int32_t a = c->a, v = c->b;
+    b[0] = 0;
+    switch (c->type) {
+    case CP_PULSE: case CP_HOLD: case CP_TONE:
+        if (a > 0) str_cpy(b, "+", 2);
+        fmt_int(b + str_len(b), a);
+        break;
+    case CP_MULT:
+        str_cpy(b, "x", 2), fmt_int(b + 1, a);
+        break;
+    case CP_VEL:
+        fmt_int(b, a);
+        if (v) str_cpy(b + str_len(b), "~", 2), fmt_int(b + str_len(b), v);
+        break;
+    case CP_RUP: case CP_RDN:
+        fmt_int(b, a), str_cpy(b + str_len(b), " /", 3), fmt_int(b + str_len(b), v);
+        break;
+    case CP_RAND:
+        str_cpy(b, "~", 2), fmt_int(b + 1, a);
+        break;
+    case CP_PORTA:
+        fmt_int(b, a);
+        break;
+    case CP_BEND:
+        if (a > 0) str_cpy(b, "+", 2);
+        fmt_int(b + str_len(b), a);
+        str_cpy(b + str_len(b), v ? " FROM" : " TO", 6);
+        break;
+    case CP_JUMP:
+        fmt_int(b, a), str_cpy(b + str_len(b), " /", 3), fmt_int(b + str_len(b), v);
+        break;
+    case CP_PARAM:
+        str_cpy(b, lock_desc(t, (uint32_t)a % P_COUNT)->label, 6);
+        str_cpy(b + str_len(b), " ", 2), fmt_int(b + str_len(b), v), str_cpy(b + str_len(b), "%", 2);
+        break;
+    case CP_COND:
+        if (a < 0) str_cpy(b, "!", 2);
+        fmt_int(b + str_len(b), a < 0 ? -a : a), str_cpy(b + str_len(b), ":", 2), fmt_int(b + str_len(b), v);
+        break;
+    case CP_TRIG:
+        fmt_int(b, a), str_cpy(b + str_len(b), "%", 2);
+        break;
+    default:
+        break;
+    }
+}
+UI_SMALL static void comp_strip_draw(int32_t y, const track_t *t, uint32_t step, uint16_t acc)
+{
+    uint8_t slot[NCOMP];
+    static char vb[NCOMP + 1u][16];
+    const char *lab[NCOMP + 1u], *val[NCOMP + 1u];
+    uint32_t n = comp_items(t, step, slot), i, sel = ui.csheet ? ui.csheet - 1u : 0u;
+    for (i = 0; i < n; i++) {
+        lab[i] = CP_NAME[t->comp[slot[i]].type % CP_COUNT];
+        comp_val_text(t, &t->comp[slot[i]], vb[i]);
+        val[i] = vb[i];
+    }
+    lab[n] = "ADD";
+    val[n] = CP_NAME[ui.cadd % CP_COUNT];
+    sheet_bar_n(y, lab, val, sel > n ? n : sel, n + 1u, acc);
+}
+UI_SMALL static void comp_strip_knob(track_t *t, uint32_t step, uint32_t k, int32_t s)
+{
+    uint8_t slot[NCOMP];
+    uint32_t n = comp_items(t, step, slot), sel = ui.csheet - 1u;
+    if (k == 0u) {
+        ui.csheet = (uint8_t)(1 + clamp((int32_t)sel + s, 0, (int32_t)n));
+        return;
+    }
+    if (sel >= n) {                                       /* ADD: KNOB 2 the type */
+        if (k == 1u)
+            ui.cadd = (uint8_t)(1 + ((int32_t)ui.cadd - 1 + s % (CP_COUNT - 1) + 2 * (CP_COUNT - 1)) % (CP_COUNT - 1));
+        return;
+    }
+    {
+        comp_t *c = &t->comp[slot[sel]];
+        int32_t a = c->a, b = c->b;
+        if (k == 1u && c->type == CP_PARAM) {             /* the parameter: the next lockable one */
+            int32_t d = s > 0 ? 1 : -1, g = P_COUNT;
+            for (; s; s -= d)
+                do
+                    a = (a + d + P_COUNT) % P_COUNT;
+                while (g-- && !p_lockable((uint32_t)a));
+        } else if (k == 1u) {
+            a = comp_clamp(c->type, 0, a + s);
+            if (c->type == CP_COND && !a)
+                a = s > 0 ? 1 : -1;                       /* (no loop 0: from 1 to -1, NOT 1) */
+        } else if (k == 2u) {
+            b = comp_clamp(c->type, 1, b + s);
+        } else {
+            return;
+        }
+        fm1_irq_off();
+        comp_set(t, step, c->type, a, b);
+        fm1_irq_on();
+        sync_reload = 1;
+    }
+}
+UI_SMALL static void comp_strip_do(track_t *t, uint32_t step)   /* OCT+: ADD adds the type, a component goes */
+{
+    uint8_t slot[NCOMP];
+    uint32_t n = comp_items(t, step, slot), sel = ui.csheet - 1u, ty = ui.cadd % CP_COUNT;
+    int k;
+    if (sel < n) {
+        fm1_irq_off();
+        comp_del(t, step, t->comp[slot[sel]].type);
+        fm1_irq_on();
+        ui_message("COMP REMOVED");
+    } else if (!ty) {
+        return;
+    } else if ((k = comp_find(t, step, ty)) >= 0) {
+        uint32_t i;
+        for (i = 0; i < n && slot[i] != (uint8_t)k; i++)
+            ;
+        ui.csheet = (uint8_t)(1u + i);                    /* (one of that type is there: picked) */
+        ui_message("ON THE STEP ALREADY");
+        return;
+    } else {
+        int ok;
+        fm1_irq_off();
+        ok = comp_set(t, step, ty, CP_RANGE[ty][4], CP_RANGE[ty][5]);
+        fm1_irq_on();
+        if (!ok) {
+            ui_message("NO COMP LEFT");
+            return;
+        }
+        ui.csheet = (uint8_t)(1u + n);                    /* (the new one, the last of the step's) */
+        ui_message("COMP ADDED");
+    }
+    n = comp_items(t, step, slot);
+    if (ui.csheet > n + 1u)
+        ui.csheet = (uint8_t)(n + 1u);
+    sync_reload = 1;
 }
 
 UI_SMALL static void note_name(char *b, uint32_t n)

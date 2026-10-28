@@ -35,7 +35,6 @@ static const int8_t CP_RANGE[CP_COUNT][6] = {
 };
 static const char *const CP_NAME[CP_COUNT] = {"-", "PULSE", "HOLD", "MULT", "VEL", "RAMP+", "RAMP-", "RAND",
                                               "PORTA", "BEND", "TONE", "JUMP", "PARAM", "COND", "TRIG"};
-static const char *const DIR_NAME[DIR_COUNT] = {"FWD", "REV", "PEND", "RAND"};
 
 /* a component that can be: its type known, a in range (COND: not 0; PARAM: a lockable parameter) */
 static int comp_valid(uint32_t type, int32_t a, int32_t b)

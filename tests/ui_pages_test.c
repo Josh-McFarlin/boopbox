@@ -894,6 +894,9 @@ int main(int argc, char **argv)
             open_family(FAM_SEQ); frame();
             ok &= !strcmp(PAGES[ui.page].title, "PATTERN");
             k2 = page_pos(&n2);
+            open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
+            ok &= !strcmp(PAGES[ui.page].title, "PLAY");
+            ok &= page_pos(&n) == 3u && n == 3u;
             open_family(FAM_SEQ); frame();            /* SEQ again: the SONG screen (its own) */
             if (PAGES[ui.page].scope == SC_SONG)
                 k3 = page_pos(&n3);
@@ -903,10 +906,10 @@ int main(int argc, char **argv)
             (void)page_pos(&n);                       /* GLO: its ten pages (eight tracks: MIDI 4) */
             go_home(); frame();
             ui.menu = (uint8_t)menu0, ui.menu_sel = (uint8_t)sel0, ui.force = 1; frame();
-            ok &= k1 == 1u && n1 == 2u && k2 == 2u && n2 == 2u && k3 == 3u && n3 == 3u && n == 10u;
+            ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;
             if (!ok)
                 printf("ui:   counter: STEP %u/%u PATTERN %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
-            check(ok, "page counter (2.7): as SELECT walks them: STEP 1/2, PATTERN 2/2 (SONG, its own screen, not counted)");
+            check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, PATTERN 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
         }
         {   /* 2.7: a sound loaded under a running arp keeps it (settings and the notes it holds); arp OFF: the preset's */
             track_t *t = &trk[0];
@@ -1206,7 +1209,7 @@ int main(int argc, char **argv)
         SEL(9);
         check(!strcmp(PT(), "VOICE 2"), "SELECT on EDIT: up to VOICE 2");
         tap(B_SEQ); SEL(9);
-        check(!strcmp(PT(), "PATTERN"), "SELECT on SEQ: STEP <-> PATTERN, not into the SONG screen");
+        check(!strcmp(PT(), "PLAY"), "SELECT on SEQ: NOTES <-> PATTERN <-> PLAY, not into the SONG screen");
         tap(B_ENV);
         check(!strcmp(PT(), "ENV"), "the button still opens its family");
         tap(B_ENV);
@@ -2076,8 +2079,86 @@ int main(int argc, char **argv)
         tap(B_OCTUP); frame();
         ok &= !dstep_has(&TDRUM->dstep[7], 2) && dstep_has(&TDRUM->dstep[6], 2) && !ui.sheet;
         check(ok, "DRUMS sheet: MOVE (KNOB 2), COPY (OCT+: the next step), DELETE (OCT+)");
+        /* the step's components from the sheet's COMP row (the step's: every sound in it) */
+        comp_clear(TDRUM);
+        drum_cursor = 6;
+        press(B_OCTUP); frames(30); release(B_OCTUP); frame();
+        encs[panel.enc[EN_K1]] = 9; frame();               /* (the last row: COMP) */
+        ok = ui.sheet == NSHEET;
+        tap(B_OCTUP); frame();
+        ok &= ui.csheet == 1u;                              /* ADD (none yet) */
+        ui.cadd = 0;
+        encs[panel.enc[EN_K2]] = CP_VEL; frame();           /* the type: VEL */
+        ok &= ui.cadd == CP_VEL;
+        tap(B_OCTUP); frame();
+        ok &= comp_find(TDRUM, 6, CP_VEL) >= 0 && ui.csheet == 1u && TDRUM->comp[comp_find(TDRUM, 6, CP_VEL)].a == 100;
+        encs[panel.enc[EN_K2]] = -30; frame();              /* its velocity */
+        encs[panel.enc[EN_K3]] = 6; frame();                /* its spread */
+        ok &= TDRUM->comp[comp_find(TDRUM, 6, CP_VEL)].a == 70 && TDRUM->comp[comp_find(TDRUM, 6, CP_VEL)].b == 6;
+        ui.force = 1; frame(); ppm("drums-comp");
+        check(ok, "DRUMS sheet: COMP (the last row): ADD a VEL, KNOB 2 / KNOB 3 its velocity and spread");
+        tap(B_OCTDN); frame();
+        ok = ui.sheet == NSHEET && !ui.csheet;
+        tap(B_OCTDN); frame();
+        ok &= !ui.sheet && comp_count(TDRUM, 6) == 1u && step_locked(TDRUM, 6);
+        check(ok, "DRUMS sheet: OCT- back from the COMP strip to the sheet, then closed; the step marked");
+        comp_clear(TDRUM);
         TDRUM->p[P_SLEN] = 16;
         go_home(); song.sel = 0; frame();
+    }
+    {   /* the NOTES sheet's COMP row: add, edit, remove a step's components */
+        track_t *t = &trk[0];
+        uint32_t j;
+        int ok;
+        transport_req = 2; frames(2);
+        song.sel = 0; go_home(); frame();
+        for (j = 0; j < NSTEP; j++) step_clear(&t->step[j]);
+        comp_clear(t);
+        t->step[4].n = 1; t->step[4].note[0] = 60; t->step[4].time = ST_NOTE;
+        while (strcmp(PAGES[ui.page].title, "NOTES")) { open_family(FAM_SEQ); frame(); }
+        cursor_set(4); ui.note_k = 0; frame();
+        press(B_OCTUP); frames(30); release(B_OCTUP); frame();
+        encs[panel.enc[EN_K1]] = 9; frame();
+        ok = ui.sheet == NSHEET;
+        tap(B_OCTUP); frame();
+        ui.cadd = CP_PULSE;
+        encs[panel.enc[EN_K2]] = CP_TONE - CP_PULSE; frame();
+        tap(B_OCTUP); frame();                              /* TONE +12 */
+        encs[panel.enc[EN_K2]] = -5; frame();               /* +7 */
+        ok &= comp_find(t, 4, CP_TONE) >= 0 && t->comp[comp_find(t, 4, CP_TONE)].a == 7 && ui.csheet == 1u;
+        encs[panel.enc[EN_K1]] = 1; frame();                /* ADD again */
+        encs[panel.enc[EN_K2]] = CP_MULT - CP_TONE; frame();
+        tap(B_OCTUP); frame();                              /* MULT x2 */
+        ok &= comp_count(t, 4) == 2u && comp_find(t, 4, CP_MULT) >= 0 && ui.csheet == 2u;
+        tap(B_OCTUP); frame();                              /* (on MULT: removes it) */
+        ok &= comp_count(t, 4) == 1u && comp_find(t, 4, CP_MULT) < 0;
+        encs[panel.enc[EN_K1]] = 1; frame();
+        encs[panel.enc[EN_K2]] = CP_COND - CP_MULT; frame();
+        tap(B_OCTUP); frame();                              /* COND 1:2 */
+        encs[panel.enc[EN_K2]] = -1; frame();               /* 1 -> NOT 1 (no loop 0) */
+        ok &= t->comp[comp_find(t, 4, CP_COND)].a == -1;
+        encs[panel.enc[EN_K1]] = 1; frame();
+        tap(B_OCTUP); frame();                              /* COND again: picked, not doubled */
+        ok &= comp_count(t, 4) == 2u && !strcmp(ui.msg, "ON THE STEP ALREADY");
+        ui.force = 1; frame(); ppm("notes-comp");
+        check(ok, "NOTES sheet: COMP: TONE +7, MULT added then removed, COND NOT 1:2; one of a type a step");
+        tap(B_OCTDN); frame(); tap(B_OCTDN); frame();
+        check(!ui.sheet && !ui.csheet, "NOTES sheet: OCT- twice: the strip, then the sheet closed");
+        /* the PLAY page: the direction and the components' seed (not parameters: no lock, no MIDI learn) */
+        open_family(FAM_SEQ); frame();
+        while (strcmp(PAGES[ui.page].title, "PLAY")) { open_family(FAM_SEQ); frame(); }
+        ui.lock_par = P_ED_FLT;
+        encs[panel.enc[EN_K1]] = 2; frame();
+        encs[panel.enc[EN_K2]] = 9; frame();
+        ui.force = 1; frame(); ppm("page-play");
+        check(t->cp_dir == DIR_PEND && t->cp_seed == 9 && ui.lock_par == P_ED_FLT && !strcmp(ui.big_v[0], "PEND"),
+              "SEQ > PLAY: DIR PEND, SEED 9 (the lock parameter stays)");
+        encs[panel.enc[EN_K1]] = 5; frame();
+        encs[panel.enc[EN_K2]] = 400; frame();
+        ok = t->cp_dir == DIR_RAND && t->cp_seed == 255;
+        t->cp_dir = DIR_FWD; t->cp_seed = 0; comp_clear(t);
+        check(ok, "SEQ > PLAY: DIR and SEED stop at their ends");
+        go_home(); frame();
     }
     {   /* fuzz: 20000 frames of random buttons (held or tapped), knobs and keys, with the audio running
          * between frames; every draw stays on the screen (lcd_blit / lcd_fill assert it) */
