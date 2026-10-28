@@ -2456,8 +2456,9 @@ function backupObjects(file) {
 /* write it back: banks, projects, the working project, the settings, then the samples */
 /* the project format of a backup object ("FUN6" .. as stored, low byte first: 6 ..), 0 not a project */
 const bkProjFormat = (d) => (d && d.length >= 4 && d[1] === 0x4E && d[2] === 0x55 && d[3] === 0x46 ? d[0] - 0x30 : 0);
-/* the newest project format a device reads, from its INFO: 2.6 (71 parameters) 6, 2.4 .. 2.5 (61) 5, older 4 */
-const bkDevFormat = (info) => (info.pcount >= 71 ? 6 : info.pcount >= 61 ? 5 : 4);
+/* the newest project format a device reads, from its INFO: eight tracks 7 (format 7, variable length), 2.6 (71
+   parameters) 6, 2.4 .. 2.5 (61) 5, older 4 */
+const bkDevFormat = (info) => (info.ntrk >= 8 ? 7 : info.pcount >= 71 ? 6 : info.pcount >= 61 ? 5 : 4);
 /* "SLOOP 2.6" -> true when at least maj.min.patch */
 const bkFwAtLeast = (v, want) => {
   const m = /(\d+)\.(\d+)(?:\.(\d+))?/.exec(String(v || ""));

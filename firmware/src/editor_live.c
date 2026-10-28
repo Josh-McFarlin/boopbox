@@ -170,7 +170,7 @@ UI_SMALL static void ed_live(const uint8_t *a, uint32_t na)
     ed_b(arrangement_clock.bar);
     ed_b(arrangement.entry[arrangement_clock.index % ARR_STEPS].bars);
     ed_b(arrangement_ready() & 15u);
-    for (i = 0; i < NTRK; i++) {
+    for (i = 0; i < 4u; i++) {                         /* (the four tracks the page shows: 1..4, the protocol's 50 bytes) */
         int32_t pk = trk[i].peak, lg = 0;
         ed_b(trk[i].seq_idx);
         ed_b(trk_len(&trk[i]));

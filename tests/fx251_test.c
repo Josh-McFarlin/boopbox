@@ -161,8 +161,8 @@ static void t_insert(void)
         render(1400);
         b = rms(0, 1400u * CTL);
         printf("  drums: rms dry %.0f, FUZZ %.0f\n", a, b);
-        check(a > 100 && fabs(b - a) > 0.05 * a && TDRUM->ins_run && ins[NPART].type == 4u && ins[NPART + 2u].w,
-              "the drum track's INSERT (FUZZ): the kick changed, left / right / sends through it");
+        check(a > 100 && fabs(b - a) > 0.05 * a && TDRUM->ins_run && ins[TRK_DRUM].type == 4u && ins[TRK_DRUM].w,
+              "the drum track's INSERT (FUZZ): the kick changed, on the track's bus before its pan and sends");
         transport_req = 2;
         render(4);
     }
@@ -653,11 +653,11 @@ static void t_glide(void)
            r[24], r[63], rt);
     check(r[0] > 0.8 && r[1] < r[0] && fabs(r[24] - rt) < 0.01 && fabs(r[63] - rt) < 0.005 && trk[0].gpl == 4096 - 63 * 64,
           "PAN: a jump glides too (the left fades over a few blocks), then lands exactly");
-    song.g[G_DRLVL] = 100;
+    TDRUM->p[P_LEVEL] = 100;
     TDRUM->mix_on = 0;
     drums_mix(TDRUM, 0, 0, ml, mr, rv, dl, 0, CTL);
     g0 = TDRUM->lvl;
-    song.g[G_DRLVL] = 20;
+    TDRUM->p[P_LEVEL] = 20;
     drums_mix(TDRUM, 0, 0, ml, mr, rv, dl, 0, CTL);
     g1 = TDRUM->lvl;
     for (b = 0; b < 40u; b++)

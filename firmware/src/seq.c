@@ -3392,6 +3392,8 @@ static void events_block(uint32_t n)
         route_was = (uint8_t)rt;
         chans_was = chans;
     }
+    eng_arena_lend();                                 /* (eight tracks: the arenas and STUT buffers lent here, on core 0, */
+    sl_lend();                                        /* before the units render on both cores) */
     pr = panic_req;
     panic_req = 0;
     {

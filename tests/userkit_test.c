@@ -76,7 +76,7 @@ int main(void)
     }
     host_tracks_init();
     song.g[G_BPM] = 120;
-    song.g[G_DRREV] = 0;                                 /* (no reverb tail between the checks) */
+    TDRUM->p[P_REV] = 0;                                 /* (no reverb tail between the checks) */
     slot_build(0, notes, lens, 4);
     check(usr_nz[0] == 4u && !usr_nz[1], "USR1 read by smp_user_scan: 4 zones; USR2 empty");
     check(DRUM_SYN == DRUM_USR + 5u && DRUM_KITS == DRUM_SYN + 4u && !strcmp(DRUM_KIT_NAMES[DRUM_USR], "USR1") && !strcmp(DRUM_KIT_NAMES[DRUM_USR + 3u], "USR4") &&
@@ -186,7 +186,7 @@ int main(void)
         int32_t pk[4];
         for (k = 0; k < 4u; k++) {
             host_tracks_init();
-            song.g[G_BPM] = 120; song.g[G_CLOCK] = 2; song.g[G_DRLVL] = k == 3u ? 0 : 100;
+            song.g[G_BPM] = 120; song.g[G_CLOCK] = 2; TDRUM->p[P_LEVEL] = k == 3u ? 0 : 100;
             for (j = 0; j < NSTEP; j++) memset(&TDRUM->dstep[j], 0, sizeof(dstep_t));
             TDRUM->p[P_E0] = (int16_t)(k == 0u ? DRUM_PAIR : k == 1u ? DRUM_USR + 1u : DRUM_SAMPLED);
             TDRUM->p[P_MUTE] = (int16_t)(k == 2u);

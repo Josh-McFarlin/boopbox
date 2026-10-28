@@ -127,7 +127,7 @@ static void sframe(void)                              /* frame(), the output che
             if (on > stq_max) stq_max = on;
         }
         for (i = 0; i < STQ; i++)                     /* a strummed note waits at most 3 x 60 ms */
-            if (stq[i].on && (stq[i].left > 3u * 60u * FS / 1000u || stq[i].trk >= NPART)) {
+            if (stq[i].on && (stq[i].left > 3u * 60u * FS / 1000u || stq[i].trk >= NTRK || is_drum(&trk[stq[i].trk]))) {
                 scheck(0, "fuzz: strum queue entry out of range");
                 stq[i].on = 0;
             }
@@ -385,7 +385,7 @@ int main(int argc, char **argv)
     settings.palette = 4;
     palette_set(4);
     host_tracks_init();
-    for (i = 0; i < NPART; i++) { set_engine_of(&trk[i], TRK_DEF[i][0]); apply_preset_to(&trk[i], TRK_DEF[i][1]); trk[i].engine = trk[i].eng_req; }
+    for (i = 0; i < NPART; i++) { set_engine_of(&trk[i], TRK_DEF[i][1]); apply_preset_to(&trk[i], TRK_DEF[i][2]); trk[i].engine = trk[i].eng_req; }
     TDRUM->p[P_E0] = DRUM_SAMPLED;
     song.g[G_BPM] = 120;
     go_home(); ui.force = 1;

@@ -14,7 +14,7 @@ static uint32_t one_hit(uint32_t kit, uint32_t note, int32_t *peak, uint64_t *en
     memset(&drums, 0, sizeof drums);
     drums.set = -2;
     TDRUM->p[P_E0] = (int16_t)kit;
-    song.g[G_DRLVL] = 100;
+    TDRUM->p[P_LEVEL] = 100;
     drum_on(TDRUM, note, 110);
     *peak = 0;
     *energy = 0;

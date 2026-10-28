@@ -1,17 +1,45 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SLOOP soak test: 10 simulated minutes of random live use through the real audio path
- * (mix_block: sequencer, the 3 synth parts, the synthesised and sampled drum kits, the
- * punch-in FX, the record arm, free takes, MIDI in), then everything stopped and released.
+ * (mix_block: sequencer, the eight tracks: synths and drum kits, a track changing kind, more tracks asking for the big
+ * engines than there are arenas, the punch-in FX, the record arm, free takes, MIDI in on CH1..CH8), then everything
+ * stopped and released.
  * Checks: the output stays bounded, every block renders in time on the host, voices never
  * hang (all free a few seconds after the last note), the punch FX and the record state come
  * back to idle, recorded steps stay well-formed. Seeded: the same run every time. */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
+#define PROJ_HOST 1
+#include "../firmware/src/project.c"            /* (trk_kind_now: a track changes kind as a section does it) */
 #include <assert.h>
 static uint32_t seed = 12345, ft_count, ft_starts;
 static uint8_t ft_prev, arm_next;
 static uint32_t rnd(uint32_t n) { seed = seed * 1664525u + 1013904223u; return (seed >> 8) % (n ? n : 1u); }
+static uint32_t rsyn(void)                            /* a synth track, any of the eight (track 1 when none) */
+{
+    uint32_t k, t = rnd(NTRK);
+    for (k = 0; k < NTRK; k++, t = (t + 1u) % NTRK)
+        if (!is_drum(&trk[t]))
+            return t;
+    return 0;
+}
+static uint32_t rdrum(void)                           /* a drum track (track 4 when none) */
+{
+    uint32_t k, t = rnd(NTRK);
+    for (k = 0; k < NTRK; k++, t = (t + 1u) % NTRK)
+        if (is_drum(&trk[t]))
+            return t;
+    return TRK_DRUM;
+}
+static void kind_flip(uint32_t t)                     /* track t, one of 5..8, to the other kind (as a section) */
+{
+    trk_kind_now(&trk[t], is_drum(&trk[t]) ? TK_SYNTH : TK_DRUM);
+    steps_clear(&trk[t]);
+    if (is_drum(&trk[t]))
+        trk[t].p[P_E0] = (int16_t)rnd(DRUM_KITS), trk[t].p[P_LEVEL] = 100;
+    else
+        host_preset_req(&trk[t], 0, 0);
+}
 static void midi_in(uint32_t st, uint32_t d1, uint32_t d2)
 {
     if (mi_w - mi_r >= MQ) return;
@@ -32,7 +60,12 @@ int main(int argc, char **argv)
     host_preset(&trk[0], 0, 4);
     host_preset(&trk[1], 1, 5);
     host_preset(&trk[2], 3, 0);
+    host_preset(&trk[4], 0, 12);
+    host_preset(&trk[5], 1, 9);
+    host_preset(&trk[6], 0, 16);
     TDRUM->p[P_E0] = DRUM_SAMPLED;
+    trk[7].p[P_E0] = DRUM_SAMPLED + 1u;
+    song.g[G_CH5] = 5, song.g[G_CH6] = 6, song.g[G_CH7] = 7, song.g[G_CH8] = 11;
     for (k = LY_FX; k < LY_COUNT; k++)                        /* the layer buttons (SLOOP 2.0): bits 8.. */
         ly_bit[k] = 1u << (7u + k);
     dyn_bit[0] = 1u << 14;
@@ -41,26 +74,28 @@ int main(int argc, char **argv)
         static uint32_t layer_btn;
         if (rnd(40) == 0) {                                   /* an event every ~29 ms on average */
             events++;
-            switch (rnd(22)) {
+            switch (rnd(23)) {
             case 16: layer_btn = rnd(3) ? 0u : ly_bit[1u + rnd(LY_COUNT - 1u)] | (rnd(4) ? 0u : dyn_bit[rnd(2)]); break;   /* a layer held */
             case 17: song.g[G_DUST] = (int16_t)rnd(128); song.g[G_DUCK] = (int16_t)rnd(128); break;
             case 18: song.g[G_FILT] = (int16_t)((int)rnd(128) - 64); song.g[G_ROLL] = (int16_t)rnd(5); break;
             case 19: trk[rnd(NTRK)].p[P_MUTE] = (int16_t)(rnd(4) == 0); song.solo = (uint8_t)(rnd(5) ? 0u : 1u << rnd(NTRK)); break;
             case 20: {                                                             /* levels, ratchets on steps */
                 uint32_t t = rnd(NTRK), i2 = rnd(NSTEP);
-                if (t == TRK_DRUM) dstep_set(&trk[t].dstep[i2], rnd(DRUM_LANES), rnd(4), rnd(4));
+                if (is_drum(&trk[t])) dstep_set(&trk[t].dstep[i2], rnd(DRUM_LANES), rnd(4), rnd(4));
                 else if (trk[t].step[i2].n) { trk[t].step[i2].lvl = (uint8_t)rnd(256); trk[t].step[i2].rat = (uint8_t)rnd(256); }
                 break;
             }
-            case 21: trk[rnd(NPART)].p[P_CHORD] = (int16_t)rnd(6); trk[rnd(NPART)].p[P_VOICE] = (int16_t)rnd(4); break;
+            case 21: trk[rsyn()].p[P_CHORD] = (int16_t)rnd(6); trk[rsyn()].p[P_VOICE] = (int16_t)rnd(4); break;
+            case 22: if (rnd(4) == 0) kind_flip(4u + rnd(4)); break;          /* (eight tracks) a track changes kind */
             case 0: if (!ft_on || !rnd(16)) transport_req = song.playing ? 2 : 1; break;   /* (a free take: PLAY closes it) */
             case 1: if (song.playing) rec_begin(); else rec_wait = 1; break;        /* REC */
             case 2: song.rec = 0; rec_wait = 0; break;                            /* REC off */
             case 3: { uint32_t s = rnd(NTRK); song.sel = (uint8_t)s; rec_follow(s); break; }   /* ALGO */
-            case 4: TDRUM->p[P_E0] = (int16_t)rnd(DRUM_KITS); break;              /* kit */
+            case 4: trk[rdrum()].p[P_E0] = (int16_t)rnd(DRUM_KITS); break;      /* kit */
             case 5: punch.req = (int8_t)(rnd(3) ? -1 : (int)rnd(PUNCH_NFX)); break;
             case 6: song.g[G_BPM] = (int16_t)(60 + rnd(140)); break;
-            case 7: { uint32_t t = rnd(NPART), e = rnd(NENGINES);                 /* engine / preset */
+            case 7: { uint32_t t = rsyn(), e = rnd(NENGINES);                     /* engine / preset (big ones on more
+                                                                                * tracks than there are arenas: they wait) */
                       host_preset_req(&trk[t], e, rnd(ENGINES[e]->npresets)); panic_req |= (uint8_t)(1u << t); break; }
             case 8: trk[rnd(NTRK)].p[P_SLEN] = (int16_t)(1 + rnd(64)); break;
             case 9: trk[rnd(NTRK)].p[P_SDIV] = (int16_t)rnd(6); break;
@@ -68,7 +103,7 @@ int main(int argc, char **argv)
             case 11: midi_in(0x90u | rnd(16), 24 + rnd(80), 1 + rnd(127)); break;
             case 12: midi_in(0x80u | rnd(16), 24 + rnd(80), 0); break;
             case 13: trk[rnd(NTRK)].p[P_SLCR] = (int16_t)rnd(3); break;
-            case 14: trk[rnd(NPART)].p[P_AMODE] = (int16_t)rnd(6); break;
+            case 14: trk[rsyn()].p[P_AMODE] = (int16_t)rnd(6); break;
             default: {                                                             /* keys: press / release */
                 uint32_t key = rnd(27);
                 if (rnd(2)) held |= 1u << key; else held &= ~(1u << key);
@@ -125,13 +160,13 @@ int main(int argc, char **argv)
     for (b = 0; b < 5u * FS / CTL; b++) mix_block(out, CTL);
     assert(!song.playing && !song.rec && !rec_wait && !ft_on);
     assert(punch.cur == -1);
-    for (k = 0; k < NPART; k++)
+    for (k = 0; k < NTRK; k++)
         for (i = 0; i < NVOICE; i++)
-            assert(!trk[k].v[i].active);                     /* no hanging synth note */
+            assert(!trk[k].v[i].active);                     /* no hanging synth note, on any of the eight */
     for (i = 0; i < NDRUM; i++)
         assert(!drums.v[i].active);                          /* every drum hit ended */
-    for (k = 0; k < NPART; k++)
-        for (i = 0; i < NSTEP; i++) {
+    for (k = 0; k < NTRK; k++)
+        for (i = 0; i < NSTEP && !is_drum(&trk[k]); i++) {
             const step_t *s = &trk[k].step[i];
             assert(s->n <= 4u && s->time <= ST_REST);
         }

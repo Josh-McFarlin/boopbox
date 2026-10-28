@@ -53,7 +53,6 @@ static struct {
 } drums = {.set = -2};
 /* (the LEVEL / PAN glide and the meter of a drum track: its track_t's lvl, gpl, gpr, mix_on and peak, as a synth's) */
 
-static int32_t ds_buf[CTL];
 
 /* (2.7) LEVEL and PAN glide: a knob's detent (or a new sound's trim) moves a quarter of the way each block of CTL
  * samples (0.73 ms), ~3 ms in all, instead of a step a detent (after JIANT FM 0.6.8, github.com/juanjiant-bit/JIANT:
@@ -391,6 +390,8 @@ static inline void drums_mix(track_t *t, int32_t a0, int32_t a1, int32_t *ml, in
                              int32_t *mono, uint32_t n)
 {
     uint32_t k, i, own = (uint32_t)(t - trk) % NTRK;
+    int32_t ds_buf[CTL];                            /* (a synthesised voice's samples: on this core's stack, two drum
+                                                     * tracks may render at once on the two cores) */
     int32_t lvl = expr_gain(t->p[P_LEVEL] * 200, own), send = send_thr(t->p[P_REV] * 258, thr_rev),
             dsend = send_thr(t->p[P_DLY] * 258, thr_dly), pk = t->peak;   /* (2.6: the THROWs) */
     int32_t pan = t->p[P_PAN], gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
@@ -412,7 +413,8 @@ static inline void drums_mix(track_t *t, int32_t a0, int32_t a1, int32_t *ml, in
     for (k = 0; k < NDRUM; k++) {               /* synthesised voices: render, then as below */
         voice_t *v = &drums.v[k];
         uint32_t m = n < CTL ? n : CTL;             /* (the mix runs in blocks of CTL) */
-        if (!v->active || !drums.synth[k] || drums.own[k] != own)
+        if (drums.own[k] != own || !v->active || !drums.synth[k])   /* (its owner first: written on core 0 only, before the
+                                                     * render; another track's voice may be ending on the other core) */
             continue;
         if (!ds_render(&drums.ds[k], ds_buf, m))
             v->active = 0;
@@ -441,7 +443,7 @@ static inline void drums_mix(track_t *t, int32_t a0, int32_t a1, int32_t *ml, in
     for (k = 0; k < NDRUM; k++) {
         voice_t *v = &drums.v[k];
         const smp_zone_t *z;
-        if (drums.synth[k] || drums.own[k] != own)
+        if (drums.own[k] != own || drums.synth[k])
             continue;
         z = drum_zone_of(v);
         uint32_t frac = v->ph[1], stepq = (uint32_t)v->s[5];   /* Q16 source samples per output (drum_on) */
