@@ -155,6 +155,8 @@ static void preset_extras(int16_t *p, const preset_t *pr)
 
 static const char *const N_HKEY[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};   /* G_HKEY */
 static const char *const N_HQ[] = {"NOW", "BEAT", "BAR"};   /* G_HQ (harmony.c HQ_*) */
+static const char *const N_PFXT[] = {"MASTER", "SEL", "DRUMS", "SYNTHS"};   /* G_PFXT (punch.c PT_*) */
+static const char *const N_PFXQ[] = {"OFF", "1/16", "1/8", "1/4", "BAR"};   /* G_PFXQ */
 static const char *const N_PATQ[] = {"LOOP", "1 BAR", "2 BAR", "4 BAR"};   /* G_PATQ (patbank.c PQ_*) */
 static const param_desc_t GP[G_COUNT] = {
     [G_BPM] = PD("BPM", F_BPM, 40, 240, 90),
@@ -216,6 +218,9 @@ static const param_desc_t GP[G_COUNT] = {
     [G_HSCL] = PE("SCALE", N_SCALE, 1),           /* the chord progression */
     [G_HQ] = PE("Q", N_HQ, 2),
     [G_HPROG] = PE("PROG", N_ONOFF, 0),
+    [G_PFXT] = PE("TARGET", N_PFXT, 0),           /* the punch-in FX (punch.c, FX > PERF): what they act on, */
+    [G_PFXL] = PE("LATCH", N_ONOFF, 0),           /* latched, quantized */
+    [G_PFXQ] = PE("Q", N_PFXQ, 0),
 };
 
 /* the globals that are settings of the FM-1, not of a project: a NEW project and a load leave them */
@@ -501,6 +506,7 @@ static const page_t PAGES[] = {
     {"INSERT 2", FAM_FX, SC_TRACK, GR_INS, {P_IMIX, 0xFF, 0xFF, 0xFF}},  /* .. its dry / wet; the drum track too */
     {"DLY", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX}},
     {"REV/CHO", FAM_FX, SC_GLOBAL, GR_NONE, {G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH}},
+    {"PERF", FAM_FX, SC_GLOBAL, GR_NONE, {G_PFXT, G_PFXL, G_PFXQ, 0xFF}},   /* the punch-in FX: target, latch, quantized */
     {"SEL", FAM_SCL, SC_TRACK, GR_SCALE, {P_ROOT, P_SCALE, P_QUANT, P_CHORD}},
     {"SEL 2", FAM_SCL, SC_TRACK, GR_SCALE, {P_TRANS, P_STRUM, P_VLEAD, 0xFF}},   /* (2.4: the chords played) */
     {"HARMONY", FAM_SCL, SC_GLOBAL, GR_NONE, {G_HKEY, G_HSCL, G_HQ, G_HPROG}},   /* the song's key, scale (harmony.c) */

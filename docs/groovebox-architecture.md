@@ -104,7 +104,7 @@ New modules (all host-testable, no allocation, bounded loops):
 | `comp.c` | step components: per-step rules, evaluated (`comp_eval`) apart from the scheduling (`seq.c seq_fire`) |
 | `harmony.c` | the harmony: key, scale, chord, progression, per-track follow, applied to the sequencer's notes |
 | `patbank.c`, `patcodec.c` | the pattern bank, quantized pattern changes and chains; the pattern codec (moved out of `project.c`) |
-| `perf.c` | the performance layer over the punch-in effects (momentary / latched, quantized) |
+| `punch.c` (extended) | the performance layer over the punch-in effects: target, latch, quantized start |
 
 ## 5. Progress log
 
@@ -227,3 +227,14 @@ New modules (all host-testable, no allocation, bounded loops):
   - Tests: `tests/harm_test.c` (the mapping alone, played, BEAT / BAR, a progression, a live chord, a note held across
     a change, ratchets and component notes, the keys untouched, the stores), UI cases in `tests/ui_pages_test.c`.
   - Proxy sizes against Milestone E: code 294,398 -> 299,066 B (+4.7 KB), RAM 77,268 -> 77,400 B.
+- Performance effects (the punch-in FX extended in place, `punch.c` and `fx.c`):
+  - LATCH (`G_PFXL`): `seq.c key_down` (the FX layer) and `midi_fx` toggle `punch.req` instead of holding it.
+  - Q (`G_PFXQ`): `punch_quant` lets a new effect through only once the transport crossed a 1/16, 1/8, 1/4 or bar
+    line since the last block (an end, or stopped: at once).
+  - TARGET (`G_PFXT`): `mixacc_t` gained a second dry pair (`pl`, `pr`); `fx.c pfx_bus` (set before the units render,
+    read by both cores) sends the targeted tracks' dry there instead of the mix (`mix_part`, `mix_drums`, the drum
+    voices' direct path). The punch processes that bus, which is then added to the mix; with no target the path is
+    the old one (the golden renders unchanged), and idle with a target the output is the same sum. The bus mask is
+    latched when an effect starts (`punch_mask`). `.lowram` +512 B.
+  - Tests: `tests/perf_test.c`; a TARGET scene in `tests/mix_split_test.c` (every split, ThreadSanitizer clean).
+  - Proxy sizes against Milestone F: code 299,066 -> 299,472 B (+0.4 KB), RAM 77,400 -> 77,432 B.

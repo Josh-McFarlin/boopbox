@@ -2302,7 +2302,11 @@ static void midi_fx(uint32_t note, int on)
     fx = punch_fx_of_key(k);
     if (fx < 0 || fx >= (int32_t)PUNCH_NFX)
         return;
-    if (on) {
+    if (on && song.g[G_PFXL]) {                  /* (LATCH: a note turns its effect on, again off; its note-off nothing) */
+        punch.req = (int8_t)(punch.req == fx ? -1 : fx);
+        punch.keybit = 0;
+        mfx_key = 0;
+    } else if (on) {
         punch.req = (int8_t)fx;
         punch.keybit = 0;                        /* (no FM-1 key holds it: a key's release does not end it) */
         mfx_key = (uint8_t)(k + 1u);
@@ -2325,8 +2329,13 @@ static void key_down(uint32_t k)
         int32_t fx = punch_fx_of_key(k);
         kb_kind[k] = KS_FX;
         if (fx >= 0 && fx < (int32_t)PUNCH_NFX) {
-            punch.req = (int8_t)fx;
-            punch.keybit = 1u << k;
+            if (song.g[G_PFXL]) {                     /* FX > PERF LATCH: a key turns its effect on, again off */
+                punch.req = (int8_t)(punch.req == fx ? -1 : fx);
+                punch.keybit = 0;                     /* (its release does not end it) */
+            } else {
+                punch.req = (int8_t)fx;
+                punch.keybit = 1u << k;
+            }
         }
         return;
     }

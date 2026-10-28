@@ -244,6 +244,20 @@ static void scene_block(uint32_t s, uint32_t b)          /* what the UI would do
         }
         if (b == 1000u)
             trk[7].p[P_SLCR] = SL_GATE;
+        if (b == 250u) {                                 /* (groovebox) the punch-in FX on a TARGET: the synths' dry through */
+            song.g[G_PFXT] = PT_SYNTHS;                  /* CRUSH on its own bus (units on both cores write it) */
+            punch.req = PX_CRUSH;
+        }
+        if (b == 450u)
+            punch.req = -1;
+        if (b == 520u) {                                 /* .. then a loop of the drums' */
+            song.g[G_PFXT] = PT_DRUMS;
+            punch.req = PX_LOOP8;
+        }
+        if (b == 800u)
+            punch.req = -1;
+        if (b == 900u)
+            song.g[G_PFXT] = PT_MASTER;
     }
 }
 

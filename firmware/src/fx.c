@@ -311,8 +311,13 @@ static void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t
  * added before the buses: integer sums commute, so the output is the same, bit for bit, whatever the split
  * (tests/regress.c gives the golden hashes under every mode of the host double: tests/cpu1_modes.sh). */
 static void events_block(uint32_t n);                    /* seq.c */
-typedef struct { int32_t l[CTL], r[CTL], sc[CTL], sd[CTL], sr[CTL]; } mixacc_t;   /* dry L, R; chorus, delay, reverb sends */
+typedef struct { int32_t l[CTL], r[CTL], sc[CTL], sd[CTL], sr[CTL], pl[CTL], pr[CTL]; } mixacc_t;   /* dry L, R; chorus,
+                                                         * delay, reverb sends; the dry of the tracks the punch-in FX
+                                                         * act on (pfx_bus: punch.c) */
 static mixacc_t acc[2] __attribute__((section(".lowram")));          /* core 0's, core 1's (.lowram: app.ld, main.c) */
+/* FX > PERF TARGET other than MASTER: the tracks (a bit each) whose dry goes to the punch-in FX's own bus (acc.pl, pr),
+ * this block (set before the units render, both cores read it); 0: every track to the mix, the effect on the whole mix */
+static uint8_t pfx_bus;
 static int32_t wet_l[CTL], wet_r[CTL];
 static int32_t part_buf[2][CTL] __attribute__((section(".lowram")));   /* a track's scratch, one per core (a drum track's
                                                                         * mono bus too: mix_drums) */
@@ -712,6 +717,8 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
         lvl0 = t->lvl, gl0 = t->gpl, gr0 = t->gpr;
         t->lvl = mix_glide(lvl0, lvl), t->gpl = mix_glide(gl0, gl), t->gpr = mix_glide(gr0, gr);
         dl = (t->lvl - lvl0) >> CTL_LOG2, dgl = t->gpl - gl0, dgr = t->gpr - gr0;
+        int32_t *ol = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pl : mx->l;   /* (the punch-in FX's bus, or the mix) */
+        int32_t *orr = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pr : mx->r;
         for (i = 0; i < n; i++) {
             int32_t x = ((b[i] >> 2) * (lvl0 + dl * (int32_t)i)) >> 10, a;   /* pre-shift: 8 loud voices */
             int32_t xs, g = ga + (((gb - ga) * (int32_t)i) >> CTL_LOG2);
@@ -728,8 +735,8 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
             if (r)
                 mx->sr[i] += mulq15(xs, r);
             gl = gl0 + ((dgl * (int32_t)i) >> CTL_LOG2), gr = gr0 + ((dgr * (int32_t)i) >> CTL_LOG2);   /* (2.7) */
-            mx->l[i] += ((x >> 4) * gl) >> 8;           /* (x may pass 2^19: >> 4 first) */
-            mx->r[i] += ((x >> 4) * gr) >> 8;
+            ol[i] += ((x >> 4) * gl) >> 8;              /* (x may pass 2^19: >> 4 first) */
+            orr[i] += ((x >> 4) * gr) >> 8;
         }
         t->peak = pk;
     }
@@ -826,9 +833,11 @@ static void mix_drums(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
     int32_t a0 = t->att, a1 = 32767 - gain_next(t);    /* the track's mute / solo fade */
     int flt = n <= CTL && djf_block(f, t->p[P_TFLT], &fc, tflt_reso());   /* its FILTER */
     int ins_on = n <= CTL && (t->p[P_ITYPE] | t->ins_run);
+    int32_t *ol = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pl : mx->l;   /* (the punch-in FX's bus, or the mix) */
+    int32_t *orr = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pr : mx->r;
     if (!flt && !ins_on && !slicer_on(t)) {
         slicer_track(t, 0, n);                          /* (the SLICER's step clock runs on) */
-        drums_mix(t, a0, a1, mx->l, mx->r, mx->sr, mx->sd, 0, n);
+        drums_mix(t, a0, a1, ol, orr, mx->sr, mx->sd, 0, n);
         return;
     }
     for (i = 0; i < n; i++)
@@ -844,8 +853,8 @@ static void mix_drums(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
         int32_t gl = t->gpl, gr = t->gpr;               /* (the pan as drums_mix glided it this block) */
         for (i = 0; i < n; i++) {
             int32_t x = b[i];
-            mx->l[i] += (x * gl) >> 12;
-            mx->r[i] += (x * gr) >> 12;
+            ol[i] += (x * gl) >> 12;
+            orr[i] += (x * gr) >> 12;
             if (send)
                 mx->sr[i] += mulq15(x, send);
             if (dsend)
@@ -1172,7 +1181,7 @@ static void mix_block(int32_t *out, uint32_t n)
     uint32_t i, c1;
     int32_t m0, m1, *mix_l = acc[0].l, *mix_r = acc[0].r;
     for (i = 0; i < n; i++)
-        acc[0].l[i] = acc[0].r[i] = acc[0].sc[i] = acc[0].sd[i] = acc[0].sr[i] = 0;
+        acc[0].l[i] = acc[0].r[i] = acc[0].sc[i] = acc[0].sd[i] = acc[0].sr[i] = acc[0].pl[i] = acc[0].pr[i] = 0;
     {   /* REV / ECHO THROW (2.6): the sends glide to full and back over ~12 ms (17 blocks); set before the hand-off:
          * the units on both cores read them (send_thr) */
         uint32_t q = thr_req | thr_ed;                  /* (2.7: the editor's LIVE page too) */
@@ -1180,11 +1189,12 @@ static void mix_block(int32_t *out, uint32_t n)
         thr_dly = (q & 2u) ? (thr_dly + 1928 > 32767 ? 32767 : thr_dly + 1928) : (thr_dly > 1928 ? thr_dly - 1928 : 0);
     }
     events_block(n);
+    pfx_bus = punch.cur >= 0 ? punch_mask : (uint8_t)pfx_mask_now();   /* (an effect playing keeps the tracks it started on) */
     duck_block(n * (uint32_t)song.g[G_BPM]);
     c1 = cpu1_on() ? units_split() : 0;                 /* core 1's units this block */
     if (c1) {
         for (i = 0; i < n; i++)
-            acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = 0;
+            acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = acc[1].pl[i] = acc[1].pr[i] = 0;
         if (!cpu1_run(cpu1_units_job, c1 | n << 8))
             c1 = 0;
     }
@@ -1197,7 +1207,7 @@ static void mix_block(int32_t *out, uint32_t n)
         if (late) {                                     /* core 1 did not finish in time: held from now on (cpu1.h);
                                                          * its units here, once (what it half did is this block's glitch) */
             for (i = 0; i < n; i++)
-                acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = 0;
+                acc[1].l[i] = acc[1].r[i] = acc[1].sc[i] = acc[1].sd[i] = acc[1].sr[i] = acc[1].pl[i] = acc[1].pr[i] = 0;
             cpu1_units_job(c1 | n << 8);
         }
         for (i = 0; i < n; i++) {
@@ -1206,18 +1216,33 @@ static void mix_block(int32_t *out, uint32_t n)
             acc[0].sc[i] += acc[1].sc[i];
             acc[0].sd[i] += acc[1].sd[i];
             acc[0].sr[i] += acc[1].sr[i];
+            acc[0].pl[i] += acc[1].pl[i];
+            acc[0].pr[i] += acc[1].pr[i];
         }
     }
     texture_mix(mix_l, mix_r, n);                       /* GLO > TEXTURE (2.6): the bed, dry; after both cores' units
                                                          * (what it adds does not depend on them: the same sum) */
-    punch_freeze_feed(acc[0].sr, mix_l, mix_r, n);     /* punch-in FREEZE: the whole dry mix into the held reverb */
-    fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
-    for (i = 0; i < n; i++) {
-        mix_l[i] += wet_l[i];
-        mix_r[i] += wet_r[i];
+    if (!pfx_bus) {                                     /* TARGET MASTER: the effect on the whole mix, as ever */
+        punch_freeze_feed(acc[0].sr, mix_l, mix_r, n); /* punch-in FREEZE: the whole dry mix into the held reverb */
+        fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
+        for (i = 0; i < n; i++) {
+            mix_l[i] += wet_l[i];
+            mix_r[i] += wet_r[i];
+        }
+        dust_process(mix_l, mix_r, n);
+        punch_process(mix_l, mix_r, n);
+    } else {                                            /* a TARGET: the effect on those tracks' dry only, then into the
+                                                         * mix (the sends, the texture and the other tracks pass it by;
+                                                         * idle, the same sum as above) */
+        punch_freeze_feed(acc[0].sr, acc[0].pl, acc[0].pr, n);
+        fx_buses(acc[0].sc, acc[0].sd, acc[0].sr, wet_l, wet_r, n);
+        punch_process(acc[0].pl, acc[0].pr, n);
+        for (i = 0; i < n; i++) {
+            mix_l[i] += wet_l[i] + acc[0].pl[i];
+            mix_r[i] += wet_r[i] + acc[0].pr[i];
+        }
+        dust_process(mix_l, mix_r, n);
     }
-    dust_process(mix_l, mix_r, n);
-    punch_process(mix_l, mix_r, n);
     djf_process(mix_l, mix_r, n);
     m1 = (int32_t)song.master_q12;
     m0 = master_cur < 0 ? m1 : master_cur;
