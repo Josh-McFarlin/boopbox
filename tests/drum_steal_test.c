@@ -7,7 +7,6 @@
 #include "hostsim.c"
 #undef main
 #define PROJ_HOST 1
-static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? i : 0; }
 #include "../firmware/src/project.c"
 static struct { uint8_t force; } ui;
 static uint8_t sync_reload;
@@ -26,7 +25,7 @@ static uint32_t run_kit(uint32_t kit, int dense, uint32_t *kicks, uint32_t *natu
     TDRUM->p[P_MUTE] = 0;
     for (i = 0; i < 20; i++) block();
     /* the kick alone: how long it sounds */
-    drum_on(36, 110);
+    drum_on(TDRUM, 36, 110);
     for (b = 0; b < FS * 2u / CTL; b++) { int a = 0; for (i = 0; i < NDRUM; i++) a |= drums.v[i].active && drums.v[i].note == 36; if (!a) break; block(); }
     *natural_ms = b * CTL * 1000u / FS;
     for (i = 0; i < 40; i++) block();
@@ -46,7 +45,7 @@ static uint32_t run_kit(uint32_t kit, int dense, uint32_t *kicks, uint32_t *natu
         }
         uint32_t ages[10];
         for (i = 0; i < n; i++) {
-            drum_on(notes[i], 100);
+            drum_on(TDRUM, notes[i], 100);
             ages[i] = drums.age;
             if (notes[i] == 36) {
                 uint32_t v;

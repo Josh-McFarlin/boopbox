@@ -180,7 +180,8 @@ def build_loader():
 def build_app():
     flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_CDC", "FELUCCA_UART",
-                 "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT"):
+                 "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT", "FELUCCA_VIS",
+                 "FELUCCA_EDITOR"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
@@ -334,15 +335,29 @@ def main():
         gen, ldr = ex.submit(generate), ex.submit(build_loader)
         gen.result()
         ota = ldr.result()
-    try:
-        img, syms, dis, rt = build_app()
-    except SystemExit:
-        # (2.7) the flash is full: the boot logo as text ("S" and "LOOP" in the tracks' colours, splash.c) gives 4.6 KB
-        if "overflow" not in LAST_ERR or os.environ.get("FELUCCA_LOGO_TEXT") == "1":
-            raise
-        print("build: the flash is full: building again with the boot logo as text (FELUCCA_LOGO_TEXT=1, 4.6 KB less)")
-        os.environ["FELUCCA_LOGO_TEXT"] = "1"
-        img, syms, dis, rt = build_app()
+    # The flash is full: each fallback in turn, said, until the image fits; none left: the build fails (nothing is
+    # left out silently). (2.7) the boot logo as text ("S" and "LOOP" in the tracks' colours, splash.c), 4.6 KB;
+    # (groovebox) no full-screen visualiser (HOME on HOME, ui_vis.c), about 10 KB (the proxy build's measure)
+    fallbacks = [("FELUCCA_LOGO_TEXT", "the boot logo as text, 4.6 KB less"),
+                 ("FELUCCA_VIS", "no full-screen visualiser (HOME on HOME), about 10 KB less")]
+    while True:
+        try:
+            img, syms, dis, rt = build_app()
+            break
+        except SystemExit:
+            if "overflow" not in LAST_ERR:
+                raise
+            nxt = next(((k, w) for k, w in fallbacks if os.environ.get(k) is None), None)
+            if nxt is None:
+                print("build: the flash is full and every fallback is taken: the image does not fit. By hand: "
+                      "FELUCCA_EDITOR=0 builds without the web editor's SysEx (about 19 KB less; updates and recovery "
+                      "stay); see docs/groovebox-performance.md")
+                raise
+            print(f"build: the flash is full: building again with {nxt[1]} ({nxt[0]}={'1' if nxt[0] == 'FELUCCA_LOGO_TEXT' else '0'})")
+            os.environ[nxt[0]] = "1" if nxt[0] == "FELUCCA_LOGO_TEXT" else "0"
+    taken = [w for k, w in fallbacks if os.environ.get(k) == ("1" if k == "FELUCCA_LOGO_TEXT" else "0")]
+    if taken:
+        print("build: NOTE: built with " + "; ".join(taken))
     errors, notes = check(img, syms, dis, rt)
     hal_err = mmio_check()
     errors += hal_err

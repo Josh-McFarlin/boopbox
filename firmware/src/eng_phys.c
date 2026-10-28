@@ -84,7 +84,7 @@ static const int8_t PHYS_DETUNE[PX_NSYMP] = {1, -1, 0};   /* 1/16 semitone (6 ce
 #define PHYS_SLOT_SMALL ((__builtin_offsetof(phys_slot_t, u) + sizeof(px_string_t) + 7u) & ~7u)
 #define PHYS_ARENA (2u * PHYS_SLOT_BIG > 3u * PHYS_SLOT_SMALL ? 2u * PHYS_SLOT_BIG : 3u * PHYS_SLOT_SMALL)
 _Static_assert(sizeof(px_modal_t) <= sizeof(px_string_t), "a small PHYS slot holds MODAL and MEMB too");
-static uint8_t phys_lay[NPART];          /* 1 + the layout the slots are in (0 small, 1 SYMP), 0 = none yet */
+static uint8_t phys_lay[NTRK];          /* 1 + the layout the slots are in (0 small, 1 SYMP), 0 = none yet */
 static uint32_t phys_poly(const track_t *t)
 {
     return (uint32_t)t->p[P_E0] % PM_COUNT == PM_SYMP ? 2u : 3u;
@@ -93,7 +93,7 @@ static phys_slot_t *phys_slot_of(track_t *t, voice_t *v)
 {
     uint32_t i, p, big, k, sz;
     uint8_t *a;
-    if (t < &trk[0] || t >= &trk[NPART])
+    if (t < &trk[0] || t >= &trk[NTRK])
         return 0;
     p = (uint32_t)(t - trk);
     i = (uint32_t)(v - t->v);
@@ -101,6 +101,8 @@ static phys_slot_t *phys_slot_of(track_t *t, voice_t *v)
     if (i >= phys_poly(t))
         return 0;
     a = (uint8_t *)eng_arena_of(t, ENGI_PHYS);
+    if (!a)
+        return 0;                                        /* (no arena lent to the track: silent, engines.c) */
     sz = big ? PHYS_SLOT_BIG : PHYS_SLOT_SMALL;
     if (phys_lay[p] != big + 1u) {                       /* the other layout: every slot starts over */
         for (k = 0; k < phys_poly(t); k++)

@@ -55,6 +55,9 @@ static struct {
     uint8_t note_k;              /* (2.7.2) NOTES: the note of the cursor's chord (0..n-1) */
     uint8_t zoom;                /* (2.7.2) NOTES: the steps shown, NV_ZOOM[zoom] (PRESETS) */
     uint8_t sheet;               /* (2.7.2) NOTES / DRUMS grid: the sheet (OCT+ held) open: 1 + its row; 0 closed */
+    uint8_t csheet;              /* the sheet's COMP strip open: 1 + the item (the step's components, then ADD); 0 closed */
+    uint8_t cadd;                /* the type its ADD puts on the step (CP_*) */
+    uint8_t lsheet;              /* the sheet's LOCKS strip open: 1 + the item (the step's locks, then ADD); 0 closed */
     uint8_t sheet_last;          /* (2.8.1) the sheet row last used (0..5): OCT+ reopens on it (quick MOVE) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
     uint8_t menu;                /* 0 off, 1 list, 2 about (HOME held) */
@@ -96,6 +99,7 @@ static struct {
 
 UI_SMALL static const page_t *cur_page(void) { return &PAGES[ui.page]; }
 static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* ui_input.c */
+static void lock_par_step(int32_t s);                            /* ui_layers.c: the lock parameter, the next lockable one */
 static void layer_screen_draw(void);                            /* ui_layers.c */
 static void hold_screen_draw(void);
 static uint8_t layer_shown;
@@ -146,10 +150,12 @@ UI_SMALL static void page_entered(void)
  * turned, and says whose it was. Every frame (ui_input) */
 UI_SMALL static void midi_chan_fix(void)
 {
-    static const uint8_t ID[4] = {G_CH1, G_CH2, G_CH3, G_DRCH};
-    static int16_t was[4] = {-1, -1, -1, -1};
+    static int16_t was[NTRK] = {-1, -1, -1, -1, -1, -1, -1, -1};
+    uint8_t ID[NTRK];
     uint32_t k, j;
-    for (k = 0; k < 4u; k++) {
+    for (k = 0; k < NTRK; k++)
+        ID[k] = (uint8_t)trk_ch_id(k);
+    for (k = 0; k < NTRK; k++) {
         int32_t v = song.g[ID[k]], dir, owner = -1;
         if (was[k] < 0 || v == was[k] || !v) {
             was[k] = (int16_t)v;
@@ -158,7 +164,7 @@ UI_SMALL static void midi_chan_fix(void)
         dir = v > was[k] ? 1 : -1;
         for (;;) {
             int32_t o = -1;
-            for (j = 0; j < 4u; j++)
+            for (j = 0; j < NTRK; j++)
                 if (j != k && song.g[ID[j]] == v)
                     o = (int32_t)j;
             if (o < 0)
@@ -176,10 +182,12 @@ UI_SMALL static void midi_chan_fix(void)
             }
         }
         if (owner >= 0) {
-            char b[8];
+            char b[8], w[12];
             str_cpy(b, "CH ", sizeof b);
             fmt_int(b + 3, song.g[ID[k]]);
-            ui_say(b, owner == 3 ? " = DRUMS" : owner == 0 ? " = TRACK 1" : owner == 1 ? " = TRACK 2" : " = TRACK 3");
+            str_cpy(w, " = TRACK 1", sizeof w);
+            w[9] = (char)('1' + owner);
+            ui_say(b, w);
             song.g[ID[k]] = (int16_t)v;
         }
         was[k] = (int16_t)v;
@@ -311,9 +319,12 @@ UI_SMALL static void cursor_fix(void)                           /* LEN got short
 static const uint8_t NV_ZOOM[4] = {8, 16, 32, 64};
 static const char *const FORCE_N[5] = {"GHOST", "SOFT", "NORM", "HARD", "ACC"};
 static const uint8_t F_LVL[4] = {LV_GHOST, LV_SOFT, LV_NORM, LV_HARD};
-static const char *const SHEET_N[6] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE"};
+#define NSHEET 8u                /* the sheet's rows; COMP opens the step's components (comp_strip_*), LOCKS its locks (lock_strip_*) */
+#define SH_COMP 6u
+#define SH_LOCKS 7u
+static const char *const SHEET_N[NSHEET] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP", "LOCKS"};
 static const char *const FILL_N[3] = {"NORMAL", "FILL", "NO FILL"};
-static const char *const DSHEET_N[6] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE"};
+static const char *const DSHEET_N[NSHEET] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP", "LOCKS"};
 UI_SMALL static void note_walk(int32_t dir)
 {
     track_t *t = TSEL;
@@ -396,7 +407,7 @@ UI_SMALL static int step_free(const track_t *t, uint32_t i)   /* nothing there: 
 {
     return !step_on(&t->step[i]) && t->step[i].time != ST_TIE;
 }
-/* a note (its step, TIEs, nudge, fill, locks) one step on or back (copy: to just after it, the original stays);
+/* a note (its step, TIEs, nudge, fill, locks, components) one step on or back (copy: to just after it, the original stays);
  * the steps it goes to must be free, inside the pattern. Returns where it is now, or -1 */
 UI_SMALL static int32_t note_shift(track_t *t, uint32_t i, int32_t dir, int copy)
 {
@@ -429,13 +440,25 @@ UI_SMALL static int32_t note_shift(track_t *t, uint32_t i, int32_t dir, int copy
             if (!copy)
                 t->lock[j].step = (uint8_t)to;
             else {
-                int k = lock_find(t, to, t->lock[j].param, 1);
+                int k = lock_find(t, to, t->lock[j].param & LOCK_PID, 1);
                 if (k >= 0) {
                     t->lock[k].step = (uint8_t)to;
                     t->lock[k].param = t->lock[j].param;
                     t->lock[k].val = t->lock[j].val;
                 }
             }
+        }
+    for (j = 0; j < NCOMP; j++)                         /* (and its components) */
+        if (t->comp[j].type != CP_NONE && t->comp[j].step == i) {
+            if (!copy) {
+                int d = comp_find(t, to, t->comp[j].type);
+                if (d >= 0 && d != (int)j) {                /* (one of that type there already: this one takes its place) */
+                    t->comp[d].type = CP_NONE;
+                    t->comp[d].step = COMP_FREE;
+                }
+                t->comp[j].step = (uint8_t)to;
+            } else
+                comp_set(t, to, t->comp[j].type, t->comp[j].a, t->comp[j].b);
         }
     if (!copy) {
         t->micro[i] = 0;
@@ -473,23 +496,288 @@ UI_SMALL static uint32_t octp_filter(uint32_t pressed, uint32_t *ev)
 /* (2.8.1) the sheet (NOTES, the drum grid) as a strip along the bottom, over the knob area, so the
  * sequencer itself stays fully visible: the row KNOB 1 picks is lit in the middle with its value, the
  * rows before and after it faint on each side, and six dots for the place in the list. OCT+ acts, OCT- closes. */
-UI_SMALL static void sheet_bar(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint16_t acc)
+UI_SMALL static void sheet_bar_n(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint32_t n, uint16_t acc)
 {
-    uint32_t prev = (sel + 5u) % 6u, next = (sel + 1u) % 6u, i;
+    uint32_t prev = (sel + n - 1u) % n, next = (sel + 1u) % n, i;
     int32_t x = 6, lw = text_w(&FONT_S, lab[sel]);
     int32_t vw = val[sel] && val[sel][0] ? text_w(&FONT_S, val[sel]) + 6 : 0;
     cv_rect(0, y, 240, 16, C_BLACK);                   /* the strip */
     cv_rect(0, y, 240, 1, C_LINE);
-    cv_text(x, y + 2, &FONT_S, lab[prev], C_DIM);      /* the row before (faint) */
-    x += text_w(&FONT_S, lab[prev]) + 10;
+    if (prev != sel) {
+        cv_text(x, y + 2, &FONT_S, lab[prev], C_DIM);  /* the row before (faint) */
+        x += text_w(&FONT_S, lab[prev]) + 10;
+    }
     cv_rect(x - 3, y + 1, lw + vw + 6, 14, acc);       /* the row under edit, lit */
     cv_text(x, y + 2, &FONT_S, lab[sel], C_WHITE);
     if (vw)
         cv_text(x + lw + 6, y + 2, &FONT_S, val[sel], C_WHITE);
     x += lw + vw + 10;
-    cv_text(x, y + 2, &FONT_S, lab[next], C_DIM);      /* the row after (faint) */
-    for (i = 0; i < 6u; i++)                            /* the place in the six */
-        cv_rect(200 + (int32_t)i * 6, y + 6, 4, 4, i == sel ? acc : C_DIM);
+    if (next != sel && next != prev)
+        cv_text(x, y + 2, &FONT_S, lab[next], C_DIM);  /* the row after (faint) */
+    for (i = 0; i < n && n > 1u; i++)                   /* the place in the list */
+        cv_rect(236 - (int32_t)(n - i) * 6, y + 6, 4, 4, i == sel ? acc : C_DIM);
+}
+UI_SMALL static void sheet_bar(int32_t y, const char *const *lab, const char *const *val, uint32_t sel, uint16_t acc)
+{
+    sheet_bar_n(y, lab, val, sel, NSHEET, acc);
+}
+
+/* ---- the step's components (comp.c), from the sheet's COMP row: a strip as the sheet's. The items: the components on
+ * the step (in the list's order), then ADD. KNOB 1 the item, KNOB 2 its first value (ADD: the type), KNOB 3 its second;
+ * OCT+ adds (ADD) or removes (a component), OCT- goes back to the sheet. t, step: the track and step under edit */
+UI_SMALL static uint32_t comp_items(const track_t *t, uint32_t step, uint8_t *slot)   /* the step's, slot[] their slots */
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE && t->comp[k].step == step)
+            slot[n++] = (uint8_t)k;
+    return n;
+}
+UI_SMALL static uint32_t comp_sig(const track_t *t, uint32_t step)   /* the step's components and the strip (redraws) */
+{
+    uint32_t k, h = ui.csheet * 131u + ui.cadd * 17u;
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE && t->comp[k].step == step)
+            h = h * 33u + t->comp[k].type * 7u + (uint32_t)(uint8_t)t->comp[k].a * 257u + (uint8_t)t->comp[k].b;
+    return h;
+}
+UI_SMALL static void comp_val_text(const track_t *t, const comp_t *c, char *b)   /* its values, short (b: 16 bytes) */
+{
+    int32_t a = c->a, v = c->b;
+    b[0] = 0;
+    switch (c->type) {
+    case CP_PULSE: case CP_HOLD: case CP_TONE:
+        if (a > 0) str_cpy(b, "+", 2);
+        fmt_int(b + str_len(b), a);
+        break;
+    case CP_MULT:
+        str_cpy(b, "x", 2), fmt_int(b + 1, a);
+        break;
+    case CP_VEL:
+        fmt_int(b, a);
+        if (v) str_cpy(b + str_len(b), "~", 2), fmt_int(b + str_len(b), v);
+        break;
+    case CP_RUP: case CP_RDN:
+        fmt_int(b, a), str_cpy(b + str_len(b), " /", 3), fmt_int(b + str_len(b), v);
+        break;
+    case CP_RAND:
+        str_cpy(b, "~", 2), fmt_int(b + 1, a);
+        break;
+    case CP_PORTA:
+        fmt_int(b, a);
+        break;
+    case CP_BEND:
+        if (a > 0) str_cpy(b, "+", 2);
+        fmt_int(b + str_len(b), a);
+        str_cpy(b + str_len(b), v ? " FROM" : " TO", 6);
+        break;
+    case CP_JUMP:
+        fmt_int(b, a), str_cpy(b + str_len(b), " /", 3), fmt_int(b + str_len(b), v);
+        break;
+    case CP_PARAM:
+        str_cpy(b, lock_desc(t, (uint32_t)a % P_COUNT)->label, 6);
+        str_cpy(b + str_len(b), " ", 2), fmt_int(b + str_len(b), v), str_cpy(b + str_len(b), "%", 2);
+        break;
+    case CP_COND:
+        if (a < 0) str_cpy(b, "!", 2);
+        fmt_int(b + str_len(b), a < 0 ? -a : a), str_cpy(b + str_len(b), ":", 2), fmt_int(b + str_len(b), v);
+        break;
+    case CP_TRIG:
+        fmt_int(b, a), str_cpy(b + str_len(b), "%", 2);
+        break;
+    default:
+        break;
+    }
+}
+UI_SMALL static void comp_strip_draw(int32_t y, const track_t *t, uint32_t step, uint16_t acc)
+{
+    uint8_t slot[NCOMP];
+    static char vb[NCOMP + 1u][16];
+    const char *lab[NCOMP + 1u], *val[NCOMP + 1u];
+    uint32_t n = comp_items(t, step, slot), i, sel = ui.csheet ? ui.csheet - 1u : 0u;
+    for (i = 0; i < n; i++) {
+        lab[i] = CP_NAME[t->comp[slot[i]].type % CP_COUNT];
+        comp_val_text(t, &t->comp[slot[i]], vb[i]);
+        val[i] = vb[i];
+    }
+    lab[n] = "ADD";
+    val[n] = CP_NAME[ui.cadd % CP_COUNT];
+    sheet_bar_n(y, lab, val, sel > n ? n : sel, n + 1u, acc);
+}
+UI_SMALL static void comp_strip_knob(track_t *t, uint32_t step, uint32_t k, int32_t s)
+{
+    uint8_t slot[NCOMP];
+    uint32_t n = comp_items(t, step, slot), sel = ui.csheet - 1u;
+    if (k == 0u) {
+        ui.csheet = (uint8_t)(1 + clamp((int32_t)sel + s, 0, (int32_t)n));
+        return;
+    }
+    if (sel >= n) {                                       /* ADD: KNOB 2 the type */
+        if (k == 1u)
+            ui.cadd = (uint8_t)(1 + ((int32_t)ui.cadd - 1 + s % (CP_COUNT - 1) + 2 * (CP_COUNT - 1)) % (CP_COUNT - 1));
+        return;
+    }
+    {
+        comp_t *c = &t->comp[slot[sel]];
+        int32_t a = c->a, b = c->b;
+        if (k == 1u && c->type == CP_PARAM) {             /* the parameter: the next lockable one */
+            int32_t d = s > 0 ? 1 : -1, g = P_COUNT;
+            for (; s; s -= d)
+                do
+                    a = (a + d + P_COUNT) % P_COUNT;
+                while (g-- && !p_lockable((uint32_t)a));
+        } else if (k == 1u) {
+            a = comp_clamp(c->type, 0, a + s);
+            if (c->type == CP_COND && !a)
+                a = s > 0 ? 1 : -1;                       /* (no loop 0: from 1 to -1, NOT 1) */
+        } else if (k == 2u) {
+            b = comp_clamp(c->type, 1, b + s);
+        } else {
+            return;
+        }
+        fm1_irq_off();
+        comp_set(t, step, c->type, a, b);
+        fm1_irq_on();
+        sync_reload = 1;
+    }
+}
+/* ---- the step's parameter locks, from the sheet's LOCKS row, as the COMP strip: the step's locks, then ADD. KNOB 1 the item,
+ * KNOB 2 its value (ADD: the parameter, from the lockable ones), KNOB 3 its SLIDE (ON: over the step the parameter glides to
+ * the value); OCT+ adds one at the track's own value (ADD) or removes it, OCT- back to the sheet */
+UI_SMALL static uint32_t lock_items(const track_t *t, uint32_t step, uint8_t *slot)
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NLOCK; k++)
+        if (t->lock[k].step == step)
+            slot[n++] = (uint8_t)k;
+    return n;
+}
+UI_SMALL static uint32_t lock_sig(const track_t *t, uint32_t step)
+{
+    uint32_t k, h = ui.lsheet * 151u + ui.lock_par * 19u;
+    for (k = 0; k < NLOCK; k++)
+        if (t->lock[k].step == step)
+            h = h * 33u + t->lock[k].param * 7u + (uint32_t)(uint16_t)t->lock[k].val * 257u;
+    return h;
+}
+UI_SMALL static void lock_strip_draw(int32_t y, const track_t *t, uint32_t step, uint16_t acc)
+{
+    uint8_t slot[NLOCK];
+    static char vb[NLOCK + 1u][16];
+    const char *lab[NLOCK + 1u], *val[NLOCK + 1u], *unit;
+    uint32_t n = lock_items(t, step, slot), i, sel = ui.lsheet ? ui.lsheet - 1u : 0u;
+    for (i = 0; i < n; i++) {
+        const plock_t *l = &t->lock[slot[i]];
+        const param_desc_t *d = lock_desc(t, l->param & LOCK_PID);
+        lab[i] = d->label;
+        unit = 0;
+        param_format(d, l->val, vb[i], &unit);
+        if (l->param & LOCK_SLIDE)
+            str_cpy(vb[i] + str_len(vb[i]), " SL", 4);
+        val[i] = vb[i];
+    }
+    lab[n] = "ADD";
+    val[n] = lock_desc(t, ui.lock_par % P_COUNT)->label;
+    sheet_bar_n(y, lab, val, sel > n ? n : sel, n + 1u, acc);
+}
+UI_SMALL static void lock_strip_knob(track_t *t, uint32_t step, uint32_t k, int32_t s)
+{
+    uint8_t slot[NLOCK];
+    uint32_t n = lock_items(t, step, slot), sel = ui.lsheet - 1u;
+    if (k == 0u) {
+        ui.lsheet = (uint8_t)(1 + clamp((int32_t)sel + s, 0, (int32_t)n));
+        return;
+    }
+    if (sel >= n) {                                       /* ADD: KNOB 2 the parameter */
+        if (k == 1u)
+            lock_par_step(s);
+        return;
+    }
+    {
+        plock_t *l = &t->lock[slot[sel]];
+        uint32_t id = l->param & LOCK_PID;
+        const param_desc_t *d = lock_desc(t, id);
+        fm1_irq_off();
+        if (k == 1u)
+            lock_set(t, step, id, l->val + accel(EN_K2, s, d->max - d->min));
+        else if (k == 2u)
+            lock_slide_set(t, step, id, s > 0);
+        fm1_irq_on();
+        sync_reload = 1;
+    }
+}
+UI_SMALL static void lock_strip_do(track_t *t, uint32_t step)   /* OCT+: ADD adds a lock, a lock goes */
+{
+    uint8_t slot[NLOCK];
+    uint32_t n = lock_items(t, step, slot), sel = ui.lsheet - 1u, id = ui.lock_par % P_COUNT;
+    int k;
+    if (sel < n) {
+        fm1_irq_off();
+        lock_del(t, step, t->lock[slot[sel]].param & LOCK_PID);
+        fm1_irq_on();
+        ui_message("LOCK REMOVED");
+    } else if ((k = lock_find(t, step, id, 0)) >= 0) {
+        uint32_t i;
+        for (i = 0; i < n && slot[i] != (uint8_t)k; i++)
+            ;
+        ui.lsheet = (uint8_t)(1u + i);
+        ui_message("ON THE STEP ALREADY");
+        return;
+    } else {
+        int ok;
+        fm1_irq_off();
+        ok = lock_set(t, step, id, trk_base(t, id));
+        fm1_irq_on();
+        if (!ok) {
+            ui_message(p_lockable(id) ? "NO LOCK LEFT" : "NOT LOCKABLE");
+            return;
+        }
+        n = lock_items(t, step, slot);
+        for (k = 0; k < (int)n && t->lock[slot[k]].param != (uint8_t)id; k++)
+            ;
+        ui.lsheet = (uint8_t)(1 + k);                     /* (the new one) */
+        ui_message("LOCK ADDED");
+    }
+    n = lock_items(t, step, slot);
+    if (ui.lsheet > n + 1u)
+        ui.lsheet = (uint8_t)(n + 1u);
+    sync_reload = 1;
+}
+UI_SMALL static void comp_strip_do(track_t *t, uint32_t step)   /* OCT+: ADD adds the type, a component goes */
+{
+    uint8_t slot[NCOMP];
+    uint32_t n = comp_items(t, step, slot), sel = ui.csheet - 1u, ty = ui.cadd % CP_COUNT;
+    int k;
+    if (sel < n) {
+        fm1_irq_off();
+        comp_del(t, step, t->comp[slot[sel]].type);
+        fm1_irq_on();
+        ui_message("COMP REMOVED");
+    } else if (!ty) {
+        return;
+    } else if ((k = comp_find(t, step, ty)) >= 0) {
+        uint32_t i;
+        for (i = 0; i < n && slot[i] != (uint8_t)k; i++)
+            ;
+        ui.csheet = (uint8_t)(1u + i);                    /* (one of that type is there: picked) */
+        ui_message("ON THE STEP ALREADY");
+        return;
+    } else {
+        int ok;
+        fm1_irq_off();
+        ok = comp_set(t, step, ty, CP_RANGE[ty][4], CP_RANGE[ty][5]);
+        fm1_irq_on();
+        if (!ok) {
+            ui_message("NO COMP LEFT");
+            return;
+        }
+        ui.csheet = (uint8_t)(1u + n);                    /* (the new one, the last of the step's) */
+        ui_message("COMP ADDED");
+    }
+    n = comp_items(t, step, slot);
+    if (ui.csheet > n + 1u)
+        ui.csheet = (uint8_t)(n + 1u);
+    sync_reload = 1;
 }
 
 UI_SMALL static void note_name(char *b, uint32_t n)
@@ -525,10 +813,11 @@ UI_SMALL static int page_walk(int32_t s)
     uint32_t i, fam = pg->fam, n = 0;
     int32_t cur = -1, to;
     uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3) */
-    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM)
+    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM || pg->scope == SC_PATS || pg->scope == SC_HARM)
         return 0;
     for (i = 0; i < NPAGES && n < 16u; i++) {
-        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM || !page_shown(&PAGES[i]))
+        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM || PAGES[i].scope == SC_PATS ||
+            PAGES[i].scope == SC_HARM || !page_shown(&PAGES[i]))
             continue;
         if (i == ui.page)
             cur = (int32_t)n;
@@ -576,10 +865,6 @@ UI_SMALL static void go_home(void)
 /* ------------------------------------------------------- track setup --- */
 /* LIVE: no factory sequence patterns. Loading a sound (factory or user preset) never
  * writes the sequencer: every pattern is the one the player records or enters. */
-
-/* the parts' sounds at power-on (engine, preset): bass, pad, lead */
-static const uint8_t TRK_DEF[NPART][2] = {{0, 0}, {1, 0}, {4, 5}};   /* ANALOG 808 BOOM, DIGITAL RHODES, SAMPLE LOFI FLUTE */
-UI_SMALL static uint32_t trk_def_engine(uint32_t i) { return i < NPART ? TRK_DEF[i][0] : 0u; }
 
 UI_SMALL static int seq_is_empty(const track_t *t) { return track_empty(t); }
 
@@ -670,12 +955,16 @@ UI_SMALL static void apply_preset_to(track_t *t, uint32_t pi)
 
 /* the engine's defaults and its first preset. With the audio IRQ off: the ISR sees the old engine with
  * its values or the new one with its own (voice.c engine_block), never one with the other's */
-UI_SMALL static void set_engine_of(track_t *t, uint32_t ei)
+UI_SMALL static int set_engine_of(track_t *t, uint32_t ei)   /* 0: refused (three tracks play GRAIN, DRAWBAR, FM6, PHYS) */
 {
     const engine_t *e = ENGINES[ei % NENGINES];
     uint32_t i;
     if (is_drum(t))
-        return;
+        return 0;
+    if (!eng_room(t, ei)) {
+        eng_refused = 1;                              /* (said: ui_input.c) */
+        return 0;
+    }
     fm1_irq_off();
     locks_restore(t);                                 /* (a lock in force: its base first, then the new sound) */
     sound_change(t);                                  /* (2.6: the sound as it is, before anything new is written) */
@@ -684,27 +973,97 @@ UI_SMALL static void set_engine_of(track_t *t, uint32_t ei)
         t->p[P_E0 + i] = e->edit[i].def;
     apply_preset_to(t, 0);
     fm1_irq_on();
+    return 1;
 }
 
 UI_SMALL static void apply_preset(uint32_t pi) { apply_preset_to(TSEL, pi); }
-UI_SMALL static void set_engine(uint32_t ei) { set_engine_of(TSEL, ei); }
+UI_SMALL static int set_engine(uint32_t ei) { return set_engine_of(TSEL, ei); }
 
 UI_SMALL static void track_defaults(track_t *t)
 {
     uint32_t i;
     for (i = 0; i < P_E0; i++)
         t->p[i] = TP[i].def;
+    if (is_drum(t)) {                                 /* a drum track: its drum mix (params.c DRUM_MIX_DESC) */
+        t->p[P_LEVEL] = track_desc(t, P_LEVEL)->def;
+        t->p[P_REV] = track_desc(t, P_REV)->def;
+        t->p[P_DLY] = track_desc(t, P_DLY)->def;
+    }
     track_defaults_steps(t);
 }
 
-/* switch engine (its defaults + first preset) and say so */
-UI_SMALL static void select_engine(uint32_t e)
+/* track t becomes kind k (a SYNTH or a DRUM track), as track i of a NEW project is (TRK_DEF: its default sound or kit
+ * when it was the other kind; a track of its kind already keeps its sound). Its pattern is cleared (a synth step and a
+ * drum step are not the same thing), its voices end; the mix (LEVEL of a synth, PAN, MUTE, FILTER) and the pattern's
+ * LEN / DIV / SWING stay. With the audio IRQ off */
+UI_SMALL static void track_set_kind(track_t *t, uint32_t k)
 {
-    if (is_drum(TSEL))
+    uint32_t i = trk_index(t) % NTRK, j;
+    int16_t keep[6];
+    if (t->kind == k)
         return;
-    set_engine(e);
+    keep[0] = t->p[P_PAN], keep[1] = t->p[P_MUTE], keep[2] = t->p[P_TFLT];
+    keep[3] = t->p[P_SLEN], keep[4] = t->p[P_SDIV], keep[5] = t->p[P_SSWING];
+    fm1_irq_off();
+    seq_release(t);
+    kh_release(t);
+    trk_all_off(t);
+    for (j = 0; j < NVOICE; j++)                      /* (a synth's voices: gone at once, the drums never use them) */
+        t->v[j].active = t->v[j].gate = t->v[j].stage = 0;
+    locks_restore(t);
+    t->nheld = t->arp_phys = t->arp_note = 0;
+    t->arp_ch[0] = t->arp_ch[1] = t->arp_ch[2] = 0;
+    t->xf_on = t->xf = t->pold = 0;
+    t->xp_n = 0;
+    t->mix_on = 0;
+    eng_arena_drop(t);
+    t->kind = (uint8_t)k;
+    track_defaults(t);                                /* (its pattern cleared too: track_defaults_steps) */
+    t->p[P_PAN] = keep[0], t->p[P_MUTE] = keep[1], t->p[P_TFLT] = keep[2];
+    t->p[P_SLEN] = keep[3], t->p[P_SDIV] = keep[4], t->p[P_SSWING] = keep[5];
+    if (k == TK_DRUM) {
+        t->eng_req = t->engine = 0;
+        t->preset = 0;
+        t->p[P_E0] = (int16_t)(trk_def_kind(i) == TK_DRUM ? TRK_DEF[i][1] : DRUM_DEFAULT_KIT);
+        for (j = 1; j < 8u; j++)
+            t->p[P_E0 + j] = 0;
+        for (j = 0; j < DRUM_LANES; j++)
+            drum_tune[i][j] = drum_dec[i][j] = 0;
+        drum_mute[i] = 0;
+        fm1_irq_on();
+    } else {
+        uint32_t e = trk_def_kind(i) == TK_SYNTH ? TRK_DEF[i][1] : 0u, pi = trk_def_kind(i) == TK_SYNTH ? TRK_DEF[i][2] : 0u;
+        fm1_irq_on();
+        set_engine_of(t, e);
+        apply_preset_to(t, pi);
+    }
+    if (t == TSEL)
+        sync_reload = 1;
+    ui.force = 1;
+}
+/* track i as at power-on: its kind and default sound or kit, an empty pattern (felucca_init, NEW) */
+UI_SMALL static void track_power_on(uint32_t i)
+{
+    track_t *t = &trk[i % NTRK];
+    t->kind = (uint8_t)trk_def_kind(i);
+    track_defaults(t);
+    if (is_drum(t)) {
+        t->p[P_E0] = TRK_DEF[i % NTRK][1];
+    } else {
+        set_engine_of(t, TRK_DEF[i % NTRK][1]);
+        apply_preset_to(t, TRK_DEF[i % NTRK][2]);   /* with its sends */
+    }
+    track_defaults_steps(t);                          /* the sequencers start empty */
+}
+
+/* switch engine (its defaults + first preset) and say so */
+UI_SMALL static int select_engine(uint32_t e)   /* 0: refused (no engine arena free) */
+{
+    if (is_drum(TSEL) || !set_engine(e))
+        return 0;
     ui_say("ENGINE ", ENGINES[TSEL->eng_req]->name);
     ui.force = 1;
+    return 1;
 }
 
 /* the factory presets as one list by kind (basses, keys, organs, pads, leads, plucks and bells, stabs,
@@ -1002,26 +1361,22 @@ UI_SMALL static void preset_go(uint32_t n)                    /* load list index
         up_load(k);
         return;
     }
-    if (e != TSEL->eng_req)
-        select_engine(e);
+    if (e != TSEL->eng_req && !select_engine(e))
+        return;                                      /* (that engine has no room now: eng_refused says so) */
     apply_preset(k);
     ui.force = 1;
 }
 
-/* HOME: what KNOB k edits: the engine's four main parameters; on the drum track
- * LEVEL and REV (GLO > DRUMS), PAN and LEN */
+/* HOME: what KNOB k edits: the engine's four main parameters; on a drum track
+ * LEVEL and REV (its drum mix), PAN and LEN */
 UI_SMALL static const param_desc_t *home_param(uint32_t k, int16_t **vp)
 {
-    static const uint8_t DRUM_HOME[4][2] = {{1, G_DRLVL}, {1, G_DRREV}, {0, P_PAN}, {0, P_SLEN}};
+    static const uint8_t DRUM_HOME[4] = {P_LEVEL, P_REV, P_PAN, P_SLEN};
     uint32_t id;
     if (is_drum(TSEL)) {
-        id = DRUM_HOME[k & 3u][1];
-        if (DRUM_HOME[k & 3u][0]) {
-            *vp = &song.g[id];
-            return &GP[id];
-        }
+        id = DRUM_HOME[k & 3u];
         *vp = &TSEL->p[id];
-        return &TP[id];
+        return track_desc(TSEL, id);
     }
     id = ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u];
     *vp = &TSEL->p[id];
@@ -1050,10 +1405,12 @@ UI_SMALL static void track_select(uint32_t i)
  * One CC sets one parameter, a parameter has one CC: learning one again replaces both. The settings keep the map */
 static struct { uint8_t on, pick, trk, id; } mlu;
 UI_SMALL static uint32_t ml_code(uint32_t id) { return id >= P_E0 ? ML_E0 + id - P_E0 : id + 1u; }
-UI_SMALL static void ml_put(uint32_t i, uint32_t e)       /* (the ISR reads the entry: never half of one) */
+UI_SMALL static void ml_put(uint32_t i, uint32_t e, uint32_t k)   /* entry i = e, for track k (the ISR reads the entry:
+                                                                   * never half of one) */
 {
     fm1_irq_off();
-    ml_tab[i % ML_N] = (uint16_t)e;
+    ml_tab[i % ML_N] = (uint16_t)((e & ~(3u << 7)) | (k & 3u) << 7);
+    ml_hi = (uint16_t)((ml_hi & ~(1u << (i % ML_N))) | ((k >> 2) & 1u) << (i % ML_N));
     fm1_irq_on();
 }
 UI_SMALL static uint32_t ml_count(void)
@@ -1070,11 +1427,11 @@ UI_SMALL static uint32_t ml_learn(uint32_t cc, uint32_t k, uint32_t id)
     if (!ml_free_cc(cc) || k >= NTRK || id >= P_COUNT)
         return 2;
     for (i = 0; i < ML_N; i++)
-        if ((e = ml_tab[i]) >> 9 && ((e & 127u) == cc || ((e >> 9) == ml_code(id) && ((e >> 7) & 3u) == k)))
-            ml_put(i, 0);
+        if ((e = ml_tab[i]) >> 9 && ((e & 127u) == cc || ((e >> 9) == ml_code(id) && ml_trk(i) == k)))
+            ml_put(i, 0, 0);
     for (i = 0; i < ML_N; i++)
         if (!(ml_tab[i] >> 9)) {
-            ml_put(i, cc | k << 7 | ml_code(id) << 9);
+            ml_put(i, cc | ml_code(id) << 9, k);
             return 1;
         }
     return 0;
@@ -1083,7 +1440,7 @@ UI_SMALL static int ml_clear_all(void)                    /* HOME > SYSTEM > LEA
 {
     uint32_t i, n = ml_count();
     for (i = 0; i < ML_N; i++)
-        ml_put(i, 0);
+        ml_put(i, 0, 0);
     if (n)
         settings_later = 1;                      /* (saved when quiet) */
     return n != 0u;

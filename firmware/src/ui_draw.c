@@ -344,11 +344,23 @@ UI_SMALL static void graph_roll(const track_t *t, uint16_t c)
         cv_rect(x - 2, top, 5, 2, C_HI);
     }
     if (ui.sheet) {                                     /* OCT+ held: the note's sheet */
-        char nu[8];
-        const char *val[6] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", ""};
+        char nu[8], cn[4], ln[4];
+        uint8_t ls[NLOCK];
+        const char *val[NSHEET] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", "", cn, ln};
         fmt_int(nu, t->micro[ui.cursor]);
         if (t->micro[ui.cursor] > 0) { nu[0] = '+'; fmt_int(nu + 1, t->micro[ui.cursor]); }
-        sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel & 3u]);
+        str_cpy(cn, "--", 4);
+        if (comp_count(t, ui.cursor))
+            fmt_int(cn, (int32_t)comp_count(t, ui.cursor));
+        str_cpy(ln, "--", 4);
+        if (lock_items(t, ui.cursor, ls))
+            fmt_int(ln, (int32_t)lock_items(t, ui.cursor, ls));
+        if (ui.csheet)
+            comp_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel & 3u]);
+        else if (ui.lsheet)
+            lock_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel & 3u]);
+        else
+            sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel & 3u]);
     }
 }
 UI_SMALL static void graph_scale(const track_t *t, uint16_t c)
@@ -419,7 +431,8 @@ UI_SMALL static uint32_t str_hash(uint32_t h, const char *s)
 /* a page drawn with its values large (graph_big) */
 UI_SMALL static int big_page(const page_t *pg)            /* (2.6: the INSERT pages too: their middle stayed empty) */
 {
-    return (pg->graph == GR_NONE || pg->graph == GR_INS) && pg->scope != SC_SONG && pg->scope != SC_DRUM;
+    return (pg->graph == GR_NONE || pg->graph == GR_INS) && pg->scope != SC_SONG && pg->scope != SC_DRUM && pg->scope != SC_PATS &&
+           pg->scope != SC_HARM;
 }
 UI_SMALL static uint32_t graph_signature(void)
 {
@@ -450,7 +463,8 @@ UI_SMALL static uint32_t graph_signature(void)
         uint32_t ph = song.playing ? t->seq_idx : 0xFFFFu;
         if (pg->graph == GR_ROLL)                    /* (2.7.2 NOTES: the note under edit, the zoom, the sheet) */
             h ^= ui.note_k * 104729u + ui.zoom * 7u + ui.sheet * 977u + (uint32_t)t->micro[ui.cursor] * 31337u +
-                 step_fill(t, ui.cursor) * 3u + last_note * 65537u;
+                 step_fill(t, ui.cursor) * 3u + last_note * 65537u + comp_sig(t, ui.cursor) * 2654435761u +
+                 lock_sig(t, ui.cursor) * 40503u;
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u;
     }
     return h;
@@ -546,16 +560,16 @@ UI_SMALL static int32_t meter_px(int32_t a)                   /* |sample| (Q15) 
     return clamp((v - 48) * (TS_H - 2) / 80, 0, TS_H - 2);
 }
 
-UI_SMALL static uint32_t trk_level(uint32_t c)                /* LEVEL 0..127 (the drum track: GLO > DRUMS LEVEL) */
+UI_SMALL static uint32_t trk_level(uint32_t c)                /* LEVEL 0..127 (a drum track: its drum LEVEL) */
 {
-    return (uint32_t)(c == TRK_DRUM ? song.g[G_DRLVL] : trk[c].p[P_LEVEL]) & 127u;
+    return (uint32_t)trk[c % NTRK].p[P_LEVEL] & 127u;
 }
 
 UI_SMALL static void trk_short_name(uint32_t c, char *b)      /* the track's sound, b holds 13 */
 {
     const track_t *t = &trk[c];
     const engine_t *e = ENGINES[t->eng_req % NENGINES];
-    if (c == TRK_DRUM)
+    if (is_drum(t))
         str_cpy(b, "DRUM", 13);
     else if (user_of(t) < UP_SLOTS)
         up_name(user_of(t), b);
@@ -565,28 +579,27 @@ UI_SMALL static void trk_short_name(uint32_t c, char *b)      /* the track's sou
         str_cpy(b, e->name, 13);
 }
 
-UI_SMALL static void draw_tracks(void)
+UI_SMALL static void draw_tracks(void)                       /* (eight tracks: the bank of four of the selected one) */
 {
-    uint32_t c;
+    uint32_t c, base = song.sel / 4u * 4u;
+    static uint32_t base_was = 0xFFu;
+    if (base != base_was)
+        ui.force = 1;
+    base_was = base;
     if (ui.force) {
         lcd_fill(0, Y_GRAPH, 240, H_GRAPH, C_BLACK);
         for (c = 0; c < NTRK; c++)
             ts.meter[c] = 0;
     }
-    for (c = 0; c < NTRK; c++) {
+    for (c = base; c < base + 4u && c < NTRK; c++) {
         track_t *t = &trk[c];
-        uint32_t x0 = c * 60u + 4u, sel = c == song.sel, lvl = trk_level(c), mute = !lvl || t->p[P_MUTE];
+        uint32_t x0 = (c - base) * 60u + 4u, sel = c == song.sel, lvl = trk_level(c), mute = !lvl || t->p[P_MUTE];
         uint32_t arm = (song.rec >> c) & 1u, st = arm ? (song.playing ? 1u : 2u) : mute ? 3u : 0u, sig;
         uint32_t len = t->p[P_SLEN] > 0 ? (uint32_t)t->p[P_SLEN] : 1u, row = 0xFFFFu;
         int32_t pk, m;
         char b[16];
-        if (c == TRK_DRUM) {
-            pk = drums.peak;
-            drums.peak = 0;
-        } else {
-            pk = t->peak;
-            t->peak = 0;
-        }
+        pk = t->peak;                                /* (a drum track's too: drums.c drums_mix) */
+        t->peak = 0;
         /* head: number (white = selected), REC / ARM / MUTE */
         sig = 1u + sel + st * 2u;
         if (ui.force || sig != ts.head[c]) {
@@ -827,7 +840,8 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
     *n = 0;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && (i == ui.page || (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG &&
-                                                         PAGES[i].scope != SC_DRUM))) {
+                                                         PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_PATS &&
+                                                         PAGES[i].scope != SC_HARM))) {
             (*n)++;
             if (i == ui.page)
                 k = *n;
@@ -846,7 +860,7 @@ UI_SMALL static void draw_foot(void)
     int32_t x;
     pn[0] = 0;
     if (is_drum(t))
-        str_cpy(pn, DRUM_KIT_NAMES[drum_kit()], sizeof pn);
+        str_cpy(pn, DRUM_KIT_NAMES[drum_kit(t)], sizeof pn);
     else if (user_of(t) < UP_SLOTS)
         up_name(user_of(t), pn);                       /* a user preset */
     else if (e->npresets)
@@ -935,7 +949,7 @@ UI_SMALL static void draw_columns(void)
         const track_t *t = TSEL;
         uint32_t lvl = trk_level(song.sel);
         fmt_int(val, (int32_t)song.sel + 1);
-        draw_column(0, "TRACK", val, "/4", VAL(0u), (int32_t)song.sel * 1000 / (NTRK - 1), ICON_AUTO);
+        draw_column(0, "TRACK", val, "/8", VAL(0u), (int32_t)song.sel * 1000 / (NTRK - 1), ICON_AUTO);
         if (!lvl || t->p[P_MUTE]) {                    /* (MUTE: a turn of KNOB 2 unmutes, tracks_edit) */
             str_cpy(val, "MUTE", 12);
             unit = "";
@@ -1108,6 +1122,18 @@ UI_SMALL static void ui_draw(void)
         return;
     }
 #endif
+    if (!ui.menu && on_pats_page()) {
+        pats_screen_draw();
+        ui_timers();
+        ui.force = 0;
+        return;
+    }
+    if (!ui.menu && on_chords_page()) {
+        chords_screen_draw();
+        ui_timers();
+        ui.force = 0;
+        return;
+    }
     if (ui.menu) {
         draw_menu();
         ui_timers();

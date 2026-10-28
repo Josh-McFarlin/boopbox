@@ -14,7 +14,7 @@ static int cpu1_run(cpu1_job_t fn, uint32_t arg);
 static int cpu1_wait(void);
 static int cpu1_on(void);
 /* the render units core 1 gets (fx.c units_split): -1 the firmware's share (the last part and the drums), else a
- * mask of them, bit k = synth part k, bit NPART = the drums; 0 = none (the menu's 2ND CORE OFF, the tests:
+ * mask of them, bit k = track k (fx.c U_ALL); 0 = none (the menu's 2ND CORE OFF, the tests:
  * CPU1_UNITS=mask in the host double). Whatever the value, the output is the same, bit for bit */
 static int32_t cpu1_units = -1;
 /* a 24 MHz tick counter for the load figures (fx.c cpu1_load_half): the device's TIMER4, readable by both
