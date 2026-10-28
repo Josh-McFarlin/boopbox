@@ -61,6 +61,13 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_CDC` | 1 | USB serial console |
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
+| `FELUCCA_LOGO_TEXT` | 0 | the boot logo as text (4.6 KB less flash); the build's first fallback when the flash is full |
+| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME); 0 is the build's second fallback (about 10 KB less) |
+| `FELUCCA_EDITOR` | 1 | the web editor's SysEx; 0 only by hand (about 19 KB less): the editor gets no reply, updates and USB rescue stay |
+
+When the app does not fit its flash slot, the build takes the fallbacks in turn and prints each one
+(`build: the flash is full: building again with ...`). It never takes `FELUCCA_EDITOR=0` itself; when no fallback is
+left it fails and says so. See `docs/groovebox-performance.md` for the measured sizes.
 
 ## Samples
 
@@ -76,9 +83,14 @@ tests/run_tests.sh
 ```
 
 Runs the host tests (flash storage, user presets, MIDI parser, update entry, update
-loader, a DSP render, the 4-track mix, project formats, the SLICER, the regression suite,
+loader, a DSP render, the 8-track mix, project formats, the SLICER, the regression suite,
 the command-line installer) and, with Node.js, the web page tests. Run it after `./build.sh`
 (it uses `build/` and needs `AC79_SDK` set as for the build).
+
+Without the JieLi toolchain, `HOST_ONLY=1 sh tests/run_tests.sh` runs every test that does not need a firmware
+image and names the ones it skips (the update entry, the update loader, the target cost, the offline site).
+`python3 tools/proxy_size.py` estimates the code and RAM size with the host clang (see
+`docs/groovebox-architecture.md`).
 
 The regression suite (`tests/regress.c`) renders every engine and preset and compares a
 hash of each render with `tests/golden.txt`; it also checks levels, voices and the CPU

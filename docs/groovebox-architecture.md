@@ -246,3 +246,13 @@ New modules (all host-testable, no allocation, bounded loops):
   engine's values on the old engine; song mode's refusal (`song_full`) is said too. Messages kept within the UI's
   23 characters (`ui.msg`).
   - Proxy sizes against the performance FX: code 299,472 -> 300,286 B, RAM 77,432 -> 77,440 B.
+- Milestone H (validation, measures, documents):
+  - The shipped SLOOP 2.8.3 package (`docs/firmware/sloop-2.8.3.fwsc`) decoded: its app is 570,176 of the slot's
+    581,564 B, with the bitmap logo: the baseline had 11,388 B free. The proxy growth (code + constants +35.3 KB)
+    probably does not fit with the automatic fallbacks alone (`docs/groovebox-performance.md`, section 1).
+  - Flash fallbacks: `tools/build.py` takes the text logo, then no visualiser (`FELUCCA_VIS=0`), each said, and fails
+    when none is left; `FELUCCA_EDITOR=0` (the web editor's SysEx, about 19 KB) only by hand.
+  - `tests/groove_cost.c`: the host cost of the sequencer path and of a block, with and without every feature.
+  - Documents: `docs/groovebox-performance.md` (sizes, RAM, CPU, how to measure), `docs/groovebox-storage.md`
+    (format 7, migration, validation, the format 6 fallback, going back to 2.8.3), `docs/groovebox-status.md`
+    (implemented, limits, blockers, build and install), `BUILDING.md` (the new build options, `HOST_ONLY`).
