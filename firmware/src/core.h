@@ -112,6 +112,9 @@ enum {                          /* global parameters */
                                  * 1, 2 or 4 BARS. The project's */
     G_HKEY, G_HSCL, G_HQ, G_HPROG,   /* harmony (harmony.c): the song's key and scale, when a change takes hold (NOW, BEAT,
                                       * BAR), the chord progression OFF / ON. The project's */
+    G_PFXT, G_PFXL, G_PFXQ,     /* the punch-in FX as performance effects (punch.c, FX > PERF): TARGET (MASTER: the mix, as before;
+                                 * SEL: the selected track; DRUMS; SYNTHS), LATCH (an effect stays when its key is let go), Q (it
+                                 * starts on the next 1/16, 1/8, 1/4 or bar; OFF: at once). The project's */
     G_COUNT
 };
 

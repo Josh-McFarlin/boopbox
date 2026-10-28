@@ -49,6 +49,38 @@ static struct {
     int32_t fg;                   /* FREEZE: the held reverb's gain, Q10 */
 } punch = {.req = -1, .cur = -1, .fg = 8192};
 
+/* (groovebox) FX > PERF: TARGET what the effects act on (fx.c pfx_bus), Q when an effect starts (punch_quant), LATCH
+ * (seq.c key_down: a key turns its effect on, again off) */
+enum { PT_MASTER, PT_SEL, PT_DRUMS, PT_SYNTHS };   /* G_PFXT */
+static uint8_t punch_mask;                       /* the tracks the effect playing started on (fx.c pfx_bus) */
+static uint32_t pfx_mask_now(void)              /* the tracks TARGET names now, a bit each; 0: MASTER, the whole mix */
+{
+    switch ((uint32_t)clamp(song.g[G_PFXT], PT_MASTER, PT_SYNTHS)) {
+    case PT_SEL: return 1u << (song.sel % NTRK);
+    case PT_DRUMS: return trk_drums();
+    case PT_SYNTHS: return ~trk_drums() & ((1u << NTRK) - 1u);
+    default: return 0;
+    }
+}
+static int8_t pq_want = -1;                      /* Q: the effect let through (punch.req once past its grid line) */
+static uint32_t pq_gi = 0xFFFFFFFFu;             /* the grid line the transport was in at the last block */
+/* the effect to play now (req: the one asked for): with Q, a new one only once the transport crosses a 1/16, 1/8, 1/4
+ * or bar line (playing); an end, or stopped, or Q OFF: at once */
+static int32_t punch_quant(int32_t req)
+{
+    static const uint8_t PER_BEAT[4] = {0, 4, 2, 1};
+    uint32_t q = (uint32_t)clamp(song.g[G_PFXQ], 0, 4), gi;
+    if (req < 0 || !q || !song.playing) {
+        pq_want = (int8_t)req;
+        pq_gi = 0xFFFFFFFFu;
+        return req;
+    }
+    gi = q == 4u ? clk_beat / 4u : clk_beat * PER_BEAT[q] + clk_pos / (BEAT_U / PER_BEAT[q]);
+    if (req != pq_want && pq_gi != 0xFFFFFFFFu && gi != pq_gi)
+        pq_want = (int8_t)req;                       /* (a line crossed since the last block: it starts) */
+    pq_gi = gi;
+    return pq_want;
+}
 static int px_loop(int32_t fx) { return fx <= PX_STUT || fx == PX_LOOP8T; }   /* on the grid */
 static int px_replay(int32_t fx) { return fx <= PX_HALF || fx == PX_LOOP8T; } /* replays a span of the ring */
 
@@ -232,7 +264,7 @@ static void punch_freeze_feed(int32_t *rev, const int32_t *l, const int32_t *r, 
 static void punch_process(int32_t *l, int32_t *r, uint32_t n)
 {
     uint32_t i;
-    int32_t want = punch.req, pstep;
+    int32_t want = punch_quant(punch.req), pstep;
     uint32_t beat, step, echo_d, binc, fdec;
     static int32_t kl[CTL], kr[CTL];                    /* (static: the ISR stack is small) */
     tsvf_t c1, c2;
@@ -261,8 +293,10 @@ static void punch_process(int32_t *l, int32_t *r, uint32_t n)
             punch_ring[punch.w++ & (PUNCH_N - 1u)] = (int16_t)clamp((l[i] + r[i]) >> 4, -32768, 32767);
         return;
     }
-    if (punch.cur < 0 && want >= 0)
+    if (punch.cur < 0 && want >= 0) {
         punch_start(want);
+        punch_mask = pfx_bus;                           /* (the tracks it acts on until it ends) */
+    }
     beat = beat_samples();                              /* per block: no divide per sample */
     step = beat / 4u ? beat / 4u : 1u;
     echo_d = beat * 3u / 4u;

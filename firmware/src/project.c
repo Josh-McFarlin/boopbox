@@ -43,7 +43,7 @@
 _Static_assert(G_DRDLY == PROJ_NG && G_TXSRC == PROJ_NG + 5u,
                "the globals a project holds, then G_DRDLY (then 2.6's GLO > MIDI: settings of the FM-1)");
 _Static_assert(G_FXFADE == G_CLKOUT + 1u && G_CH5 == G_FXFADE + 1u && G_PATQ == G_CH8 + 1u && G_HKEY == G_PATQ + 1u &&
-               G_COUNT == G_HPROG + 1u,
+               G_PFXT == G_HPROG + 1u && G_COUNT == G_PFXQ + 1u,
                "G_FXFADE (2.7.2), then the eight-track CH5..CH8: settings of the FM-1, the last globals");
 #define PROJ_NC6 ((uint32_t)P_ITYPE)           /* format 6: the parameters kept in 16 bits, P_LEVEL .. P_VLEAD (as 5), */
 #define PROJ_NX6 ((uint32_t)(P_E0 - P_ITYPE))  /* the 2.6 ones in a byte (0..127), then P_E0 .. P_E7 */
@@ -575,9 +575,11 @@ static int proj6_fits(void)                            /* the working project is
     for (i = 0; i < 4u; i++)
         if (trk[i].kind != (i == TRK_DRUM_V6 ? TK_DRUM : TK_SYNTH))
             return 0;
-    if (pb_n || song.g[G_PATQ] != GP[G_PATQ].def || !harm_default() || song.g[G_HKEY] != GP[G_HKEY].def ||
-        song.g[G_HSCL] != GP[G_HSCL].def || song.g[G_HQ] != GP[G_HQ].def || song.g[G_HPROG] != GP[G_HPROG].def)
-        return 0;                                       /* (nor more than one pattern a track, nor PAT Q, nor a harmony) */
+    if (pb_n || !harm_default())
+        return 0;                                       /* (nor more than one pattern a track, nor a harmony) */
+    for (i = G_PATQ; i < G_COUNT; i++)                  /* (nor PAT Q, the harmony's or the performance FX's globals: */
+        if (song.g[i] != GP[i].def)                     /* format 6 has no byte for them) */
+            return 0;
     for (i = 0; i < NTRK; i++) {                        /* (format 6 has no step components, no direction, */
         uint32_t k, n = 0;                              /* NLOCK_V6 locks a track, no SLIDE) */
         if (comp_count(&trk[i], NSTEP) || trk[i].cp_dir || trk[i].cp_seed || trk[i].pat || trk[i].pat_nchain || trk[i].hfol)

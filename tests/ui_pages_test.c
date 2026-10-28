@@ -1207,7 +1207,7 @@ int main(int argc, char **argv)
         }
         TSEL->p[P_TFLT] = 0;
         SEL(9);
-        check(!strcmp(PT(), "REV/CHO"), "SELECT on FX: on to the last page, REV/CHO");
+        check(!strcmp(PT(), "PERF"), "SELECT on FX: on to the last page, PERF (the punch-in FX's TARGET, LATCH, Q)");
         tap(B_EDIT); SEL(-9);
         check(!strcmp(PT(), "EDIT 1"), "SELECT on EDIT: back to the first page");
         SEL(9);
@@ -2313,6 +2313,20 @@ int main(int argc, char **argv)
         harm_defaults();
         song.g[G_HKEY] = 0; song.g[G_HSCL] = 1; song.g[G_HPROG] = 0;
         for (j = 0; j < NTRK; j++) trk[j].hfol = HF_OFF;
+        go_home(); frame();
+    }
+    {   /* FX > PERF: TARGET, LATCH, Q of the punch-in FX */
+        uint32_t ok;
+        go_home(); frame();
+        open_family(FAM_FX); frame();
+        while (strcmp(PAGES[ui.page].title, "PERF")) { open_family(FAM_FX); frame(); }
+        encs[panel.enc[EN_K1]] = 2; frame();            /* TARGET DRUMS */
+        encs[panel.enc[EN_K2]] = 1; frame();            /* LATCH ON */
+        encs[panel.enc[EN_K3]] = 3; frame();            /* Q 1/4 */
+        ok = song.g[G_PFXT] == PT_DRUMS && song.g[G_PFXL] == 1 && song.g[G_PFXQ] == 3 && !strcmp(ui.big_v[0], "DRUMS");
+        ui.force = 1; frame(); ppm("page-perf");
+        song.g[G_PFXT] = 0; song.g[G_PFXL] = 0; song.g[G_PFXQ] = 0;
+        check(ok, "FX > PERF: TARGET DRUMS, LATCH ON, Q 1/4");
         go_home(); frame();
     }
     {   /* fuzz: 20000 frames of random buttons (held or tapped), knobs and keys, with the audio running

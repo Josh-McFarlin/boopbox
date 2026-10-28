@@ -257,3 +257,21 @@ the progression (or the live one) is in force.
 The progression is saved in the project (format 7) and in song sections; FOLLOW with each track. A project with a
 harmony (a follow, a progression, a key or scale other than C major, Q other than BAR, PROG on) is never saved in
 format 6, which has no room for it.
+
+## Performance effects
+
+The punch-in effects of `GUIDE.md` (hold **FX**, press a key: LOOP, STUTTER, REVERSE, STOP, HALF, the filters, PHONE,
+CRUSH, GATE, ECHO, WOBBLE, the kills, REWIND, OCT UP, FLANGER, AUTO-PAN, FREEZE, MONO, FADE OUT …) are the
+performance effects: beat repeat (the LOOPs, STUTTER), filter sweeps (LOW, HIGH), speed (STOP, HALF, REWIND), gating
+(GATE), audio transposition (OCT UP). Live **sequencer** transposition is the harmony's: the CHORDS screen's keys (see
+Harmony). Everything there still works as written; the **PERF** page (FX family, the last page) adds:
+
+| Knob | Does |
+| --- | --- |
+| **KNOB 1 TARGET** | what the effects act on: **MASTER** (the whole mix, as before), **SEL** (the selected track), **DRUMS** (the drum tracks), **SYNTHS** (the synth tracks). With a target, only those tracks' dry sound goes through the effect; the other tracks, the reverb, delay and chorus returns and the TEXTURE pass it by. A target taken while an effect plays waits until that effect ends |
+| **KNOB 2 LATCH** | **OFF** (as before: an effect lasts while its key is held) or **ON**: FX + a key turns its effect on and it stays when you let go (also FX); the same key again turns it off; another key changes to its effect. The MIDI FX channel (GLO > MIDI 3 > FX CH) does the same with its notes |
+| **KNOB 3 Q** | when an effect starts: **OFF** (at once, as before) or on the next **1/16**, **1/8**, **1/4** or **BAR** line of the playing transport. Its end is always at once; stopped, it starts at once |
+
+TARGET, LATCH and Q are saved with the project (not in format 6). The loops replay what the target played (with a
+target the loops' memory holds only those tracks; just after the target changed, it still holds what came before,
+for up to 0.74 s).
