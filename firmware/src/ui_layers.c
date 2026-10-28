@@ -163,10 +163,11 @@ UI_SMALL static void step_up(uint32_t w)
         dstep_clr(&t->dstep[idx], pen_lane);
     else
         step_clear(&t->step[idx]);
-    if (!is_drum(t) || !dstep_mask(&t->dstep[idx])) {   /* an empty step keeps no lock, no nudge, no condition */
+    if (!is_drum(t) || !dstep_mask(&t->dstep[idx])) {   /* an empty step keeps no lock, no nudge, no condition, no component */
         lock_del(t, idx, P_COUNT);
         t->micro[idx] = 0;
         step_fill_set(t, idx, FC_NORM);
+        comp_del(t, idx, CP_NONE);
     }
     fm1_irq_on();
     sync_reload = 1;
@@ -276,10 +277,11 @@ UI_SMALL static void steps_held_clear(void)
         lock_del(t, idx, P_COUNT);
         t->micro[idx] = 0;
         step_fill_set(t, idx, FC_NORM);
+        comp_del(t, idx, CP_NONE);
     }
     fm1_irq_on();
     sync_reload = 1;
-    ui_message(n ? "NUDGE, LOCKS, FILL CLEARED" : "NO NUDGE, LOCK OR FILL");
+    ui_message(n ? "STEP EXTRAS CLEARED" : "NO NUDGE, LOCK, FILL, COMP");
 }
 /* OCT+ with step keys held: their fill condition, round: normal -> fill only -> no fill (the first one's next) */
 UI_SMALL static void steps_held_fill(void)

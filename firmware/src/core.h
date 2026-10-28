@@ -296,8 +296,8 @@ typedef struct track {
     plock_t lock[NLOCK];         /* parameter locks, unsorted (step LOCK_FREE = a free slot) */
     uint8_t fill[NSTEP / 4];     /* each step's condition, 2 bits (seq.c step_fill): FC_* */
     comp_t comp[NCOMP];          /* step components (comp.c), unsorted (type CP_NONE: a free slot) */
-    uint8_t cp_dir;              /* the play direction, DIR_* (comp.c comp_next) */
-    uint8_t cp_seed;             /* the components' random seed: every PLAY draws the same numbers */
+    int16_t cp_dir;              /* the play direction, DIR_* (comp.c comp_next; SEQ > PLAY, params.c PS_DIR) */
+    int16_t cp_seed;             /* the components' random seed 0..255: every PLAY draws the same numbers (PS_SEED) */
     /* the locks in force (seq.c lock_step): the params overridden now, what they were, what the lock set */
     uint8_t lk_n;
     uint8_t lk_param[NLOCK];

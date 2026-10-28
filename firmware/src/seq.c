@@ -1299,13 +1299,16 @@ static void lock_del(track_t *t, uint32_t step, uint32_t param)   /* param P_COU
         if (t->lock[k].step == step && (param >= P_COUNT || t->lock[k].param == param))
             t->lock[k].step = LOCK_FREE;
 }
-static int step_locked(const track_t *t, uint32_t step)   /* the step carries a lock or a nudge (the UI's mark) */
+static int step_locked(const track_t *t, uint32_t step)   /* the step carries a lock, a nudge or a component (the UI's mark) */
 {
     uint32_t k;
     if (step < NSTEP && t->micro[step])
         return 1;
     for (k = 0; k < NLOCK; k++)
         if (t->lock[k].step == step)
+            return 1;
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE && t->comp[k].step == step)
             return 1;
     return 0;
 }

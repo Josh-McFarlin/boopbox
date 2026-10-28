@@ -456,7 +456,16 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 /* ------------------------------------------------------------ pages --- */
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
        FAM_COUNT };
-enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM };
+enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM,
+       SC_PATT };                /* SC_PATT: the selected track's pattern settings that are not parameters (PS_*) */
+/* SC_PATT ids: values of the pattern kept in track_t beside p[] (not sound parameters: no lock, no MIDI learn, not in
+ * a user preset) */
+enum { PS_DIR, PS_SEED, PS_COUNT };
+static const char *const N_DIR[] = {"FWD", "REV", "PEND", "RAND"};   /* core.h DIR_* */
+static const param_desc_t PS_DESC[PS_COUNT] = {
+    [PS_DIR] = PE("DIR", N_DIR, 0),
+    [PS_SEED] = {"SEED", F_INT, 0, 255, 0, 0, 0},
+};
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,
        GR_SLCR, GR_INS };
 
@@ -509,6 +518,7 @@ static const page_t PAGES[] = {
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
     {"NOTES", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 2, 3}},   /* (2.7.2: the NOTES editor; "STEP" before) */
     {"PATTERN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},
+    {"PLAY", FAM_SEQ, SC_PATT, GR_NONE, {PS_DIR, PS_SEED, 0xFF, 0xFF}},   /* the play direction, the components' seed */
     {"SONG", FAM_SEQ, SC_SONG, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"TRACKS", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* REC button; TRACK LEVEL LEN PAN */
     {"DRUMS", FAM_TRK, SC_DRUM, GR_NONE, {0xFF,0xFF,0xFF,0xFF}},
@@ -545,6 +555,14 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (pg->scope == SC_STEP || pg->scope == SC_TRK) {
         *valp = 0;
         return 0;
+    }
+    if (pg->scope == SC_PATT) {
+        if (id >= PS_COUNT) {
+            *valp = 0;
+            return 0;
+        }
+        *valp = id == PS_DIR ? &TSEL->cp_dir : &TSEL->cp_seed;
+        return &PS_DESC[id];
     }
     if (pg->scope == SC_GLOBAL) {
         if (id == G_DRLVL || id == G_DRREV || id == G_DRDLY) {   /* GLO > DRUMS: the drum track shown (core.h drum_focus) */

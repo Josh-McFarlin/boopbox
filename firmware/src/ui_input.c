@@ -342,8 +342,12 @@ UI_SMALL static void note_sheet_knob(uint32_t slot, int32_t steps)
     track_t *t = TSEL;
     step_t *st = &t->step[ui.cursor];
     uint32_t row = ui.sheet - 1u;
+    if (ui.csheet) {                                      /* the COMP strip */
+        comp_strip_knob(t, ui.cursor, slot, steps);
+        return;
+    }
     if (slot == 0u) {
-        ui.sheet = (uint8_t)(1 + clamp((int32_t)row + steps, 0, 5));
+        ui.sheet = (uint8_t)(1 + clamp((int32_t)row + steps, 0, NSHEET - 1));
         ui.sheet_last = (uint8_t)(ui.sheet - 1u);          /* (2.8.1) reopen on this row next time */
         return;
     }
@@ -383,6 +387,14 @@ UI_SMALL static void note_sheet_do(void)               /* OCT+ tapped in the she
 {
     track_t *t = TSEL;
     uint32_t row = ui.sheet - 1u;
+    if (ui.csheet) {
+        comp_strip_do(t, ui.cursor);
+        return;
+    }
+    if (row == 6u) {                                      /* COMP: the step's components */
+        ui.csheet = 1;
+        return;
+    }
     note_mark();
     if (row == 0u) {
         t->step[ui.cursor].flags ^= SF_SLIDE;
@@ -559,6 +571,8 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
     v = d->names == ESYNC_NAMES || d->names == N_IBITS || d->names == N_IRATE ? names_turn(d, *vp, steps)   /* (a name a detent) */
                                     : clamp(*vp + accel(EN_K1 + slot, steps, d->names ? 0 : d->max - d->min), d->min, d->max);
     *vp = (int16_t)v;
+    if (pg->scope == SC_PATT)
+        return;                                           /* (DIR, SEED: not parameters, nothing more to do) */
     if (pg->scope != SC_GLOBAL && p_lockable(id))
         ui.lock_par = (uint8_t)id;                        /* the SEQ layer's lock parameter: the last one touched */
     if (pg->scope != SC_GLOBAL)
@@ -1206,14 +1220,19 @@ UI_SMALL static void ui_input(void)
     if (on_notes_page()) {                              /* (2.7.2) OCT+ held: the note's sheet; tapped: as before */
         uint32_t ev, ob = 1u << panel.btn[B_OCTDN];
         pressed = octp_filter(pressed, &ev);
-        if (ev == 2u && !ui.sheet)
+        if (ev == 2u && !ui.sheet) {
             ui.sheet = (uint8_t)(1u + ui.sheet_last);      /* (2.8.1) reopen on the row last used */
-        else if (ev == 1u && ui.sheet)
+            ui.csheet = 0;
+        } else if (ev == 1u && ui.sheet) {
             note_sheet_do();
-        else if (ev == 1u)
+        } else if (ev == 1u) {
             pressed |= 1u << panel.btn[B_OCTUP];
+        }
         if (ui.sheet && (pressed & ob)) {
-            ui.sheet = 0;
+            if (ui.csheet)
+                ui.csheet = 0;                              /* (the COMP strip: back to the sheet) */
+            else
+                ui.sheet = 0;
             pressed &= ~ob;
         }
         if (ev)
