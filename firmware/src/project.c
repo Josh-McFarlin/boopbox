@@ -574,6 +574,9 @@ static int proj6_fits(void)                            /* the working project is
     for (i = 0; i < 4u; i++)
         if (trk[i].kind != (i == TRK_DRUM_V6 ? TK_DRUM : TK_SYNTH))
             return 0;
+    for (i = 0; i < NTRK; i++)                          /* (format 6 has no step components, no direction) */
+        if (comp_count(&trk[i], NSTEP) || trk[i].cp_dir || trk[i].cp_seed)
+            return 0;
     for (i = 4; i < NTRK; i++)
         if (!trk_pristine(i))
             return 0;
@@ -747,8 +750,10 @@ UI_SMALL static __attribute__((noinline)) int32_t pr_v(pr_t *r)
     return (int16_t)v;
 }
 
-/* a track's pattern (its steps, nudges and fill conditions, parameter locks): each part sparse (a bit per step it
- * holds something on, then those) or whole, whichever is smaller */
+/* a track's pattern (its steps, nudges and fill conditions, parameter locks, step components): each of the first two
+ * sparse (a bit per step it holds something on, then those) or whole, whichever is smaller. The components last:
+ * the direction, the seed, their count, each one's step, type and values, in the order of the list (the order
+ * comp_eval draws its random numbers in); a pattern written before them has none (FWD) */
 UI_SMALL static __attribute__((noinline)) int step_blank(const track_t *t, uint32_t k)    /* as steps_clear leaves it */
 {
     const uint8_t *b = (const uint8_t *)&t->step[k];
@@ -899,6 +904,17 @@ UI_SMALL static __attribute__((noinline)) void pat_put(pw_t *w, const track_t *t
             pw_u8(w, lock_code(t->lock[k].param));
             pw_v(w, t->lock[k].val);
         }
+    pw_u8(w, t->cp_dir);                                 /* the components */
+    pw_u8(w, t->cp_seed);
+    pw_u8(w, comp_count(t, NSTEP));
+    for (k = 0; k < NCOMP; k++)
+        if (t->comp[k].type != CP_NONE) {
+            const comp_t *c = &t->comp[k];
+            pw_u8(w, c->step);
+            pw_u8(w, c->type == CP_PARAM ? CP_PARAM | 0x80u : c->type);   /* (PARAM's a: a parameter, coded as a lock's) */
+            pw_u8(w, c->type == CP_PARAM ? lock_code((uint32_t)c->a) : (uint32_t)c->a & 0xFFu);
+            pw_u8(w, (uint32_t)c->b & 0xFFu);
+        }
 }
 UI_SMALL static __attribute__((noinline)) void pat_get(pr_t *r, track_t *t)
 {
@@ -956,6 +972,23 @@ UI_SMALL static __attribute__((noinline)) void pat_get(pr_t *r, track_t *t)
         t->lock[j].step = (uint8_t)st;
         t->lock[j].param = (uint8_t)id;
         t->lock[j].val = (int16_t)clamp(v, lock_desc(t, id)->min, lock_desc(t, id)->max);
+    }
+    if (r->i + 3u > r->n || r->bad)
+        return;                                         /* (written before the components: none) */
+    m = pr_u8(r);
+    t->cp_dir = (uint8_t)(m < DIR_COUNT ? m : DIR_FWD);
+    t->cp_seed = (uint8_t)pr_u8(r);
+    n = pr_u8(r);
+    for (k = 0; k < n && !r->bad; k++) {
+        uint32_t st = pr_u8(r), ty = pr_u8(r), a = pr_u8(r), b = pr_u8(r);
+        int32_t va = (int8_t)a;
+        if (ty == (CP_PARAM | 0x80u)) {
+            ty = CP_PARAM;
+            va = (int32_t)lock_id(a);
+        }
+        if (r->bad || st >= NSTEP || !comp_valid(ty, va, (int8_t)b) || comp_find(t, st, ty) >= 0)
+            continue;                                   /* (not one this firmware plays, or a second of its type) */
+        comp_set(t, st, ty, va, (int8_t)b);
     }
 }
 

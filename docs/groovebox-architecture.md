@@ -101,7 +101,7 @@ New modules (all host-testable, no allocation, bounded loops):
 
 | File | What |
 | --- | --- |
-| `stepcomp.c` | step components: per-step transformations, evaluated before scheduling |
+| `comp.c` | step components: per-step rules, evaluated (`comp_eval`) apart from the scheduling (`seq.c seq_fire`) |
 | `harmony.c` | the harmony track: key, scale, chord progression, per-track opt-in, applied to scheduled notes |
 | `patbank.c` | the compact pattern bank and quantized pattern changes |
 | `perf.c` | the performance layer over the punch-in effects (momentary / latched, quantized) |
@@ -137,3 +137,30 @@ New modules (all host-testable, no allocation, bounded loops):
     (the protocol frame sizes are unchanged); the editor's FM6 / track commands accept tracks 1..8.
   - Proxy sizes against the baseline: RAM 59,094 -> 71,448 B (+12.4 KB of 96 KB: `trk` +8.6 KB, the INSERT states,
     FM6's per-track copies), pool +48 B, code +10.7 KB (format 7's codec ~6 KB of it).
+- Milestone C (step components), the engine (`firmware/src/comp.c`, included by `seq.c`):
+  - 14 types (`core.h CP_*`): PULSE, HOLD, MULT, VEL, RAMP+ / RAMP-, RAND, PORTA, BEND, TONE, JUMP, PARAM, COND, TRIG;
+    a per-track play direction (FWD, REV, PEND, RAND) and a random seed. Sparse: `NCOMP` (16) per track, several on
+    one step (of different types). The values and their ranges: `comp.c CP_RANGE`.
+  - These are this firmware's own definitions, chosen to cover the usual groovebox step components (rhythm, melody,
+    dynamics, sequence, conditions); where a reference instrument's exact behaviour could not be checked, the
+    semantics here are the documented ones (`core.h`, `GUIDE`-style notes in `docs/groovebox-controls.md`).
+  - Evaluation apart from scheduling: `comp_eval` turns a step's components, the track's component state and its own
+    random numbers into a `cp_ev_t` (skip, repeats, jump, hits, velocity, semitones, scale degrees, bend, parameter
+    values); `seq_fire` plays that. `comp_eval` starts no note and can be called on a track that does not play
+    (`tests/comp_test.c t_eval`).
+  - The playhead leaves the grid only with PULSE / HOLD / JUMP or a direction other than FWD (`comp_flow`,
+    `comp_next`); every other track, and a track without those, plays `abs % len` as before. A track off the grid
+    still records on the grid, and held notes are not extended into TIEs there (`rec_hold` is skipped).
+  - Random numbers: each track's own xorshift (`cp_rng`), seeded from `cp_seed` and the track index at every PLAY;
+    the shared `rng()` is not drawn (the render's draws and the golden renders stay the same: 182 / 182).
+  - Moved notes are the notes started, so their note-offs are theirs (`seq_notes`); PARAM and PORTA go through the
+    lock machinery (`lock_step_x`) and come back to their base like a lock; BEND is a per-track offset in 1/4096
+    semitone (`cp_bend`, added in `voice.c` with the MIDI bend), 0 at the next step and at STOP.
+  - Bounded work: at most `NCOMP` components looked at per step that fires, `NCPAR` (4) extra parameter values; no
+    allocation; everything on core 0 in `events_block`.
+  - Stored in format 7 at the end of each pattern (direction, seed, count, 4 bytes each). Format 6 has no room for
+    them: the fallback is refused when any track has a component or a direction (`proj6_fits`), so nothing is lost
+    silently. Damaged entries (unknown type, step past 64, value out of range, a second of a type) are dropped.
+  - Tests: `tests/comp_test.c` (each type played, directions, seeds, drums, a 5-step track beside, a random edited
+    session with stops: nothing left on, the stores and damage); the soak test now adds components at random.
+  - Proxy sizes against Milestone B: code 277,588 -> 281,598 B (+4.0 KB), constants +138 B, RAM 71,448 -> 72,376 B.
