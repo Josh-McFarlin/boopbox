@@ -28,6 +28,10 @@
 #ifndef FELUCCA_OTA
 #define FELUCCA_OTA 1            /* M-UPGRADE update entry; needs FELUCCA_FLASH */
 #endif
+#ifndef FELUCCA_EDITOR
+#define FELUCCA_EDITOR 1         /* the web editor's SysEx (editor.c); 0 only by hand (FELUCCA_EDITOR=0 tools/build.py), never
+                                  * a fallback: about 18 KB less, the web editor gets no reply; updates and recovery stay */
+#endif
 #ifndef FELUCCA_OTA_DRYRUN
 #define FELUCCA_OTA_DRYRUN 0     /* 1 = stage, ask "success", then undo: no record, no reset */
 #endif
@@ -66,7 +70,17 @@
 #include "ui_pats.c"         /* PATTERNS: the eight tracks' patterns (patbank.c) */
 #include "icons.c"           /* parameter icons (FELUCCA_ICONS), used by ui_draw.c */
 #include "ui_draw.c"
+#ifndef FELUCCA_VIS
+#define FELUCCA_VIS 1                /* the full-screen visualiser; 0: tools/build.py's second fallback when the flash is full */
+#endif
+#if FELUCCA_VIS
 #include "ui_vis.c"           /* the full-screen visualiser (HOME on HOME, 2.4) */
+#else
+static int vis_shown(void) { return 0; }   /* (no visualiser: HOME on HOME stays on the TRACKS screen) */
+static void vis_open(void) {}
+static void vis_draw(void) {}
+static void vis_select(int32_t s) { (void)s; }
+#endif
 #include "ui_layers.c"       /* hold a function button: what the keys and knobs do (TE style) */
 #include "ui_menu.c"
 #include "ui_input.c"
@@ -190,8 +204,10 @@ static void ota_commit(const uint8_t *parm)
     fm1_enter_update(parm);                             /* record into RAM, core reset (fm1_sys.h) */
 }
 #endif
-#if FELUCCA_OTA
+#if FELUCCA_OTA && FELUCCA_EDITOR
 #include "editor.c"          /* web editor SysEx (needs the OTA SysEx plumbing) */
+#elif FELUCCA_OTA
+static void ed_service(void) {}   /* (no web editor: ota_service takes its frames and drops them) */
 #endif
 #if FELUCCA_CDC
 #include "console.c"
