@@ -1187,6 +1187,18 @@ static void locks_restore(track_t *t)        /* every lock in force let go (STOP
         if (t->p[t->lk_param[i] % P_COUNT] == t->lk_set[i])
             lock_write(t, t->lk_param[i], t->lk_base[i]);
     t->lk_n = 0;
+    t->sl_n = 0;
+}
+/* p[id] without the locks in force: the track's own value, what a project or a user preset keeps (a lock playing never
+ * becomes the sound saved; a knob turned while a lock is on is the track's value: lock_step takes it as the base) */
+static int16_t trk_base(const track_t *t, uint32_t id)
+{
+    uint32_t i;
+    id %= P_COUNT;
+    for (i = 0; i < t->lk_n && i < NLOCK; i++)
+        if (t->lk_param[i] == id && t->p[id] == t->lk_set[i])
+            return t->lk_base[i];
+    return t->p[id];
 }
 static void locks_clear(track_t *t)          /* no lock, no nudge (an empty pattern) */
 {
@@ -1205,10 +1217,17 @@ static void locks_clear(track_t *t)          /* no lock, no nudge (an empty patt
 static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16_t *xv, uint32_t xn, uint32_t xabs)
 {
     uint32_t i, k, j, n = 0;
+    for (j = 0; j < t->sl_n && j < NSLIDE; j++)       /* the last step's slides: at their values (lock_slide_tick may */
+        for (i = 0; i < t->lk_n && i < NLOCK; i++)    /* have stopped short of them, a block before the end) */
+            if (t->lk_param[i] == t->sl_p[j] && t->p[t->sl_p[j] % P_COUNT] == t->lk_set[i]) {
+                lock_write(t, t->sl_p[j], t->sl_to[j]);
+                t->lk_set[i] = t->p[t->sl_p[j] % P_COUNT];
+            }
+    t->sl_n = 0;
     for (i = 0; i < t->lk_n && i < NLOCK; i++) {      /* in force, no lock here: back to the base (or the knob) */
         uint32_t p = t->lk_param[i] % P_COUNT, has = 0;
         for (k = 0; k < NLOCK; k++)
-            if (t->lock[k].step == idx && t->lock[k].param == p)
+            if (t->lock[k].step == idx && (t->lock[k].param & LOCK_PID) == p)
                 has = 1;
         for (j = 0; j < xn; j++)
             has |= xp[j] == p;
@@ -1224,7 +1243,7 @@ static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16
     t->lk_n = (uint8_t)n;
     for (k = 0; k < NLOCK; k++) {                     /* this step's locks */
         const plock_t *l = &t->lock[k];
-        uint32_t p = l->param;
+        uint32_t p = l->param & LOCK_PID;
         if (l->step != idx || p >= P_COUNT || !p_lockable(p))
             continue;
         for (i = 0; i < t->lk_n && t->lk_param[i] != p; i++)
@@ -1238,6 +1257,15 @@ static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16
         } else if (t->p[p] != t->lk_set[i]) {
             t->lk_base[i] = t->p[p];                  /* turned meanwhile: that is the new base */
         }
+        if ((l->param & LOCK_SLIDE) && t->sl_n < NSLIDE) {   /* SLIDE: from where it is now, over the step */
+            const param_desc_t *d = lock_desc(t, p);
+            t->sl_p[t->sl_n] = (uint8_t)p;
+            t->sl_from[t->sl_n] = t->p[p];
+            t->sl_to[t->sl_n] = (int16_t)clamp(l->val, d->min, d->max);
+            t->sl_n++;
+            t->lk_set[i] = t->p[p];
+            continue;
+        }
         lock_write(t, p, l->val);
         t->lk_set[i] = t->p[p];
     }
@@ -1247,7 +1275,7 @@ static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16
         if (p >= P_COUNT || !p_lockable(p))
             continue;
         for (k = 0; k < NLOCK; k++)
-            if (t->lock[k].step == idx && t->lock[k].param == p)
+            if (t->lock[k].step == idx && (t->lock[k].param & LOCK_PID) == p)
                 locked = 1;
         for (i = 0; i < t->lk_n && t->lk_param[i] != p; i++)
             ;
@@ -1266,13 +1294,31 @@ static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16
     }
 }
 static void lock_step(track_t *t, uint32_t idx) { lock_step_x(t, idx, 0, 0, 0, 0); }
-/* a lock of (step, param): its slot, or a free one for it (-1: none left) */
+/* the SLIDE locks of the step playing, rel units into it of slen: each at from + (to - from) x rel / slen. A knob turned
+ * meanwhile wins (that slide stops: its value is the knob's, lock_step's new base) */
+static void lock_slide_tick(track_t *t, uint32_t rel, uint32_t slen)
+{
+    uint32_t j, i, q = slen >> 8, f = q ? rel / q : 256u;
+    if (f > 256u)
+        f = 256u;
+    for (j = 0; j < t->sl_n && j < NSLIDE; j++) {
+        uint32_t p = t->sl_p[j] % P_COUNT;
+        for (i = 0; i < t->lk_n && i < NLOCK && t->lk_param[i] != p; i++)
+            ;
+        if (i >= t->lk_n || i >= NLOCK || t->p[p] != t->lk_set[i]) {
+            t->sl_p[j] = P_COUNT;                     /* (turned: this one is done) */
+            continue;
+        }
+        lock_write(t, p, t->sl_from[j] + ((int32_t)t->sl_to[j] - t->sl_from[j]) * (int32_t)f / 256);
+        t->lk_set[i] = t->p[p];
+    }
+}/* a lock of (step, param): its slot, or a free one for it (-1: none left) */
 static int lock_find(const track_t *t, uint32_t step, uint32_t param, int make)
 {
     uint32_t k;
     int fr = -1;
     for (k = 0; k < NLOCK; k++) {
-        if (t->lock[k].step == step && t->lock[k].param == param)
+        if (t->lock[k].step == step && (t->lock[k].param & LOCK_PID) == param)
             return (int)k;
         if (fr < 0 && t->lock[k].step == LOCK_FREE)
             fr = (int)k;
@@ -1287,17 +1333,45 @@ static int lock_set(track_t *t, uint32_t step, uint32_t param, int32_t v)
     if (step >= NSTEP || param >= P_COUNT || !p_lockable(param) || (k = lock_find(t, step, param, 1)) < 0)
         return 0;
     d = lock_desc(t, param);
+    t->lock[k].param = (uint8_t)(param | (t->lock[k].step == step ? t->lock[k].param & LOCK_SLIDE : 0u));   /* (its SLIDE kept) */
     t->lock[k].step = (uint8_t)step;
-    t->lock[k].param = (uint8_t)param;
     t->lock[k].val = (int16_t)clamp(v, d->min, d->max);
+    return 1;
+}
+static int lock_slide_set(track_t *t, uint32_t step, uint32_t param, int on)   /* a lock's SLIDE; 0: no such lock */
+{
+    int k = lock_find(t, step, param, 0);
+    if (k < 0)
+        return 0;
+    t->lock[k].param = (uint8_t)((t->lock[k].param & LOCK_PID) | (on ? LOCK_SLIDE : 0u));
     return 1;
 }
 static void lock_del(track_t *t, uint32_t step, uint32_t param)   /* param P_COUNT: every lock of the step */
 {
     uint32_t k;
     for (k = 0; k < NLOCK; k++)
-        if (t->lock[k].step == step && (param >= P_COUNT || t->lock[k].param == param))
+        if (t->lock[k].step == step && (param >= P_COUNT || (t->lock[k].param & LOCK_PID) == param))
             t->lock[k].step = LOCK_FREE;
+}
+/* a knob turned while the track records (menu SEQ > REC KNOBS LOCKS): p[id] at v for the step playing, kept as its lock;
+ * the track's own value stays (the locks in force: lk_*). 0: no lock left or not lockable. Callers hold the IRQ off */
+static int lock_capture(track_t *t, uint32_t idx, uint32_t id, int32_t v)
+{
+    uint32_t i;
+    if (!lock_set(t, idx, id, v))
+        return 0;
+    for (i = 0; i < t->lk_n && t->lk_param[i] != id; i++)
+        ;
+    if (i == t->lk_n) {
+        if (i >= NLOCK)
+            return 1;
+        t->lk_param[i] = (uint8_t)id;
+        t->lk_base[i] = t->p[id];                     /* (the track's value: back to it on a step without the lock) */
+        t->lk_n++;
+    }
+    lock_write(t, id, v);
+    t->lk_set[i] = t->p[id];
+    return 1;
 }
 static int step_locked(const track_t *t, uint32_t step)   /* the step carries a lock, a nudge or a component (the UI's mark) */
 {
@@ -3021,6 +3095,8 @@ static void seq_tick(track_t *t, uint32_t adv)
         seq_ratchets(t, rel < 0 ? 0u : (uint32_t)rel, slen);
         if (t->cp_bend_a || t->cp_bend)
             comp_bend_tick(t, rel < 0 ? 0u : (uint32_t)rel, slen);
+        if (t->sl_n)
+            lock_slide_tick(t, rel < 0 ? 0u : (uint32_t)rel, slen);
     }
 }
 

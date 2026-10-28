@@ -205,7 +205,7 @@ UI_SMALL static void steps_held_edit(uint32_t knob, int32_t s)
         if (knob == 4u) {                                 /* LOCK (PRESETS): ui.lock_par on this step */
             uint32_t id = ui.lock_par % P_COUNT;
             int k = lock_find(t, idx, id, 0);
-            int32_t v = k >= 0 ? t->lock[k].val : t->p[id];
+            int32_t v = k >= 0 ? t->lock[k].val : trk_base(t, id);   /* (a new one: from the track's own value) */
             if (!lock_set(t, idx, id, v + sk))
                 ui_message(p_lockable(id) ? "NO LOCK LEFT" : "NOT LOCKABLE");
             continue;

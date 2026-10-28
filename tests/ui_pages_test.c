@@ -2083,8 +2083,9 @@ int main(int argc, char **argv)
         comp_clear(TDRUM);
         drum_cursor = 6;
         press(B_OCTUP); frames(30); release(B_OCTUP); frame();
-        encs[panel.enc[EN_K1]] = 9; frame();               /* (the last row: COMP) */
-        ok = ui.sheet == NSHEET;
+        encs[panel.enc[EN_K1]] = 9; frame();               /* (the last row, LOCKS, then COMP before it) */
+        encs[panel.enc[EN_K1]] = -1; frame();
+        ok = ui.sheet == 1u + SH_COMP;
         tap(B_OCTUP); frame();
         ok &= ui.csheet == 1u;                              /* ADD (none yet) */
         ui.cadd = 0;
@@ -2098,7 +2099,7 @@ int main(int argc, char **argv)
         ui.force = 1; frame(); ppm("drums-comp");
         check(ok, "DRUMS sheet: COMP (the last row): ADD a VEL, KNOB 2 / KNOB 3 its velocity and spread");
         tap(B_OCTDN); frame();
-        ok = ui.sheet == NSHEET && !ui.csheet;
+        ok = ui.sheet == 1u + SH_COMP && !ui.csheet;
         tap(B_OCTDN); frame();
         ok &= !ui.sheet && comp_count(TDRUM, 6) == 1u && step_locked(TDRUM, 6);
         check(ok, "DRUMS sheet: OCT- back from the COMP strip to the sheet, then closed; the step marked");
@@ -2119,7 +2120,8 @@ int main(int argc, char **argv)
         cursor_set(4); ui.note_k = 0; frame();
         press(B_OCTUP); frames(30); release(B_OCTUP); frame();
         encs[panel.enc[EN_K1]] = 9; frame();
-        ok = ui.sheet == NSHEET;
+        encs[panel.enc[EN_K1]] = -1; frame();
+        ok = ui.sheet == 1u + SH_COMP;
         tap(B_OCTUP); frame();
         ui.cadd = CP_PULSE;
         encs[panel.enc[EN_K2]] = CP_TONE - CP_PULSE; frame();
@@ -2144,6 +2146,58 @@ int main(int argc, char **argv)
         check(ok, "NOTES sheet: COMP: TONE +7, MULT added then removed, COND NOT 1:2; one of a type a step");
         tap(B_OCTDN); frame(); tap(B_OCTDN); frame();
         check(!ui.sheet && !ui.csheet, "NOTES sheet: OCT- twice: the strip, then the sheet closed");
+        /* the sheet's LOCKS row: the step's locks, ADD one (the lock parameter), its value, its SLIDE, remove */
+        lock_del(t, 4, P_COUNT);
+        press(B_OCTUP); frames(30); release(B_OCTUP); frame();
+        encs[panel.enc[EN_K1]] = 9; frame();               /* (the last row: LOCKS) */
+        ok = ui.sheet == 1u + SH_LOCKS;
+        tap(B_OCTUP); frame();
+        ok &= ui.lsheet == 1u;                              /* ADD (none yet) */
+        ui.lock_par = P_DLY;
+        tap(B_OCTUP); frame();                              /* a DLY lock at the track's value */
+        ok &= lock_find(t, 4, P_DLY, 0) >= 0 && t->lock[lock_find(t, 4, P_DLY, 0)].val == trk_base(t, P_DLY) && ui.lsheet == 1u;
+        encs[panel.enc[EN_K2]] = 1; frame();                /* its value + 1 */
+        encs[panel.enc[EN_K3]] = 1; frame();                /* SLIDE on */
+        ok &= t->lock[lock_find(t, 4, P_DLY, 0)].val == trk_base(t, P_DLY) + 1 &&
+              (t->lock[lock_find(t, 4, P_DLY, 0)].param & LOCK_SLIDE);
+        encs[panel.enc[EN_K1]] = 1; frame();                /* ADD again: KNOB 2 the parameter */
+        encs[panel.enc[EN_K2]] = 1; frame();
+        ok &= ui.lock_par != P_DLY && p_lockable(ui.lock_par);
+        tap(B_OCTUP); frame();
+        ok &= lock_items(t, 4, (uint8_t[NLOCK]){0}) == 2u;
+        ui.force = 1; frame(); ppm("notes-locks");
+        encs[panel.enc[EN_K1]] = -1; frame();               /* (the DLY lock) */
+        tap(B_OCTUP); frame();
+        ok &= lock_find(t, 4, P_DLY, 0) < 0 && lock_items(t, 4, (uint8_t[NLOCK]){0}) == 1u && !strcmp(ui.msg, "LOCK REMOVED");
+        tap(B_OCTDN); frame(); tap(B_OCTDN); frame();
+        check(ok && !ui.sheet && !ui.lsheet, "NOTES sheet: LOCKS: ADD a DLY lock (the track's value), +1, SLIDE, a second, remove");
+        lock_del(t, 4, P_COUNT);
+        /* menu SEQ > REC KNOBS LOCKS: a sound knob turned while the track records is the step's lock */
+        {
+            int16_t base;
+            uint32_t at;
+            check(mi_sec(MI_RECLK) == MS_SEQ && !rec_locks && !strcmp(mi_value(MI_RECLK, &(uint16_t){0}), "SOUND"),
+                  "menu SEQ: REC KNOBS, SOUND by default");
+            go_home(); frame();
+            while (strcmp(PAGES[ui.page].title, "ENV DEST")) { open_family(FAM_ENV); frame(); }
+            base = t->p[P_ED_FLT];
+            rec_locks = 1;
+            song.rec = 1u;
+            transport_req = 1; frames(3);
+            at = t->seq_idx;
+            encs[panel.enc[EN_K1]] = 5; frame();
+            ok = lock_find(t, at, P_ED_FLT, 0) >= 0 || lock_find(t, (at + 1u) % trk_len(t), P_ED_FLT, 0) >= 0;
+            transport_req = 2; frames(3);
+            song.rec = 0; rec_wait = 0;
+            ok &= t->p[P_ED_FLT] == base && trk_base(t, P_ED_FLT) == base;
+            check(ok, "REC KNOBS LOCKS: ENV DEST > FLT turned while recording: a lock on the step playing, the sound kept");
+            encs[panel.enc[EN_K1]] = 5; frame();
+            check(t->p[P_ED_FLT] != base, "  .. not recording: the knob changes the sound, as before");
+            t->p[P_ED_FLT] = base;
+            rec_locks = 0;
+            for (j = 0; j < NSTEP; j++) lock_del(t, j, P_COUNT);
+            go_home(); frame();
+        }
         /* the PLAY page: the direction and the components' seed (not parameters: no lock, no MIDI learn) */
         open_family(FAM_SEQ); frame();
         while (strcmp(PAGES[ui.page].title, "PLAY")) { open_family(FAM_SEQ); frame(); }

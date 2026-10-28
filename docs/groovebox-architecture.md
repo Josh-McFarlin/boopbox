@@ -164,3 +164,23 @@ New modules (all host-testable, no allocation, bounded loops):
   - Tests: `tests/comp_test.c` (each type played, directions, seeds, drums, a 5-step track beside, a random edited
     session with stops: nothing left on, the stores and damage); the soak test now adds components at random.
   - Proxy sizes against Milestone B: code 277,588 -> 281,598 B (+4.0 KB), constants +138 B, RAM 71,448 -> 72,376 B.
+- Milestone C, the UI: the step sheet's COMP row and strip (`ui.c comp_strip_*`), SEQ > PLAY (`SC_PATT`: DIR and
+  SEED live in `track_t` beside `p[]`, so they are not sound parameters: no lock, no MIDI learn, not in user presets).
+- Milestone D (parameter locks):
+  - `NLOCK` 24 -> 32 a track; formats 5 and 6 keep their 24 (`NLOCK_V6`): format 6 capture packs the slots, and the
+    fallback is refused when a track has more than 24 or a SLIDE (`proj6_fits`).
+  - SLIDE: bit 7 of `plock_t.param` (`LOCK_SLIDE`; the parameter id is `& LOCK_PID`). The step's slides (at most
+    `NSLIDE` = 4) are listed in `track_t.sl_*` and moved once a block on core 0 (`seq.c lock_slide_tick`, after the
+    ratchets); a new step first puts the last step's slides at their values. Format 7 stores SLIDE in bit 7 of the
+    lock's step byte (steps < 64).
+  - No preset corruption: `trk_base(t, id)` is `p[id]` without the lock in force; project capture (formats 6 and 7,
+    so also the autosave and the song backup) and the user preset save use it.
+  - Capture: `lock_capture` (the step playing, the base kept in `lk_*`), from the UI's page and HOME knobs when
+    MENU > SEQ > REC KNOBS is LOCKS (`panel.c rec_locks`, kept in byte 6 of the settings' eight-track tail).
+  - The sheet's LOCKS row and strip (`ui.c lock_strip_*`); MOVE / COPY of a note take its components along with its
+    locks; the web editor shows up to 32 locks on this firmware (`devNlock`).
+  - Tests: `tests/lock_test.c`; UI cases in `tests/ui_pages_test.c`; the golden renders unchanged.
+  - Proxy sizes against Milestone C's engine: code 281,598 -> 287,994 B (+6.4 KB with C's UI), RAM 72,376 ->
+    73,948 B.
+  - Flash risk: code has grown ~21 KB (proxy) since the baseline, whose image already filled the app slot. A target
+    build is needed to know the real figure; `tools/build.py` must shed something (see Milestone H).

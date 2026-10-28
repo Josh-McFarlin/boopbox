@@ -222,7 +222,7 @@ static void busy_track(uint32_t i, int dense, uint32_t seed)
         if (dense || k % 4u == 1u)
             step_fill_set(t, s, 1u + r % 2u);
     }
-    for (k = 0; k < (dense ? NLOCK : 3u); k++)
+    for (k = 0; k < (dense == 2 ? NLOCK_V6 : dense ? NLOCK : 3u); k++)   /* (dense 2: as many as format 6 holds) */
         lock_set(t, (k * 5u + seed) % NSTEP, k % 2u ? P_DIST : P_PAN, (int32_t)((seed + k) % 60u));
     if (!dense && !is_drum(t))                     /* (a step left with a note past n: kept as it is) */
         t->step[(seed + 3u) % NSTEP].note[3] = 99;
@@ -384,7 +384,7 @@ static int fun7_tests(void)
     /* the format 6 fallback itself: forced (the same tracks, captured by proj6_capture; tracks 5..8 at power-on) */
     host_tracks_init();
     for (i = 0; i < 4u; i++)
-        busy_track(i, 1, 3u * i + 2u);
+        busy_track(i, 2, 3u * i + 2u);
     for (i = 4; i < NTRK; i++)
         trk_pon_now(i);
     snap(&S1);
@@ -485,7 +485,7 @@ int main(void)
         ok &= n->p[P_SSWING] == 40 && n->p[P_ASWING] == 80 && n->p[P_CHORD] == 0;
         for (k = 0; k < 8u; k++)
             ok &= pt_get(n, P_E0 + k) == oldv(t, PROJ_NP_V3 - 8u + k);
-        for (k = 0; k < NLOCK; k++)
+        for (k = 0; k < NLOCK_V6; k++)
             ok &= n->lock[k].step == LOCK_FREE;
         for (k = 0; k < NSTEP; k++)
             ok &= n->mf[k] == 0;
@@ -547,7 +547,7 @@ int main(void)
         ok &= !memcmp(q2.t[t].p, v4.t[t].p, P_TFLT * 2u) && !memcmp(q2.t[t].e, v4.t[t].p + P_TFLT, 16u) &&
               q2.t[t].p[P_TFLT] == 0 && q2.t[t].p[P_STRUM] == 0 && q2.t[t].p[P_VLEAD] == 0 &&
               !memcmp(q2.t[t].step, v4.t[t].step, sizeof q2.t[t].step);
-        for (i = 0; i < NLOCK; i++)
+        for (i = 0; i < NLOCK_V6; i++)
             ok &= q2.t[t].lock[i].step == LOCK_FREE;
         for (i = 0; i < NSTEP; i++)
             ok &= q2.t[t].mf[i] == 0;
@@ -574,7 +574,7 @@ int main(void)
         v5.t[t].engine = (uint8_t)t;
         v5.t[t].preset = (uint8_t)(3 + t);
         memcpy(v5.t[t].step, q.t[t].step, sizeof v5.t[t].step);
-        for (i = 0; i < NLOCK; i++)
+        for (i = 0; i < NLOCK_V6; i++)
             v5.t[t].lock[i].step = LOCK_FREE;
     }
     v5.t[0].micro[3] = -32, v5.t[0].micro[4] = 31, v5.t[TRK_DRUM].micro[9] = -7;

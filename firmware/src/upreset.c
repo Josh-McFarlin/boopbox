@@ -280,7 +280,7 @@ UI_SMALL static int up_store(uint32_t k, const char *name)
             r.name[i] = b[i];
     }
     for (i = 0; i < P_COUNT; i++)
-        r.p[i] = TSEL->p[i];
+        r.p[i] = trk_base(TSEL, i);                     /* (the sound itself: not a lock playing now) */
     up_pat_from(&r, TSEL->step);
     return up_put(k, &r);
 }
