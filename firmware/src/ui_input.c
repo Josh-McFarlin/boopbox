@@ -604,8 +604,8 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         ml_knob(TSEL, id);                                /* MIDI LEARN: this parameter (2.6) */
     if (!v)
         return;
-    if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ) &&
-        ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
+    if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ ||
+                                   id == G_KIND) && ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
         *vp = 0;
         ui.arm = (uint8_t)id;
         ui.arm_t = 90;
@@ -638,6 +638,19 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         ui_message("SOUND INIT");
         ui.force = 1;
         break;
+    case G_KIND: {                                              /* (eight tracks) the selected track SYNTH <-> DRUM */
+        uint32_t to = is_drum(TSEL) ? TK_SYNTH : TK_DRUM;
+        *vp = 0;
+        if (to == TK_SYNTH && !eng_room(TSEL, trk_def_kind(song.sel % NTRK) == TK_SYNTH ? TRK_DEF[song.sel % NTRK][1] : 0u)) {
+            ui_message("ENGINE BUSY: NO CHANGE");
+            break;
+        }
+        if (undo.valid && undo.trk == song.sel % NTRK)
+            undo.valid = 0;                                     /* (the undo was the other kind's pattern) */
+        track_set_kind(TSEL, to);
+        ui_message(to == TK_DRUM ? "NOW A DRUM TRACK" : "NOW A SYNTH TRACK");
+        break;
+    }
     case G_NEWPRJ:
         *vp = 0;
 #if FELUCCA_ARRANGER
@@ -1243,6 +1256,16 @@ UI_SMALL static void ui_input(void)
             panel_enc(EN_K1 + k);
     }
     pats_poll();                                        /* (patterns: a change refused, said) */
+    if (eng_refused) {                                  /* (an engine change refused: three tracks play the big ones) */
+        eng_refused = 0;
+        ui_message("BIG ENGINES: 3 IN USE");
+    }
+#if FELUCCA_ARRANGER
+    if (song_full) {                                    /* (song mode refused: the loop could not be kept aside) */
+        song_full = 0;
+        ui_message("LOOP TOO BIG FOR SONG");
+    }
+#endif
     if (on_pats_page()) {
         pats_screen_input(pressed, home);
         return;

@@ -2315,6 +2315,42 @@ int main(int argc, char **argv)
         for (j = 0; j < NTRK; j++) trk[j].hfol = HF_OFF;
         go_home(); frame();
     }
+    {   /* SAVE > TOOLS > KIND: a track SYNTH <-> DRUM; a fourth big engine refused (three arenas) */
+        uint32_t ok, k;
+        transport_req = 2; frames(2);
+        go_home(); frame();
+        song.sel = 4; frame();
+        open_family(FAM_SAVE); frame();
+        while (strcmp(PAGES[ui.page].title, "TOOLS")) { open_family(FAM_SAVE); frame(); }
+        encs[panel.enc[EN_K3]] = 1; frame();
+        ok = !is_drum(&trk[4]) && ui.arm == G_KIND;     /* (one detent arms) */
+        encs[panel.enc[EN_K3]] = 1; frame();
+        ok &= is_drum(&trk[4]) && !strcmp(ui.msg, "NOW A DRUM TRACK");
+        encs[panel.enc[EN_K3]] = 1; frame(); encs[panel.enc[EN_K3]] = 1; frame();
+        ok &= !is_drum(&trk[4]) && trk[4].eng_req == TRK_DEF[4][1] && !strcmp(ui.msg, "NOW A SYNTH TRACK");
+        check(ok, "TOOLS > KIND (twice, as the other GO buttons): track 5 a drum track, then a synth again (its default sound)");
+        go_home(); frame();
+        for (k = 0; k < 3u; k++) {                      /* three tracks on the big engines */
+            song.sel = (uint8_t)k; frame();
+            select_engine(k == 0u ? ENGI_GRAIN : k == 1u ? ENGI_FM6 : ENGI_PHYS);
+            frames(2);
+        }
+        song.sel = 4; frame();
+        ok = !select_engine(ENGI_DRAWBAR) && trk[4].eng_req == TRK_DEF[4][1];
+        frame();
+        ok &= !strcmp(ui.msg, "BIG ENGINES: 3 IN USE");
+        if (!ok) printf("ui:   refused? eng_req %u msg %s\n", trk[4].eng_req, ui.msg);
+        song.sel = 0; frame();
+        select_engine(0); frames(10);                   /* (one gives its arena back, its fade over) */
+        song.sel = 4; frame();
+        ok &= select_engine(ENGI_DRAWBAR) && trk[4].eng_req == ENGI_DRAWBAR;
+        if (!ok) printf("ui:   after: busy %u arena0 %u eng0 %u req0 %u\n", eng_arenas_busy(&trk[4]), trk[0].arena, trk[0].engine, trk[0].eng_req);
+        check(ok, "a fourth track asking for a big engine: refused, said; once one is free it takes it");
+        for (k = 0; k < NTRK; k++)
+            if (!is_drum(&trk[k])) { song.sel = (uint8_t)k; frame(); select_engine(TRK_DEF[k][1]); }
+        frames(2);
+        song.sel = 0; go_home(); frame();
+    }
     {   /* FX > PERF: TARGET, LATCH, Q of the punch-in FX */
         uint32_t ok;
         go_home(); frame();

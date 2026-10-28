@@ -88,6 +88,13 @@ static uint32_t eng_arenas_busy(const track_t *t)
         n += eng_arena_lent(i) && eng_arena_trk[i] != (uint32_t)(t - trk) + 1u;
     return n;
 }
+/* engine e can play on track t now: not a big one, or t holds an arena, or one is free (the UI refuses the change
+ * else, and says so: eng_refused) */
+static volatile uint8_t eng_refused;
+static int eng_room(const track_t *t, uint32_t e)
+{
+    return !eng_big(e % NENGINES) || t->arena || eng_arenas_busy(t) < NARENA;
+}
 /* once a block on core 0, before the render (seq.c events_block): a track playing a big engine without an arena takes
  * one (an engine set straight, as at power-on or by a test), one that no longer does gives its back; in track order */
 static void eng_arena_lend(void)

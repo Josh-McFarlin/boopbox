@@ -297,8 +297,12 @@ UI_SMALL static int up_load_to(track_t *t, uint32_t k)       /* user preset k in
     int keep_arp;
     if (!up_used(k) || is_drum(t))
         return 1;
-    keep_arp = t->p[P_AMODE] && !arp_is_sounds(t);     /* (2.7.1: not the arp the old sound brought) */
     r = up_rec(k);
+    if (!eng_room(t, r->engine)) {                      /* (three tracks play the big engines: not now) */
+        eng_refused = 1;
+        return 2;
+    }
+    keep_arp = t->p[P_AMODE] && !arp_is_sounds(t);     /* (2.7.1: not the arp the old sound brought) */
     up_values(r, v);
     for (i = 0; i < P_COUNT; i++)                       /* (LEN etc. of a kept pattern changed too, and */
         if (param_kept(i) || (keep_arp && i >= P_AMODE && i <= P_AORDER) ||   /* a preset pattern then counted as */
