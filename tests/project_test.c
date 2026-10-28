@@ -397,6 +397,26 @@ static int fun7_tests(void)
                  ok && proj_ok(&P7b) && !snap_diff(&S1, &S2));
     busy_track(5, 0, 1);
     bad += check("format 6 fallback: not taken once a track of 5..8 holds something", !proj6_fits());
+    trk_pon_now(5);
+    ok = proj6_fits();
+    comp_set(&trk[0], 3, CP_TONE, 7, 0);
+    ok &= !proj6_fits();
+    comp_clear(&trk[0]);
+    trk[2].cp_dir = DIR_REV;
+    ok &= !proj6_fits();
+    trk[2].cp_dir = DIR_FWD;
+    bad += check("format 6 fallback: not taken once a track has a step component or a direction (format 6 has none)",
+                 ok && proj6_fits());
+    {   /* four dense tracks with components: too big for format 7, not format 6's: refused, the slot unchanged */
+        static project_t Pk;
+        memset(&Pk, 0x5A, sizeof Pk);
+        comp_set(&trk[1], 0, CP_PULSE, 2, 0);
+        ok = !proj_capture(&Pk) || Pk.magic == PROJ_MAGIC;   /* (format 7 when it fits) */
+        for (i = 0; ok && Pk.magic != PROJ_MAGIC && i < sizeof Pk; i++)
+            ok = ((uint8_t *)&Pk)[i] == 0x5Au;
+        bad += check("four dense tracks with a component: format 7 whole, or refused untouched (never format 6 without it)", ok);
+        comp_clear(&trk[1]);
+    }
     return bad;
 }
 

@@ -1199,15 +1199,19 @@ static void locks_clear(track_t *t)          /* no lock, no nudge (an empty patt
         t->lock[i].val = 0;
     }
 }
-/* the sequencer enters step idx: its locks take hold, the last step's that it does not share let go */
-static void lock_step(track_t *t, uint32_t idx)
+/* the sequencer enters step idx: its locks take hold, the last step's that it does not share let go. xn values of
+ * its components too (comp.c: PARAM, PORTA), after its locks: parameter xp[j] at xv[j], or (bit j of xabs clear) at
+ * xv[j] from its lock on this step, else from its base. They let go as the locks do */
+static void lock_step_x(track_t *t, uint32_t idx, const uint8_t *xp, const int16_t *xv, uint32_t xn, uint32_t xabs)
 {
-    uint32_t i, k, n = 0;
+    uint32_t i, k, j, n = 0;
     for (i = 0; i < t->lk_n && i < NLOCK; i++) {      /* in force, no lock here: back to the base (or the knob) */
         uint32_t p = t->lk_param[i] % P_COUNT, has = 0;
         for (k = 0; k < NLOCK; k++)
             if (t->lock[k].step == idx && t->lock[k].param == p)
                 has = 1;
+        for (j = 0; j < xn; j++)
+            has |= xp[j] == p;
         if (has) {
             t->lk_param[n] = (uint8_t)p;
             t->lk_base[n] = t->lk_base[i];
@@ -1237,7 +1241,31 @@ static void lock_step(track_t *t, uint32_t idx)
         lock_write(t, p, l->val);
         t->lk_set[i] = t->p[p];
     }
+    for (j = 0; j < xn; j++) {                        /* the components' */
+        uint32_t p = xp[j], locked = 0;
+        int32_t v;
+        if (p >= P_COUNT || !p_lockable(p))
+            continue;
+        for (k = 0; k < NLOCK; k++)
+            if (t->lock[k].step == idx && t->lock[k].param == p)
+                locked = 1;
+        for (i = 0; i < t->lk_n && t->lk_param[i] != p; i++)
+            ;
+        if (i == t->lk_n) {
+            if (i >= NLOCK)
+                continue;
+            t->lk_param[i] = (uint8_t)p;
+            t->lk_base[i] = t->p[p];
+            t->lk_n++;
+        } else if (!locked && t->p[p] != t->lk_set[i]) {
+            t->lk_base[i] = t->p[p];                  /* turned meanwhile: the new base */
+        }
+        v = ((xabs >> j) & 1u) ? xv[j] : (locked ? t->p[p] : t->lk_base[i]) + xv[j];
+        lock_write(t, p, v);
+        t->lk_set[i] = t->p[p];
+    }
 }
+static void lock_step(track_t *t, uint32_t idx) { lock_step_x(t, idx, 0, 0, 0, 0); }
 /* a lock of (step, param): its slot, or a free one for it (-1: none left) */
 static int lock_find(const track_t *t, uint32_t step, uint32_t param, int make)
 {
@@ -1307,7 +1335,9 @@ static uint32_t step_plays(const track_t *t, uint32_t idx)   /* its condition ho
     return c == FC_FILL ? fill_now : c == FC_NOFILL ? !fill_now : 1u;
 }
 
-static void steps_clear(track_t *t)           /* an empty pattern (synth: REST steps, drums: no lane); no lock, no nudge, no condition */
+#include "comp.c"                            /* step components */
+
+static void steps_clear(track_t *t)           /* an empty pattern (synth: REST steps, drums: no lane); no lock, no nudge, no condition, no component */
 {
     uint32_t k;
     memset(t->step, 0, sizeof t->step);
@@ -1316,6 +1346,7 @@ static void steps_clear(track_t *t)           /* an empty pattern (synth: REST s
             t->step[k].time = ST_REST;
     locks_clear(t);
     memset(t->fill, 0, sizeof t->fill);
+    comp_clear(t);
 }
 
 /* tempo x 10 of a loop of T blocks holding n bars of 4/4 */
@@ -2574,6 +2605,7 @@ static void seq_reset_tracks(uint32_t pos)
         t->rskip_abs = SEQ_NONE;
         t->rh_n = 0;
         t->arp_new = t->nheld != 0;
+        comp_reset(t);
     }
     for (i = 0; i < NROLL; i++)
         roll[i].last = SEQ_NONE - 1u;               /* (a roll held over the start: on the grid from here) */
@@ -2641,6 +2673,7 @@ static void seq_stop(void)
     for (i = 0; i < NTRK; i++) {
         seq_release(&trk[i]);
         locks_restore(&trk[i]);                    /* the parameters back to their base */
+        comp_stop(&trk[i]);
         trk[i].rh_n = 0;                           /* a recorded note held over the stop: as far as it got */
     }
     seq_out_all_off();
@@ -2666,7 +2699,7 @@ static void seq_step(track_t *t, const step_t *s, uint32_t slen, uint32_t skip)
 {
     uint32_t i, j, gate = slen * (uint32_t)t->p[P_SGATE] / 128u;
     uint32_t slide_in = t->seq_hold && t->seq_n;
-    const step_t *nx = &t->step[(t->seq_idx + 1u) % trk_len(t)];
+    const step_t *nx = &t->step[comp_peek(t)];
     uint32_t next_tie = nx->time == ST_TIE || (nx->time == ST_NOTE && (nx->flags & (SF_CONT_ALL | SF_LEG)));   /* (2.7: notes
                                                      * going on into the next step: held to it, it says which end;
                                                      * 2.7.2: a legato note next: held to it) */
@@ -2713,7 +2746,9 @@ static void seq_step(track_t *t, const step_t *s, uint32_t slen, uint32_t skip)
         t->seq_hold = (s->flags & SF_SLIDE) != 0 || next_tie;
         return;
     }
-    if (s->rat) {                                   /* ratchets: each hit its share of the step */
+    if (t->cp_hits) {                               /* MULT (comp.c): the step's hits */
+        gate /= t->cp_hits;
+    } else if (s->rat) {                            /* ratchets: each hit its share of the step */
         uint32_t hits = 1u + ((s->rat >> 0) & 3u);
         for (i = 1; i < s->n; i++)
             if (1u + ((s->rat >> (2u * i)) & 3u) > hits)
@@ -2751,9 +2786,14 @@ static void seq_step(track_t *t, const step_t *s, uint32_t slen, uint32_t skip)
         if (!((skip >> i) & 1u))
             t->seq_notes[t->seq_n++] = s->note[i];
     t->seq_off = gate;
-    t->seq_hold = !s->rat && ((s->flags & SF_SLIDE) != 0 || next_tie);   /* next step a TIE: keep the notes to it */
+    t->seq_hold = !s->rat && !t->cp_hits && ((s->flags & SF_SLIDE) != 0 || next_tie);   /* next step a TIE: keep the notes to it */
 }
 
+/* the velocity of lane l of drum step s: its level, or the step's VEL (comp.c) */
+static uint32_t dstep_vel(const track_t *t, const dstep_t *s, uint32_t l)
+{
+    return t->cp_vel ? t->cp_vel : lvl_vel(dstep_lvl(s, l), 100);
+}
 /* play one drum step: each lane a hit (skip: lanes already played by live recording, or rolling) */
 static void drum_step(track_t *t, const dstep_t *s, uint32_t skip)
 {
@@ -2761,8 +2801,8 @@ static void drum_step(track_t *t, const dstep_t *s, uint32_t skip)
     seq_out_track_off(t);                           /* the last step's hits end here */
     for (l = 0; m; l++, m >>= 1)
         if (m & 1u) {
-            trk_note_on(t, LANE_NOTE[l], lvl_vel(dstep_lvl(s, l), 100));
-            seq_out_on(t, LANE_NOTE[l], lvl_vel(dstep_lvl(s, l), 100));
+            trk_note_on(t, LANE_NOTE[l], dstep_vel(t, s, l));
+            seq_out_on(t, LANE_NOTE[l], dstep_vel(t, s, l));
         }
 }
 
@@ -2770,11 +2810,23 @@ static void drum_step(track_t *t, const dstep_t *s, uint32_t skip)
 static void seq_ratchets(track_t *t, uint32_t into, uint32_t slen)
 {
     uint32_t i;
-    if (t->seq_skip)
-        return;                                     /* (its condition failed: no hit at all) */
+    if (t->seq_skip || t->cp_held)
+        return;                                     /* (its condition failed: no hit at all; HOLD: no new hit) */
     if (is_drum(t)) {
         const dstep_t *s = &t->dstep[t->seq_idx % NSTEP];
         uint32_t m = dstep_mask(s) & ~roll_lanes(t) & ~(uint32_t)drum_mute[trk_index(t) % NTRK];
+        if (t->cp_hits) {                           /* MULT (comp.c): every lane, the step's hits */
+            uint32_t h = into * t->cp_hits / slen;
+            if (h > t->cp_hdone && h < t->cp_hits) {
+                t->cp_hdone = (uint8_t)h;
+                for (i = 0; m; i++, m >>= 1)
+                    if (m & 1u) {
+                        trk_note_on(t, LANE_NOTE[i], dstep_vel(t, s, i));
+                        seq_out_on(t, LANE_NOTE[i], dstep_vel(t, s, i));
+                    }
+            }
+            return;
+        }
         for (i = 0; m; i++, m >>= 1) {
             uint32_t hits = 1u + dstep_rat(s, i), h, done;
             if (!(m & 1u) || hits == 1u)
@@ -2783,18 +2835,18 @@ static void seq_ratchets(track_t *t, uint32_t into, uint32_t slen)
             done = (t->rat_lanes >> (2u * i)) & 3u;
             if (h > done && h < hits) {
                 t->rat_lanes = (t->rat_lanes & ~(3u << (2u * i))) | h << (2u * i);
-                trk_note_on(t, LANE_NOTE[i], lvl_vel(dstep_lvl(s, i), 100));
-                seq_out_on(t, LANE_NOTE[i], lvl_vel(dstep_lvl(s, i), 100));
+                trk_note_on(t, LANE_NOTE[i], dstep_vel(t, s, i));
+                seq_out_on(t, LANE_NOTE[i], dstep_vel(t, s, i));
             }
         }
         return;
     }
     {
-        const step_t *s = &t->step[t->seq_idx % NSTEP];
-        if (s->time != ST_NOTE || !s->rat)
+        const step_t *s = t->cp_on ? &t->cp_step : &t->step[t->seq_idx % NSTEP];   /* (as its components play it) */
+        if (s->time != ST_NOTE || (!s->rat && !t->cp_hits))
             return;
         for (i = 0; i < s->n; i++) {
-            uint32_t hits = 1u + ((s->rat >> (2u * i)) & 3u), h;
+            uint32_t hits = t->cp_hits ? t->cp_hits : 1u + ((s->rat >> (2u * i)) & 3u), h;
             if (hits == 1u || roll_has(t, s->note[i]))
                 continue;
             h = into * hits / slen;
@@ -2820,6 +2872,75 @@ static int32_t micro_units(const track_t *t, uint32_t abs, uint32_t slen)
 {
     int32_t m = t->micro[abs % trk_len(t) % NSTEP];
     return (int32_t)(slen / 64u) * m;                /* |m| <= 32: fits */
+}
+
+/* step idx of track t plays (seq_tick): grid step nabs, slen units long; again: once more (a PULSE repeat); flow: the
+ * playhead is off the grid (comp_flow). Its components say what it does this time (comp_eval), then it plays */
+static void seq_fire(track_t *t, uint32_t idx, uint32_t again, uint32_t flow, uint32_t nabs, uint32_t slen)
+{
+    uint32_t len = trk_len(t);
+    cp_ev_t ev;
+    if (!idx && !again)
+        t->pass++;                                   /* a new pass of the loop (recording: one undo) */
+    if (erasing(t))
+        erase_step(t, idx);                          /* EDIT + key held: gone as it passes */
+    if (again || comp_count(t, idx)) {
+        comp_eval(t, idx, again, len, &ev);
+    } else {
+        memset(&ev, 0, sizeof ev);
+        ev.jump = -1;
+    }
+    t->cp_skip = ev.skip;
+    if (!again) {
+        t->cp_rep = ev.rep;
+        t->cp_hold = ev.hold;
+    }
+    if (ev.jump >= 0)
+        t->cp_jump = ev.jump;
+    t->cp_hits = ev.hits;
+    t->cp_vel = is_drum(t) ? ev.vel : 0u;
+    t->cp_bend_a = is_drum(t) ? 0 : ev.bend;
+    t->cp_bend_b = ev.bend_b;
+    t->cp_on = 0;
+    t->seq_skip = (uint8_t)(!step_plays(t, idx) || ev.skip);
+    if (t->seq_skip) {                               /* its fill condition fails: as a REST with no lock */
+        lock_step(t, NSTEP);                         /* (no step has locks there: the bases are back) */
+        t->rskip_lanes = 0;
+        t->rskip_n = 0;
+        if (is_drum(t)) {
+            seq_out_track_off(t);
+        } else {
+            if (!flow)
+                rec_hold(t, idx, len, nabs);
+            seq_release(t);
+        }
+    } else if (is_drum(t)) {
+        uint32_t skip = t->rskip_abs == nabs ? t->rskip_lanes : 0u;
+        lock_step_x(t, idx, ev.pid, ev.pv, ev.np, ev.pabs);   /* its parameter locks, before the block renders */
+        t->rskip_lanes = 0;
+        drum_step(t, &t->dstep[idx], skip);
+    } else {
+        const step_t *s = &t->step[idx];
+        uint32_t skip = 0, i, k;
+        lock_step_x(t, idx, ev.pid, ev.pv, ev.np, ev.pabs);
+        if (!flow)
+            rec_hold(t, idx, len, nabs);             /* (held notes record into the grid's steps, not off it) */
+        if (t->rskip_n && t->rskip_abs == nabs)
+            for (i = 0; i < s->n; i++)
+                for (k = 0; k < t->rskip_n; k++)
+                    if (s->note[i] == t->rskip[k])
+                        skip |= 1u << i;
+        t->rskip_n = 0;
+        if (again || comp_count(t, idx)) {           /* (the step as its components play it this time) */
+            t->cp_step = *s;
+            comp_apply(t, &t->cp_step, &ev);
+            t->cp_on = 1;
+            s = &t->cp_step;
+        }
+        seq_step(t, s, slen, skip);
+        if (ev.rep && ev.hold && t->seq_n)
+            t->seq_hold = 1;                         /* (HOLD: the notes on through its grid steps) */
+    }
 }
 
 /* The steps fire in order, one a block at most, each at its nudged time (micro: 1/64 of a step early
@@ -2863,43 +2984,27 @@ static void seq_tick(track_t *t, uint32_t adv)
         /* (abs + 1 == seq_abs: SWING turned up inside a played odd step: nothing until the grid is back) */
     }
     if (fire) {                                      /* a new step: one a block at most */
+        uint32_t again = 0, flow = comp_flow(t);
+        if (flow) {                                  /* (PULSE / HOLD / JUMP, a direction: the playhead, comp.c) */
+            idx = comp_next(t, len, t->seq_abs == SEQ_NONE, &again);
+        } else {
+            idx = nabs % len;
+            t->cp_adv = nabs;
+        }
         t->seq_abs = nabs;
-        idx = nabs % len;
         t->seq_idx = (uint16_t)idx;
         t->rat_done[0] = t->rat_done[1] = t->rat_done[2] = t->rat_done[3] = 0;
         t->rat_lanes = 0;
-        if (!idx)
-            t->pass++;                               /* a new pass of the loop (recording: one undo) */
-        if (erasing(t))
-            erase_step(t, idx);                      /* EDIT + key held: gone as it passes */
-        t->seq_skip = (uint8_t)!step_plays(t, idx);
-        if (t->seq_skip) {                           /* its fill condition fails: as a REST with no lock */
-            lock_step(t, NSTEP);                     /* (no step has locks there: the bases are back) */
-            t->rskip_lanes = 0;
-            t->rskip_n = 0;
-            if (is_drum(t)) {
-                seq_out_track_off(t);
-            } else {
-                rec_hold(t, idx, len, nabs);
-                seq_release(t);
+        t->cp_hdone = 0;
+        if (again && t->cp_hold) {                   /* HOLD: the step sounds on through this grid step */
+            t->cp_held = 1;
+            if (!t->cp_rep && t->seq_n) {            /* (its last: the gate ends it) */
+                t->seq_hold = 0;
+                t->seq_off = slen * (uint32_t)t->p[P_SGATE] / 128u;
             }
-        } else if (is_drum(t)) {
-            uint32_t skip = t->rskip_abs == nabs ? t->rskip_lanes : 0u;
-            lock_step(t, idx);                       /* its parameter locks, before the block renders */
-            t->rskip_lanes = 0;
-            drum_step(t, &t->dstep[idx], skip);
         } else {
-            const step_t *s = &t->step[idx];
-            uint32_t skip = 0, i, k;
-            lock_step(t, idx);
-            rec_hold(t, idx, len, nabs);
-            if (t->rskip_n && t->rskip_abs == nabs)
-                for (i = 0; i < s->n; i++)
-                    for (k = 0; k < t->rskip_n; k++)
-                        if (s->note[i] == t->rskip[k])
-                            skip |= 1u << i;
-            t->rskip_n = 0;
-            seq_step(t, s, slen, skip);
+            t->cp_held = 0;
+            seq_fire(t, idx, again, flow, nabs, slen);
         }
     }
     /* the ratchets of the step playing, timed from where it fired (its hits ride with its nudge) */
@@ -2909,8 +3014,11 @@ static void seq_tick(track_t *t, uint32_t adv)
         rel = (int32_t)into - ((int32_t)slen + micro_units(t, abs + 1u, slen));
     else
         rel = (int32_t)into;
-    if (t->seq_abs != SEQ_NONE)
+    if (t->seq_abs != SEQ_NONE) {
         seq_ratchets(t, rel < 0 ? 0u : (uint32_t)rel, slen);
+        if (t->cp_bend_a || t->cp_bend)
+            comp_bend_tick(t, rel < 0 ? 0u : (uint32_t)rel, slen);
+    }
 }
 
 /* MIDI in: the track that has channel ch (0..15) as its own: track i's GLO > MIDI > CHi (2.6; CH4 is the drum

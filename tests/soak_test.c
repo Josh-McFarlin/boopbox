@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         static uint32_t layer_btn;
         if (rnd(40) == 0) {                                   /* an event every ~29 ms on average */
             events++;
-            switch (rnd(23)) {
+            switch (rnd(24)) {
             case 16: layer_btn = rnd(3) ? 0u : ly_bit[1u + rnd(LY_COUNT - 1u)] | (rnd(4) ? 0u : dyn_bit[rnd(2)]); break;   /* a layer held */
             case 17: song.g[G_DUST] = (int16_t)rnd(128); song.g[G_DUCK] = (int16_t)rnd(128); break;
             case 18: song.g[G_FILT] = (int16_t)((int)rnd(128) - 64); song.g[G_ROLL] = (int16_t)rnd(5); break;
@@ -87,6 +87,17 @@ int main(int argc, char **argv)
             }
             case 21: trk[rsyn()].p[P_CHORD] = (int16_t)rnd(6); trk[rsyn()].p[P_VOICE] = (int16_t)rnd(4); break;
             case 22: if (rnd(4) == 0) kind_flip(4u + rnd(4)); break;          /* (eight tracks) a track changes kind */
+            case 23: {                                                             /* a step component, a direction */
+                track_t *ct = &trk[rnd(NTRK)];
+                uint32_t ty = 1u + rnd(CP_COUNT - 1u), st = rnd(32);
+                int32_t a = CP_RANGE[ty][0] + (int32_t)rnd((uint32_t)(CP_RANGE[ty][1] - CP_RANGE[ty][0] + 1));
+                int32_t bb = CP_RANGE[ty][2] + (int32_t)rnd((uint32_t)(CP_RANGE[ty][3] - CP_RANGE[ty][2] + 1));
+                if (ty == CP_PARAM) a = P_ED_FLT;
+                if (ty == CP_COND && !a) a = 1;
+                if (rnd(3) == 0) comp_del(ct, st, CP_NONE); else comp_set(ct, st, ty, a, bb);
+                if (rnd(6) == 0) ct->cp_dir = (uint8_t)rnd(DIR_COUNT);
+                break;
+            }
             case 0: if (!ft_on || !rnd(16)) transport_req = song.playing ? 2 : 1; break;   /* (a free take: PLAY closes it) */
             case 1: if (song.playing) rec_begin(); else rec_wait = 1; break;        /* REC */
             case 2: song.rec = 0; rec_wait = 0; break;                            /* REC off */

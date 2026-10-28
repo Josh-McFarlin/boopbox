@@ -233,6 +233,31 @@ typedef struct {                 /* a lock: on step `step` the track's p[param] 
 #define LOCK_FREE 0xFFu
 /* a step's condition (SLOOP 2.4 fill, GLO + key 9 / 10): plays always, only during a fill, never during one */
 enum { FC_NORM, FC_FILL, FC_NOFILL };     /* (3: as FC_NORM) */
+/* Step components (comp.c): rules on a step that change how it plays each time the sequencer reaches it, on top of
+ * what the step holds. Sparse: a track keeps up to NCOMP of them (step, type, two values), several on one step (of
+ * other types). The values (comp.c CP_RANGE): */
+enum {
+    CP_NONE,
+    CP_PULSE,                   /* a 1..8: the step plays again on the next a grid steps, a new hit each, before moving on */
+    CP_HOLD,                    /* a 1..16: the step sounds on through the next a grid steps (held, no new hit) */
+    CP_MULT,                    /* a 2..8: a hits evenly inside the step (a ratchet of the whole step) */
+    CP_VEL,                     /* a 1..127: the velocity of its notes / hits; b 0..64: random, +-b around it */
+    CP_RUP,                     /* a 1..16: each time it plays, b (1..7) scale degrees higher; after a times, back */
+    CP_RDN,                     /* a 1..16: the same, down */
+    CP_RAND,                    /* a 1..12: its notes a random number of scale degrees within +-a away */
+    CP_PORTA,                   /* a 1..127: its notes glide in from the last ones, GLIDE a for the step */
+    CP_BEND,                    /* a -12..12 semitones: the pitch bends over the step; b 0: from the note to a, 1: from a back */
+    CP_TONE,                    /* a -24..24: its notes a semitones away */
+    CP_JUMP,                    /* a 1..64: the sequence goes on at step a after it; b 1..16: every b-th time it plays */
+    CP_PARAM,                   /* a: a lockable parameter (P_*), b 1..100: a random value within +-b % of its range */
+    CP_COND,                    /* a 1..8, b 1..8: plays on loop a of every b (A:B); a -1..-8: on every other loop */
+    CP_TRIG,                    /* a 1..99: plays with a % chance */
+    CP_COUNT
+};
+#define NCOMP 16                 /* components per track */
+#define COMP_FREE 0xFFu          /* comp_t.step of a free slot (its type CP_NONE says it is free) */
+typedef struct { uint8_t step, type; int8_t a, b; } comp_t;
+enum { DIR_FWD, DIR_REV, DIR_PEND, DIR_RAND, DIR_COUNT };   /* a track's play direction (track_t.cp_dir) */
 
 typedef struct track {
     int16_t p[P_COUNT];
@@ -270,11 +295,31 @@ typedef struct track {
     int8_t micro[NSTEP];         /* each step's nudge, MICRO_MIN..MICRO_MAX (1/64 of a step; - early, + late) */
     plock_t lock[NLOCK];         /* parameter locks, unsorted (step LOCK_FREE = a free slot) */
     uint8_t fill[NSTEP / 4];     /* each step's condition, 2 bits (seq.c step_fill): FC_* */
+    comp_t comp[NCOMP];          /* step components (comp.c), unsorted (type CP_NONE: a free slot) */
+    uint8_t cp_dir;              /* the play direction, DIR_* (comp.c comp_next) */
+    uint8_t cp_seed;             /* the components' random seed: every PLAY draws the same numbers */
     /* the locks in force (seq.c lock_step): the params overridden now, what they were, what the lock set */
     uint8_t lk_n;
     uint8_t lk_param[NLOCK];
     int16_t lk_base[NLOCK];
     int16_t lk_set[NLOCK];
+    /* the components' runtime (comp.c) */
+    uint32_t cp_rng;             /* their random numbers (from cp_seed at PLAY) */
+    uint32_t cp_adv;             /* steps moved on since PLAY (trk_len of them: a loop, CP_COND) */
+    int32_t cp_bend;             /* CP_BEND now: 1/4096 semitone over the track's notes (voice.c) */
+    uint8_t cp_rep;              /* PULSE / HOLD: the grid steps the step playing still takes */
+    uint8_t cp_hold;             /* .. held (HOLD: no new hit); cp_held: such a grid step plays now */
+    uint8_t cp_held;
+    int8_t cp_jump;              /* JUMP: the step after this one, -1 none */
+    uint8_t cp_back;             /* DIR_PEND: on the way back */
+    uint8_t cp_skip;             /* COND / TRIG silenced the step playing (its PULSE repeats too) */
+    uint8_t cp_on;               /* the step playing went through its components: cp_step is it as it plays */
+    uint8_t cp_hits, cp_hdone;   /* MULT: the step's hits, those played */
+    uint8_t cp_vel;              /* a drum step's VEL, 0 = none */
+    int8_t cp_bend_a;            /* the step's BEND: semitones (0 none), its shape */
+    uint8_t cp_bend_b;
+    uint8_t cp_ctr[NCOMP];       /* each component's count: RUP / RDN's place, JUMP's plays */
+    step_t cp_step;
     uint32_t seq_abs;            /* the step of the transport grid last played (seq.c trk_grid), SEQ_NONE */
     int16_t bend, bend_s;        /* 2.6: MIDI pitch bend -8192..8191 (seq.c), and as it glides (voice.c, a block at a time) */
     uint16_t seq_idx;            /* its index in the pattern */
