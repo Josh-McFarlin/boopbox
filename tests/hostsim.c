@@ -230,7 +230,7 @@ static int tracks_demo(const char *dir, const char *name, uint32_t solo)
             if (i + 1u != solo)
                 trk[i].p[P_LEVEL] = 0;
         if (solo != 4u)
-            song.g[G_DRLVL] = 0;
+            TDRUM->p[P_LEVEL] = 0;
     }
     kills0 = voice_kills;
     transport_req = 1;

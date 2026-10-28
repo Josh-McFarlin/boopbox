@@ -1125,9 +1125,11 @@ async function editorDsyn() {
     const f6 = Uint8Array.of(0x36, 0x4E, 0x55, 0x46, 1), f5 = Uint8Array.of(0x35, 0x4E, 0x55, 0x46);
     ok(E.bkProjFormat(f6) === 6 && E.bkProjFormat(f5) === 5 && E.bkProjFormat(Uint8Array.of(1, 2, 3, 4)) === 0
       && E.bkDevFormat({ pcount: 71 }) === 6 && E.bkDevFormat({ pcount: 61 }) === 5 && E.bkDevFormat({ pcount: 53 }) === 4
+      && E.bkDevFormat({ pcount: 71, ntrk: 8 }) === 7 && E.bkDevFormat({ pcount: 71, ntrk: 4 }) === 6
+      && E.bkProjFormat(Uint8Array.of(0x37, 0x4E, 0x55, 0x46, 12, 0, 0, 0)) === 7
       && E.bkFwAtLeast("SLOOP 2.6", [2, 5, 1]) && E.bkFwAtLeast("SLOOP 2.6", [2, 5, 1]) && !E.bkFwAtLeast("SLOOP 2.5", [2, 5, 1])
       && !E.bkFwAtLeast("FELUCCA SLOOP 2.0 (MOCK)", [2, 5, 1]),
-      "backup: the project format of an object, what a device reads (INFO), the firmware compared");
+      "backup: the project format of an object, what a device reads (INFO: eight tracks read format 7), the firmware compared");
     let err = null, writes = 0;
     const rq25 = async (r, o) => {                    /* a 2.5 FM-1 (INFO: 61 parameters); anything else counts as a write */
       if (r[0] === C.INFO) return { info25: { ...E.parse[C.INFO](await rq(r, o)), pcount: 61, pe0: 53 } };

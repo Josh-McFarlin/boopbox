@@ -166,9 +166,13 @@ $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/scale_test" tests/scale_test.c -l
 run "scales: white-key mapping and note lifecycle" "$OUT/scale_test"
 run "DSP render (ANALOG preset 0)" "$OUT/hostsim" 0 0 1 "$OUT/render.wav"
 mkdir -p build/tracks_demo
-run "TRACKS: 4-track pattern, live recording (lengths, swing), voice budget, engine switch, cost" env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
+run "TRACKS: 4-track pattern (of eight), live recording (lengths, swing), voice budget, engine switch, cost" env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
+$CC -O2 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/tracks8_test" tests/tracks8_test.c -lm
+run "eight tracks: all at once on their own lengths, the shared voice budget, two drum tracks, kinds, arenas, STUT, MIDI CH5..8" "$OUT/tracks8_test"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/project_test" tests/project_test.c -lm
-run "project formats (FUN4 / FUN3 / FUN2 / FUN1 -> FUN5), capture / apply, autosave" "$OUT/project_test"
+run "project formats: FUN7 (eight tracks) round trips, damage, too big refused whole, FUN6 fallback; FUN1..FUN6 converted" "$OUT/project_test"
+$CC -O1 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -o "$OUT/arena_test" tests/arena_test.c -lm
+run "engine arenas: no stale state, no engine on another's arena, a random session (lent to the tracks)" "$OUT/arena_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/slicer_test" tests/slicer_test.c -lm
 mkdir -p build/slicer_demo
 run "SLICER: no clicks, timing, sync with the sequencer, STUT, cost, demos" "$OUT/slicer_test" build/slicer_demo

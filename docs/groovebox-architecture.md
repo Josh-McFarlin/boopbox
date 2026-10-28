@@ -110,3 +110,30 @@ New modules (all host-testable, no allocation, bounded loops):
 
 - Milestone A: baseline host suite passes (`HOST_ONLY=1`, 4 tests skipped for want of a firmware build);
   sizes measured with `tools/proxy_size.py`.
+- Milestone B (eight tracks), as built:
+  - `track_t.kind`; `is_drum()` reads it; `drum_focus()` / `DFOC` is the drum track the drum pages show (the selected
+    one, else the first). The default layout: synths 1-3 and 5-7, drums 4 and 8 (`params.c TRK_DEF`, `pon_params`).
+  - Drum tracks: one pool of `NDRUM` voices with an owner each (`drums.own`); kit, TUNE / DECAY, LEVEL / REV / DLY
+    (in the track's `P_LEVEL`, `P_REV`, `P_DLY`, `params.c DRUM_MIX_DESC`), lane mutes and the hat choke per track.
+    GLO > DRUMS edits the focused drum track. A drum track with its SLICER, INSERT or FILTER on renders on a mono bus.
+  - Engine arenas: three, lent (`engines.c eng_arena_take / eng_arena_drop / eng_arena_lend`); ownership is two-way, so
+    a stale entry frees itself; a track without an arena stays on core 0 (it may take one as it renders). A fourth big
+    engine waits for a free arena (`tests/tracks8_test.c t_arena`).
+  - STUT buffers: four, lent once a block on core 0 in track order (`slicer.c sl_lend`), never while rendering.
+  - Render units: one per track, eight bits in core 1's job argument; core 1's default share is tracks 3, 4, 7, 8.
+    Two races found by the extended split test and fixed: the drum voices' shared `active` scan, the drum synth's
+    shared scratch (`ds_buf`, now on the stack).
+  - MIDI: CH5..CH8 (`G_CH5..G_CH8`, GLO > MIDI 4), saved in an 8-byte tail of the settings' MIDI part that older
+    firmware ignores; MIDI LEARN keeps a fourth track bit (`ml_hi`) there too.
+  - Screens that list tracks (TRACKS, REC, the track meters, the GLO layer, the visualiser) show the bank of four the
+    selected track is in; tracks 5-8 take the colours of 1-4.
+  - Project format 7 (`project.c proj7_*`): typical eight-track projects take ~1.1 KB of the 3,840; four dense
+    tracks 3.4 KB; eight dense tracks (6.4 KB) are refused whole (PROJECT FULL). Format 6 is still read and is the
+    fallback when tracks 5..8 are as at power-on.
+  - The golden renders: bit for bit the same when only tracks 1..4 render; with all eight, the three idle synth tracks
+    5..7 tick their LFOs and an LFO wrap draws from the shared `rng()`, which shifts the random seeds of the PHYS
+    string models: those 8 renders were re-recorded (`tests/golden.txt`), no other sound changed.
+  - Not kept for eight tracks (documented limits): the web editor's LIVE page and its track list stay four-track
+    (the protocol frame sizes are unchanged); the editor's FM6 / track commands accept tracks 1..8.
+  - Proxy sizes against the baseline: RAM 59,094 -> 71,448 B (+12.4 KB of 96 KB: `trk` +8.6 KB, the INSERT states,
+    FM6's per-track copies), pool +48 B, code +10.7 KB (format 7's codec ~6 KB of it).

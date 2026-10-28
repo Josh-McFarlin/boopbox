@@ -19,8 +19,9 @@
  * from the steps), the track's + the global SWING as the sequencer has them (seq.c trk_grid); sample
  * exact. With the SLICER OFF and no ramp left, the signal is not touched.
  * Eight tracks: STUT's recordings are SL_NBUF buffers (8 KB each, the pool has room for four), lent to the tracks in
- * STUT mode in the order they ask (sl_buf_of); a fifth track in STUT gets none and plays live (gate and clock as
- * usual, no repeat) until one is free. GATE needs no buffer: every track can gate. */
+ * STUT mode, in track order, once a block on core 0 before the render (sl_lend; the units only look them up, on either
+ * core); a fifth track in STUT gets none and plays live (gate and clock as usual, no repeat) until one is free. GATE
+ * needs no buffer: every track can gate. */
 #define SL_NPAT 16
 #define SL_LEN 4096u                    /* recording, 22.05 kHz samples a track: 186 ms, 8 KB */
 #define SL_RAMP_LOG2 7
@@ -66,28 +67,38 @@ typedef struct {
     uint8_t rec_on;              /* recording this step */
 } sl_t;
 static sl_t sl[NTRK];
-/* track k's STUT buffer: its own, a free one (taken), 0 when all are lent; a track not in STUT gives its back */
+/* track k's STUT buffer, 0 when none is lent to it (sl_lend) */
 static int16_t *sl_buf_of(const track_t *t, uint32_t k)
 {
-    uint32_t i, f = SL_NBUF;
-    for (i = 0; i < SL_NBUF; i++) {
-        if (sl_buf_trk[i] == k + 1u) {
-            if (t->p[P_SLCR] == SL_STUT || sl[k].loop || sl[k].w)
-                return sl_buf[i];
-            sl_buf_trk[i] = 0;                      /* (no longer in STUT, nothing repeating: free) */
-            return 0;
-        }
-        if (!sl_buf_trk[i] && f == SL_NBUF)
-            f = i;
-    }
-    if (t->p[P_SLCR] != SL_STUT || f == SL_NBUF)
-        return 0;
-    sl_buf_trk[f] = (uint8_t)(k + 1u);
-    sl[k].rec = 0;                                  /* (a fresh buffer: nothing recorded in it for this track) */
-    sl[k].loop = 0;
-    return sl_buf[f];
+    uint32_t i;
+    (void)t;
+    for (i = 0; i < SL_NBUF; i++)
+        if (sl_buf_trk[i] == k + 1u)
+            return sl_buf[i];
+    return 0;
 }
-
+/* once a block on core 0, before the render (seq.c events_block): the buffers of the tracks out of STUT (nothing left
+ * repeating) back, then the free ones to the tracks in STUT that have none, in track order */
+static void sl_lend(void)
+{
+    uint32_t i, k;
+    for (i = 0; i < SL_NBUF; i++) {
+        uint32_t o = sl_buf_trk[i];
+        if (o && (o > NTRK || (trk[o - 1u].p[P_SLCR] != SL_STUT && !sl[o - 1u].w && !sl[o - 1u].loop)))
+            sl_buf_trk[i] = 0;
+    }
+    for (k = 0; k < NTRK; k++) {
+        if (trk[k].p[P_SLCR] != SL_STUT || sl_buf_of(&trk[k], k))
+            continue;
+        for (i = 0; i < SL_NBUF && sl_buf_trk[i]; i++)
+            ;
+        if (i == SL_NBUF)
+            return;                                 /* (all lent: this one and the later ones play live) */
+        sl_buf_trk[i] = (uint8_t)(k + 1u);
+        sl[k].rec = 0;                              /* (a fresh buffer: nothing recorded in it for this track) */
+        sl[k].loop = 0;
+    }
+}
 static void slicer_start(uint32_t pos)   /* seq_start: step 0 of every track, pos units in */
 {
     uint32_t k;
@@ -184,11 +195,6 @@ static void slicer_track(const track_t *t, int32_t *b, uint32_t n)
     uint32_t k = (uint32_t)(t - trk) % NTRK, i = 0, bpm = (uint32_t)song.g[G_BPM];
     sl_t *s = &sl[k];
     int act = b && (t->p[P_SLCR] != SL_OFF || s->gc || s->w);
-    if (!act && t->p[P_SLCR] != SL_STUT && !s->w)
-        for (i = 0; i < SL_NBUF; i++)
-            if (sl_buf_trk[i] == k + 1u)
-                sl_buf_trk[i] = 0;                  /* (out of STUT: its buffer back to the others) */
-    i = 0;
     while (i < n) {
         uint32_t m, left;
         while (s->pos >= s->len)

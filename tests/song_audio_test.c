@@ -50,7 +50,7 @@ int main(int argc, char **argv)
             for (j = 0; j < trk[i].step[k].n; j++) trk[i].step[k].note[j] += 5;
         }
     host_preset_req(&trk[2], 0, 1);             /* change the lead's engine at the section boundary */
-    song.g[G_DRLVL] = 80;
+    TDRUM->p[P_LEVEL] = 80;                   /* (the drum track's level: saved with the section) */
     TDRUM->p[P_E0] = 4;                       /* drum kit is saved with the section */
     capture(1);
     arr_defaults(&arrangement);
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     assert(at_change >= FS*4u && at_change < FS*4u + CTL);
     assert(at_stop >= FS*8u && at_stop < FS*8u + CTL);
     assert(trk[0].step[0].note[0] == 41);
-    assert(trk[2].engine == 0 && song.g[G_DRLVL] == 80);
+    assert(trk[2].engine == 0 && TDRUM->p[P_LEVEL] == 80);
     assert(drum_kit(TDRUM) == 4);
     for (i = 0; i < NPART; i++) {
         assert(trk[i].seq_n == 0);

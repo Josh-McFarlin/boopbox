@@ -124,7 +124,7 @@ int main(void)
     uint32_t i, k, ok;
     uint64_t rng_s = 12345;
     host_tracks_init();
-    song.g[G_DRREV] = 0;
+    TDRUM->p[P_REV] = 0;
     song.g[G_BPM] = 120;
     check(DRUM_SYN == DRUM_PAIR + 1u && DRUM_KITS == DRUM_SYN + 4u && !strcmp(DRUM_KIT_NAMES[DRUM_SYN], "SYN1") &&
           !strcmp(DRUM_KIT_NAMES[DRUM_KITS - 1u], "SYN4") && !strcmp(DRUM_KIT_STYLES[DRUM_SYN], "YOUR SYNTH"),

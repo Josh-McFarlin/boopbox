@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     if (!f)
         return 1;
     host_tracks_init();
-    song.g[G_DRLVL] = 100;
+    TDRUM->p[P_LEVEL] = 100;
     for (kit = DRUM_SAMPLED; kit < DRUM_USR; kit++)
         for (ln = 0; ln < 16u; ln++) {
             memset(&drums, 0, sizeof drums);

@@ -1005,7 +1005,7 @@ static void t_midifix(void)
     check(trk[0].bend == 0 && trk[1].bend == 0, "2.6: the wheel let go after another track was selected: the first one back too");
     mclk_push(0x0Eu | (0xE0u | 0u) << 8 | 127u << 16 | 127u << 24);
     run_block();
-    panic_req = 15, run_block();
+    panic_req = (1u << NTRK) - 1u, run_block();
     check(trk[0].bend == 0, "2.6: a project / NEW (every track released): the bends back to the middle");
     mf_prep();                                        /* OTHER = OFF */
     song.sel = 0, song.g[G_CHOTH] = 1;
@@ -1970,12 +1970,12 @@ static void t_midicc(void)
     cc_push(drch, 7, 0); cc_push(drch, 91, 127); cc_push(drch, 10, 0); cc_push(drch, 74, 127); cc_push(drch, 73, 127);
     cc_push(drch, 94, 64);
     run_block(); run_block();
-    check(song.g[G_DRLVL] == 0 && song.g[G_DRREV] == 127 && song.g[G_DRDLY] == 64 && TDRUM->p[P_PAN] == -64 && TDRUM->p[P_TFLT] == 63
-          && TDRUM->p[P_ATK] == before[P_ATK] && TDRUM->p[P_DLY] == before[P_DLY],
-          "2.5: the drum channel: 7 / 91 / 94 = DRUMS LVL / REV / DLY, 10 PAN, 74 FILTER; 73 ignored");
+    check(TDRUM->p[P_LEVEL] == 0 && TDRUM->p[P_REV] == 127 && TDRUM->p[P_DLY] == 64 && TDRUM->p[P_PAN] == -64 && TDRUM->p[P_TFLT] == 63
+          && TDRUM->p[P_ATK] == before[P_ATK],
+          "2.5: the drum channel: 7 / 91 / 94 = DRUMS LVL / REV / DLY (the drum track's own), 10 PAN, 74 FILTER; 73 ignored");
     {   /* 2.7.1: CC 11 EXPRESSION, a gain over the LEVEL (the mix untouched); CC 121 full again */
         int32_t o[CTL * 2], pk[3] = {0, 0, 0};
-        uint32_t ph, j, lv = song.g[G_DRLVL];
+        uint32_t ph, j, lv = TDRUM->p[P_LEVEL];
         a->p[P_LEVEL] = 100, a->p[P_ATK] = 0, a->p[P_SUS] = 127, a->p[P_MUTE] = 0;
         a->p[P_E0 + 4] = ENGINES[0]->edit[4].max, a->p[P_TFLT] = 0, a->p[P_REV] = a->p[P_DLY] = a->p[P_CHOR] = 0;   /* (CUT open)*/
         mclk_push(0x09u | 0x90u << 8 | 60u << 16 | 100u << 24);   /* ch 1: a held C4 */
@@ -1996,7 +1996,7 @@ static void t_midicc(void)
               "2.7.1: CC 11 on ch 1: track 1 at 64 about -12 dB, at 0 silent, its LEVEL untouched");
         cc_push(drch, 11, 0); cc_push(1, 11, 100);
         run_block(); run_block();
-        check(ex_off[TRK_DRUM] == 127u && song.g[G_DRLVL] == (int16_t)lv && ex_off[1] == 27u && expr_gain(25400, TRK_DRUM) == 0,
+        check(ex_off[TRK_DRUM] == 127u && TDRUM->p[P_LEVEL] == (int16_t)lv && ex_off[1] == 27u && expr_gain(25400, TRK_DRUM) == 0,
               "2.7.1: CC 11 on the drum channel: the drums' expression (DRUMS LVL untouched); ch 2: track 2's");
         cc_push(0, 121, 0); cc_push(drch, 121, 0); cc_push(1, 121, 0);
         run_block(); run_block();
@@ -2006,7 +2006,7 @@ static void t_midicc(void)
         for (j = 0; j < 40u; j++) run_block();
         a->p[P_LEVEL] = 127;                            /* (as the CCs above left it) */
     }
-    song.g[G_DRDLY] = 0;
+    TDRUM->p[P_DLY] = 0;
     song.g[G_ROUTE] = 1;
     cc_push(0, 7, 55);
     run_block(); run_block();
@@ -2105,15 +2105,15 @@ static double drdly_echo(int32_t dly, int32_t flt)
 {
     double e;
     reset(120);
-    song.g[G_DRREV] = 0;
-    song.g[G_DRDLY] = (int16_t)dly;
+    TDRUM->p[P_REV] = 0;
+    TDRUM->p[P_DLY] = (int16_t)dly;
     TDRUM->p[P_TFLT] = (int16_t)flt;
     tf_measure(40);
     trk_note_on(TDRUM, 38u, 120);
     tf_measure(120);                                     /* the hit */
     tf_measure(1600);                                    /* then its echoes (or silence) */
     e = tf_rms;
-    song.g[G_DRDLY] = 0;
+    TDRUM->p[P_DLY] = 0;
     TDRUM->p[P_TFLT] = 0;
     return e;
 }

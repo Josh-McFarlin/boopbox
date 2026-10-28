@@ -505,7 +505,7 @@ static void drum_tw_get(const project_v6_t *p)
 
 /* track t becomes kind k at once (a project or a section applied: the audio ISR, or with the IRQ off): whatever it
  * sounded (its synth voices, the drum voices it owns, a fade, its engine arena) ends here, its mix starts afresh */
-static void trk_kind_now(track_t *t, uint32_t k)
+UI_SMALL static __attribute__((noinline)) void trk_kind_now(track_t *t, uint32_t k)
 {
     uint32_t i, own = (uint32_t)(t - trk) % NTRK;
     if (t->kind == k)
@@ -528,7 +528,7 @@ static void trk_kind_now(track_t *t, uint32_t k)
 /* track i as at power-on (its kind, sound and an empty pattern), from the audio ISR or with the IRQ off: no side effect
  * but what its sound needs (fm6_track_loaded: the main loop loads its FM6 patch). A project of four tracks leaves
  * tracks 5..8 so */
-static void trk_pon_now(uint32_t i)
+UI_SMALL static __attribute__((noinline)) void trk_pon_now(uint32_t i)
 {
     track_t *t = &trk[i % NTRK];
     trk_kind_now(t, trk_def_kind(i));
@@ -545,7 +545,7 @@ static void trk_pon_now(uint32_t i)
 }
 /* track i is as at power-on: its kind and sound (every parameter), nothing in its pattern (format 6 can keep the
  * other tracks then) */
-static int trk_pristine(uint32_t i)
+UI_SMALL static __attribute__((noinline)) int trk_pristine(uint32_t i)
 {
     int16_t p[P_COUNT];
     const track_t *t = &trk[i % NTRK];
@@ -613,7 +613,7 @@ UI_SMALL static void proj6_capture(project_v6_t *p)    /* tracks 1..4 as format 
 /* a format 6 project's tracks (and its globals, all: a load; or only the drum level / reverb / delay: a song section)
  * into tracks 1..4, every value back inside its range; tracks 5..8 as at power-on. The audio ISR must not run
  * meanwhile (the song sections: called from it; a load: IRQ off) */
-static void proj6_apply(const project_v6_t *p, int all)
+UI_SMALL static __attribute__((noinline)) void proj6_apply(const project_v6_t *p, int all)
 {
     uint32_t i, k;
     for (i = 0; i < PROJ_NG; i++)
@@ -697,13 +697,13 @@ static void proj6_apply(const project_v6_t *p, int all)
  *       its default then the value; a drum track's sounds' TUNE / DECAY (16 bytes); then its pattern (pat_put)
  * A track with no chunk is as at power-on (trk_pon_now). Every value is clamped to its range when it is read. */
 typedef struct { uint8_t *b; uint32_t n, max; } pw_t;   /* a writer: n counts on past max (the size, nothing written) */
-static void pw_u8(pw_t *w, uint32_t v)
+UI_SMALL static __attribute__((noinline)) void pw_u8(pw_t *w, uint32_t v)
 {
     if (w->n < w->max)
         w->b[w->n] = (uint8_t)v;
     w->n++;
 }
-static void pw_v(pw_t *w, int32_t v)
+UI_SMALL static __attribute__((noinline)) void pw_v(pw_t *w, int32_t v)
 {
     if (v >= -127 && v <= 127) {
         pw_u8(w, (uint32_t)v & 0xFFu);
@@ -729,7 +729,7 @@ static void pw_close(pw_t *w, uint32_t at)
         w->b[at - 1u] = (uint8_t)(len >> 8);
 }
 typedef struct { const uint8_t *b; uint32_t n, i; uint8_t bad; } pr_t;   /* a reader: never past n */
-static uint32_t pr_u8(pr_t *r)
+UI_SMALL static __attribute__((noinline)) uint32_t pr_u8(pr_t *r)
 {
     if (r->i >= r->n) {
         r->bad = 1;
@@ -737,7 +737,7 @@ static uint32_t pr_u8(pr_t *r)
     }
     return r->b[r->i++];
 }
-static int32_t pr_v(pr_t *r)
+UI_SMALL static __attribute__((noinline)) int32_t pr_v(pr_t *r)
 {
     uint32_t v = pr_u8(r);
     if (v != 0x80u)
@@ -749,7 +749,7 @@ static int32_t pr_v(pr_t *r)
 
 /* a track's pattern (its steps, nudges and fill conditions, parameter locks): each part sparse (a bit per step it
  * holds something on, then those) or whole, whichever is smaller */
-static int step_blank(const track_t *t, uint32_t k)    /* as steps_clear leaves it */
+UI_SMALL static __attribute__((noinline)) int step_blank(const track_t *t, uint32_t k)    /* as steps_clear leaves it */
 {
     const uint8_t *b = (const uint8_t *)&t->step[k];
     uint32_t i;
@@ -758,7 +758,7 @@ static int step_blank(const track_t *t, uint32_t k)    /* as steps_clear leaves 
             return 0;
     return 1;
 }
-static uint32_t step_size(const track_t *t, uint32_t k) /* the bytes step_put takes */
+UI_SMALL static __attribute__((noinline)) uint32_t step_size(const track_t *t, uint32_t k) /* the bytes step_put takes */
 {
     if (is_drum(t)) {
         const dstep_t *d = &t->dstep[k];
@@ -773,7 +773,7 @@ static uint32_t step_size(const track_t *t, uint32_t k) /* the bytes step_put ta
                (s->lvl != 0u) + (s->rat != 0u);
     }
 }
-static void step_put(pw_t *w, const track_t *t, uint32_t k)
+UI_SMALL static __attribute__((noinline)) void step_put(pw_t *w, const track_t *t, uint32_t k)
 {
     uint32_t j;
     if (is_drum(t)) {
@@ -807,7 +807,7 @@ static void step_put(pw_t *w, const track_t *t, uint32_t k)
             pw_u8(w, s->rat);
     }
 }
-static void step_get(pr_t *r, track_t *t, uint32_t k)
+UI_SMALL static __attribute__((noinline)) void step_get(pr_t *r, track_t *t, uint32_t k)
 {
     uint32_t j;
     if (is_drum(t)) {
@@ -847,7 +847,7 @@ static uint32_t step_mf(const track_t *t, uint32_t k)  /* a step's nudge (6 bits
 }
 static uint32_t lock_code(uint32_t id) { return id < P_E0 ? id : 0xF0u + (id - P_E0); }   /* (P_E0 moves: see 'T') */
 static uint32_t lock_id(uint32_t code) { return code >= 0xF0u ? (code - 0xF0u < 8u ? P_E0 + code - 0xF0u : P_COUNT) : code < P_E0 ? code : P_COUNT; }
-static void pat_put(pw_t *w, const track_t *t)
+UI_SMALL static __attribute__((noinline)) void pat_put(pw_t *w, const track_t *t)
 {
     uint8_t map[NSTEP / 8];
     uint32_t k, sz = NSTEP / 8, nl = 0;
@@ -900,7 +900,7 @@ static void pat_put(pw_t *w, const track_t *t)
             pw_v(w, t->lock[k].val);
         }
 }
-static void pat_get(pr_t *r, track_t *t)
+UI_SMALL static __attribute__((noinline)) void pat_get(pr_t *r, track_t *t)
 {
     uint32_t k, m, n;
     uint8_t map[NSTEP / 8];
@@ -964,7 +964,7 @@ static int32_t trk_pref(const track_t *t, uint32_t id)
 {
     return is_drum(t) && id > P_E0 && id <= P_E7 ? 0 : track_desc(t, id)->def;   /* (a drum track's E1..E7: unused, 0) */
 }
-static void trk_put(pw_t *w, uint32_t i)
+UI_SMALL static __attribute__((noinline)) void trk_put(pw_t *w, uint32_t i)
 {
     const track_t *t = &trk[i];
     uint8_t map[(P_E0 + 7u) / 8u], em = 0;
@@ -973,7 +973,7 @@ static void trk_put(pw_t *w, uint32_t i)
     pw_u8(w, i);
     pw_u8(w, t->kind);
     pw_u8(w, is_drum(t) ? 0u : t->eng_req);
-    pw_u8(w, t->preset);
+    pw_u8(w, is_drum(t) ? 0u : t->preset);              /* (a drum track has neither: 0) */
     pw_u8(w, P_E0);
     for (k = 0; k < P_E0; k++)
         if (t->p[k] != trk_pref(t, k))
@@ -996,7 +996,7 @@ static void trk_put(pw_t *w, uint32_t i)
     pat_put(w, t);
     pw_close(w, at);
 }
-static void trk_get(pr_t *r)
+UI_SMALL static __attribute__((noinline)) void trk_get(pr_t *r)
 {
     uint32_t i = pr_u8(r), kind = pr_u8(r), e = pr_u8(r) % NENGINES, pre = pr_u8(r), nc = pr_u8(r), k;
     uint8_t map[32];
@@ -1005,7 +1005,7 @@ static void trk_get(pr_t *r)
         return;
     t = &trk[i];
     trk_kind_now(t, kind);
-    t->eng_req = (uint8_t)(kind == TK_DRUM ? 0u : e);
+    t->eng_req = (uint8_t)(kind == TK_DRUM ? 0u : e);   /* (a drum track: engine and preset 0, as power-on has them) */
     t->user = 0;
     t->lk_n = 0;
     for (k = 0; k < P_COUNT; k++)
@@ -1038,7 +1038,7 @@ static void trk_get(pr_t *r)
     if (kind == TK_SYNTH)
         fm6_track_loaded(t);                            /* FM6: the project keeps PTCH, not the patch: its slot's */
 }
-static void proj7_put(pw_t *w)
+UI_SMALL static __attribute__((noinline)) void proj7_put(pw_t *w)
 {
     uint8_t map[(G_COUNT + 7u) / 8u];
     uint32_t i, at;
@@ -1062,7 +1062,7 @@ static void proj7_put(pw_t *w)
 }
 /* the globals a section takes from its project (a load takes all but the FM-1's settings): the TEXTURE */
 static int g_of_section(uint32_t i) { return i >= G_TXSRC && i <= G_TXDUCK; }
-static void proj7_apply(const project_t *p, int all)
+UI_SMALL static __attribute__((noinline)) void proj7_apply(const project_t *p, int all)
 {
     pr_t r = {p->d, p->size - PROJ_HDR, 0, 0};
     uint32_t seen = 0, i;

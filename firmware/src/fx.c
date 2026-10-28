@@ -907,6 +907,10 @@ static uint32_t units_split(void)
                                                          * an engine fading out its old engine values, pe_old) */
         if (!(mask & (1u << k)) || is_drum(t))
             continue;
+        if (eng_big(t->engine) && !t->arena) {         /* (no arena yet: it may take one as it renders, on core 0 only) */
+            mask &= ~(1u << k);
+            continue;
+        }
         inc = p[P_LSYNC] ? lfo_sync_inc(p) : LFO_INC[p[P_LRATE] & 127];   /* (2.6: LFO 2 SYNC, as track_lfo_tick) */
         if (t->lfo_ph + inc < t->lfo_ph || (e == &ENG_PHYS && phys_render_draws(t, fade ? t->pe_old[0] : p[P_E0])) ||
             (e == &ENG_FORMANT && nform > 1u))
