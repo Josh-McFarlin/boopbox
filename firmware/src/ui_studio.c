@@ -408,7 +408,7 @@ UI_SMALL static void drum_screen_draw(void)
     }
     sig = drum_page + drum_lane * 7u + drum_cursor * 101u + song.playing * 71u + len * 3u + ui.sheet * 7919u +
           (uint32_t)(DFOC->micro[drum_cursor] + 64) * 104729u + step_fill(DFOC, drum_cursor) * 13u +
-          comp_sig(DFOC, drum_cursor) * 2654435761u;
+          comp_sig(DFOC, drum_cursor) * 2654435761u + lock_sig(DFOC, drum_cursor) * 40503u;
     for (i = 0; i < DRUM_LANES; i++) sig = sig * 5u + (uint32_t)(drum_tune[dfi()][i] + 8) * 9u + (uint32_t)(drum_dec[dfi()][i] + 4);
     if (song.playing) sig = sig * 31u + DFOC->seq_idx;
     for (i = 0; i < DRUM_LANES; i++) sig = sig * 3u + (pad_lit[i] != 0);
@@ -448,8 +448,9 @@ UI_SMALL static void drum_screen_draw(void)
             if (ui.sheet) {                            /* (2.7.2) OCT+ held: the hit's sheet (2.8.1: a strip at the bottom) */
                 const dstep_t *s = &DFOC->dstep[drum_cursor];
                 char r[4], nu[8];
-                char cn[4];
-                const char *val[NSHEET] = {r, nu, FILL_N[step_fill(DFOC, drum_cursor) % 3u], "", "", "", cn};
+                char cn[4], ln[4];
+                uint8_t ls[NLOCK];
+                const char *val[NSHEET] = {r, nu, FILL_N[step_fill(DFOC, drum_cursor) % 3u], "", "", "", cn, ln};
                 int8_t m = DFOC->micro[drum_cursor];
                 str_cpy(r, dstep_has(s, drum_lane) ? "x1" : "--", 4);
                 if (dstep_has(s, drum_lane))
@@ -459,8 +460,13 @@ UI_SMALL static void drum_screen_draw(void)
                 str_cpy(cn, "--", 4);
                 if (comp_count(DFOC, drum_cursor))
                     fmt_int(cn, (int32_t)comp_count(DFOC, drum_cursor));
+                str_cpy(ln, "--", 4);
+                if (lock_items(DFOC, drum_cursor, ls))
+                    fmt_int(ln, (int32_t)lock_items(DFOC, drum_cursor, ls));
                 if (ui.csheet)
                     comp_strip_draw(84, DFOC, drum_cursor, TE_DIM[3]);
+                else if (ui.lsheet)
+                    lock_strip_draw(84, DFOC, drum_cursor, TE_DIM[3]);
                 else
                     sheet_bar(84, DSHEET_N, val, ui.sheet - 1u, TE_DIM[3]);
             }
@@ -596,6 +602,10 @@ UI_SMALL static void drum_sheet_knob(uint32_t k, int32_t s)
         comp_strip_knob(DFOC, drum_cursor, k, s);
         return;
     }
+    if (ui.lsheet) {                                      /* the LOCKS strip (the step's) */
+        lock_strip_knob(DFOC, drum_cursor, k, s);
+        return;
+    }
     if (k == 0u) {
         ui.sheet = (uint8_t)(1 + clamp((int32_t)row + s, 0, NSHEET - 1));
         ui.sheet_last = (uint8_t)(ui.sheet - 1u);          /* (2.8.1) reopen on this row next time */
@@ -626,8 +636,16 @@ UI_SMALL static void drum_sheet_do(void)                 /* OCT+ tapped in the s
         comp_strip_do(DFOC, drum_cursor);
         return;
     }
-    if (ui.sheet == 7u) {                                 /* COMP: the step's components */
+    if (ui.lsheet) {
+        lock_strip_do(DFOC, drum_cursor);
+        return;
+    }
+    if (ui.sheet == 1u + SH_COMP) {                       /* COMP: the step's components */
         ui.csheet = 1;
+        return;
+    }
+    if (ui.sheet == 1u + SH_LOCKS) {                      /* LOCKS: the step's parameter locks */
+        ui.lsheet = 1;
         return;
     }
     undo_mark(DFOC, (undo_sess += 4u) | 3u);
@@ -661,15 +679,15 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
         pressed = octp_filter(pressed, &ev);
         if (ev == 2u && !ui.sheet) {
             ui.sheet = (uint8_t)(1u + ui.sheet_last);      /* (2.8.1) reopen on the row last used */
-            ui.csheet = 0;
+            ui.csheet = ui.lsheet = 0;
         } else if (ev == 1u && ui.sheet) {
             drum_sheet_do();
         } else if (ev == 1u) {
             pressed |= 1u << panel.btn[B_OCTUP];
         }
         if (ui.sheet && (pressed & ob)) {
-            if (ui.csheet)
-                ui.csheet = 0;                              /* (the COMP strip: back to the sheet) */
+            if (ui.csheet || ui.lsheet)
+                ui.csheet = ui.lsheet = 0;                  /* (a strip: back to the sheet) */
             else
                 ui.sheet = 0;
             pressed &= ~ob;

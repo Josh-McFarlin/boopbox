@@ -1091,7 +1091,7 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
         for (i = 0; i < NLOCK; i++)
             if (t->lock[i].step < NSTEP) {
                 ed_b(t->lock[i].step);
-                ed_b(t->lock[i].param);
+                ed_b(t->lock[i].param & LOCK_PID);   /* (its SLIDE: not in this reply) */
                 ed_v(t->lock[i].val);
             }
         break;

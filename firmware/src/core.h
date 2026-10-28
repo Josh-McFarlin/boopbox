@@ -224,13 +224,17 @@ _Static_assert(sizeof(step_t) == 10 && sizeof(dstep_t) == 10, "a step is 10 byte
 /* SLOOP 2.4: per-step nudge (micro timing) and parameter locks (seq.c seq_tick / lock_step) */
 #define MICRO_MIN (-32)          /* a step's nudge in 1/64 of its length: half a step early .. */
 #define MICRO_MAX 31             /* .. just under half a step late (0 = on the grid) */
-#define NLOCK 24                 /* parameter locks per track (several may share a step: other params) */
-typedef struct {                 /* a lock: on step `step` the track's p[param] is `val` (4 bytes) */
+#define NLOCK 32                 /* parameter locks per track (several may share a step: other params) */
+#define NLOCK_V6 24u             /* .. in a project of format 5 or 6 (SLOOP 2.4 .. 2.8.3) */
+typedef struct {                 /* a lock: on step `step` the track's p[param & LOCK_PID] is `val` (4 bytes) */
     uint8_t step;                /* 0xFF = a free slot */
-    uint8_t param;               /* P_* (a lockable one: p_lockable) */
+    uint8_t param;               /* P_* (a lockable one: p_lockable) | LOCK_SLIDE */
     int16_t val;
 } plock_t;
 #define LOCK_FREE 0xFFu
+#define LOCK_PID 0x7Fu           /* plock_t.param: the parameter */
+#define LOCK_SLIDE 0x80u         /* .. and SLIDE: over its step the parameter glides from what it was to val (seq.c) */
+#define NSLIDE 4                 /* SLIDE locks gliding at once on a track (the step's first four) */
 /* a step's condition (SLOOP 2.4 fill, GLO + key 9 / 10): plays always, only during a fill, never during one */
 enum { FC_NORM, FC_FILL, FC_NOFILL };     /* (3: as FC_NORM) */
 /* Step components (comp.c): rules on a step that change how it plays each time the sequencer reaches it, on top of
@@ -303,6 +307,8 @@ typedef struct track {
     uint8_t lk_param[NLOCK];
     int16_t lk_base[NLOCK];
     int16_t lk_set[NLOCK];
+    uint8_t sl_n, sl_p[NSLIDE];  /* the SLIDE locks of the step playing: their parameters, from what, to what */
+    int16_t sl_from[NSLIDE], sl_to[NSLIDE];
     /* the components' runtime (comp.c) */
     uint32_t cp_rng;             /* their random numbers (from cp_seed at PLAY) */
     uint32_t cp_adv;             /* steps moved on since PLAY (trk_len of them: a loop, CP_COND) */

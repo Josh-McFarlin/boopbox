@@ -344,15 +344,21 @@ UI_SMALL static void graph_roll(const track_t *t, uint16_t c)
         cv_rect(x - 2, top, 5, 2, C_HI);
     }
     if (ui.sheet) {                                     /* OCT+ held: the note's sheet */
-        char nu[8], cn[4];
-        const char *val[NSHEET] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", "", cn};
+        char nu[8], cn[4], ln[4];
+        uint8_t ls[NLOCK];
+        const char *val[NSHEET] = {cs->flags & SF_SLIDE ? "ON" : "OFF", nu, FILL_N[step_fill(t, ui.cursor) % 3u], "", "", "", cn, ln};
         fmt_int(nu, t->micro[ui.cursor]);
         if (t->micro[ui.cursor] > 0) { nu[0] = '+'; fmt_int(nu + 1, t->micro[ui.cursor]); }
         str_cpy(cn, "--", 4);
         if (comp_count(t, ui.cursor))
             fmt_int(cn, (int32_t)comp_count(t, ui.cursor));
+        str_cpy(ln, "--", 4);
+        if (lock_items(t, ui.cursor, ls))
+            fmt_int(ln, (int32_t)lock_items(t, ui.cursor, ls));
         if (ui.csheet)
             comp_strip_draw(H_GRAPH - 16, t, ui.cursor, TE_DIM[song.sel & 3u]);
+        else if (ui.lsheet)
+            lock_strip_draw(H_GRAPH - 16, t, ui.cursor, TE_DIM[song.sel & 3u]);
         else
             sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, TE_DIM[song.sel & 3u]);
     }
@@ -456,7 +462,8 @@ UI_SMALL static uint32_t graph_signature(void)
         uint32_t ph = song.playing ? t->seq_idx : 0xFFFFu;
         if (pg->graph == GR_ROLL)                    /* (2.7.2 NOTES: the note under edit, the zoom, the sheet) */
             h ^= ui.note_k * 104729u + ui.zoom * 7u + ui.sheet * 977u + (uint32_t)t->micro[ui.cursor] * 31337u +
-                 step_fill(t, ui.cursor) * 3u + last_note * 65537u + comp_sig(t, ui.cursor) * 2654435761u;
+                 step_fill(t, ui.cursor) * 3u + last_note * 65537u + comp_sig(t, ui.cursor) * 2654435761u +
+                 lock_sig(t, ui.cursor) * 40503u;
         h ^= steps_hash(t) + ph * 31u + ui.cursor * 7919u;
     }
     return h;

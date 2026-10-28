@@ -57,6 +57,7 @@ static struct {
     uint8_t sheet;               /* (2.7.2) NOTES / DRUMS grid: the sheet (OCT+ held) open: 1 + its row; 0 closed */
     uint8_t csheet;              /* the sheet's COMP strip open: 1 + the item (the step's components, then ADD); 0 closed */
     uint8_t cadd;                /* the type its ADD puts on the step (CP_*) */
+    uint8_t lsheet;              /* the sheet's LOCKS strip open: 1 + the item (the step's locks, then ADD); 0 closed */
     uint8_t sheet_last;          /* (2.8.1) the sheet row last used (0..5): OCT+ reopens on it (quick MOVE) */
     uint8_t hot_col, hot_t;      /* column whose knob was just turned (drawn white) */
     uint8_t menu;                /* 0 off, 1 list, 2 about (HOME held) */
@@ -98,6 +99,7 @@ static struct {
 
 UI_SMALL static const page_t *cur_page(void) { return &PAGES[ui.page]; }
 static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* ui_input.c */
+static void lock_par_step(int32_t s);                            /* ui_layers.c: the lock parameter, the next lockable one */
 static void layer_screen_draw(void);                            /* ui_layers.c */
 static void hold_screen_draw(void);
 static uint8_t layer_shown;
@@ -317,10 +319,12 @@ UI_SMALL static void cursor_fix(void)                           /* LEN got short
 static const uint8_t NV_ZOOM[4] = {8, 16, 32, 64};
 static const char *const FORCE_N[5] = {"GHOST", "SOFT", "NORM", "HARD", "ACC"};
 static const uint8_t F_LVL[4] = {LV_GHOST, LV_SOFT, LV_NORM, LV_HARD};
-#define NSHEET 7u                /* the sheet's rows; the last, COMP, opens the step's components (comp_strip_*) */
-static const char *const SHEET_N[NSHEET] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP"};
+#define NSHEET 8u                /* the sheet's rows; COMP opens the step's components (comp_strip_*), LOCKS its locks (lock_strip_*) */
+#define SH_COMP 6u
+#define SH_LOCKS 7u
+static const char *const SHEET_N[NSHEET] = {"SLIDE", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP", "LOCKS"};
 static const char *const FILL_N[3] = {"NORMAL", "FILL", "NO FILL"};
-static const char *const DSHEET_N[NSHEET] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP"};
+static const char *const DSHEET_N[NSHEET] = {"RATCHET", "NUDGE", "FILL", "MOVE", "COPY", "DELETE", "COMP", "LOCKS"};
 UI_SMALL static void note_walk(int32_t dir)
 {
     track_t *t = TSEL;
@@ -403,7 +407,7 @@ UI_SMALL static int step_free(const track_t *t, uint32_t i)   /* nothing there: 
 {
     return !step_on(&t->step[i]) && t->step[i].time != ST_TIE;
 }
-/* a note (its step, TIEs, nudge, fill, locks) one step on or back (copy: to just after it, the original stays);
+/* a note (its step, TIEs, nudge, fill, locks, components) one step on or back (copy: to just after it, the original stays);
  * the steps it goes to must be free, inside the pattern. Returns where it is now, or -1 */
 UI_SMALL static int32_t note_shift(track_t *t, uint32_t i, int32_t dir, int copy)
 {
@@ -436,13 +440,25 @@ UI_SMALL static int32_t note_shift(track_t *t, uint32_t i, int32_t dir, int copy
             if (!copy)
                 t->lock[j].step = (uint8_t)to;
             else {
-                int k = lock_find(t, to, t->lock[j].param, 1);
+                int k = lock_find(t, to, t->lock[j].param & LOCK_PID, 1);
                 if (k >= 0) {
                     t->lock[k].step = (uint8_t)to;
                     t->lock[k].param = t->lock[j].param;
                     t->lock[k].val = t->lock[j].val;
                 }
             }
+        }
+    for (j = 0; j < NCOMP; j++)                         /* (and its components) */
+        if (t->comp[j].type != CP_NONE && t->comp[j].step == i) {
+            if (!copy) {
+                int d = comp_find(t, to, t->comp[j].type);
+                if (d >= 0 && d != (int)j) {                /* (one of that type there already: this one takes its place) */
+                    t->comp[d].type = CP_NONE;
+                    t->comp[d].step = COMP_FREE;
+                }
+                t->comp[j].step = (uint8_t)to;
+            } else
+                comp_set(t, to, t->comp[j].type, t->comp[j].a, t->comp[j].b);
         }
     if (!copy) {
         t->micro[i] = 0;
@@ -624,6 +640,108 @@ UI_SMALL static void comp_strip_knob(track_t *t, uint32_t step, uint32_t k, int3
         fm1_irq_on();
         sync_reload = 1;
     }
+}
+/* ---- the step's parameter locks, from the sheet's LOCKS row, as the COMP strip: the step's locks, then ADD. KNOB 1 the item,
+ * KNOB 2 its value (ADD: the parameter, from the lockable ones), KNOB 3 its SLIDE (ON: over the step the parameter glides to
+ * the value); OCT+ adds one at the track's own value (ADD) or removes it, OCT- back to the sheet */
+UI_SMALL static uint32_t lock_items(const track_t *t, uint32_t step, uint8_t *slot)
+{
+    uint32_t k, n = 0;
+    for (k = 0; k < NLOCK; k++)
+        if (t->lock[k].step == step)
+            slot[n++] = (uint8_t)k;
+    return n;
+}
+UI_SMALL static uint32_t lock_sig(const track_t *t, uint32_t step)
+{
+    uint32_t k, h = ui.lsheet * 151u + ui.lock_par * 19u;
+    for (k = 0; k < NLOCK; k++)
+        if (t->lock[k].step == step)
+            h = h * 33u + t->lock[k].param * 7u + (uint32_t)(uint16_t)t->lock[k].val * 257u;
+    return h;
+}
+UI_SMALL static void lock_strip_draw(int32_t y, const track_t *t, uint32_t step, uint16_t acc)
+{
+    uint8_t slot[NLOCK];
+    static char vb[NLOCK + 1u][16];
+    const char *lab[NLOCK + 1u], *val[NLOCK + 1u], *unit;
+    uint32_t n = lock_items(t, step, slot), i, sel = ui.lsheet ? ui.lsheet - 1u : 0u;
+    for (i = 0; i < n; i++) {
+        const plock_t *l = &t->lock[slot[i]];
+        const param_desc_t *d = lock_desc(t, l->param & LOCK_PID);
+        lab[i] = d->label;
+        unit = 0;
+        param_format(d, l->val, vb[i], &unit);
+        if (l->param & LOCK_SLIDE)
+            str_cpy(vb[i] + str_len(vb[i]), " SL", 4);
+        val[i] = vb[i];
+    }
+    lab[n] = "ADD";
+    val[n] = lock_desc(t, ui.lock_par % P_COUNT)->label;
+    sheet_bar_n(y, lab, val, sel > n ? n : sel, n + 1u, acc);
+}
+UI_SMALL static void lock_strip_knob(track_t *t, uint32_t step, uint32_t k, int32_t s)
+{
+    uint8_t slot[NLOCK];
+    uint32_t n = lock_items(t, step, slot), sel = ui.lsheet - 1u;
+    if (k == 0u) {
+        ui.lsheet = (uint8_t)(1 + clamp((int32_t)sel + s, 0, (int32_t)n));
+        return;
+    }
+    if (sel >= n) {                                       /* ADD: KNOB 2 the parameter */
+        if (k == 1u)
+            lock_par_step(s);
+        return;
+    }
+    {
+        plock_t *l = &t->lock[slot[sel]];
+        uint32_t id = l->param & LOCK_PID;
+        const param_desc_t *d = lock_desc(t, id);
+        fm1_irq_off();
+        if (k == 1u)
+            lock_set(t, step, id, l->val + accel(EN_K2, s, d->max - d->min));
+        else if (k == 2u)
+            lock_slide_set(t, step, id, s > 0);
+        fm1_irq_on();
+        sync_reload = 1;
+    }
+}
+UI_SMALL static void lock_strip_do(track_t *t, uint32_t step)   /* OCT+: ADD adds a lock, a lock goes */
+{
+    uint8_t slot[NLOCK];
+    uint32_t n = lock_items(t, step, slot), sel = ui.lsheet - 1u, id = ui.lock_par % P_COUNT;
+    int k;
+    if (sel < n) {
+        fm1_irq_off();
+        lock_del(t, step, t->lock[slot[sel]].param & LOCK_PID);
+        fm1_irq_on();
+        ui_message("LOCK REMOVED");
+    } else if ((k = lock_find(t, step, id, 0)) >= 0) {
+        uint32_t i;
+        for (i = 0; i < n && slot[i] != (uint8_t)k; i++)
+            ;
+        ui.lsheet = (uint8_t)(1u + i);
+        ui_message("ON THE STEP ALREADY");
+        return;
+    } else {
+        int ok;
+        fm1_irq_off();
+        ok = lock_set(t, step, id, trk_base(t, id));
+        fm1_irq_on();
+        if (!ok) {
+            ui_message(p_lockable(id) ? "NO LOCK LEFT" : "NOT LOCKABLE");
+            return;
+        }
+        n = lock_items(t, step, slot);
+        for (k = 0; k < (int)n && t->lock[slot[k]].param != (uint8_t)id; k++)
+            ;
+        ui.lsheet = (uint8_t)(1 + k);                     /* (the new one) */
+        ui_message("LOCK ADDED");
+    }
+    n = lock_items(t, step, slot);
+    if (ui.lsheet > n + 1u)
+        ui.lsheet = (uint8_t)(n + 1u);
+    sync_reload = 1;
 }
 UI_SMALL static void comp_strip_do(track_t *t, uint32_t step)   /* OCT+: ADD adds the type, a component goes */
 {

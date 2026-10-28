@@ -346,6 +346,10 @@ UI_SMALL static void note_sheet_knob(uint32_t slot, int32_t steps)
         comp_strip_knob(t, ui.cursor, slot, steps);
         return;
     }
+    if (ui.lsheet) {                                      /* the LOCKS strip */
+        lock_strip_knob(t, ui.cursor, slot, steps);
+        return;
+    }
     if (slot == 0u) {
         ui.sheet = (uint8_t)(1 + clamp((int32_t)row + steps, 0, NSHEET - 1));
         ui.sheet_last = (uint8_t)(ui.sheet - 1u);          /* (2.8.1) reopen on this row next time */
@@ -391,8 +395,16 @@ UI_SMALL static void note_sheet_do(void)               /* OCT+ tapped in the she
         comp_strip_do(t, ui.cursor);
         return;
     }
-    if (row == 6u) {                                      /* COMP: the step's components */
+    if (ui.lsheet) {
+        lock_strip_do(t, ui.cursor);
+        return;
+    }
+    if (row == SH_COMP) {                                 /* COMP: the step's components */
         ui.csheet = 1;
+        return;
+    }
+    if (row == SH_LOCKS) {                                /* LOCKS: the step's parameter locks */
+        ui.lsheet = 1;
         return;
     }
     note_mark();
@@ -504,6 +516,7 @@ UI_SMALL static void project_new(void)
     ui.force = 1;
 }
 
+static int knob_capture(uint32_t id, int32_t v, int32_t was);
 UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
 {
     int16_t *vp;
@@ -570,6 +583,8 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         return;
     v = d->names == ESYNC_NAMES || d->names == N_IBITS || d->names == N_IRATE ? names_turn(d, *vp, steps)   /* (a name a detent) */
                                     : clamp(*vp + accel(EN_K1 + slot, steps, d->names ? 0 : d->max - d->min), d->min, d->max);
+    if ((pg->scope == SC_TRACK || pg->scope == SC_ENGINE) && knob_capture(id, v, *vp))
+        return;                                           /* (recorded as the step's lock) */
     *vp = (int16_t)v;
     if (pg->scope == SC_PATT)
         return;                                           /* (DIR, SEED: not parameters, nothing more to do) */
@@ -627,6 +642,24 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
     default:
         break;
     }
+}
+
+/* menu SEQ > REC KNOBS = LOCKS (rec_locks): a sound knob turned while the selected track records becomes a lock on the
+ * step playing (seq.c lock_capture), the track's own value stays. 1: so (the caller writes nothing) */
+UI_SMALL static int knob_capture(uint32_t id, int32_t v, int32_t was)
+{
+    int ok;
+    if (!rec_locks || !song.playing || !((song.rec >> (song.sel % NTRK)) & 1u) || id >= P_COUNT || !p_lockable(id) ||
+        v == was)
+        return 0;
+    fm1_irq_off();
+    ok = lock_capture(TSEL, TSEL->seq_idx % NSTEP, id, v);
+    fm1_irq_on();
+    if (!ok)
+        ui_message("NO LOCK LEFT");
+    ui.lock_par = (uint8_t)id;
+    sync_reload = 1;
+    return 1;
 }
 
 /* SLOOP 2.6: the STEP page's entry from a MIDI keyboard, as from the keys (seq_entry): the notes played together on the
@@ -1222,15 +1255,15 @@ UI_SMALL static void ui_input(void)
         pressed = octp_filter(pressed, &ev);
         if (ev == 2u && !ui.sheet) {
             ui.sheet = (uint8_t)(1u + ui.sheet_last);      /* (2.8.1) reopen on the row last used */
-            ui.csheet = 0;
+            ui.csheet = ui.lsheet = 0;
         } else if (ev == 1u && ui.sheet) {
             note_sheet_do();
         } else if (ev == 1u) {
             pressed |= 1u << panel.btn[B_OCTUP];
         }
         if (ui.sheet && (pressed & ob)) {
-            if (ui.csheet)
-                ui.csheet = 0;                              /* (the COMP strip: back to the sheet) */
+            if (ui.csheet || ui.lsheet)
+                ui.csheet = ui.lsheet = 0;                  /* (a strip: back to the sheet) */
             else
                 ui.sheet = 0;
             pressed &= ~ob;
@@ -1318,7 +1351,11 @@ UI_SMALL static void ui_input(void)
         if (ui.home) {
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);
-            *vp = (int16_t)clamp(*vp + accel(EN_K1 + k, s, d->names ? 0 : d->max - d->min), d->min, d->max);   /* (a list: no jumps) */
+            int32_t hv = clamp(*vp + accel(EN_K1 + k, s, d->names ? 0 : d->max - d->min), d->min, d->max);   /* (a list: no jumps) */
+            if (!is_drum(TSEL) && vp == &TSEL->p[ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u] % P_COUNT] &&
+                knob_capture(ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u], hv, *vp))
+                continue;                               /* (recorded as the step's lock) */
+            *vp = (int16_t)hv;
             if (!is_drum(TSEL) && p_lockable(ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u]))
                 ui.lock_par = ENGINES[TSEL->eng_req % NENGINES]->macro[k & 3u];
             if (!is_drum(TSEL))

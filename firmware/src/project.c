@@ -9,7 +9,7 @@
  * Formats: 6 ("FUN6", written, SLOOP 2.6): format 5 with the ten parameters of 2.6 (P_ITYPE .. P_LPOL, just
  * before P_E0: the INSERT, the ANALOG filter TYPE, ENV SYNC, LFO 2) in a byte each, and each step's nudge (6 bits)
  * and fill condition (2 bits) in one byte: format 5 was full (3840 bytes, one flash object), this is 3816.
- * Read and converted: 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK
+ * Read and converted: 5 ("FUN5", SLOOP 2.4 .. 2.5: format 4 plus, per track, the nudge of each step (micro), NLOCK_V6
  * parameter locks, the steps' fill conditions (2 bits each) and P_TFLT, one parameter more just before P_E0;
  * converted by id, the 2.6 parameters at their defaults, a lock on P_E0.. moved with it), 4 ("FUN4", SLOOP 2.0 .. 2.3: PROJ_NP_V4 parameters, today's G_COUNT, 10-byte
  * steps with levels and ratchets, the drum track's 16 lanes; no nudge, no lock), 3 ("FUN3", SLOOP 1.x: 8-byte
@@ -57,7 +57,7 @@ typedef struct {                               /* one track; the drum track igno
         dstep_t dstep[NSTEP];                  /* (the drum track: 16 lanes, the same size) */
     };
     uint8_t mf[NSTEP];                         /* each step's nudge (core.h MICRO_*, 6 bits) | its fill condition << 6 */
-    plock_t lock[NLOCK];                       /* and its parameter locks (step LOCK_FREE = none) */
+    plock_t lock[NLOCK_V6];                       /* and its parameter locks (step LOCK_FREE = none) */
 } proj_trk_v6_t;
 typedef struct {                               /* format 6 (SLOOP 2.6 .. 2.8.3): four tracks, drums on 4 */
     uint32_t magic, size;
@@ -93,7 +93,7 @@ typedef struct {                               /* a track of format 5 (SLOOP 2.4
         dstep_t dstep[NSTEP];
     };
     int8_t micro[NSTEP];                       /* each step's nudge (core.h) */
-    plock_t lock[NLOCK];                       /* and its parameter locks (step LOCK_FREE = none) */
+    plock_t lock[NLOCK_V6];                       /* and its parameter locks (step LOCK_FREE = none) */
     uint8_t fill[NSTEP / 4];                   /* and its fill condition, 2 bits a step (FC_*) */
 } proj_trk_v5_t;
 typedef struct {                               /* format 5, read only */
@@ -241,7 +241,7 @@ UI_SMALL static void proj_trk_plain(proj_trk_v6_t *d)
     memset(d->mf, 0, sizeof d->mf);
     for (k = PROJ_NC6; k < P_E0; k++)
         pt_set(d, k, TP[k].def);
-    for (k = 0; k < NLOCK; k++) {
+    for (k = 0; k < NLOCK_V6; k++) {
         d->lock[k].step = LOCK_FREE;
         d->lock[k].param = 0;
         d->lock[k].val = 0;
@@ -336,7 +336,7 @@ UI_SMALL static int proj_from_v5(project_v6_t *q, const project_v5_t *v5, int n)
         memcpy(d->step, s->step, sizeof d->step);
         for (k = 0; k < NSTEP; k++)
             pt_set_mf(d, k, clamp(s->micro[k], MICRO_MIN, MICRO_MAX), (uint32_t)s->fill[k / 4u] >> (2u * (k % 4u)));
-        for (k = 0; k < NLOCK; k++) {
+        for (k = 0; k < NLOCK_V6; k++) {
             d->lock[k] = s->lock[k];
             if (s->lock[k].step != LOCK_FREE && s->lock[k].param >= PROJ_NP_V5 - 8u)   /* P_E0.. of format 5 */
                 d->lock[k].param = (uint8_t)(s->lock[k].param - (PROJ_NP_V5 - 8u) + P_E0);
@@ -574,9 +574,19 @@ static int proj6_fits(void)                            /* the working project is
     for (i = 0; i < 4u; i++)
         if (trk[i].kind != (i == TRK_DRUM_V6 ? TK_DRUM : TK_SYNTH))
             return 0;
-    for (i = 0; i < NTRK; i++)                          /* (format 6 has no step components, no direction) */
+    for (i = 0; i < NTRK; i++) {                        /* (format 6 has no step components, no direction, */
+        uint32_t k, n = 0;                              /* NLOCK_V6 locks a track, no SLIDE) */
         if (comp_count(&trk[i], NSTEP) || trk[i].cp_dir || trk[i].cp_seed)
             return 0;
+        for (k = 0; k < NLOCK; k++)
+            if (trk[i].lock[k].step != LOCK_FREE) {
+                if (trk[i].lock[k].param & LOCK_SLIDE)
+                    return 0;
+                n++;
+            }
+        if (n > NLOCK_V6)
+            return 0;
+    }
     for (i = 4; i < NTRK; i++)
         if (!trk_pristine(i))
             return 0;
@@ -597,14 +607,19 @@ UI_SMALL static void proj6_capture(project_v6_t *p)    /* tracks 1..4 as format 
     proj_tx_put(p);
     for (i = 0; i < 4u; i++) {
         uint32_t k;
+        uint32_t n = 0;
         for (k = 0; k < P_COUNT; k++)
-            pt_set(&p->t[i], k, trk[i].p[k]);
+            pt_set(&p->t[i], k, trk_base(&trk[i], k));   /* (not a lock playing now) */
         p->t[i].engine = trk[i].eng_req;
         p->t[i].preset = trk[i].preset;
         memcpy(p->t[i].step, trk[i].step, sizeof trk[i].step);
         for (k = 0; k < NSTEP; k++)
             pt_set_mf(&p->t[i], k, trk[i].micro[k], (uint32_t)trk[i].fill[k / 4u] >> (2u * (k % 4u)));
-        memcpy(p->t[i].lock, trk[i].lock, sizeof trk[i].lock);
+        for (k = 0; k < NLOCK_V6; k++)
+            p->t[i].lock[k].step = LOCK_FREE;
+        for (k = 0; k < NLOCK && n < NLOCK_V6; k++)    /* (the locks, packed: proj6_fits saw NLOCK_V6 at most) */
+            if (trk[i].lock[k].step != LOCK_FREE)
+                p->t[i].lock[n++] = trk[i].lock[k];
     }
     p->t[TRK_DRUM_V6].p[P_LEVEL] = TP[P_LEVEL].def;     /* (format 6 kept the drum track's own as it never used them) */
     p->t[TRK_DRUM_V6].p[P_REV] = TP[P_REV].def;
@@ -652,7 +667,7 @@ UI_SMALL static __attribute__((noinline)) void proj6_apply(const project_v6_t *p
             if (c != 3u)
                 t->fill[i / 4u] |= (uint8_t)(c << (2u * (i % 4u)));
         }
-        for (i = 0; i < NLOCK; i++) {
+        for (i = 0; i < NLOCK_V6; i++) {
             const plock_t *l = &s->lock[i];
             uint32_t id = l->param;
             if (l->step < NSTEP && id < P_COUNT && p_lockable(id)) {
@@ -666,6 +681,11 @@ UI_SMALL static __attribute__((noinline)) void proj6_apply(const project_v6_t *p
                 t->lock[i].param = 0;
                 t->lock[i].val = 0;
             }
+        }
+        for (; i < NLOCK; i++) {                        /* (format 6 holds NLOCK_V6: the others free) */
+            t->lock[i].step = LOCK_FREE;
+            t->lock[i].param = 0;
+            t->lock[i].val = 0;
         }
         if (k != TRK_DRUM_V6) {
             for (i = 0; i < NSTEP; i++) {
@@ -900,8 +920,8 @@ UI_SMALL static __attribute__((noinline)) void pat_put(pw_t *w, const track_t *t
     pw_u8(w, nl);
     for (k = 0; k < NLOCK; k++)
         if (t->lock[k].step != LOCK_FREE) {
-            pw_u8(w, t->lock[k].step);
-            pw_u8(w, lock_code(t->lock[k].param));
+            pw_u8(w, t->lock[k].step | (t->lock[k].param & LOCK_SLIDE));   /* (the step < 64: bit 7 its SLIDE) */
+            pw_u8(w, lock_code(t->lock[k].param & LOCK_PID));
             pw_v(w, t->lock[k].val);
         }
     pw_u8(w, t->cp_dir);                                 /* the components */
@@ -961,16 +981,17 @@ UI_SMALL static __attribute__((noinline)) void pat_get(pr_t *r, track_t *t)
     }
     n = pr_u8(r);
     for (k = 0; k < n && !r->bad; k++) {
-        uint32_t st = pr_u8(r), id = lock_id(pr_u8(r)), j;
+        uint32_t st = pr_u8(r), id = lock_id(pr_u8(r)), j, sl = st & LOCK_SLIDE;
         int32_t v = pr_v(r);
-        if (st >= NSTEP || id >= P_COUNT || !p_lockable(id))
-            continue;                                   /* (no such step or parameter here) */
+        st &= 0x7Fu;
+        if (st >= NSTEP || id >= P_COUNT || !p_lockable(id) || lock_find(t, st, id, 0) >= 0)
+            continue;                                   /* (no such step or parameter here, or a second lock of it) */
         for (j = 0; j < NLOCK && t->lock[j].step != LOCK_FREE; j++)
             ;
         if (j == NLOCK)
             break;
         t->lock[j].step = (uint8_t)st;
-        t->lock[j].param = (uint8_t)id;
+        t->lock[j].param = (uint8_t)(id | sl);
         t->lock[j].val = (int16_t)clamp(v, lock_desc(t, id)->min, lock_desc(t, id)->max);
     }
     if (r->i + 3u > r->n || r->bad)
@@ -1008,21 +1029,21 @@ UI_SMALL static __attribute__((noinline)) void trk_put(pw_t *w, uint32_t i)
     pw_u8(w, is_drum(t) ? 0u : t->eng_req);
     pw_u8(w, is_drum(t) ? 0u : t->preset);              /* (a drum track has neither: 0) */
     pw_u8(w, P_E0);
-    for (k = 0; k < P_E0; k++)
-        if (t->p[k] != trk_pref(t, k))
+    for (k = 0; k < P_E0; k++)                         /* (the track's own values: not a lock playing now, trk_base) */
+        if (trk_base(t, k) != trk_pref(t, k))
             map[k / 8u] |= (uint8_t)(1u << (k % 8u));
     for (k = 0; k < sizeof map; k++)
         pw_u8(w, map[k]);
     for (k = 0; k < P_E0; k++)
         if ((map[k / 8u] >> (k % 8u)) & 1u)
-            pw_v(w, t->p[k]);
+            pw_v(w, trk_base(t, k));
     for (k = 0; k < 8u; k++)
-        if (t->p[P_E0 + k] != trk_pref(t, P_E0 + k))
+        if (trk_base(t, P_E0 + k) != trk_pref(t, P_E0 + k))
             em |= (uint8_t)(1u << k);
     pw_u8(w, em);
     for (k = 0; k < 8u; k++)
         if ((em >> k) & 1u)
-            pw_v(w, t->p[P_E0 + k]);
+            pw_v(w, trk_base(t, P_E0 + k));
     if (is_drum(t))
         for (k = 0; k < DRUM_LANES; k++)
             pw_u8(w, ((uint32_t)drum_tune[i][k] & 15u) | ((uint32_t)drum_dec[i][k] & 7u) << 4);
@@ -1578,7 +1599,8 @@ UI_SMALL static void midi_part_fill(uint8_t *b)
     for (k = 0; k < 4u; k++)
         b[MIDI_PART + k] = midi_set[10u + k];       /* (eight tracks) CH5..CH8 */
     b[MIDI_PART + 4u] = (uint8_t)ml_hi, b[MIDI_PART + 5u] = (uint8_t)(ml_hi >> 8);
-    b[MIDI_PART + 6u] = b[MIDI_PART + 7u] = 0;
+    b[MIDI_PART + 6u] = (uint8_t)(rec_locks != 0u);    /* menu SEQ > REC KNOBS (LOCKS) */
+    b[MIDI_PART + 7u] = 0;
 }
 /* the bytes of the part to write: MIDI_PART_8 when the eight-track tail holds something, else 2.7's MIDI_PART */
 UI_SMALL static uint32_t midi_part_len(const uint8_t *b)
@@ -1645,6 +1667,7 @@ UI_SMALL static void midi_part_read(const uint8_t *b, uint32_t n)
         midi_set[10u + k] = (uint8_t)(n >= MIDI_PART_8 && b[MIDI_PART + k] <= 16u ? b[MIDI_PART + k] : 0u);
     if (n >= MIDI_PART_8)
         ml_hi = (uint16_t)((uint32_t)b[MIDI_PART + 4u] | (uint32_t)b[MIDI_PART + 5u] << 8);
+    rec_locks = (uint8_t)(n >= MIDI_PART_8 && (b[MIDI_PART + 6u] & 1u));   /* (older: SOUND) */
     song.g[G_CH5] = midi_set[10], song.g[G_CH6] = midi_set[11], song.g[G_CH7] = midi_set[12], song.g[G_CH8] = midi_set[13];
     fm1_irq_on();
 }

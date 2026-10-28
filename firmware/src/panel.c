@@ -101,6 +101,9 @@ static uint8_t step_adv_off;                    /* menu SEQ > STEP ADVANCE (2.7.
                                                  * is when the keys are let go (KNOB 1 moves it); kept in the MIDI part */
 static uint8_t drum_preview;                    /* menu DRUM PREVIEW (2.7.1): 1 = ON, a drum sound picked with a knob is heard; OFF (the
                                                  * default): silent, for live (ui_studio.c). Kept in the MIDI part (project.c) */
+static uint8_t rec_locks;                       /* menu SEQ > REC KNOBS: 1 = LOCKS, a sound knob turned while the track records
+                                                 * becomes a lock on the step playing (ui_input.c knob_capture); 0 = SOUND, it
+                                                 * changes the sound (as before). Kept in the MIDI part's eight-track tail */
 UI_SMALL static uint32_t lights_word(void)
 {
     return (uint32_t)lights_lvl | (uint32_t)lights_keys << 4 | (uint32_t)(lights_notes != 0u) << 8 |

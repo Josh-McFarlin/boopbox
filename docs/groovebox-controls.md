@@ -47,7 +47,8 @@ On the **NOTES** page (synth tracks) or the **DRUMS grid** (drum tracks):
 
 A step with a component shows the same corner dot as a step with a lock or a nudge. **SEQ + step + OCT−** clears the
 step's nudge, locks, fill condition and components (*STEP EXTRAS CLEARED*). Clearing a step (a tap in the SEQ layer,
-the last sound of a drum step) removes its components too.
+the last sound of a drum step) removes its components too. MOVE and COPY in the sheet take the step's components with
+it, as they take its nudge, fill condition and locks.
 
 ### The types
 
@@ -92,3 +93,47 @@ over MIDI.
 Components, the direction and the seed are saved in the project (format 7) and in song sections. A project that has
 any of them is never saved in the older format 6 (which cannot hold them): when it does not fit format 7, the save is
 refused (*PROJECT FULL: NOT SAVED*) and nothing is cut.
+
+## Parameter locks
+
+Everything in `GUIDE.md` ("Parameter locks") still works: **SEQ + step + PRESETS** makes or moves a lock of the lock
+parameter, **ALGORITHM** (step held) picks the parameter. What changed:
+
+- A track holds **32 locks** (24 before). Several locks can sit on one step, one per parameter.
+- A lock made from the SEQ layer starts at the **track's own value**, also while another step's lock is playing.
+- **Saving never keeps a lock's value as the sound.** A project (also the autosave while playing) and a user preset
+  store the track's own values; the locks are stored as locks.
+
+### The LOCKS row of the sheet
+
+On the **NOTES** page or the **DRUMS grid**, hold **OCT+** (the step's sheet), turn **KNOB 1** to the last row,
+**LOCKS** (its value: the number of locks on the step), and tap **OCT+**:
+
+| In the lock strip | Does |
+| --- | --- |
+| **KNOB 1** | picks an item: the step's locks one by one (the parameter and its value; *SL* when it slides), then **ADD** |
+| **KNOB 2** | on a lock: its value; on ADD: the parameter to lock (the lockable ones, as ALGORITHM picks them in the SEQ layer) |
+| **KNOB 3** | on a lock: **SLIDE** (right ON, left OFF) |
+| **OCT+** (tap) | on ADD: a lock of that parameter at the track's own value (*LOCK ADDED*; *ON THE STEP ALREADY* picks it; *NO LOCK LEFT* at 32); on a lock: removes it (*LOCK REMOVED*) |
+| **OCT−** | back to the sheet; OCT− again closes it |
+
+### SLIDE
+
+A lock with **SLIDE** does not jump to its value at the start of its step: the parameter glides from the value it had
+(the step before's lock, or the track's own value) to the lock's value, reaching it at the end of the step. On the
+next step the parameter goes on as usual (its lock there, or back to the track's value). Up to **4** slides play at
+once on a track (on a step with more, the others jump). Turning the parameter's knob during a slide stops it: the
+knob's value stays and becomes the track's value.
+
+### Recording knob moves as locks
+
+**MENU > SEQ > REC KNOBS**: **SOUND** (the default, as before: a knob turned while recording changes the sound) or
+**LOCKS**: while the selected track records (REC, playing), turning a sound parameter's knob (on its page or on HOME)
+writes a lock of that value on the step playing. You hear it at once; the track's own value does not change, so on
+the steps without a lock the sound stays as it was. Parameters that cannot be locked change as usual. The setting is
+kept with the FM-1's settings.
+
+### Saved
+
+Format 7 keeps all 32 locks and their SLIDE. A project whose locks format 6 could not hold whole (more than 24 on a
+track, or a SLIDE) is never saved as format 6.
