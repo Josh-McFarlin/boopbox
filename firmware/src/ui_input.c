@@ -35,6 +35,8 @@ UI_SMALL static uint32_t cur_btn(void)                      /* the button of the
         return B_SAVE;
     if (!ui.home && cur_page()->scope == SC_DRUM)
         return B_SEQ;
+    if (!ui.home && cur_page()->scope == SC_PATS)
+        return B_SEQ;
     return FAM_BTN[cur_fam()];
 }
 
@@ -507,6 +509,9 @@ UI_SMALL static void project_new(void)
         memset(drum_dec[i], 0, sizeof drum_dec[i]);
         drum_mute[i] = 0;                               /* (2.6: the live mutes) */
     }
+    fm1_irq_off();
+    pat_reset_all();                                    /* (one empty pattern a track, the bank empty) */
+    fm1_irq_on();
     for (i = 0; i < G_COUNT; i++)
         if (!g_setting(i))                              /* (the FM-1's settings: GLO > MIDI 2.6) */
             song.g[i] = GP[i].def;
@@ -1230,6 +1235,11 @@ UI_SMALL static void ui_input(void)
     } else if (rec_wait || ft_on) {                     /* the arm follows) */
         for (k = 0; k < 4u; k++)                        /* a take / the count-in: KNOB 1..4 edit nothing */
             panel_enc(EN_K1 + k);
+    }
+    pats_poll();                                        /* (patterns: a change refused, said) */
+    if (on_pats_page()) {
+        pats_screen_input(pressed, home);
+        return;
     }
 #if FELUCCA_ARRANGER
     if (on_song_page()) {

@@ -137,3 +137,67 @@ kept with the FM-1's settings.
 
 Format 7 keeps all 32 locks and their SLIDE. A project whose locks format 6 could not hold whole (more than 24 on a
 track, or a SLIDE) is never saved as format 6.
+
+## Patterns
+
+Each track has **8 patterns**. A pattern holds the track's steps with their nudges, fill conditions, locks and step
+components, its direction and seed (SEQ > PLAY) and its **length** (PATTERN > LEN). The sound, DIV, SWG and GATE are
+the track's, the same for all its patterns. A new pattern starts empty, with the length the track has.
+
+### The PATTERNS screen (SEQ, after PLAY)
+
+Tap **SEQ** until the PATTERNS screen shows (NOTES, PATTERN, PLAY, **PATTERNS**, SONG). It shows the eight tracks as
+rows and their eight patterns as columns:
+
+| Tile | Means |
+| --- | --- |
+| lit in the track's colour | the pattern playing |
+| dim | a pattern that holds something |
+| dark | an empty pattern |
+| blinking white frame | the pattern asked for: it waits for its moment (PAT Q) |
+| a dot under it | a pattern of the track's chain |
+| white line under it | the cursor (KNOB 1) on the selected track |
+
+| Control | Does |
+| --- | --- |
+| **ALGORITHM** | the track (its row number turns white) |
+| **KNOB 1** | the cursor: pattern 1 … 8 |
+| **OCT+** | asks for the cursor's pattern on the selected track |
+| **OCT−** | asks for the cursor's pattern on **every** track |
+| **KNOB 2 QUANT** | when an asked change happens (PAT Q): **LOOP** (at the end of the track's own loop, each track on its own length), **1 BAR**, **2 BAR**, **4 BAR** (on the first step of the track at or after the next such bar line: tracks asked together change together) |
+| **KNOB 3 CHAIN** | the selected track's chain: **OFF**, or the cursor's pattern and the ones after it (2 … 8 patterns); each plays one loop, then the next, round |
+| **KNOB 4** right, twice | **COPY** the pattern playing into the cursor's pattern (*AGAIN: COPY* first) |
+| **KNOB 4** left, twice | **CLEAR** the cursor's pattern (*AGAIN: CLEAR* first) |
+| **PLAY**, the keys | as everywhere; **ENV**, **LFO** and the layer buttons open their pages; **HOME** goes home |
+
+Stopped, a change is made at once. Playing, it waits for its moment, then the new pattern starts from its step 1 (a
+note of the old pattern still sounding ends there). An asked change goes before the chain; the chain then goes on from
+the pattern asked for. Edit the pattern playing as usual (NOTES, the DRUMS grid, the SEQ layer, recording): its
+changes are kept when another pattern plays, and come back with it. The header shows how full the pattern store is.
+
+### When the store is full
+
+The patterns that are not playing share one store of 3 KB (a typical pattern takes 30 to 150 bytes; a 64-step pattern
+of 4-note chords about 700). When the pattern playing does not fit in it, a change is refused: the screen says
+*PATTERNS FULL: NOT CHANGED* and the pattern keeps playing, whole. COPY says *PATTERNS FULL: NOT COPIED*. Clear a
+pattern you do not need, or shorten one.
+
+### Saved
+
+The patterns, the chains and the pattern each track plays are saved in the project (format 7) and in each song
+section. A project with more than one pattern on a track is never saved in format 6. A project larger than a store
+object is refused whole (*PROJECT FULL: NOT SAVED*).
+
+## Song: the loop region
+
+On the **SONG** screen (see `GUIDE.md`):
+
+| Control | Does |
+| --- | --- |
+| **PRESETS** right | the song **loops**, the loop region **ending** on the entry under the cursor |
+| **ALGORITHM** | the loop region **starts** on the entry under the cursor |
+| **PRESETS** left | no loop: the song ends after its last entry |
+
+With a loop on, the song plays from its first entry and, after the region's last entry, goes back to the region's first
+(the header shows *loop a-b*; a bar beside the entries marks the region). This works while the song plays (it is read
+at the next entry). The region is kept with the song. (The web editor's song page saves the song without a region.)

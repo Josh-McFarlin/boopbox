@@ -67,6 +67,15 @@ int main(int argc,char **argv)
     enc[EN_K4]=99;song_screen_input(0,0);assert(arrangement.count==16);
     enc[EN_K1]=99;song_screen_input(0,0);assert(song_cursor==15);
     enc[EN_K4]=-99;song_screen_input(0,0);assert(arrangement.count==1 && song_cursor==0);
+    /* (groovebox) the loop region: PRESETS right ends it on the cursor (loop on), ALGORITHM starts it there, left: off */
+    arr_defaults(&arrangement);
+    song_cursor=2;enc[EN_PRESET]=1;song_screen_input(0,0);
+    assert(arrangement.loop==1 && arr_loop_first(&arrangement)==0 && arr_loop_end(&arrangement)==3);
+    song_cursor=1;enc[EN_ALGO]=1;song_screen_input(0,0);
+    assert(arr_loop_first(&arrangement)==1 && arr_loop_end(&arrangement)==3);
+    song_cursor=3;enc[EN_ALGO]=1;song_screen_input(0,0);    /* (a start past the end: the end follows) */
+    assert(arr_loop_first(&arrangement)==3 && arr_loop_end(&arrangement)==4);
+    enc[EN_PRESET]=-1;song_screen_input(0,0);assert(!arrangement.loop);
     arr_defaults(&arrangement);ready=15;ui.msg_t=0;ui.force=1;
     arrangement.entry[0]=(arr_entry_t){0,4};
     arrangement.entry[1]=(arr_entry_t){1,8};
@@ -83,6 +92,6 @@ int main(int argc,char **argv)
         }
         fclose(f);
     }
-    puts("song UI: independent plan/scene save, overwrite confirmation, stopped-only changes, missing scene, bounds PASS");
+    puts("song UI: independent plan/scene save, overwrite confirmation, stopped-only changes, missing scene, bounds, loop region PASS");
     return 0;
 }

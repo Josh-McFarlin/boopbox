@@ -813,10 +813,11 @@ UI_SMALL static int page_walk(int32_t s)
     uint32_t i, fam = pg->fam, n = 0;
     int32_t cur = -1, to;
     uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3) */
-    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM)
+    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM || pg->scope == SC_PATS)
         return 0;
     for (i = 0; i < NPAGES && n < 16u; i++) {
-        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM || !page_shown(&PAGES[i]))
+        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM || PAGES[i].scope == SC_PATS ||
+            !page_shown(&PAGES[i]))
             continue;
         if (i == ui.page)
             cur = (int32_t)n;

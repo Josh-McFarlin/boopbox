@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         static uint32_t layer_btn;
         if (rnd(40) == 0) {                                   /* an event every ~29 ms on average */
             events++;
-            switch (rnd(24)) {
+            switch (rnd(25)) {
             case 16: layer_btn = rnd(3) ? 0u : ly_bit[1u + rnd(LY_COUNT - 1u)] | (rnd(4) ? 0u : dyn_bit[rnd(2)]); break;   /* a layer held */
             case 17: song.g[G_DUST] = (int16_t)rnd(128); song.g[G_DUCK] = (int16_t)rnd(128); break;
             case 18: song.g[G_FILT] = (int16_t)((int)rnd(128) - 64); song.g[G_ROLL] = (int16_t)rnd(5); break;
@@ -87,6 +87,16 @@ int main(int argc, char **argv)
             }
             case 21: trk[rsyn()].p[P_CHORD] = (int16_t)rnd(6); trk[rsyn()].p[P_VOICE] = (int16_t)rnd(4); break;
             case 22: if (rnd(4) == 0) kind_flip(4u + rnd(4)); break;          /* (eight tracks) a track changes kind */
+            case 24: {                                                             /* a pattern change, its quantization, a chain */
+                uint32_t pk = rnd(NTRK);
+                trk[pk].pat_req = (uint8_t)(1u + rnd(4));
+                if (rnd(4) == 0) song.g[G_PATQ] = (int16_t)rnd(4);
+                if (rnd(8) == 0) {
+                    uint8_t pc[3] = {(uint8_t)rnd(4), (uint8_t)rnd(4), (uint8_t)rnd(4)};
+                    pat_chain_set(&trk[pk], pc, rnd(4));
+                }
+                break;
+            }
             case 23: {                                                             /* a step component, a direction */
                 track_t *ct = &trk[rnd(NTRK)];
                 uint32_t ty = 1u + rnd(CP_COUNT - 1u), st = rnd(32);
@@ -168,9 +178,18 @@ int main(int argc, char **argv)
         }
     transport_req = 2;
     for (k = 0; k < NTRK; k++) trk[k].p[P_AMODE] = 0;
+    for (k = 0; k < NTRK; k++)                               /* (a random sound's release can last seconds past the wait (REL */
+        if (!is_drum(&trk[k]))                               /* 110: ~10 s): short, so what is let go ends; a note still held */
+            trk[k].p[P_REL] = 0;                             /* (its gate on) is still caught below) */
     for (b = 0; b < 5u * FS / CTL; b++) mix_block(out, CTL);
     assert(!song.playing && !song.rec && !rec_wait && !ft_on);
     assert(punch.cur == -1);
+    for (k = 0; k < NTRK; k++)
+        for (i = 0; i < NVOICE; i++)
+            if (trk[k].v[i].active)                          /* (what hangs, before the assert says so) */
+                fprintf(stderr, "soak: track %u voice %u note %u gate %u stage %u engine %u kind %u voice mode %d nheld %u mono %u "
+                       "held %u kh %u rel %d sus %d env %d\n", k, i, trk[k].v[i].note, trk[k].v[i].gate, trk[k].v[i].stage, trk[k].engine,
+                       trk[k].kind, trk[k].p[P_VOICE], trk[k].nheld, trk[k].mono_note, trk[k].latched, kh_any(&trk[k]), trk[k].p[P_REL], trk[k].p[P_SUS], trk[k].v[i].env);
     for (k = 0; k < NTRK; k++)
         for (i = 0; i < NVOICE; i++)
             assert(!trk[k].v[i].active);                     /* no hanging synth note, on any of the eight */

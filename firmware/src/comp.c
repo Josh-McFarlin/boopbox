@@ -1,5 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-only
- * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
+/* SPDX-License-Identifier: GPL-3.0-only */
 /* Step components (core.h CP_*): rules on a step that change how it plays each time the sequencer reaches it.
  *   rhythm     PULSE (plays again on the next grid steps), HOLD (sounds on through them), MULT (hits inside the step)
  *   melody     RUP / RDN (a scale degree further each time), RAND (a random degree), TONE (semitones), PORTA, BEND

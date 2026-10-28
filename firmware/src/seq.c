@@ -844,7 +844,7 @@ UI_SMALL static void hold_restart(track_t *t, uint32_t j, uint32_t len, uint32_t
  * step ends the hold before (the step model ties the notes of one step only). */
 UI_SMALL static void rec_note(track_t *t, uint32_t note, uint32_t vel, uint32_t rat, int hold)
 {
-    uint32_t len = trk_len(t), later, abs = rec_target(t, &later), idx = abs % len, k;
+    uint32_t len = trk_len(t), later, abs = rec_target(t, &later), idx = (abs - t->seq_org) % len, k;
     int was_empty = !(t->step[idx % NSTEP].time == ST_NOTE && t->step[idx % NSTEP].n);
     step_t *st = &t->step[idx % NSTEP];
     uint8_t ch[4], keep[4];
@@ -926,7 +926,7 @@ UI_SMALL static void rec_note(track_t *t, uint32_t note, uint32_t vel, uint32_t 
 static uint8_t roll_rec;                         /* (2.7) a roll's hit is being recorded (roll_hit) */
 static void rec_hit(track_t *t, uint32_t lane, uint32_t lvl, uint32_t rat)
 {
-    uint32_t later, abs = rec_target(t, &later), idx = abs % trk_len(t);
+    uint32_t later, abs = rec_target(t, &later), idx = (abs - t->seq_org) % trk_len(t);
     int was_empty = !(t->dstep[idx % NSTEP].on[0] | t->dstep[idx % NSTEP].on[1]);
     undo_mark(t, UNDO_REC(t));
     dstep_set(&t->dstep[idx], lane, lvl, rat);
@@ -1413,6 +1413,8 @@ static uint32_t step_plays(const track_t *t, uint32_t idx)   /* its condition ho
 }
 
 #include "comp.c"                            /* step components */
+static void steps_clear(track_t *t);
+#include "patcodec.c"                        /* patterns as bytes (projects, the pattern bank) */
 
 static void steps_clear(track_t *t)           /* an empty pattern (synth: REST steps, drums: no lane); no lock, no nudge, no condition, no component */
 {
@@ -1425,6 +1427,7 @@ static void steps_clear(track_t *t)           /* an empty pattern (synth: REST s
     memset(t->fill, 0, sizeof t->fill);
     comp_clear(t);
 }
+#include "patbank.c"                         /* patterns: NPAT a track, the bank, quantized changes, chains */
 
 /* tempo x 10 of a loop of T blocks holding n bars of 4/4 */
 static uint32_t ft_bpm10(uint32_t T, uint32_t n)
@@ -2683,6 +2686,8 @@ static void seq_reset_tracks(uint32_t pos)
         t->rh_n = 0;
         t->arp_new = t->nheld != 0;
         comp_reset(t);
+        t->seq_org = 0;                             /* (patterns: from step 1; a change asked for is seen again) */
+        t->pat_arm = 0;
     }
     for (i = 0; i < NROLL; i++)
         roll[i].last = SEQ_NONE - 1u;               /* (a roll held over the start: on the grid from here) */
@@ -2947,7 +2952,7 @@ static void seq_ratchets(track_t *t, uint32_t into, uint32_t slen)
  * (micro >= 0), or how far before its step (micro < 0, as a negative number) */
 static int32_t micro_units(const track_t *t, uint32_t abs, uint32_t slen)
 {
-    int32_t m = t->micro[abs % trk_len(t) % NSTEP];
+    int32_t m = t->micro[(abs - t->seq_org) % trk_len(t) % NSTEP];
     return (int32_t)(slen / 64u) * m;                /* |m| <= 32: fits */
 }
 
@@ -3061,12 +3066,17 @@ static void seq_tick(track_t *t, uint32_t adv)
         /* (abs + 1 == seq_abs: SWING turned up inside a played odd step: nothing until the grid is back) */
     }
     if (fire) {                                      /* a new step: one a block at most */
-        uint32_t again = 0, flow = comp_flow(t);
+        uint32_t again = 0, flow, start = t->seq_abs == SEQ_NONE;
+        if ((t->pat_arm || t->pat_nchain) && pat_due(t, nabs, len, start)) {
+            len = trk_len(t);                        /* (another pattern from here: its LEN, from its step 1) */
+            start = 1;
+        }
+        flow = comp_flow(t);
         if (flow) {                                  /* (PULSE / HOLD / JUMP, a direction: the playhead, comp.c) */
-            idx = comp_next(t, len, t->seq_abs == SEQ_NONE, &again);
+            idx = comp_next(t, len, start, &again);
         } else {
-            idx = nabs % len;
-            t->cp_adv = nabs;
+            idx = (nabs - t->seq_org) % len;
+            t->cp_adv = nabs - t->seq_org;
         }
         t->seq_abs = nabs;
         t->seq_idx = (uint16_t)idx;
@@ -3764,6 +3774,7 @@ static void events_block(uint32_t n)
                     }
         mi_pen[0] = mi_pen[1] = mi_pen[2] = mi_pen[3] = 0;
     }
+    pat_block();                                      /* (patterns: a change asked for, its boundary; stopped: made) */
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], adv);
     click_tick();
