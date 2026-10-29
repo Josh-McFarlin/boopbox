@@ -185,6 +185,9 @@ def build_app():
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
+    v = os.environ.get("FELUCCA_VIS_STYLES")   # the visualiser's styles built in, a bit each (ui_vis.c), e.g. 0x533
+    if v and re.fullmatch(r"(0x[0-9a-fA-F]+|[0-9]+)", v):
+        flags.append(f"-DFELUCCA_VIS_STYLES={v}u")
     flags.append(f'-DFELUCCA_ID="{PRODUCT}"')
     if VERSION:
         flags.append(f'-DFELUCCA_VERSION="{VERSION}"')
