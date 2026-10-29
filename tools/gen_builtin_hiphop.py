@@ -27,7 +27,8 @@ CC0 = g.ROOT / "assets" / "samples-cc0"
 
 # set: (zones [(MIDI root it sounds at, seconds)], builder, chain, transpose of the stored root)
 SETS = {
-    "BASS": ([(28, 0.9), (35, 0.9), (42, 0.9), (49, 0.85)], g.CB, dict(lp=4500, drive=1.8, warm=3.0, wow=0.0), 24),
+    # (groovebox: three zones, the top one (49, C#) left out for flash room: the F# zone plays the notes above it)
+    "BASS": ([(28, 0.9), (35, 0.9), (42, 0.9)], g.CB, dict(lp=4500, drive=1.8, warm=3.0, wow=0.0), 24),
     "VIBES": ([(53, 1.0), (62, 1.0), (71, 1.0)], g.VIB, dict(lp=10000, drive=1.2, warm=1.0), 0),
     "HORNS": ([(55, 0.6), (62, 0.6), (69, 0.6), (76, 0.6)],
               g.section((g.TPT, 0, 1.0), (g.TBN, 12, 0.75)), dict(lp=9500, drive=2.2, warm=1.5), 0),

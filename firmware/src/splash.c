@@ -5,8 +5,8 @@
 #define UI_SMALL
 #endif
 #ifndef FELUCCA_LOGO_TEXT       /* (2.7) 1: the boot logo as text, "S" and "LOOP" in the four track colours (4.6 KB of flash
-                                 * less: tools/build.py builds so by itself when the flash is full) */
-#define FELUCCA_LOGO_TEXT 0
+                                 * less); the default since the groovebox upgrade (the flash is full); 0: the bitmap logo */
+#define FELUCCA_LOGO_TEXT 1
 #endif
 #if FELUCCA_LOGO_TEXT
 UI_SMALL static void sloop_logo_draw(uint32_t y0)

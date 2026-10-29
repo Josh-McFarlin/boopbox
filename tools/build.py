@@ -335,29 +335,16 @@ def main():
         gen, ldr = ex.submit(generate), ex.submit(build_loader)
         gen.result()
         ota = ldr.result()
-    # The flash is full: each fallback in turn, said, until the image fits; none left: the build fails (nothing is
-    # left out silently). (2.7) the boot logo as text ("S" and "LOOP" in the tracks' colours, splash.c), 4.6 KB;
-    # (groovebox) no full-screen visualiser (HOME on HOME, ui_vis.c), about 10 KB (the proxy build's measure)
-    fallbacks = [("FELUCCA_LOGO_TEXT", "the boot logo as text, 4.6 KB less"),
-                 ("FELUCCA_VIS", "no full-screen visualiser (HOME on HOME), about 10 KB less")]
-    while True:
-        try:
-            img, syms, dis, rt = build_app()
-            break
-        except SystemExit:
-            if "overflow" not in LAST_ERR:
-                raise
-            nxt = next(((k, w) for k, w in fallbacks if os.environ.get(k) is None), None)
-            if nxt is None:
-                print("build: the flash is full and every fallback is taken: the image does not fit. By hand: "
-                      "FELUCCA_EDITOR=0 builds without the web editor's SysEx (about 19 KB less; updates and recovery "
-                      "stay); see docs/groovebox-performance.md")
-                raise
-            print(f"build: the flash is full: building again with {nxt[1]} ({nxt[0]}={'1' if nxt[0] == 'FELUCCA_LOGO_TEXT' else '0'})")
-            os.environ[nxt[0]] = "1" if nxt[0] == "FELUCCA_LOGO_TEXT" else "0"
-    taken = [w for k, w in fallbacks if os.environ.get(k) == ("1" if k == "FELUCCA_LOGO_TEXT" else "0")]
-    if taken:
-        print("build: NOTE: built with " + "; ".join(taken))
+    # (groovebox) the boot logo as text and no full-screen visualiser are the defaults now (felucca.c, splash.c): the
+    # flash is full. When the image still does not fit, the build fails and says what else could go; nothing is left
+    # out silently
+    try:
+        img, syms, dis, rt = build_app()
+    except SystemExit:
+        if "overflow" in LAST_ERR:
+            print("build: the flash is full: the image does not fit. By hand: FELUCCA_EDITOR=0 builds without the web "
+                  "editor's SysEx (about 14 KB less; updates and recovery stay); see docs/groovebox-performance.md")
+        raise
     errors, notes = check(img, syms, dis, rt)
     hal_err = mmio_check()
     errors += hal_err
