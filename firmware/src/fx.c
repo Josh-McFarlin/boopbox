@@ -1176,7 +1176,10 @@ static void texture_mix(int32_t *l, int32_t *r, uint32_t n)
         texture_reset(src);                             /* faded out: the new source from rest */
 }
 
-static void mix_block(int32_t *out, uint32_t n)
+/* noinline: the mix stays a function of its own, out of the ISR (SLOOP 2.0; tests/target_budget.py counts the ISR's
+ * loops apart): with the FX target's second bus, the effects it calls are called twice, so it became small enough
+ * for the compiler to inline it into fm1_alnk0_irq */
+static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)
 {
     uint32_t i, c1;
     int32_t m0, m1, *mix_l = acc[0].l, *mix_r = acc[0].r;
