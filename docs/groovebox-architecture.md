@@ -25,7 +25,7 @@ change of the firmware and is updated as the work goes on (the last section).
 
 | Resource | Size | Used (baseline) | Notes |
 | --- | --- | --- | --- |
-| Flash, app slot (XIP) | 581,564 B (`APP_SLOT` 0x8DFBC) | full | 2.7 removed the USB serial console and `build.py` already rebuilds with a text boot logo when the image does not fit. The built-in samples are 283,212 B of it. |
+| Flash, app slot (XIP) | 581,564 B (`APP_SLOT` 0x8DFBC) | 570,176 B (11,388 B free) | 2.7 removed the USB serial console and `build.py` already rebuilt with a text boot logo when the image did not fit. The built-in samples are 283,212 B of it (273,840 B since the groovebox's bass change). |
 | RAM region (.data+.bss) | 98,304 B | 59,094 B (proxy) | ~37 KB free: the only real room. |
 | Pool (.pool, zeroed) | 344,064 B | 333,900 B | `build.py` demands 8,192 B of headroom: **~2 KB usable**. Holds the delay (128 KB), the punch ring (64 KB), the canvas (58 KB), the SLICER buffers (4 x 8 KB), the engine arenas (3 x 8,592 B), the song backup and the autosave buffer. |
 | NOINIT | 15,696 B | 15,464 B | The four section snapshots `proj_slot[4]` (4 x 3,816 B). |
@@ -256,3 +256,14 @@ New modules (all host-testable, no allocation, bounded loops):
   - Documents: `docs/groovebox-performance.md` (sizes, RAM, CPU, how to measure), `docs/groovebox-storage.md`
     (format 7, migration, validation, the format 6 fallback, going back to 2.8.3), `docs/groovebox-status.md`
     (implemented, limits, blockers, build and install), `BUILDING.md` (the new build options, `HOST_ONLY`).
+- The real build (after the merge): with the JieLi toolchain and the SDK files, every milestone commit was built.
+  The upgrade adds 29,144 B to the app (`docs/groovebox-performance.md`); the default build was 17,756 B over the
+  slot, 4,184 B over with both fallbacks. Each feature's cost was measured by building with its entry points made
+  empty. To fit with the web editor kept: the text boot logo and no visualiser became the defaults (`splash.c`,
+  `felucca.c`; `tools/build.py` no longer falls back by itself, it fails and says so), and the top recording of the
+  SAMPLE engine's BASS set (C#, note 73: 9,372 B) left the tree (`tools/gen_builtin_hiphop.py`, `ATTRIBUTION.txt`):
+  its notes are played from the F# recording. The default build is 576,212 B (5,352 B free); the golden renders are
+  unchanged (none plays the bass at note 70 or above). The render-loop check (`tests/target_budget.py`, first run on
+  a real build) found `mix_block` inlined into the audio ISR (the FX target's second bus makes the effects it calls
+  twice not inline any more, so `mix_block` became small enough): it is `noinline` again; the budget file, written
+  for an older toolchain on which 2.8.3 itself fails, was rewritten on this one.

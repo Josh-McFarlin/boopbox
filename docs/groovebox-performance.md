@@ -2,96 +2,118 @@
 
 This page gives the measured cost of the groovebox features: flash, RAM and CPU. Read the source of each number:
 
+- **Real build**: `tools/build.py` with the JieLi pi32v2 toolchain (jieli-linux-toolchains-20260730.1) and the AC79
+  SDK files. The 2.8.3 tree built with this toolchain gives an app of 570,176 B, the size of the shipped 2.8.3 app,
+  so these figures are the firmware's own.
 - **Proxy build** (`tools/proxy_size.py`): the whole firmware compiled with the host clang for RISC-V RV32IMC at
-  `-Os`, because the JieLi pi32v2 toolchain could not be installed here (`docs/groovebox-status.md`, section 4). Its RAM and pool figures match
-  the real build closely (baseline: RAM 59,094 B proxy, 58,220 B target). Its code size does not, because it is a
-  different instruction set. The difference between two trees is a fair measure of a change's cost.
-- **Shipped image**: the SLOOP 2.8.3 package in `docs/firmware/sloop-2.8.3.fwsc`, decoded (the app entry's CRC-16
-  matches). This is a real target figure.
+  `-Os`, for use without the JieLi toolchain. Its RAM figures match the real build closely; its code size does not
+  (another instruction set: it put this upgrade's growth at 35.3 KB, the real build at 29.1 KB).
 - **Host time**: the firmware's audio and sequencer code compiled with `cc -O2` and timed on this machine (x86-64,
   4 cores). It is not the FM-1's time. Only ratios between two runs on the same machine are meaningful.
 
-**Nothing on this page was measured on an FM-1.** No firmware image was built and none was flashed.
+**Nothing on this page was measured on an FM-1.** An image was built; none was flashed.
 
 ## 1. Flash
 
-### The baseline had 11.1 KB free
+The app slot is 581,564 B (`APP_SLOT` 0x8DFBC). The 2.8.3 app is 570,176 B: **11,388 B were free**.
 
-The app slot is 581,564 B (`APP_SLOT` 0x8DFBC). In the shipped 2.8.3 image, the app ends at byte 570,176, so
-**11,388 B were free**. That image has the bitmap boot logo (its RLE data is in the app), so the 2.7 text-logo
-fallback was not needed for 2.8.3.
+### The final build
 
-### Growth per milestone (proxy build, bytes)
+| | Bytes |
+| --- | ---: |
+| App, default build (`./build.sh`) | **576,212** |
+| Free in the slot | **5,352** |
 
-| Tree | Code | Constants | RAM (.data + .bss) |
-| --- | ---: | ---: | ---: |
-| Baseline (SLOOP 2.8.3) | 266,894 | 358,319 | 59,094 |
-| B: eight tracks, format 7 | 277,588 | | 71,448 |
-| C: step components | 281,598 | | 72,376 |
-| D: parameter locks (+ C's UI) | 287,994 | | 73,948 |
-| E: patterns, song loop region | 294,398 | | 77,268 |
-| F: harmony | 299,066 | | 77,400 |
-| Performance FX | 299,472 | | 77,432 |
-| G: UI integration (final tree) | 300,286 | 360,221 | 77,440 |
-| **Growth** | **+33,392** | **+1,902** | **+18,346** |
+To fit, three things that cost no feature of the groovebox upgrade were taken out (all measured on the real build):
 
-(Constants were measured at the baseline and the final tree only.)
-
-### Build variants (proxy build, final tree)
-
-| Variant | Code | Constants | Code + constants vs baseline | RAM |
-| --- | ---: | ---: | ---: | ---: |
-| default | 300,286 | 360,221 | +35,294 | 77,440 |
-| `FELUCCA_LOGO_TEXT=1` (fallback 1) | 300,372 | 355,559 | +30,718 | 77,440 |
-| `FELUCCA_LOGO_TEXT=1 FELUCCA_VIS=0` (fallbacks 1 + 2) | 290,432 | 355,253 | +20,472 | 74,584 |
-| `FELUCCA_EDITOR=0` | 280,686 | 359,792 | +15,265 | 74,988 |
-| `FELUCCA_LOGO_TEXT=1 FELUCCA_EDITOR=0` | 280,758 | 355,130 | +10,675 | 74,988 |
-| `FELUCCA_LOGO_TEXT=1 FELUCCA_VIS=0 FELUCCA_EDITOR=0` | 270,820 | 354,824 | +431 | 72,132 |
-
-### Will it fit? (an estimate, not a measurement)
-
-The proxy build's code + constants for the baseline are 625,213 B, while the real app is 570,176 B: the proxy is
-about 1.10 x the target. If the growth scales the same way (an assumption; the instruction sets differ):
-
-| Variant | Estimated growth on the target | Against the 11.1 KB free |
+| Taken out | Saves | What it means |
 | --- | ---: | --- |
-| default | ~32 KB | does not fit |
-| fallback 1 (text logo) | ~28 KB | does not fit |
-| fallbacks 1 + 2 (text logo, no visualiser) | ~18.7 KB | does not fit |
-| `FELUCCA_EDITOR=0` alone | ~13.9 KB | probably does not fit |
-| text logo + `FELUCCA_EDITOR=0` | ~9.7 KB | may fit, with little margin |
-| all three | ~0.4 KB | fits |
+| The bitmap boot logo (`FELUCCA_LOGO_TEXT=1`, now the default) | 4,592 | the boot screen shows "SLOOP" as text in the tracks' colours |
+| The full-screen visualiser (`FELUCCA_VIS=0`, now the default) | 8,980 | HOME on HOME stays on the TRACKS screen |
+| The top recording of the SAMPLE engine's BASS set (C#, note 73) | 9,372 | the F# recording (note 66) now plays notes 63 and up; notes below 70 sound exactly as before |
 
-So the automatic fallbacks alone are probably **not** enough. `tools/build.py` takes them in turn and says so; when
-every fallback is taken and the image still does not fit, the build fails and names `FELUCCA_EDITOR=0`. The build
-does not take that option itself, because it removes a feature that users rely on (the web editor: sound and
-pattern editing, backups, sample upload). With `FELUCCA_EDITOR=0`:
+The bitmap logo can be set back (`FELUCCA_LOGO_TEXT=0`: about 750 B are left). The visualiser fits again only without
+the web editor (`FELUCCA_VIS=1 FELUCCA_EDITOR=0`): see the variants below.
 
-- the web editor gets no reply from the FM-1 (no editing, backup or sample upload over USB);
-- M-UPGRADE updates, the USB rescue (`recovery.c`, OCT− at power-on), USB-MIDI and USB audio stay: `ota_service`
-  still reads every SysEx frame and drops the editor's.
+### Growth per milestone (real build, default flags of each tree)
 
-Only a target build can tell the real figure. Other parts that could go (proxy code, measured by building without
-them): the TRIO engine 4.3 KB, FORMANT 3.3 KB, NOISE 2.9 KB. This firmware has no switch for them: removing an engine
-changes what existing projects sound like.
+| Tree | App | Added |
+| --- | ---: | ---: |
+| Baseline (SLOOP 2.8.3) | 570,176 | |
+| B: eight tracks, project format 7 | 579,080 | +8,904 |
+| C: step components, the engine | 584,168 | +5,088 |
+| C: step components, the UI | 586,868 | +2,700 |
+| D: parameter locks | 589,456 | +2,588 |
+| E: patterns, song loop region | 595,000 | +5,544 |
+| F: harmony | 597,712 | +2,712 |
+| Performance FX | 598,416 | +704 |
+| G: UI integration | 599,320 | +904 |
+| **Growth** | | **+29,144** |
 
-The fallback switches are compile-checked (proxy build and `clang -Wall`: no warnings). The host tests include
-`ui_vis.c` and `editor.c` themselves, so the stubs that replace them are not run by a test.
+### What single features cost (real build)
+
+Each measured by building the final tree with that feature's entry points made empty (the compiler drops its code):
+
+| Feature | Saves |
+| --- | ---: |
+| The web editor's SysEx (`FELUCCA_EDITOR=0`) | 13,872 |
+| The visualiser | 8,980 |
+| The bitmap boot logo | 4,592 |
+| Harmony (engine, live chords, CHORDS screen) | 4,200 |
+| Step components (engine and COMP strip) | 3,492 |
+| The CHORDS screen alone | 3,208 |
+| The PATTERNS screen | 3,104 |
+| The format 6 fallback writer | 1,104 |
+| The sheet's LOCKS strip | 828 |
+| SAVE > TOOLS > KIND | 432 |
+| FX > PERF Q | 164 |
+| REC KNOBS (knob moves as locks) | 160 |
+| BEND (step component) | 64 |
+| The song's loop region | 48 |
+| SLIDE (the glide itself) | 32 |
+
+The visualiser's styles (real build, `FELUCCA_VIS=1`, each style left out alone with `FELUCCA_VIS_STYLES`): the
+whole visualiser 9,168 B, its frame with no style 1,860 B; SLOOP 1,672, SPECTRUM + SPECTROGRAM together 1,272 (their
+FFT; alone 144 and 280), LCD 704, TAPE 644, ORBIT 568, LISSAJOUS 544, OSCILLOSCOPE 320, WIRES 320, VU METERS 304,
+CIRCLE 288, BOUNCE 208. Six styles fit beside the web editor (OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE,
+WIRES: `0x533`, 836 B left), seven only just (428 B left with SPECTROGRAM added), eight do not.
+
+Sample data, exact bytes (one recording fewer in a set): PIANO 11,025, VIBES 11,025, FLUTE 10,474, BASS 9,922 (B) or
+9,372 (C#), HORNS 6,615, STRGS 6,615.
+
+### Build variants (real build, before the bass recording was taken out)
+
+| Variant | Result |
+| --- | ---: |
+| the 2.8.3 defaults (bitmap logo, visualiser) | 17,756 B over |
+| text logo | 13,164 B over |
+| text logo, no visualiser | 4,184 B over |
+| no web editor | 3,900 B over |
+| text logo, no web editor | fits, 708 B free |
+| text logo, no visualiser, no web editor | fits, 9,352 B free |
+
+With the bass recording out, each of these has 9,372 B more room.
+
+When the image does not fit, `tools/build.py` fails and names `FELUCCA_EDITOR=0`; it takes nothing out by itself.
+With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1 (no editing, backup or sample upload over USB);
+M-UPGRADE updates, the USB rescue (`recovery.c`, OCT− at power-on), USB-MIDI and USB audio stay: `ota_service` still
+reads every SysEx frame and drops the editor's.
 
 ## 2. RAM
 
-| Region | Size | Baseline | Final tree | Free |
+| Region | Size | 2.8.3 | Final build | Free |
 | --- | ---: | ---: | ---: | ---: |
-| RAM region (.data + .bss) | 98,304 | 59,094 | 77,440 | ~20.9 KB |
-| Pool (.pool, `tools/build.py` demands 8,192 B headroom) | 344,064 | 333,900 | 333,948 | 10,116 (1,924 past the headroom) |
-| NOINIT (`proj_slot[4]`: 4 x 3,840 B) | 15,696 | 15,464 | 15,560 | 136 |
-| `.lowram` | 29,488 | 19,700 | 19,700 | 9,788 |
+| RAM region (.data + .bss) | 98,304 | 59,308 | 74,684 | 23,620 |
+| Pool (.pool, `tools/build.py` demands 8,192 B headroom) | 344,064 | 333,900 | 328,444 | 15,620 |
+| `.lowram` | 29,384 | 22,772 | 22,772 | 6,612 |
+| NOINIT (`proj_slot[4]`: 4 x 3,840 B; proxy figure) | 15,696 | 15,464 | 15,560 | 136 |
 
-Where the RAM went (+18.3 KB): Milestone B +12.4 KB (the four extra tracks' `track_t` +8.6 KB, their INSERT
-states, FM6's per-track copies), C +0.9 KB (the step components in each `track_t`), D +1.6 KB (locks 25..32, the
-slides), E +3.3 KB (the pattern bank, 3,072 B, and the chain state), F +132 B (the harmony), the FX target +32 B.
-The FX target's second dry pair in the mix accumulators (`acc[2].pl/pr`, 512 B) is in `.lowram`; the old drum bus of
-the same size left `.lowram` in Milestone B, so `.lowram` is unchanged.
+(Real build figures, from `tools/build.py`'s checks; the visualiser's buffers left the pool and the RAM region with
+it.) Where the RAM went, by milestone (proxy build, with the visualiser): B +12.4 KB (the four extra tracks'
+`track_t` +8.6 KB, their INSERT states, FM6's per-track copies), C +0.9 KB (the step components in each `track_t`),
+D +1.6 KB (locks 25..32, the slides), E +3.3 KB (the pattern bank, 3,072 B, and the chain state), F +132 B (the
+harmony), the FX target +32 B. The FX target's second dry pair in the mix accumulators (`acc[2].pl/pr`, 512 B) is in
+`.lowram`; the old drum bus of the same size left `.lowram` in Milestone B, so `.lowram` is unchanged.
 
 Nothing is allocated at run time. Every new structure is a fixed-size array; every loop has a fixed bound.
 
@@ -156,6 +178,11 @@ FOLLOW on, while watching the CPU readout and listening for dropped voices.
 - The step components use each track's own random generator (`cp_rng`), seeded at PLAY. They do not draw from the
   shared `rng()`, so the existing sounds' random seeds are unchanged.
 - `tests/regress.c`'s CPU check (per-preset cost against `tests/cpu_baseline.txt`, +35 % timed) passes.
+- The target cost of the render loops (`tests/target_budget.py`, a static count of the instructions in the loops of
+  each render function in the real build's disassembly): every loop is within 1 % of the 2.8.3 tree built with the
+  same toolchain (`drums_mix` 6,830 against 6,811). The FX target made the compiler inline `mix_block` into the audio
+  ISR; `mix_block` is `noinline` again, so the ISR is 256 (2.8.3: 268). `tests/target_budget.txt` was written for an
+  older toolchain, on which 2.8.3 itself is over budget; it was rewritten on this one (its notes say so).
 
 ## 5. Bounds of the new work per block (core 0)
 
@@ -171,7 +198,7 @@ FOLLOW on, while watching the CPU readout and listening for dropped voices.
 
 ```sh
 python3 tools/proxy_size.py --json                         # proxy sizes (default build)
-python3 tools/proxy_size.py --json -DFELUCCA_VIS=0         # a variant
+python3 tools/proxy_size.py --json -DFELUCCA_VIS=1         # a variant
 cc -O2 -Ibuild/gen -Ifirmware/src -Ifirmware/hal tests/groove_cost.c -lm -o build/host/groove_cost
 build/host/groove_cost                                     # the host cost table above
 HOST_ONLY=1 sh tests/run_tests.sh                          # the full host suite
