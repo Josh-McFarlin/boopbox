@@ -61,13 +61,13 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_CDC` | 1 | USB serial console |
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
-| `FELUCCA_LOGO_TEXT` | 0 | the boot logo as text (4.6 KB less flash); the build's first fallback when the flash is full |
-| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME); 0 is the build's second fallback (about 10 KB less) |
-| `FELUCCA_EDITOR` | 1 | the web editor's SysEx; 0 only by hand (about 19 KB less): the editor gets no reply, updates and USB rescue stay |
+| `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text (4.6 KB less flash than the bitmap logo, 0) |
+| `FELUCCA_VIS` | 0 | the full-screen visualiser (HOME on HOME, 9 KB) |
+| `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
-When the app does not fit its flash slot, the build takes the fallbacks in turn and prints each one
-(`build: the flash is full: building again with ...`). It never takes `FELUCCA_EDITOR=0` itself; when no fallback is
-left it fails and says so. See `docs/groovebox-performance.md` for the measured sizes.
+The flash is full: the default build leaves about 5 KB of the app slot free. The bitmap logo fits back
+(`FELUCCA_LOGO_TEXT=0`); the visualiser only with `FELUCCA_EDITOR=0`. When the app does not fit, the build fails and
+says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes.
 
 ## Samples
 

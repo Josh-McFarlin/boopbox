@@ -10,7 +10,6 @@ Each file is retuned, cut and coloured (tools/gen_builtin_hiphop.py) from:
 BASS/00_E1_m52.wav  <-  sgossner/VSCO-2-CE/master/Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_E0_v3_rr1.wav
 BASS/01_B1_m59.wav  <-  sgossner/VSCO-2-CE/master/Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_A#0_v3_rr1.wav
 BASS/02_Fs2_m66.wav  <-  sgossner/VSCO-2-CE/master/Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_F#1_v1_rr1.wav
-BASS/03_Cs3_m73.wav  <-  sgossner/VSCO-2-CE/master/Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_C#2_v1_rr1.wav
 VIBES/00_F3_m53.wav  <-  sgossner/VCSL/master/Idiophones/Struck Idiophones/Vibraphone/Hard Mallets/Vibes_hard_F2_v3_rr1_Main.wav
 VIBES/01_D4_m62.wav  <-  sgossner/VCSL/master/Idiophones/Struck Idiophones/Vibraphone/Hard Mallets/Vibes_hard_C3_v3_rr1_Main.wav
 VIBES/02_B4_m71.wav  <-  sgossner/VCSL/master/Idiophones/Struck Idiophones/Vibraphone/Hard Mallets/Vibes_hard_B3_v3_rr1_Main.wav
