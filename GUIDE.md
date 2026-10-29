@@ -674,7 +674,7 @@ The song's settings can only be edited while it is stopped (*STOP FIRST*). An em
 | Screen | How to get there | What it shows · what the knobs do |
 | --- | --- | --- |
 | **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat; each track with its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** a coloured **A–D** badge by the title shows which section is playing. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track; on a muted track: unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
-| **Visualiser** | tap **HOME** on TRACKS | twelve full-screen visualisers; see [The visualiser](#19-the-visualiser) |
+| **Visualiser** | tap **HOME** on TRACKS | twelve full-screen visualisers (not in the groovebox build by default); see [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the layer's colour |
 | **DRUMS** (grid / kit) | tap **EDIT** or **SEQ** on TRACKS with the drum track | see [The DRUMS screen](#the-drums-screen) |
 | **REC READY / FREE TAKE / COUNT-IN** | **REC** while stopped | the tracks, then **mode · length · start · quant** on KNOB 1–4 (4-3-2-1 during a count-in); in a free take: the seconds and the loop it would make |
@@ -888,6 +888,10 @@ The texture is saved with the project, and each song section (A–D) has its own
 ---
 
 ## 19. The visualiser
+
+> **Groovebox build:** the visualiser is left out by default, because the flash is full (see
+> `docs/groovebox-performance.md`): tapping HOME on the TRACKS screen does nothing. A build with
+> `FELUCCA_VIS=1 FELUCCA_EDITOR=0` brings it back, without the web editor.
 
 On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of what SLOOP plays.
 

@@ -4,6 +4,13 @@ This page lists the controls added by the groovebox upgrade (eight tracks, step 
 control of SLOOP 2.8.3 described in `GUIDE.md` still works as written there; where a control changed, this page says
 so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 
+Three things of SLOOP 2.8.3 are left out of this build to make room in the flash (`docs/groovebox-performance.md`):
+
+- **The visualiser:** tapping HOME on the TRACKS screen does nothing.
+- **The bitmap boot logo:** the boot screen shows "SLOOP" as text in the tracks' colours.
+- **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
+  recording below, so they sound a little different; every note below 70 sounds as before.
+
 ## Eight tracks
 
 | Control | Does |

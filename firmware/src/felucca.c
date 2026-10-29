@@ -30,7 +30,7 @@
 #endif
 #ifndef FELUCCA_EDITOR
 #define FELUCCA_EDITOR 1         /* the web editor's SysEx (editor.c); 0 only by hand (FELUCCA_EDITOR=0 tools/build.py), never
-                                  * a fallback: about 18 KB less, the web editor gets no reply; updates and recovery stay */
+                                  * a fallback: about 14 KB less, the web editor gets no reply; updates and recovery stay */
 #endif
 #ifndef FELUCCA_OTA_DRYRUN
 #define FELUCCA_OTA_DRYRUN 0     /* 1 = stage, ask "success", then undo: no record, no reset */
@@ -71,7 +71,7 @@
 #include "icons.c"           /* parameter icons (FELUCCA_ICONS), used by ui_draw.c */
 #include "ui_draw.c"
 #ifndef FELUCCA_VIS
-#define FELUCCA_VIS 1                /* the full-screen visualiser; 0: tools/build.py's second fallback when the flash is full */
+#define FELUCCA_VIS 0                /* the full-screen visualiser (9 KB): off since the groovebox upgrade (the flash is full) */
 #endif
 #if FELUCCA_VIS
 #include "ui_vis.c"           /* the full-screen visualiser (HOME on HOME, 2.4) */
