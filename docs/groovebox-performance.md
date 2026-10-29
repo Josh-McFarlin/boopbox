@@ -72,6 +72,12 @@ Each measured by building the final tree with that feature's entry points made e
 | The song's loop region | 48 |
 | SLIDE (the glide itself) | 32 |
 
+The visualiser's styles (real build, `FELUCCA_VIS=1`, each style left out alone with `FELUCCA_VIS_STYLES`): the
+whole visualiser 9,168 B, its frame with no style 1,860 B; SLOOP 1,672, SPECTRUM + SPECTROGRAM together 1,272 (their
+FFT; alone 144 and 280), LCD 704, TAPE 644, ORBIT 568, LISSAJOUS 544, OSCILLOSCOPE 320, WIRES 320, VU METERS 304,
+CIRCLE 288, BOUNCE 208. Six styles fit beside the web editor (OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE,
+WIRES: `0x533`, 836 B left), seven only just (428 B left with SPECTROGRAM added), eight do not.
+
 Sample data, exact bytes (one recording fewer in a set): PIANO 11,025, VIBES 11,025, FLUTE 10,474, BASS 9,922 (B) or
 9,372 (C#), HORNS 6,615, STRGS 6,615.
 

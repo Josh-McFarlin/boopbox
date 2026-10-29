@@ -63,6 +63,7 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
 | `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text (4.6 KB less flash than the bitmap logo, 0) |
 | `FELUCCA_VIS` | 0 | the full-screen visualiser (HOME on HOME, 9 KB) |
+| `FELUCCA_VIS_STYLES` | 0xFFF | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 OSCILLOSCOPE .. bit 11 SLOOP); SELECT skips the others |
 | `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
 The flash is full: the default build leaves about 5 KB of the app slot free. The bitmap logo fits back

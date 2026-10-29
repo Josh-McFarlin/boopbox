@@ -9,6 +9,11 @@
  * (voice.c vis_hit) and the transport clock. Everything is drawn in the main loop, every other frame, in two
  * bands of 120 rows (the canvas holds 124): no cost to the audio. */
 #define VIS_N 12u
+#ifndef FELUCCA_VIS_STYLES
+#define FELUCCA_VIS_STYLES 0xFFFu                   /* (groovebox) the styles built in, a bit each (bit 0: OSCILLOSCOPE): the
+                                                     * flash is full; SELECT steps over the others */
+#endif
+#define VIS_HAS(s) ((FELUCCA_VIS_STYLES >> (s)) & 1u)
 static const char *const VIS_NAME[VIS_N] = {"OSCILLOSCOPE", "SPECTRUM", "SPECTROGRAM", "LISSAJOUS", "VU METERS",
                                             "CIRCLE", "TAPE", "LCD", "BOUNCE", "ORBIT", "WIRES", "SLOOP"};
 /* vis_on, vis_shown_last, vis_name_t: ui_draw.c; vis_style: panel.c (kept with the settings) */
@@ -39,8 +44,20 @@ static const uint8_t VIS_EDGE[33] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 
                                      41, 49, 58, 69, 82, 98, 116, 138, 164, 195, 232};
 
 static int vis_shown(void) { return vis_on && !ui.home && !ui.menu && cur_page()->scope == SC_TRK; }
+static void vis_step(uint32_t dir)                  /* vis_style on to the next style built in (dir 1 or VIS_N - 1) */
+{
+    uint32_t i, v = vis_style % VIS_N;
+    for (i = 0; i < VIS_N; i++) {
+        v = (v + dir) % VIS_N;
+        if (VIS_HAS(v))
+            break;
+    }
+    vis_style = (uint8_t)v;
+}
 static void vis_open(void)
 {
+    if (!VIS_HAS(vis_style % VIS_N))
+        vis_step(1);                                /* (the style kept with the settings is not built in) */
     vis_on = 1;
     vis_name_t = 30;
     ui.force = 1;
@@ -269,6 +286,8 @@ static void vis_update(void)
     switch (vis_style) {
     case 1: case 2: {
         int16_t b[32];
+        if (!VIS_HAS(1) && !VIS_HAS(2))
+            break;
         vis_fft();
         vis_bands(b);
         if (vis_style == 1) {
@@ -297,6 +316,8 @@ static void vis_update(void)
     case 3: {                                       /* Lissajous: L-R across, L+R up; three frames kept */
         int32_t m = 1;
         uint8_t (*p)[2];
+        if (!VIS_HAS(3))
+            break;
         for (i = 0; i < VIS_FFT; i += 2u) {
             int32_t s = vis_l[i] + vis_r[i];
             if (s < 0) s = -s;
@@ -315,7 +336,7 @@ static void vis_update(void)
         break;
     }
     case 4:                                         /* VU: fall 3 % a frame, peaks held a second */
-        for (i = 0; i < 5u; i++) {
+        for (i = 0; i < 5u && VIS_HAS(4); i++) {
             int32_t v = vs.lvl[i];
             vs.vu[i] = (int16_t)(v > vs.vu[i] - 30 ? v : vs.vu[i] - 30);
             if (v >= vs.pk[i]) {
@@ -327,7 +348,7 @@ static void vis_update(void)
         }
         break;
     case 11:                                        /* SLOOP: the sail's bands and the dial fall slowly */
-        for (i = 0; i < 5u; i++)
+        for (i = 0; i < 5u && VIS_HAS(11); i++)
             vs.vu[i] = (int16_t)(vs.lvl[i] > vs.vu[i] - 30 ? vs.lvl[i] : vs.vu[i] - 30);
         break;
     default:
@@ -612,27 +633,36 @@ static void vis_draw(void)
         cv_begin(240, 120, C_BLACK);
         cv_oy = -(int32_t)(pass * 120u);
         switch (vis_style % VIS_N) {
-        case 0: vis_scope(); break;
-        case 1: vis_spectrum(); break;
-        case 2: vis_spectrogram(); break;
-        case 3: vis_lissajous(); break;
-        case 4: vis_meters(); break;
-        case 5: vis_ring(); break;
-        case 6: vis_tape(); break;
-        case 7: vis_lcd(); break;
-        case 8: vis_bounce(); break;
-        case 9: vis_orbit(); break;
-        case 10: vis_wires(); break;
-        default: vis_sloop(); break;
+        case 0: if (VIS_HAS(0)) vis_scope(); break;
+        case 1: if (VIS_HAS(1)) vis_spectrum(); break;
+        case 2: if (VIS_HAS(2)) vis_spectrogram(); break;
+        case 3: if (VIS_HAS(3)) vis_lissajous(); break;
+        case 4: if (VIS_HAS(4)) vis_meters(); break;
+        case 5: if (VIS_HAS(5)) vis_ring(); break;
+        case 6: if (VIS_HAS(6)) vis_tape(); break;
+        case 7: if (VIS_HAS(7)) vis_lcd(); break;
+        case 8: if (VIS_HAS(8)) vis_bounce(); break;
+        case 9: if (VIS_HAS(9)) vis_orbit(); break;
+        case 10: if (VIS_HAS(10)) vis_wires(); break;
+        default: if (VIS_HAS(11)) vis_sloop(); break;
         }
         if (!pass && (vis_name_t || ui.msg_t)) {    /* the style's name a second (or a message) */
             char n[8];
             const char *s = ui.msg_t ? ui.msg : VIS_NAME[vis_style % VIS_N];
             cv_rect(0, 0, 240, 20, C_BLACK);
             cv_text(120 - text_w(&FONT_S, s) / 2, 2, &FONT_S, s, C_WHITE);
-            if (!ui.msg_t) {
-                fmt_int(n, (int32_t)(vis_style % VIS_N) + 1);
-                str_cpy(n + str_len(n), "/12", 4);
+            if (!ui.msg_t) {                        /* (its place among the styles built in: 3/12) */
+                uint32_t k, at = 0, nb = 0;
+                for (k = 0; k < VIS_N; k++)
+                    if (VIS_HAS(k)) {
+                        nb++;
+                        if (k <= vis_style % VIS_N)
+                            at++;
+                    }
+                fmt_int(n, (int32_t)at);
+                n[str_len(n) + 1u] = 0;
+                n[str_len(n)] = '/';
+                fmt_int(n + str_len(n), (int32_t)nb);
                 cv_text(4, 2, &FONT_S, n, C_DIM);
             }
         }
@@ -645,7 +675,7 @@ static void vis_draw(void)
 /* SELECT on the visualiser: the next / previous style (round) */
 static void vis_select(int32_t s)
 {
-    vis_style = (uint8_t)((vis_style + (s > 0 ? 1u : VIS_N - 1u)) % VIS_N);
+    vis_step(s > 0 ? 1u : VIS_N - 1u);
     vis_name_t = 30;
     ui.force = 1;
     settings_later = 1;                                 /* (kept with the settings, once stopped) */
