@@ -5,9 +5,9 @@ The controls are in `docs/groovebox-controls.md`, the design in `docs/groovebox-
 in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-performance.md`.
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
-for the PC, with the FM-1's inputs simulated). **No firmware image was built and nothing was run on an FM-1** (the
-JieLi toolchain and SDK could not be downloaded here; see section 4). The image probably does not fit the flash
-without the manual `FELUCCA_EDITOR=0` option (section 5).
+for the PC, with the FM-1's inputs simulated), and the default build (`./build.sh`, the JieLi toolchain) makes an
+image that fits the flash with 5,352 B to spare, the web editor included. **Nothing was run on an FM-1** (section 4).
+To fit, the build leaves out the visualiser, the bitmap boot logo and one bass recording (section 2).
 
 ## 1. Implemented
 
@@ -20,12 +20,16 @@ without the manual `FELUCCA_EDITOR=0` option (section 5).
 | Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
 | Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
 | Storage | project format 7 (eight tracks, all the above), formats 1..6 read and converted, damage detected, never cut (refused whole), format 6 kept as a fallback | `project_test` and the feature tests' store checks |
-| Size fallbacks | `tools/build.py`: text logo, then no visualiser, each said; `FELUCCA_EDITOR=0` by hand | compile-checked only (proxy build, `-Wall`) |
+| Flash budget | the text boot logo and no visualiser are the defaults; the BASS set has three recordings; `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,212 B of 581,564 |
 
 The existing SLOOP features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
 input, the M-UPGRADE update entry and the USB rescue are untouched (their host tests pass).
 
 ## 2. Limits and what is not implemented
+
+- **Left out for flash room** (from SLOOP 2.8.3): the full-screen visualiser (HOME on HOME does nothing), the bitmap
+  boot logo (the logo is text), and the top recording of the SAMPLE engine's BASS set (notes 70 and up of UP BASS and
+  DEEP BASS are played from the F# recording; every note below 70 is as before). See `docs/groovebox-performance.md`.
 
 - **Web editor:** its LIVE page and track list show 4 tracks (the protocol's frame sizes are unchanged). Its song
   page saves the song without the loop region. It was not extended for the new features: it has no editing of step
@@ -50,17 +54,20 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
 
 ## 3. Test results
 
-`HOST_ONLY=1 SOAK_MIN=2 SKIP_CPU_VALGRIND=1 sh tests/run_tests.sh` passes on the final tree: *ALL HOST TESTS
-PASSED* in 17 min 52 s on this machine, including the 182 golden renders unchanged, the two-core split under
-ThreadSanitizer (no race), the UBSan builds and a 2-minute soak (the full log is not part of the repository). Four tests are skipped in `HOST_ONLY` mode because they need a firmware image: the
-M-UPGRADE entry, the update loader, the target cost of the render loops (`tests/target_budget.py`) and the
-offline site in Chromium (it is built from `build/felucca.fwsc`).
+After `./build.sh`, `SOAK_MIN=2 SKIP_CPU_VALGRIND=1 sh tests/run_tests.sh` passes on the final tree with nothing
+skipped: *ALL HOST TESTS PASSED* in 18 min 14 s on this machine. That includes the 182 golden renders unchanged, the
+two-core split under ThreadSanitizer (no race), the UBSan builds, a 2-minute soak, and the tests that need the
+firmware image: the M-UPGRADE entry and the update loader on the built package, the target cost of the render loops
+(`tests/target_budget.py`, rewritten for this toolchain, see `docs/groovebox-performance.md`) and the offline site
+in Chromium. The full log is not part of the repository. Without the toolchain, `HOST_ONLY=1` runs everything but
+those four.
 
 ## 4. Blockers met
 
-- The JieLi pi32v2 toolchain (`tools/get_toolchain.sh`: pkgman.jieliapp.com) and the AC79 SDK (gitee.com) could not
-  be downloaded: the network policy of this environment blocks those hosts. So no `build/felucca.bin`, no
-  `.fwsc`, no real size and no target cost check.
+- At first the JieLi pi32v2 toolchain and the AC79 SDK could not be downloaded (the environment's network policy).
+  With `pkgman.jieliapp.com`, `jl-update.oss-cn-shenzhen.aliyuncs.com` (where the toolchain link leads) and
+  `gitee.com` allowed, `tools/get_toolchain.sh` and a sparse checkout of the three SDK files work, and the image is
+  built.
 - No FM-1 was available. Nothing was flashed (as asked) and no behaviour was checked on hardware: the timing, the
   CPU load at 8 busy tracks, the display layouts and the feel of the controls are checked on the host only.
 
@@ -76,22 +83,13 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
 ./build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
 ```
 
-When the image does not fit the 581,564-byte app slot, `tools/build.py` builds again with the text boot logo, then
-also without the full-screen visualiser, and prints each step (`build: the flash is full: building again with ...`,
-then `build: NOTE: built with ...`). If it still does not fit, the build fails and says so. Then build without the
-web editor's SysEx, which `docs/groovebox-performance.md` estimates is needed:
+The default build fits (`app ... 576212 B`). The bitmap boot logo can be built back in with
+`FELUCCA_LOGO_TEXT=0 ./build.sh` (about 750 B are left); the visualiser only without the web editor
+(`FELUCCA_VIS=1 FELUCCA_EDITOR=0 ./build.sh`). When an image does not fit, `tools/build.py` fails and says so; it
+leaves nothing out by itself. With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB
+rescue, USB-MIDI and USB audio still work.
 
-```sh
-FELUCCA_EDITOR=0 ./build.sh
-```
-
-With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB rescue, USB-MIDI and USB audio
-still work. After the first real build, check:
-
-1. the size line that `tools/build.py` prints, against `docs/groovebox-performance.md`;
-2. `sh tests/run_tests.sh` (without `HOST_ONLY`): it runs the four skipped tests on the image;
-3. `BUDGET_UPDATE=1` only after reviewing `tests/target_budget.py`'s report (the render loops did not change, so
-   their budget should still pass).
+After a build, `sh tests/run_tests.sh` (without `HOST_ONLY`) also runs the tests that need the image.
 
 ## 6. Install and recovery
 
