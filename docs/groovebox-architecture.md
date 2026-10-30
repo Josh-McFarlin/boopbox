@@ -1,4 +1,4 @@
-# SLOOP groovebox upgrade: architecture notes
+# BoopBox groovebox upgrade: architecture notes
 
 This file records what the checked-out tree (SLOOP 2.8.3, branch `groovebox-8track`) actually does, the limits
 that bound the upgrade to eight tracks, and the design chosen to fit them. It was written before the first

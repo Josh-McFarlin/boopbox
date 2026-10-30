@@ -1,4 +1,4 @@
-# SLOOP groovebox: controls
+# BoopBox groovebox: controls
 
 This page lists the controls added by the groovebox upgrade (eight tracks, step components, and what follows). Every
 control of SLOOP 2.8.3 described in `GUIDE.md` still works as written there; where a control changed, this page says
@@ -7,7 +7,7 @@ so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 Three things of SLOOP 2.8.3 are left out of this build to make room in the flash (`docs/groovebox-performance.md`):
 
 - **The visualiser:** tapping HOME on the TRACKS screen does nothing.
-- **The bitmap boot logo:** the boot screen shows "SLOOP" as text in the tracks' colours.
+- **The bitmap boot logo:** the boot screen shows "BoopBox" as text in the tracks' colours.
 - **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
   recording below, so they sound a little different; every note below 70 sounds as before.
 
@@ -28,7 +28,7 @@ it takes the default kit or sound of that track number; its PAN, MUTE, FILTER, L
 while playing.
 
 The default project: tracks 1-3 and 5-7 are synth tracks, tracks 4 and 8 drum tracks. Each synth track has its own
-engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older SLOOP opens on
+engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older BoopBox opens on
 tracks 1-4 as it was; tracks 5-8 start as at power-on.
 
 Limits: the eight synth tracks share **8 sounding voices**; the drum tracks share one pool of drum voices. At most

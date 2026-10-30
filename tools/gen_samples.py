@@ -11,13 +11,13 @@ Sources:
   assets/samples-cc0/   CC0 samples (CREDITS.txt there): PIANO (a grand), BASS, VIBES, HORNS, STRGS, FLUTE,
                         SCRCH (tools/gen_builtin_hiphop.py makes them; FLUTE and the KIT:
                         tools/fetch_cc0.py), and the acoustic drum kit of the GM map (KIT)
-  gen_waves.py          Felucca's own drum sounds (the Hügelton Sample Pack): only SLICE's BREAK, or a
+  gen_drums.py          BoopBox's own synthesized drums (GPL-3.0, made by the code): only SLICE's BREAK, or a
                         GM kit role the CC0 kit lacks
 One SAMPLE preset is written per set (SET_PRESETS: its name and sound), plus EXTRA_PRESETS.
 A file named ..._m<n>.wav has its root given (MIDI note n); else it comes from the note in the name.
 
 With FELUCCA_SLICE=1 the SLICE engine's built-in BREAK (eng_slice.c) is rendered here
-too: one bar of 16ths arranged from Felucca's own generated drums, stored after every set
+too: one bar of 16ths arranged from BoopBox's own generated drums, stored after every set
 and not one of the SAMPLE sets. Its slice table (decoder states on a 128-point grid, the hits as AUTO
 slices) is written with it: SLC_BREAK_INIT.
 
@@ -222,7 +222,7 @@ def gm_role(name):
 
 def gm_kit_sources(have_cc0):
     """role -> wav path: the CC0 acoustic kit (assets/samples-cc0/KIT); without it (and for SLICE's BREAK)
-    Felucca's own synthesized drums (gen_waves.py) for the roles it lacks"""
+    BoopBox's own synthesized drums (gen_drums.py) for the roles it lacks"""
     src = {}
     if have_cc0 and (CC0 / "KIT").exists():
         for p in sorted((CC0 / "KIT").glob("*.wav")):
@@ -440,7 +440,7 @@ def input_key(have_cc0):
     for p in (here / "gen_samples.py", here / "sampleio.py"):
         h.update(p.read_bytes())
     h.update(repr((sys.version_info[:2], have_cc0, os.environ.get("FELUCCA_SLICE") == "1")).encode())   # sum() differs across versions
-    files = sorted(GENDIR.glob("*.wav"))
+    files = sorted(GENDIR.glob("D *.wav"))
     if have_cc0:
         files += sorted(CC0.glob("*/*.wav"))
     for p in files:
@@ -450,7 +450,7 @@ def input_key(have_cc0):
 
 
 def main(out):
-    subprocess.run([sys.executable, str(Path(__file__).with_name("gen_waves.py")), str(GENDIR)], check=True)
+    subprocess.run([sys.executable, str(Path(__file__).with_name("gen_drums.py")), str(GENDIR)], check=True)
     have_cc0 = CC0.exists() and any(CC0.glob("*/*.wav"))
     if not have_cc0:
         print("samples: no CC0 samples in assets/samples-cc0 - generated material only")

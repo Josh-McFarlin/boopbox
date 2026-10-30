@@ -28,7 +28,7 @@ To fit, three things that cost no feature of the groovebox upgrade were taken ou
 
 | Taken out | Saves | What it means |
 | --- | ---: | --- |
-| The bitmap boot logo (`FELUCCA_LOGO_TEXT=1`, now the default) | 4,592 | the boot screen shows "SLOOP" as text in the tracks' colours |
+| The bitmap boot logo (`FELUCCA_LOGO_TEXT=1`, now the default) | 4,592 | the boot screen shows "BoopBox" as text in the tracks' colours |
 | The full-screen visualiser (`FELUCCA_VIS=0`, now the default) | 8,980 | HOME on HOME stays on the TRACKS screen |
 | The top recording of the SAMPLE engine's BASS set (C#, note 73) | 9,372 | the F# recording (note 66) now plays notes 63 and up; notes below 70 sound exactly as before |
 

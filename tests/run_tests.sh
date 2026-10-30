@@ -229,7 +229,7 @@ fi
 
 # the browser audio preview (web editor): the same engines in WASM as on the host, when it is built
 # (python3 tools/build_preview.py: Emscripten, or clang + wasm-ld)
-if [ -f build/preview/sloop-preview.wasm ]; then
+if [ -f build/preview/boopbox-preview.wasm ]; then
     run "the editor's audio preview: WASM == host, all 12 engines" sh tests/run_preview_tests.sh
 fi
 [ $skipped -eq 0 ] || echo "($skipped tests skipped: no firmware build)"

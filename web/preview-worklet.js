@@ -66,7 +66,7 @@ export class FirmwareAudio {
 
 // Guard permits the exact same adapter to be tested with Node, without Web Audio.
 if (typeof registerProcessor === 'function') {
-  class SloopProcessor extends AudioWorkletProcessor {
+  class BoopBoxProcessor extends AudioWorkletProcessor {
     constructor(options) {
       super();
       this.dsp = new FirmwareAudio(options.processorOptions.module);
@@ -101,5 +101,5 @@ if (typeof registerProcessor === 'function') {
       return true;
     }
   }
-  registerProcessor('sloop-preview', SloopProcessor);
+  registerProcessor('boopbox-preview', BoopBoxProcessor);
 }
