@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="BoopBox">
+<rect width="240" height="240" fill="#000"/>
+<path d="M70 74 V54 A16 16 0 0 1 86 38 H154 A16 16 0 0 1 170 54 V74" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<rect x="18" y="74" width="204" height="136" rx="28" fill="#000" stroke="#F2F2F2" stroke-width="12"/>
+<rect x="44.00" y="92.00" width="32.00" height="16.00" rx="8.00" fill="#287CFF"/>
+<rect x="84.00" y="92.00" width="32.00" height="16.00" rx="8.00" fill="#1ECC70"/>
+<rect x="124.00" y="92.00" width="32.00" height="16.00" rx="8.00" fill="#FFC618"/>
+<rect x="164.00" y="92.00" width="32.00" height="16.00" rx="8.00" fill="#FF621A"/>
+<circle cx="78" cy="156" r="30" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="78" cy="156" r="10" fill="#F2F2F2"/>
+<circle cx="162" cy="156" r="30" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="162" cy="156" r="10" fill="#F2F2F2"/>
+</svg>

@@ -10,7 +10,7 @@ const html = readFileSync('web/editor.html', 'utf8');
 const proto = html.slice(html.indexOf('/*PROTO-BEGIN*/'), html.indexOf('/*PROTO-END*/'));
 const E = vm.runInNewContext(proto + ';({makeMockDevice, previewSnapshot, previewToggleStep, previewSetStepNotes, previewToggleDrum, CMD, req, frame, unframe, FM6, buildSlot})',
   { setTimeout, clearTimeout, setInterval, clearInterval, console, TextEncoder, TextDecoder, Blob, Response, DecompressionStream });
-const module = await WebAssembly.compile(readFileSync('build/preview/sloop-preview.wasm'));
+const module = await WebAssembly.compile(readFileSync('build/preview/boopbox-preview.wasm'));
 assert.equal(WebAssembly.Module.imports(module).length, 0, 'DSP must have no hardware or runtime imports');
 function device(options = {}) { return E.makeMockDevice({ auto: false, ...options }); }
 function render(dsp, frames = 8192) {

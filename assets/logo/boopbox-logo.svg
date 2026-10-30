@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" width="900" height="260" role="img" aria-label="BoopBox">
+<rect width="900" height="260" fill="#000"/>
+<path d="M80 84 V64 A16 16 0 0 1 96 48 H164 A16 16 0 0 1 180 64 V84" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<rect x="28" y="84" width="204" height="136" rx="28" fill="#000" stroke="#F2F2F2" stroke-width="12"/>
+<rect x="54.00" y="102.00" width="32.00" height="16.00" rx="8.00" fill="#287CFF"/>
+<rect x="94.00" y="102.00" width="32.00" height="16.00" rx="8.00" fill="#1ECC70"/>
+<rect x="134.00" y="102.00" width="32.00" height="16.00" rx="8.00" fill="#FFC618"/>
+<rect x="174.00" y="102.00" width="32.00" height="16.00" rx="8.00" fill="#FF621A"/>
+<circle cx="88" cy="166" r="30" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="88" cy="166" r="10" fill="#F2F2F2"/>
+<circle cx="172" cy="166" r="30" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="172" cy="166" r="10" fill="#F2F2F2"/>
+<circle cx="316.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<line x1="286.00" y1="78.00" x2="286.00" y2="140.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+<circle cx="406.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="496.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<circle cx="586.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<line x1="556.00" y1="140.00" x2="556.00" y2="206.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+<circle cx="676.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<line x1="646.00" y1="78.00" x2="646.00" y2="140.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+<circle cx="766.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
+<line x1="826.00" y1="110.00" x2="874.00" y2="170.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+<line x1="874.00" y1="110.00" x2="826.00" y2="170.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+</svg>

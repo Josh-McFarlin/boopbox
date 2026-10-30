@@ -1,6 +1,6 @@
 # Groovebox upgrade: status, limits, build and install
 
-This page says what the groovebox upgrade of SLOOP implements, what it does not, and how to build and install it.
+This page says what the groovebox upgrade of BoopBox implements, what it does not, and how to build and install it.
 The controls are in `docs/groovebox-controls.md`, the design in `docs/groovebox-architecture.md`, the project format
 in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-performance.md`.
 
@@ -22,7 +22,7 @@ To fit, the build leaves out the visualiser, the bitmap boot logo and one bass r
 | Storage | project format 7 (eight tracks, all the above), formats 1..6 read and converted, damage detected, never cut (refused whole), format 6 kept as a fallback | `project_test` and the feature tests' store checks |
 | Flash budget | the text boot logo and no visualiser are the defaults; the BASS set has three recordings; `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,212 B of 581,564 |
 
-The existing SLOOP features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
+The existing BoopBox features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
 input, the M-UPGRADE update entry and the USB rescue are untouched (their host tests pass).
 
 ## 2. Limits and what is not implemented
@@ -73,7 +73,7 @@ those four.
 
 ## 5. Build
 
-The build is SLOOP's own; see `BUILDING.md` for the prerequisites (Python 3 with Pillow, the JieLi toolchain, the
+The build is BoopBox's own; see `BUILDING.md` for the prerequisites (Python 3 with Pillow, the JieLi toolchain, the
 three AC79 SDK files, Docker on macOS).
 
 ```sh
@@ -110,10 +110,10 @@ cd /tmp/felucca-site && python3 -m http.server 8000   # open http://localhost:80
 
 If something goes wrong:
 
-- the FM-1 no longer starts SLOOP: hold **OCT−** alone while you switch it on (*SLOOP USB RESCUE*), then install
-  again (this firmware or a SLOOP release);
+- the FM-1 no longer starts BoopBox: hold **OCT−** alone while you switch it on (*BoopBox USB RESCUE*), then install
+  again (this firmware or a BoopBox release);
 - an install was cut off: the FM-1 stays in update mode; install again;
 - the FM-1 does not start at all: [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
-To go back, install the `.fwsc` of a SLOOP release (for example `docs/firmware/sloop-2.8.3.fwsc`) and restore your
+To go back, install the `.fwsc` of a BoopBox release (for example `docs/firmware/boopbox-2.8.3.fwsc`) and restore your
 backup there. Projects saved by this firmware do not open in 2.8.3.
