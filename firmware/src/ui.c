@@ -1125,9 +1125,10 @@ static const struct { uint8_t kind, e; const char *name; } BANK[] = {
 #define NBANK (sizeof BANK / sizeof BANK[0])
 static uint8_t bank_pi[NBANK];                       /* the preset index of each entry in its engine */
 static uint8_t bank_ready;
+static uint8_t br_ord[NBANK];                        /* the sound browser's ENGINE view: the BANK indices by engine */
 UI_SMALL static void bank_resolve(void)
 {
-    uint32_t i, k;
+    uint32_t i, k, n = 0;
     for (i = 0; i < NBANK; i++) {
         const engine_t *e = ENGINES[BANK[i].e % NENGINES];
         bank_pi[i] = 0xFF;
@@ -1135,6 +1136,10 @@ UI_SMALL static void bank_resolve(void)
             if (str_eq(e->presets[k].name, BANK[i].name))
                 bank_pi[i] = (uint8_t)k;
     }
+    for (k = 0; k < NENGINES; k++)
+        for (i = 0; i < NBANK; i++)
+            if (BANK[i].e % NENGINES == k)
+                br_ord[n++] = (uint8_t)i;
     bank_ready = 1;
 }
 UI_SMALL static uint32_t base_pos(uint32_t *total)            /* list index of the selected track's preset (no favourites) */
@@ -1367,6 +1372,107 @@ UI_SMALL static void preset_go(uint32_t n)                    /* load list index
         return;                                      /* (that engine has no room now: eng_refused says so) */
     apply_preset(k);
     ui.force = 1;
+}
+
+/* The sound browser (the PRESETS page; PRESETS turned on TRACKS opens it): the groups on the
+ * left, the sounds of the selected one on the right, all of them in sight. VIEW (KNOB 3) groups them by ENGINE (the
+ * engines in order, each with its sounds) or by KIND (the PRESETS list's own order: basses, keys, organs...). The
+ * favourites come first and the user presets last in both. A position in the view -> a PRESETS list index (preset_go);
+ * Program Change and the favourites keep the list as it was */
+#define BR_G 16u                                     /* groups: FAV, 12 engines (or 8 kinds), USER */
+#define BR_IDLE_MS 4000u                             /* opened from TRACKS: back to it after this long untouched */
+static uint8_t br_kind;                              /* VIEW: 0 ENGINE, 1 KIND (not kept: ENGINE at power-on) */
+static uint8_t br_back, br_home, br_page;            /* opened by PRESETS on TRACKS: the screen it goes back to */
+#define BR_OPEN_MS 150u                              /* the turn that opened it moves no sound */
+static uint32_t br_t0;                               /* when it opened (ms) */
+UI_SMALL static uint32_t br_n(uint32_t p, uint32_t nf)        /* view position -> PRESETS list index */
+{
+    if (br_kind || p < nf || p - nf >= NBANK)
+        return p;
+    if (!bank_ready)
+        bank_resolve();
+    return nf + br_ord[p - nf];
+}
+UI_SMALL static uint32_t br_pos(uint32_t *total, uint32_t *nf)   /* the selected track's sound in the view */
+{
+    uint32_t b[FAV_N], n = preset_pos(total), p;
+    *nf = fav_list(b);
+    if (!br_kind && n >= *nf)
+        for (p = *nf; p < *nf + NBANK; p++)
+            if (br_n(p, *nf) == n)
+                return p;
+    return n;
+}
+UI_SMALL static uint32_t br_gid(uint32_t p, uint32_t nf)      /* the group of a position: 0 FAV, 255 USER, else 1 + */
+{                                                              /* its engine (ENGINE) or its kind (KIND) */
+    uint32_t n = br_n(p, nf) - nf;
+    if (p < nf)
+        return 0;
+    if (n >= NBANK)
+        return 255;
+    return 1u + (br_kind ? BANK[n].kind : BANK[n].e % NENGINES);
+}
+UI_SMALL static const char *br_gname(uint32_t g)
+{
+    return !g ? "FAV" : g == 255u ? "USER" : br_kind ? BANK_KIND[g - 1u] : ENGINES[g - 1u]->name;
+}
+/* the view's groups: gs[i] the first position of group i (gs[ng] = total), gid[i] its id; *cg the group of cur */
+UI_SMALL static uint32_t br_groups(uint16_t *gs, uint8_t *gid, uint32_t cur, uint32_t total, uint32_t nf, uint32_t *cg)
+{
+    uint32_t p, ng = 0, g, last = 0x100u;
+    for (p = 0; p < total; p++) {
+        if ((g = br_gid(p, nf)) != last && ng < BR_G) {
+            gs[ng] = (uint16_t)p;
+            gid[ng++] = (uint8_t)(last = g);
+        }
+        if (p == cur)
+            *cg = ng - 1u;
+    }
+    gs[ng] = (uint16_t)total;
+    return ng;
+}
+/* move the selected track's sound: by = the sounds (PRESETS, KNOB 2), else (KNOB 1, SELECT) the first sound of the
+ * next / previous group; both wrap round */
+UI_SMALL static void br_step(int32_t s, int groups)
+{
+    uint16_t gs[BR_G + 1u];
+    uint8_t gid[BR_G];
+    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, p;
+    if (!total || is_drum(TSEL))
+        return;
+    if (groups) {
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        p = gs[(cg + (s > 0 ? 1u : ng - 1u)) % ng];
+    } else {
+        p = (uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total);
+    }
+    preset_go(br_n(p, nf));
+}
+UI_SMALL static void br_open(void)                   /* PRESETS on TRACKS: the browser, until left untouched */
+{
+    uint32_t i = 0;
+    while (PAGES[i].graph != GR_BROWSE)
+        i++;
+    br_home = ui.home;
+    br_page = ui.page;
+    ui.home = 0;
+    ui.page = (uint8_t)i;
+    page_entered();
+    br_back = 1;
+    br_t0 = fm1_ms;
+}
+UI_SMALL static void br_poll(void)                   /* once a pass: opened from TRACKS, back there when idle */
+{
+    if (!br_back)
+        return;
+    if (ui.home || cur_page()->graph != GR_BROWSE)   /* (a button took it elsewhere: it stays there) */
+        br_back = 0;
+    else if (is_drum(TSEL) || fm1_ms - ui_input_ms > BR_IDLE_MS) {
+        ui.home = br_home;
+        ui.page = br_page;
+        br_back = 0;
+        page_entered();
+    }
 }
 
 /* HOME: what KNOB k edits: the engine's four main parameters; on a drum track

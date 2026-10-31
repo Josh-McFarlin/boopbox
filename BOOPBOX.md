@@ -127,7 +127,7 @@ Other controls:
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
 | **EDIT + OCT− / OCT+** | undo / redo |
 | **ALGORITHM** | select the track (on every page) |
-| **PRESETS** | the selected track's sound, or the drum kit |
+| **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends) · on the DRUMS screen: grid / kit |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
 | **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, SYSTEM) · tapped while a layer is held: lock it open |
@@ -288,7 +288,7 @@ The screen shows the 27 keys as a keyboard: the white keys in four rows of four,
 
 ## The sound bank
 
-153 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the twelve engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** browses them on a synth track **by kind** — basses, keys, organs, pads, leads, plucks and bells, stabs — the kind shown next to the name (the engine follows); your own presets come after. Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
+153 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the twelve engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (KNOB 3 VIEW groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs); your favourites come first and your own presets last. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
 
 | Kind | Sounds (engine) |
 | --- | --- |
