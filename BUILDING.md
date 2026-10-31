@@ -49,8 +49,8 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 1.0.0` makes a release build: the package identity becomes `FM-1_910` and the version
-string `BOOPBOX 1.0.0`; the package is `build/felucca-1.0.0.fwsc`. A suffix is kept: `--release 1.1.0-beta`
+`./build.sh --release 1.1.0` makes a release build: the package identity becomes `FM-1_911` and the version
+string `BOOPBOX 1.1.0`; the package is `build/felucca-1.1.0.fwsc`. A suffix is kept: `--release 1.1.0-beta`
 gives `BOOPBOX 1.1.0-BETA`.
 
 Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
