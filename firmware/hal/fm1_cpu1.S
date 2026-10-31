@@ -15,7 +15,8 @@ fm1_c1_entry:
 	r1 = fm1_c1_trace	/* a breadcrumb: core 1 reached its entry */
 	r2 = 0xC1000001
 	[r1 + 0] = r2
-	icfg = 0
+	r2 = 0			/* icfg = 0 through a register: the same on the chip, and the encoding the */
+	icfg = r2		/* fm1-emulator runs (it has no icfg = imm32, 0xffeb) */
 	usp = _c1_ustack_top
 	sp = _c1_sstack_top
 	ssp = _c1_sstack_top
