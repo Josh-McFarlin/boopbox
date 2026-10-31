@@ -26,7 +26,8 @@ UI_SMALL static void led_put(uint8_t *nl, uint32_t id, int on)
 }
 
 static const uint8_t FAM_BTN[FAM_COUNT] = {B_HOME, B_ENV, B_LFO, B_FX, B_SCL, B_EDIT, B_GLO, B_SAVE,
-                                           B_ARP, B_SEQ, B_HOME};   /* button of each page family (TRACKS: HOME) */
+                                           B_ARP, B_SEQ, B_HOME, B_GLO};   /* button of each page family (TRACKS: HOME;
+                                                                     * 1.2: the MIDI setup lights GLO) */
 
 UI_SMALL static uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
 UI_SMALL static uint32_t cur_btn(void)                      /* the button of the screen shown */
@@ -565,7 +566,7 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         if (ui.arm != 0xE0u + slot) {                     /* one detent arms, a second one within ~1.5 s acts */
             ui.arm = (uint8_t)(0xE0u + slot);
             ui.arm_t = 90;
-            ui_say("AGAIN: ", UP_GO[slot - 1u]);
+            ui_say("TURN AGAIN: ", UP_GO[slot - 1u]);
             return;
         }
         ui.arm = 0;
@@ -578,7 +579,7 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         if (ui.arm != 0xE8u) {                            /* one detent arms, a second one within ~1.5 s acts */
             ui.arm = 0xE8u;
             ui.arm_t = 90;
-            ui_say("AGAIN: ", "ERASE");
+            ui_say("TURN AGAIN: ", "ERASE");
             return;
         }
         ui.arm = 0;
@@ -606,7 +607,7 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         *vp = 0;
         ui.arm = (uint8_t)id;
         ui.arm_t = 90;
-        ui_say("AGAIN: ", d->label);
+        ui_say("TURN AGAIN: ", d->label);
         return;
     }
     ui.arm = 0;
@@ -1363,10 +1364,20 @@ UI_SMALL static void ui_input(void)
         else if (fm1_ms - br_t0 > BR_OPEN_MS)           /* (the rest of the turn that opened it: nothing) */
             br_step(s, BR_SOUND);
     }
-    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on && on_home())   /* ALGORITHM: the selected track, on TRACKS (the home
-                                                     * screen; PATTERNS and CHORDS too, ui_pats.c) only: elsewhere a stray
-                                                     * turn leaves the track (not in a take) */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* ALGORITHM: the selected track (not in a take). 1.2: on every
+                                                     * page too (TRACKS, PATTERNS and CHORDS only before): the page stays
+                                                     * and shows the new track, the header names it a moment */
+        uint32_t was = song.sel;
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+        if (song.sel != was && !on_home()) {
+            char b[24], pn[16];
+            str_cpy(b, "TRACK ", sizeof b);
+            fmt_int(b + 6, (int32_t)song.sel + 1);
+            str_cpy(b + str_len(b), ": ", 4);
+            sound_name(pn);
+            ui_say(b, pn);
+        }
+    }
     if (vis_shown() && !rec_wait && !ft_on) {           /* the visualiser: SELECT its style; KNOB 1..4 (the TRACKS
                                                          * screen's, out of sight) do nothing */
         if ((s = panel_enc(EN_SELECT)) != 0)

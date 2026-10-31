@@ -633,6 +633,46 @@ UI_SMALL static void tiles_draw(const tile_t *tl, uint32_t *cache)
     }
 }
 
+/* (1.2) GLO held: the bank's four levels as faders, each over its mute and solo, then FILL, BAR and the tap tempo; the
+ * keys as before (1-4 mute, 5-8 solo, 9 fill, 10 fill bar, 16 tap), their states read from the tiles */
+UI_SMALL static void mix_draw(const tile_t *tl, uint32_t base, uint32_t *cache)
+{
+    uint32_t c, sig = 11u;
+    static const uint8_t TI[3] = {8, 9, 15};
+    for (c = 0; c < 16u; c++)
+        sig = studio_hash(sig * 31u + tl[c].bg * 3u + tl[c].fg * 5u + tl[c].top * 7u, tl[c].lab);
+    for (c = 0; c < 4u; c++)
+        sig = sig * 131u + trk_level(base + c) + trk[base + c].p[P_MUTE] * 7u;
+    if (!ui.force && sig == *cache)
+        return;
+    *cache = sig;
+    cv_begin(240, 104, C_BLACK);
+    for (c = 0; c < 4u; c++) {
+        uint32_t k = (base + c) % NTRK;
+        int32_t x = 2 + (int32_t)c * 60, h = (int32_t)trk_level(k) * 92 / 127;
+        cv_rect(x, 2, 56, 100, UI_G1);
+        cv_rect(x + 20, 98 - h, 16, h > 0 ? h : 1, trk[k].p[P_MUTE] ? UI_DIM[k] : UI_COL[k]);
+    }
+    cv_blit(0, 40);
+    cv_begin(240, 40, C_BLACK);
+    for (c = 0; c < 4u; c++) {
+        int32_t x = 2 + (int32_t)c * 60, m = trk[(base + c) % NTRK].p[P_MUTE] != 0, so = tl[4u + c].bg == C_WHITE;
+        cv_rect(x, 2, 27, 16, m ? UI_RED : UI_G1);
+        ui_text_c(x + 13, 2, "m", m ? C_WHITE : UI_G3);
+        cv_rect(x + 29, 2, 27, 16, so ? C_WHITE : UI_G1);
+        ui_text_c(x + 42, 2, "s", so ? C_BLACK : UI_G3);
+    }
+    for (c = 0; c < 3u; c++) {
+        const tile_t *t = &tl[TI[c]];
+        int32_t x = 2 + (int32_t)c * 80;
+        cv_rect(x, 21, 76, 17, t->bg);
+        if (t->top)
+            cv_rect(x, 21, 76, 2, t->top);
+        ui_text_c(x + 38, 21, t->lab, t->fg);
+    }
+    cv_blit(0, 144);
+}
+
 /* the punch layer (2.6): the 27 keys as a keyboard, four rows of four white keys (as the other layers' 16
  * tiles) with the black keys over them, between the white keys they sit between (the one after the
  * row's last white key at its right end); a held effect lit white */
@@ -906,7 +946,7 @@ UI_SMALL static void layer_screen_draw(void)
             k = lock_find(t, idx, id, 0);
             if (k >= 0) {
                 const char *u;
-                char b[8];
+                char b[12];
                 param_format(lock_desc(t, id), t->lock[k].val, b, &u);
                 ui_lower(sub + str_len(sub), b, 8);
             } else {
@@ -967,7 +1007,7 @@ UI_SMALL static void layer_screen_draw(void)
     case LY_MIX: {                                      /* mute 1..4, solo 1..4 (of the bank), fill / fill bar, tap */
         uint32_t base = song.sel / 4u * 4u;
         col = C_WHITE;
-        str_cpy(sub, base ? "mute solo 5-8 fill tap" : "mute solo 1-4 fill tap", sizeof sub);
+        str_cpy(sub, "1-4 mute  5-8 solo", sizeof sub);   /* (1.2: the keys; the dials name the bank's tracks) */
         for (i = 0; i < 4u; i++) {
             int m = trk[base + i].p[P_MUTE] != 0, so = (song.solo >> (base + i)) & 1u;
             str_cpy(tl[i].lab, "mute 1", 8);
@@ -992,6 +1032,8 @@ UI_SMALL static void layer_screen_draw(void)
         tl[15].fg = tl[15].bg == C_WHITE ? C_BLACK : C_WHITE;
         str_cpy(tl[14].lab, "tap>", 8);
         tl[14].bg = C_BLACK;
+        str_cpy(tl[15].lab, "tap ", 8);                 /* (1.2: "tap 92" in the fader view's row) */
+        fmt_int(tl[15].lab + 4, song.g[G_BPM]);
         for (i = 0; i < 4u; i++) {
             uint32_t lv = trk_level(base + i);
             static const char *const L[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
@@ -1050,6 +1092,8 @@ UI_SMALL static void layer_screen_draw(void)
     layer_title(LAYER_NAME[layer % LY_COUNT], sub, col, &head);
     if (layer == LY_FX)
         punch_tiles_draw(tl, &tiles);
+    else if (layer == LY_MIX)
+        mix_draw(tl, song.sel / 4u * 4u, &tiles);
     else
         tiles_draw(tl, &tiles);
     {   /* (a message shows in the title: the dials stay) */

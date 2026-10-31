@@ -120,7 +120,7 @@ know are skipped. The fields at the end of a `T` chunk are read only when there 
 ## 6. Other stored data
 
 - Settings (`OBJ_SETTINGS`): `persist_t` (magic "PER3"), the SYN kits, then the MIDI part (`MIDI_PART_8` bytes:
-  the MIDI LEARN map, GLO > MIDI's channels and switches, CH5..CH8, the MIDI LEARN bit of tracks 5..8 (`ml_hi`),
+  the MIDI LEARN map, MIDI's channels and switches, CH5..CH8, the MIDI LEARN bit of tracks 5..8 (`ml_hi`),
   MENU > SEQ > REC KNOBS), always all three. An object of another length (an older SLOOP's) keeps only its
   `persist_t` part (the panel calibration, palette, song order, lights); the SYN kits and the MIDI settings start at
   their defaults. Your theme (THM2) is in the side record; SLOOP 2.7's first-beta THM1 is not read.

@@ -205,7 +205,7 @@ What this shows:
 
 The FM-1's processor is much slower than this host, and the ratio was not measured. So these numbers do not say how
 much of the 5.8 ms ISR budget eight busy tracks take on the FM-1. The existing protections stay: overload sheds
-voices (`voice.c shed_voice`), the second core takes part of the rendering, and GLO > SYSTEM shows the CPU load
+voices (`voice.c shed_voice`), the second core takes part of the rendering, and SYSTEM shows the CPU load
 (KNOB 4). To check on hardware: eight busy tracks with chains of dense patterns changing on the same bar, with
 FOLLOW on, while watching the CPU readout and listening for dropped voices.
 

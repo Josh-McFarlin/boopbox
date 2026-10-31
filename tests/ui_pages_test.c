@@ -201,32 +201,48 @@ int main(int argc, char **argv)
     open_family(FAM_GLO); ui.force = 1; frame(); ppm("page-global");
     open_family(FAM_GLO); ui.force = 1; frame(); ppm("page-master");
     open_family(FAM_SCL); ui.force = 1; frame(); ppm("page-scale");
-    {   /* (2.4) GLO > SYSTEM: KNOB 1 is MIDI OUT (KEYS / SEQ), shown as such; the USB status in the third column */
+    {   /* (2.4) MIDI OUT (KEYS / SEQ), shown as such. 1.2: on MIDI 3 (IN, OTHER, OUT, BEND), the MIDI setup opened from
+         * MENU > SEQ > MIDI SETTINGS: KNOB 3 OUT, KNOB 1 IN */
         uint32_t i, m0 = (uint32_t)song.g[G_MIDI];
-        for (i = 0; i < NPAGES; i++) if (!strcmp(PAGES[i].title, "SYSTEM")) break;
-        open_family(FAM_GLO); ui.page = (uint8_t)i; ui.fam_last[FAM_GLO] = (uint8_t)i; page_entered(); ui.force = 1; frame();
+        ui.menu = 1; ui.menu_sel = MI_MIDI; ui.force = 1; frame();
+        edges_btn |= BT(B_OCTUP); fm1_in.buttons |= BT(B_OCTUP); frame(); fm1_in.buttons &= ~BT(B_OCTUP); frame();
+        check(!ui.menu && cur_fam() == FAM_MIDI && !strcmp(PAGES[ui.page].title, "MIDI") && cur_btn() == B_GLO,
+              "MENU > SEQ > MIDI SETTINGS (1.2), OCT+: the MIDI pages, GLO lit");
+        for (i = 0; i < 6u && strcmp(PAGES[ui.page].title, "MIDI 3"); i++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
         song.g[G_MIDI] = 0; ui.force = 1; frame();
-        encs[panel.enc[EN_K1]] = 1; frame();
-        check(i < NPAGES && song.g[G_MIDI] == 1, "GLO > SYSTEM: KNOB 1 sets MIDI = SEQ");
+        encs[panel.enc[EN_K3]] = 1; frame();
+        check(!strcmp(PAGES[ui.page].title, "MIDI 3") && song.g[G_MIDI] == 1, "MIDI 3: KNOB 3 sets MIDI OUT = SEQ");
         {
             char val[12]; const char *unit = "";
-            int16_t *vp; const param_desc_t *d = page_desc(cur_page(), 0, &vp);
+            int16_t *vp; const param_desc_t *d = page_desc(cur_page(), 2, &vp);
             param_format(d, *vp, val, &unit);
-            check(d && !strcmp(d->label, "OUT") && !strcmp(val, "SEQ"), "GLO > SYSTEM: the first column reads OUT SEQ (MIDI OUT)");
+            check(d && !strcmp(d->label, "OUT") && !strcmp(val, "SEQ"), "MIDI 3: the third value reads OUT SEQ (MIDI OUT)");
+        }
+        {
+            uint32_t j, dup = 0, k, q;
+            for (j = 0; j < NPAGES; j++)                  /* (1.2) every setting on one page only */
+                for (k = 0; k < 4u; k++)
+                    for (i = j + 1u; i < NPAGES; i++)
+                        for (q = 0; q < 4u; q++)
+                            dup += PAGES[j].scope == SC_GLOBAL && PAGES[i].scope == SC_GLOBAL && PAGES[j].id[k] != 0xFF &&
+                                   PAGES[j].id[k] == PAGES[i].id[q];
+            for (j = 0, k = 0; j < NPAGES; j++)
+                k += PAGES[j].fam == FAM_GLO;
+            check(!dup && k == 5u, "1.2: GLO five pages (GLOBAL MASTER DRUMS TEXTURE TEXTURE 2), no global setting on two pages");
         }
         ui.force = 1; frame(); ppm("page-system");
-        {   /* (2.4) KNOB 3: IN = CLOCK (notes ignored), kept in the settings word; back to NOTES */
+        {   /* (2.4) KNOB 1 (MIDI 3): IN = CLOCK (notes ignored), kept in the settings word; back to NOTES */
             int16_t r0 = song.g[G_ROUTE];
-            int16_t *vp; const param_desc_t *d = page_desc(cur_page(), 2, &vp);
+            int16_t *vp; const param_desc_t *d = page_desc(cur_page(), 0, &vp);
             char val[12]; const char *unit = "";
-            encs[panel.enc[EN_K3]] = 1; frame();
+            encs[panel.enc[EN_K1]] = 1; frame();
             param_format(d, *vp, val, &unit);
-            check(song.g[G_ROUTE] == 1 && !strcmp(d->label, "IN") && !strcmp(val, "CLOCK"), "GLO > SYSTEM: KNOB 3 sets IN = CLOCK");
+            check(song.g[G_ROUTE] == 1 && !strcmp(d->label, "IN") && !strcmp(val, "CLOCK"), "MIDI 3: KNOB 1 sets IN = CLOCK");
             lights_min = 1;
             check((lights_word() >> 15 & 1u) == 1u, "IN = CLOCK kept in the settings word (bit 15)");
             lights_from_word(lights_word() & ~(1u << 15));
             check(lights_min == 0u, "IN read back from the settings word");
-            encs[panel.enc[EN_K3]] = 12; frame();             /* (2.6) on to CH 12 */
+            encs[panel.enc[EN_K1]] = 12; frame();             /* (2.6) on to CH 12 */
             param_format(d, *vp, val, &unit);
             lights_min = (uint8_t)song.g[G_ROUTE];
             {
@@ -238,7 +254,7 @@ int main(int argc, char **argv)
                 lights_from_word(w & ~(31u << 21));
                 check(lights_min == 0u, "2.6: a settings word from 2.5 (no channel bits): IN = NOTES");
             }
-            encs[panel.enc[EN_K3]] = -13; frame();
+            encs[panel.enc[EN_K1]] = -13; frame();
             song.g[G_ROUTE] = r0;
         }
         song.g[G_MIDI] = (int16_t)m0; go_home(); frame();
@@ -938,10 +954,10 @@ int main(int argc, char **argv)
             open_family(FAM_SEQ); frame();            /* (round to STEP again: SEQ opens there, as before) */
             go_home(); frame();
             open_family(FAM_GLO); frame();
-            (void)page_pos(&n);                       /* GLO: its ten pages (eight tracks: MIDI 4) */
+            (void)page_pos(&n);                       /* GLO: its five pages (1.2: the MIDI setup a family of its own) */
             go_home(); frame();
             ui.menu = (uint8_t)menu0, ui.menu_sel = (uint8_t)sel0, ui.force = 1; frame();
-            ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;   /* (SONG: 4/4,
+            ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 5u;   /* (SONG: 4/4,
                                                        * the screen shown counts; PATTERNS, its own, not) */
             if (!ok)
                 printf("ui:   counter: NOTES %u/%u TIMING %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
@@ -1228,14 +1244,14 @@ int main(int argc, char **argv)
         tap(B_FX); SEL(1);
         check(!strcmp(PT(), "FILTER"), "SELECT on FX: next page, the track FILTER");
         TSEL->p[P_TFLT] = -32; ui.force = 1; frames(2); ppm("page-filter");
-        check(!strcmp(ui.big_l[0], "FILT") && !strcmp(ui.big_v[0], "LP50") && !ui.big_l[1][0],
-              "FILTER page: its one value drawn large (LP50 %)");
-        {   /* the big value in the graph strip: white pixels in the middle of the screen */
+        check(!strcmp(ui.big_l[0], "FILT") && !strcmp(ui.big_v[0], "LP50") && !strcmp(ui.big_l[1], "MIX") && !ui.big_l[2][0],
+              "FILTER page: its values drawn large (LP50, 1.2: the INSERT's MIX beside it)");
+        {   /* (1.2) the big values from under the header, KNOB 1 top left: lit pixels there, nothing in the columns' place */
             uint32_t x, y, lit = 0;
-            for (y = Y_GRAPH + 30; y < Y_GRAPH + 90; y++)
-                for (x = 40; x < 200; x++)
-                    lit += screen[y * 240u + x] != 0;
-            check(lit > 300u, "FILTER page: the graph strip shows it");
+            for (y = 22 + 34; y < 22 + 66; y++)
+                for (x = 14; x < 110; x++)
+                    lit += screen[y * 240u + x] != swap16(C_BLACK) && screen[y * 240u + x] != swap16(C_LINE);
+            check(lit > 300u, "FILTER page: KNOB 1's value large in its corner");
         }
         TSEL->p[P_TFLT] = 0;
         SEL(9);
@@ -1425,7 +1441,8 @@ int main(int argc, char **argv)
         open_family(FAM_SEQ); ui.page = (uint8_t)j; ui.fam_last[FAM_SEQ] = (uint8_t)j; page_entered(); ui.force = 1; frames(2);
         b0 = ui.page;
         encs[panel.enc[EN_ALGO]] = 1; frames(2);
-        check(song.sel == 0u && ui.page == b0, "ALGORITHM off the home screen (NOTES): no track change");
+        check(song.sel == 1u && ui.page == b0 && !strncmp(ui.msg, "TRACK 2: ", 9),
+              "ALGORITHM on NOTES (1.2): track 2, the page stays, the header names it");
         track_select(TRK_DRUM); frames(2);                 /* (another way there: the editor, a MIDI channel) */
         check(song.sel == TRK_DRUM && ui.page == b0 && !page_for_drum(cur_page()) && !strcmp(PAGES[ui.page].title, "NOTES"),
               "STEP on the drum track: not a page for the drums (DRUM TRACK shown, no piano roll of the drum steps)");
@@ -1771,36 +1788,38 @@ int main(int argc, char **argv)
         tap(B_OCTUP);
         check(ui.menu_sel == MI_LCLEAR && ml_count() == 0u, "menu SYSTEM > MIDI LEARN CLEAR, OCT+: nothing learned any more");
         ui.menu = 0; ui.force = 1; go_home(); frames(16);
-        {   /* GLO > MIDI: CH1 CH2 CH3 OTHER (2.6) */
+        {   /* MIDI: CH1 CH2 CH3 CH4 (2.6; 1.2: the MIDI setup's first page, its own family) */
             uint32_t hit = 0;
-            WALK(FAM_GLO, "MIDI", hit);
-            open_family(FAM_GLO); frame();
-            for (j = 0; j < 12u && strcmp(PAGES[ui.page].title, "MIDI"); j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+            for (j = 0; j < NPAGES; j++) hit |= PAGES[j].fam == FAM_MIDI && !strcmp(PAGES[j].title, "MIDI");
+            ui.fam_last[FAM_MIDI] = 0;
+            open_family(FAM_MIDI); frame();
             frames(16);
             K(EN_K2, 9);                                  /* CH2: 2 -> 11 */
-            check(hit && !strcmp(PAGES[ui.page].title, "MIDI") && song.g[G_CH2] == 11, "GLO > MIDI: the page, KNOB 2 sets track 2's channel (11)");
+            check(hit && !strcmp(PAGES[ui.page].title, "MIDI") && song.g[G_CH2] == 11, "MIDI: the page, KNOB 2 sets track 2's channel (11)");
             ui.force = 1; frame(); ppm("page-midi");
-            {   /* 2.7: MIDI 3 (FX CH, DR MAP, REMOTE, CLK OUT): drawn (page-midi3), CLK OUT on KNOB 4 */
+            {   /* 2.7: MIDI 4 (FX CH, DR MAP, REMOTE, CLK OUT; MIDI 3 before 1.2): drawn (page-midi3), CLK OUT on KNOB 4 */
                 uint32_t q;
-                for (q = 0; q < 4u && strcmp(PAGES[ui.page].title, "MIDI 3"); q++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+                for (q = 0; q < 4u && strcmp(PAGES[ui.page].title, "MIDI 4"); q++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
                 frames(16);
                 K(EN_K4, 1);
                 ui.force = 1; frame(); ppm("page-midi3");
-                check(!strcmp(PAGES[ui.page].title, "MIDI 3") && song.g[G_CLKOUT] == 1, "2.7: GLO > MIDI 3 > KNOB 4: CLK OUT ON");
+                check(!strcmp(PAGES[ui.page].title, "MIDI 4") && song.g[G_CLKOUT] == 1, "2.7: MIDI 4 > KNOB 4: CLK OUT ON");
                 K(EN_K4, -1);
                 check(song.g[G_CLKOUT] == 0, "2.7: CLK OUT back OFF");
-                for (q = 0; q < 4u && strcmp(PAGES[ui.page].title, "MIDI"); q++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
+                for (q = 0; q < 5u && strcmp(PAGES[ui.page].title, "MIDI"); q++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
                 frames(16);
             }
-            {   /* 2.6: every MIDI setting in MIDI and MIDI 2; no channel on two tracks */
-                const page_t *m = cur_page(), *m2 = &PAGES[ui.page + 1u];
+            {   /* 2.6: the channels on MIDI (and 1.2: MIDI 2, tracks 5-8), IN OTHER OUT BEND on MIDI 3; no channel on two
+                 * tracks */
+                const page_t *m = cur_page(), *m2 = &PAGES[ui.page + 2u];
                 const char *u;
                 char vv[12];
                 param_format(&GP[G_DRCH], 0, vv, &u);
-                check(m->id[0] == G_CH1 && m->id[1] == G_CH2 && m->id[2] == G_CH3 && m->id[3] == G_DRCH && !strcmp(m2->title, "MIDI 2") &&
+                check(m->id[0] == G_CH1 && m->id[1] == G_CH2 && m->id[2] == G_CH3 && m->id[3] == G_DRCH && !strcmp(m2->title, "MIDI 3") &&
+                      PAGES[ui.page + 1u].id[0] == G_CH5 && PAGES[ui.page + 1u].id[3] == G_CH8 &&
                       m2->id[0] == G_ROUTE && m2->id[1] == G_CHOTH && m2->id[2] == G_MIDI && m2->id[3] == G_BEND &&
                       !strcmp(GP[G_DRCH].label, "CH4") && !strcmp(vv, "OFF"),
-                      "GLO > MIDI: CH1 CH2 CH3 CH4 (the drums); MIDI 2: IN OTHER OUT BEND; CH4 0 reads OFF");
+                      "MIDI: CH1 CH2 CH3 CH4 (the drums); MIDI 2: CH5-8; MIDI 3: IN OTHER OUT BEND; CH4 0 reads OFF");
                 song.g[G_CH2] = 2, frame();
                 K(EN_K2, 1);                              /* CH2 2 -> 3: track 3's: on to 4 */
                 check(song.g[G_CH2] == 4 && !strcmp(ui.msg, "CH 3 = TRACK 3"), "GLO > MIDI: CH2 turned onto track 3's channel: on to 4, \"CH 3 = TRACK 3\"");
@@ -1811,9 +1830,9 @@ int main(int argc, char **argv)
                 song.g[G_DRCH] = 10, frame();
                 song.g[G_ROUTE] = 6;                      /* IN = CH 5 */
                 go_home(); frame();
-                open_family(FAM_GLO); frame();
-                for (j = 0; j < 12u && strcmp(PAGES[ui.page].title, "MIDI"); j++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
-                check(!strcmp(ui.msg, "IN CH 5: SEL TRK ONLY"), "GLO > MIDI with IN = CH 5: says the channels are set aside");
+                ui.fam_last[FAM_MIDI] = 0;
+                open_family(FAM_MIDI); frame();
+                check(!strcmp(ui.msg, "IN CH 5: SEL TRK ONLY"), "MIDI with IN = CH 5: says the channels are set aside");
                 song.g[G_ROUTE] = 0;
             }
             song.g[G_CH2] = 2;
@@ -1848,7 +1867,7 @@ int main(int argc, char **argv)
         encs[panel.enc[EN_K2]] = -1; frames(2);
         check(erases == e0 && ui.arm != 0xE8u, "PROJECT, KNOB 2 left: nothing");
         encs[panel.enc[EN_K2]] = 1; frames(2);
-        check(erases == e0 && ui.arm == 0xE8u && !strcmp(ui.msg, "AGAIN: ERASE"), "PROJECT, KNOB 2 one detent: AGAIN: ERASE, nothing erased");
+        check(erases == e0 && ui.arm == 0xE8u && !strcmp(ui.msg, "TURN AGAIN: ERASE"), "PROJECT, KNOB 2 one detent: AGAIN: ERASE, nothing erased");
         ui.force = 1; frame(); ppm("page-project-erase");
         encs[panel.enc[EN_K2]] = 1; frames(2);
         check(erases == e0 + 1u && !ui.arm && !strcmp(ui.msg, "ERASED"), "PROJECT, KNOB 2 again: the slot erased");

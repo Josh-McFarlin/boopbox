@@ -3,7 +3,7 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "BOOPBOX 1.1.0"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
+#define FELUCCA_VERSION "BOOPBOX 1.2.0"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
@@ -129,7 +129,7 @@ UI_SMALL static void page_entered(void)
 {
     const page_t *pg = cur_page();
     song.seq_mode = !ui.home && pg->fam == FAM_SEQ;
-    if (!ui.home && pg->fam == FAM_GLO && pg->id[0] == G_CH1 && song.g[G_ROUTE]) {   /* (2.6) GLO > MIDI while MIDI 2 >
+    if (!ui.home && pg->fam == FAM_MIDI && pg->id[0] == G_CH1 && song.g[G_ROUTE]) {   /* (2.6) GLO > MIDI while MIDI 2 >
                                                                                    * IN sets the channels aside */
         if (song.g[G_ROUTE] == 1)
             ui_message("IN = CLOCK: NO NOTES");

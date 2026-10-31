@@ -4,7 +4,7 @@ Drawn by the firmware's own code on the host (`python3 tools/make_all_screens.py
 of `tools/screens_demo.c` on the eight tracks playing. Each screen is 240 × 240 on the FM-1, 2x here.
 MENU → SCREEN → COLOR: **SYNTHWAVE** (`python3 tools/make_all_screens.py --palette 5`).
 
-110 screens in 8 groups.
+109 screens in 8 groups.
 
 ## Home (2)
 
@@ -25,55 +25,55 @@ Every page of the page table (params.c PAGES), on track 1 (ANALOG); DRUMS on the
 
 | Screen | File | |
 |---|---|---|
-| ENV > ENV | [`pages/env-env.png`](pages/env-env.png) | page 1 of 46 |
-| ENV > ENV DEST | [`pages/env-env-dest.png`](pages/env-env-dest.png) | page 2 of 46 |
-| LFO > LFO | [`pages/lfo-lfo.png`](pages/lfo-lfo.png) | page 3 of 46 |
-| LFO > LFO 2 | [`pages/lfo-lfo-2.png`](pages/lfo-lfo-2.png) | page 4 of 46 |
-| LFO > LFO DEST | [`pages/lfo-lfo-dest.png`](pages/lfo-lfo-dest.png) | page 5 of 46 |
-| FX > FX | [`pages/fx-fx.png`](pages/fx-fx.png) | page 6 of 46 |
-| FX > FILTER | [`pages/fx-filter.png`](pages/fx-filter.png) | page 7 of 46 |
-| FX > SLICER | [`pages/fx-slicer.png`](pages/fx-slicer.png) | page 8 of 46 |
-| FX > INSERT | [`pages/fx-insert.png`](pages/fx-insert.png) | page 9 of 46 |
-| FX > INSERT 2 | [`pages/fx-insert-2.png`](pages/fx-insert-2.png) | page 10 of 46 |
-| FX > DLY | [`pages/fx-dly.png`](pages/fx-dly.png) | page 11 of 46 |
-| FX > REV/CHO | [`pages/fx-rev-cho.png`](pages/fx-rev-cho.png) | page 12 of 46 |
-| FX > PERF | [`pages/fx-perf.png`](pages/fx-perf.png) | page 13 of 46 |
-| SCL > SEL | [`pages/scl-sel.png`](pages/scl-sel.png) | page 14 of 46 |
-| SCL > SEL 2 | [`pages/scl-sel-2.png`](pages/scl-sel-2.png) | page 15 of 46 |
-| SCL > HARMONY | [`pages/scl-harmony.png`](pages/scl-harmony.png) | page 16 of 46 |
-| SCL > FOLLOW | [`pages/scl-follow.png`](pages/scl-follow.png) | page 17 of 46 |
-| SCL > CHORDS | [`pages/scl-chords.png`](pages/scl-chords.png) | page 18 of 46 |
-| EDIT > EDIT 1 | [`pages/edit-edit-1.png`](pages/edit-edit-1.png) | page 19 of 46 |
-| EDIT > EDIT 2 | [`pages/edit-edit-2.png`](pages/edit-edit-2.png) | page 20 of 46 |
-| EDIT > FILTER | [`pages/edit-filter.png`](pages/edit-filter.png) | page 21 of 46 |
-| EDIT > VOICE | [`pages/edit-voice.png`](pages/edit-voice.png) | page 22 of 46 |
-| EDIT > VOICE 2 | [`pages/edit-voice-2.png`](pages/edit-voice-2.png) | page 23 of 46 |
-| GLO > GLOBAL | [`pages/glo-global.png`](pages/glo-global.png) | page 24 of 46 |
-| GLO > MASTER | [`pages/glo-master.png`](pages/glo-master.png) | page 25 of 46 |
-| GLO > SYSTEM | [`pages/glo-system.png`](pages/glo-system.png) | page 26 of 46 |
-| GLO > DRUMS | [`pages/glo-drums.png`](pages/glo-drums.png) | page 27 of 46 |
-| GLO > MIDI | [`pages/glo-midi.png`](pages/glo-midi.png) | page 28 of 46 |
-| GLO > MIDI 2 | [`pages/glo-midi-2.png`](pages/glo-midi-2.png) | page 29 of 46 |
-| GLO > MIDI 3 | [`pages/glo-midi-3.png`](pages/glo-midi-3.png) | page 30 of 46 |
-| GLO > MIDI 4 | [`pages/glo-midi-4.png`](pages/glo-midi-4.png) | page 31 of 46 |
-| GLO > TEXTURE | [`pages/glo-texture.png`](pages/glo-texture.png) | page 32 of 46 |
-| GLO > TEXTURE 2 | [`pages/glo-texture-2.png`](pages/glo-texture-2.png) | page 33 of 46 |
-| SAVE > PRESETS | [`pages/save-presets.png`](pages/save-presets.png) | page 34 of 46 |
-| SAVE > USER | [`pages/save-user.png`](pages/save-user.png) | page 35 of 46 |
-| SAVE > SECTION | [`pages/save-section.png`](pages/save-section.png) | page 36 of 46 |
-| SAVE > TOOLS | [`pages/save-tools.png`](pages/save-tools.png) | page 37 of 46 |
-| ARP > ARP | [`pages/arp-arp.png`](pages/arp-arp.png) | page 38 of 46 |
-| ARP > ARP 2 | [`pages/arp-arp-2.png`](pages/arp-arp-2.png) | page 39 of 46 |
-| SEQ > NOTES | [`pages/seq-notes.png`](pages/seq-notes.png) | page 40 of 46 |
-| SEQ > TIMING | [`pages/seq-timing.png`](pages/seq-timing.png) | page 41 of 46 |
-| SEQ > PLAY | [`pages/seq-play.png`](pages/seq-play.png) | page 42 of 46 |
-| SEQ > PATTERNS | [`pages/seq-patterns.png`](pages/seq-patterns.png) | page 43 of 46 |
-| SEQ > SONG | [`pages/seq-song.png`](pages/seq-song.png) | page 44 of 46 |
-| TRK > TRACKS | [`pages/trk-tracks.png`](pages/trk-tracks.png) | page 45 of 46 |
-| TRK > DRUMS | [`pages/trk-drums.png`](pages/trk-drums.png) | page 46 of 46 |
+| ENV > ENV | [`pages/env-env.png`](pages/env-env.png) | page 1 of 45 |
+| ENV > ENV DEST | [`pages/env-env-dest.png`](pages/env-env-dest.png) | page 2 of 45 |
+| LFO > LFO | [`pages/lfo-lfo.png`](pages/lfo-lfo.png) | page 3 of 45 |
+| LFO > LFO 2 | [`pages/lfo-lfo-2.png`](pages/lfo-lfo-2.png) | page 4 of 45 |
+| LFO > LFO DEST | [`pages/lfo-lfo-dest.png`](pages/lfo-lfo-dest.png) | page 5 of 45 |
+| FX > FX | [`pages/fx-fx.png`](pages/fx-fx.png) | page 6 of 45 |
+| FX > FILTER | [`pages/fx-filter.png`](pages/fx-filter.png) | page 7 of 45 |
+| FX > SLICER | [`pages/fx-slicer.png`](pages/fx-slicer.png) | page 8 of 45 |
+| FX > INSERT | [`pages/fx-insert.png`](pages/fx-insert.png) | page 9 of 45 |
+| FX > DLY | [`pages/fx-dly.png`](pages/fx-dly.png) | page 10 of 45 |
+| FX > REV/CHO | [`pages/fx-rev-cho.png`](pages/fx-rev-cho.png) | page 11 of 45 |
+| FX > PERF | [`pages/fx-perf.png`](pages/fx-perf.png) | page 12 of 45 |
+| SCL > SEL | [`pages/scl-sel.png`](pages/scl-sel.png) | page 13 of 45 |
+| SCL > SEL 2 | [`pages/scl-sel-2.png`](pages/scl-sel-2.png) | page 14 of 45 |
+| SCL > HARMONY | [`pages/scl-harmony.png`](pages/scl-harmony.png) | page 15 of 45 |
+| SCL > FOLLOW | [`pages/scl-follow.png`](pages/scl-follow.png) | page 16 of 45 |
+| SCL > CHORDS | [`pages/scl-chords.png`](pages/scl-chords.png) | page 17 of 45 |
+| EDIT > EDIT 1 | [`pages/edit-edit-1.png`](pages/edit-edit-1.png) | page 18 of 45 |
+| EDIT > EDIT 2 | [`pages/edit-edit-2.png`](pages/edit-edit-2.png) | page 19 of 45 |
+| EDIT > FILTER | [`pages/edit-filter.png`](pages/edit-filter.png) | page 20 of 45 |
+| EDIT > VOICE | [`pages/edit-voice.png`](pages/edit-voice.png) | page 21 of 45 |
+| EDIT > VOICE 2 | [`pages/edit-voice-2.png`](pages/edit-voice-2.png) | page 22 of 45 |
+| GLO > GLOBAL | [`pages/glo-global.png`](pages/glo-global.png) | page 23 of 45 |
+| GLO > MASTER | [`pages/glo-master.png`](pages/glo-master.png) | page 24 of 45 |
+| GLO > DRUMS | [`pages/glo-drums.png`](pages/glo-drums.png) | page 25 of 45 |
+| GLO > TEXTURE | [`pages/glo-texture.png`](pages/glo-texture.png) | page 26 of 45 |
+| GLO > TEXTURE 2 | [`pages/glo-texture-2.png`](pages/glo-texture-2.png) | page 27 of 45 |
+| MIDI > MIDI | [`pages/midi-midi.png`](pages/midi-midi.png) | page 28 of 45 |
+| MIDI > MIDI 2 | [`pages/midi-midi-2.png`](pages/midi-midi-2.png) | page 29 of 45 |
+| MIDI > MIDI 3 | [`pages/midi-midi-3.png`](pages/midi-midi-3.png) | page 30 of 45 |
+| MIDI > MIDI 4 | [`pages/midi-midi-4.png`](pages/midi-midi-4.png) | page 31 of 45 |
+| MIDI > SYSTEM | [`pages/midi-system.png`](pages/midi-system.png) | page 32 of 45 |
+| SAVE > PRESETS | [`pages/save-presets.png`](pages/save-presets.png) | page 33 of 45 |
+| SAVE > USER | [`pages/save-user.png`](pages/save-user.png) | page 34 of 45 |
+| SAVE > SECTION | [`pages/save-section.png`](pages/save-section.png) | page 35 of 45 |
+| SAVE > TOOLS | [`pages/save-tools.png`](pages/save-tools.png) | page 36 of 45 |
+| ARP > ARP | [`pages/arp-arp.png`](pages/arp-arp.png) | page 37 of 45 |
+| ARP > ARP 2 | [`pages/arp-arp-2.png`](pages/arp-arp-2.png) | page 38 of 45 |
+| SEQ > NOTES | [`pages/seq-notes.png`](pages/seq-notes.png) | page 39 of 45 |
+| SEQ > TIMING | [`pages/seq-timing.png`](pages/seq-timing.png) | page 40 of 45 |
+| SEQ > PLAY | [`pages/seq-play.png`](pages/seq-play.png) | page 41 of 45 |
+| SEQ > PATTERNS | [`pages/seq-patterns.png`](pages/seq-patterns.png) | page 42 of 45 |
+| SEQ > SONG | [`pages/seq-song.png`](pages/seq-song.png) | page 43 of 45 |
+| TRK > TRACKS | [`pages/trk-tracks.png`](pages/trk-tracks.png) | page 44 of 45 |
+| TRK > DRUMS | [`pages/trk-drums.png`](pages/trk-drums.png) | page 45 of 45 |
 | SEQ > NOTES: a note's sheet | [`pages/seq-notes-sheet.png`](pages/seq-notes-sheet.png) | OCT+ held |
+| ENV, ALGORITHM turned | [`pages/env-algorithm.png`](pages/env-algorithm.png) | the track changes on the page, the header names it |
 
-## Drums (11)
+## Drums (10)
 
 The drum track: the grid's KIT and SOUND views, a hit's sheet, and the pages it shares
 
@@ -87,7 +87,6 @@ The drum track: the grid's KIT and SOUND views, a hit's sheet, and the pages it 
 | FX > FILTER (drum track) | [`drums/drum-fx-filter.png`](drums/drum-fx-filter.png) | a page the drum track shares |
 | FX > SLICER (drum track) | [`drums/drum-fx-slicer.png`](drums/drum-fx-slicer.png) | a page the drum track shares |
 | FX > INSERT (drum track) | [`drums/drum-fx-insert.png`](drums/drum-fx-insert.png) | a page the drum track shares |
-| FX > INSERT 2 (drum track) | [`drums/drum-fx-insert-2.png`](drums/drum-fx-insert-2.png) | a page the drum track shares |
 | SCL > FOLLOW (drum track) | [`drums/drum-scl-follow.png`](drums/drum-scl-follow.png) | a page the drum track shares |
 | SEQ > TIMING (drum track) | [`drums/drum-seq-timing.png`](drums/drum-seq-timing.png) | a page the drum track shares |
 | SEQ > PLAY (drum track) | [`drums/drum-seq-play.png`](drums/drum-seq-play.png) | a page the drum track shares |

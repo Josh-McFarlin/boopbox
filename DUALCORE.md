@@ -49,7 +49,7 @@ build's.
 came up with **2 CORES** on ABOUT: core 1 started at power-on, passed its self-test, and the render has been
 split (the last synth part and the drums on core 1) from the first block. First measurement, the same evening,
 on a pattern of the owner's (engines not noted): **CPU 31 % with 2ND CORE OFF, 23 % ON** (the INFO column of
-GLO > SYSTEM: core 0's share of a half), the sound unchanged. The console figures (core 1's load, core 0's wait,
+SYSTEM: core 0's share of a half), the sound unchanged. The console figures (core 1's load, core 0's wait,
 timeouts, core 1's stack) and a worst-case pattern are the next thing to collect (below, "What the device will tell").
 
 | Pattern | 2ND CORE OFF | ON | core 0 freed |
@@ -137,7 +137,7 @@ The package keeps SLOOP's development identity (FM-1_900); Felucca's update path
 with the same identity as the installed one, so it installs over the official 2.6 and the official 2.6
 installs back over it. Your projects, presets, samples and settings are kept (2.6's own note: a project saved by
 2.6 does not open in 2.5). If the device ran the 2.5-based build of this branch with 2ND CORE OFF, that bit now
-reads as GLO > MIDI 2 > IN = CH 1: set IN back to NOTES once. From the browser:
+reads as MIDI 3 > IN = CH 1: set IN back to NOTES once. From the browser:
 
 ```sh
 python3 web/make_site.py build/felucca.fwsc dev ../sloop-site
