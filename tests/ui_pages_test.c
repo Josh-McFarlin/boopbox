@@ -859,11 +859,19 @@ int main(int argc, char **argv)
                                                        * accent, tracks' colours and greys */
             ok = settings.palette == PAL_SYNTH && !theme_on && !strcmp(mi_value(MI_COLOR, &(uint16_t){0}), "SYNTHWAVE") &&
                  C_BLACK == SYNTH_BG && C_WHITE == SYNTH_HI && UI_COL[1] == SYNTH_TRK[1] && UI_G1 == SYNTH_G[0] &&
-                 UI_MID[2] == rgb565_scale(SYNTH_TRK[2], 2, 3) && UI_COL[5] == ui_shade(SYNTH_TRK[1]);
+                 UI_MID[2] == rgb565_over(SYNTH_TRK[2], 2, 3) && UI_DIM[1] == rgb565_over(SYNTH_TRK[1], 2, 5) &&
+                 UI_COL[5] == SYNTH_TRK2[1] && pal_neon;
+            boopbox_splash();                         /* (1.2) the neon touches: the boot screen's sun on its horizon */
+            ok &= swap16(screen[190 * 240 + 120]) != SYNTH_BG && swap16(screen[200 * 240 + 4]) == UI_COL[1] &&
+                  swap16(screen[180 * 240 + 4]) == SYNTH_BG;
+            ui.force = 1; frame();
             encs[panel.enc[EN_K1]] = 1; frame();      /* SYNTHWAVE -> GREEN, round */
             ok &= settings.palette == 0u && !theme_on && C_BLACK == 0u && C_WHITE == 0xFFFFu && UI_COL[1] == UI_COL_DEF[1] &&
-                  UI_G1 == UI_G_DEF[0];
-            check(ok, "MENU > COLOR (1.2): SYNTHWAVE after MONO (indigo, cyan accent, neon tracks); round to GREEN");
+                  UI_G1 == UI_G_DEF[0] && UI_DIM[1] == UI_DIM_DEF[1] && !pal_neon;
+            boopbox_splash();                         /* (not on GREEN) */
+            ok &= swap16(screen[190 * 240 + 120]) == 0u && swap16(screen[200 * 240 + 4]) == 0u;
+            ui.force = 1; frame();
+            check(ok, "MENU > COLOR (1.2): SYNTHWAVE after MONO (indigo, cyan accent, neon tracks, the boot sun); round to GREEN");
             settings.palette = PAL_SYNTH; palette_set(PAL_SYNTH);
             theme = th; theme_valid = 1;
             encs[panel.enc[EN_K1]] = 1; frame();      /* SYNTHWAVE -> SUNSET */
