@@ -12,6 +12,11 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
 
 ### New in 1.1.0
 
+- **A sound browser.** On TRACKS, PRESETS on a synth track opens the engines (or the kinds of sound) on the left
+  and their sounds on the right, as on the OP-1 / OP-XY: PRESETS or KNOB 2 moves through the sounds (each one loads as
+  you land on it), SELECT or KNOB 1 jumps to the next group, KNOB 3 shows them by ENGINE or by KIND, KNOB 4 marks a
+  favourite. It closes by itself after 4 s; it replaces the SAVE > PRESETS page. The drum track's PRESETS is still the
+  kit.
 - **A new visualiser.** Six scenes at sunset and in neon replace the twelve styles, all built in beside the web
   editor: PALMS (the mix's wave as the sea's front wave), NIGHT DRIVE (the spectrum as a city, a car on a road that
   runs with the beat, its lights flaring on the kick; stopped, it slows down and parks), HORIZON (the spectrum as a
@@ -19,6 +24,13 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
   terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
   key, lit in the colour of the track that plays it; a chord lights all its keys). See
   [the visualiser](BOOPBOX.md#the-visualiser).
+- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
+  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
+  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
+- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
+  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
+  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
+- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
 - **SLOOP 2.8.4's fixes.** Clean fades (no distortion at the end of notes on the 3.5 mm output and USB), UNISON no
   longer stacks its voices in phase, PHYS strings in tune, NOISE's NZ ARCADE, SAMPLE and GRAIN follow the top keys,
   a firm press on a layer button opens its pages, on REC READY a knob changes only its own value, and more
@@ -37,8 +49,9 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
   *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
-  they are.
+  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
+  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
+  bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
   tracks 5–8 (GLO → MIDI 4).
@@ -55,7 +68,7 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them).
+  step components or the chord progression (backups keep them). *Lifted in 1.1.0: see [New in 1.1.0](#new-in-110).*
 
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
 is in [its repository](https://github.com/isod89/sloop-fm1).
@@ -146,7 +159,7 @@ Other controls:
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
 | **EDIT + OCT− / OCT+** | undo / redo |
 | **ALGORITHM** | select the track (on every page) |
-| **PRESETS** | the selected track's sound, or the drum kit |
+| **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends) · on the DRUMS screen: grid / kit |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
 | **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, SYSTEM) · tapped while a layer is held: lock it open |
@@ -307,7 +320,7 @@ The screen shows the 27 keys as a keyboard: the white keys in four rows of four,
 
 ## The sound bank
 
-153 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the twelve engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** browses them on a synth track **by kind** — basses, keys, organs, pads, leads, plucks and bells, stabs — the kind shown next to the name (the engine follows); your own presets come after. Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
+153 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the twelve engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (KNOB 3 VIEW groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs); your favourites come first and your own presets last. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
 
 | Kind | Sounds (engine) |
 | --- | --- |
@@ -418,7 +431,8 @@ It looks like the FM-1 (its black screen, the four track colours, its own Termin
 
 - **Sound** — every parameter of the selected track, as on the device: a card per button (ENV, LFO, EDIT, VOICE, FX, SEL, ARP), its pages as rows of four knobs, one colour per knob. Drag a value up or down like a knob (Shift: fine), or use its bar (click, then the wheel or the arrow keys; double-click: the default). The engines and presets, files; on an FM6 track the **FM6** panel (the patch, the bank, SysEx import and export).
 - **Sequencer** — the pattern settings and the steps, as the device's tiles (click one; the **step list** below takes typed note names). On the **drum track**: a grid of the 16 sounds × the steps, with the **kit**. Choose a **level** (GHOST, SOFT, NORM, HARD) and a **roll** (x1–x4), then click: a hit; click it again (same level and roll): cleared; Shift+click: one level louder. Click a step (a cell of the grid, a drum column): its **nudge** and its **parameter locks** (add one, pick the parameter, set or delete it) below the grid; a step with either carries a mark.
-- **Tracks** — the four channel strips (level, pan, mute; SOLO and REC shown as on the device).
+- **Patterns** — each track's eight patterns (play, copy, clear), its chain and FOLLOW, a pattern's step components, direction and seed, and the song's chord progression: read from the FM-1, changed, sent back (the song stopped).
+- **Tracks** — the eight channel strips (level, pan, mute; SOLO and REC shown as on the device).
 - **Library**, **Samples** (with CHOP), **Drum kit** (your own kits, [above](#your-own-drum-kits-kit-usr1usr4-usr34)), **Projects**, **Settings** (GLOBAL, **MASTER**: DUST, DUCK, FILT, ROLL; DRUMS).
 - **Backup** (Projects tab): **Save a backup** writes everything on the FM-1 to one file (BoopBox-backup-DATE.json): the music you are working on, the sections A–D, the 32 user presets, the FM6 bank, the samples USR1–USR4 (your drum kits with them) and the settings (colours, calibration, the song order, the lights, SYNC, MIDI OUT). **Restore from a file** puts it all back — what is on the FM-1 is replaced. A damaged file is refused before anything is written, every object is checked as a load checks it, and each one is written as a save writes it (a cut-off restore never leaves half an object). Stop the song (PLAY) before restoring.
 

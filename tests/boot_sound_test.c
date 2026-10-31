@@ -1,9 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* After an install (a power-on on the flash as it was), track 1 (and the other parts) sound as their sound: the
- * values the boot leaves equal the ones the same sound gets when it is loaded again. And (2.8.4) a working project
- * Clipper left in the flash (SLOOP installed after Clipper): a part on an engine SLOOP does not have (HYBRID, 12 and
- * up) used to wrap round onto ANALOG with HYBRID's values: 808 BOOM without its TRN -24, two octaves high; it gets
- * its default sound now. Exit status: failed checks. */
+ * values the boot leaves equal the ones the same sound gets when it is loaded again. And a four-track working project
+ * SLOOP (or Clipper) left in the flash is not read: the default sounds, an empty pattern. Exit status: failed checks. */
 #include "editor_host.c"
 static int fails;
 static void check(int c, const char *what) { printf("boot_sound: %-80s %s\n", what, c ? "ok" : "FAIL"); fails += !c; }
@@ -125,22 +123,22 @@ int main(void)
     boot_as_main();
     boot_as_main();
     key_check("power-on after an update");
-    {   /* 3. a working project Clipper wrote: track 1 on engine 12 (HYBRID), its TRN 0, a pattern */
-        static project_t q;
-        proj_capture(&q);
-        q.t[0].engine = NENGINES;                 /* (Clipper's HYBRID: the first engine SLOOP does not have) */
-        q.t[0].preset = 0;
-        pt_set(&q.t[0], P_TRANS, 0);
-        q.t[0].step[0].time = ST_NOTE; q.t[0].step[0].n = 1; q.t[0].step[0].note[0] = 48;
-        q.sum = proj_sum(&q);
-        st_save(OBJ_AUTOSAVE, &q, sizeof q);
+    {   /* 3. a working project SLOOP (or Clipper) left in the flash: a four-track "FUN6", its check word right. BoopBox
+         * does not read it: the power-on sounds, nothing in the pattern */
+        static uint8_t q[3816];
+        uint32_t h = 0x811C9DC5u, m = 0x46554E36u, n = sizeof q;
+        memset(q, 0, sizeof q);
+        memcpy(q, &m, 4), memcpy(q + 4, &n, 4);
+        for (i = 0; i < n - 4u; i++) h = (h ^ q[i]) * 16777619u;
+        memcpy(q + n - 4u, &h, 4);
+        st_save(OBJ_AUTOSAVE, q, sizeof q);
         boot_as_main();
-        printf("boot_sound: over Clipper's project: track 1 %s %s, TRN %d\n", ENGINES[trk[0].eng_req]->name,
+        printf("boot_sound: over SLOOP's project: track 1 %s %s, TRN %d\n", ENGINES[trk[0].eng_req]->name,
                ENGINES[trk[0].eng_req]->presets[trk[0].preset].name, trk[0].p[P_TRANS]);
         check(trk[0].eng_req == TRK_DEF[0][0] && trk[0].preset == TRK_DEF[0][1] && trk[0].p[P_TRANS] == -24,
-              "over Clipper's working project: track 1 gets its default sound (808 BOOM, TRN -24)");
-        check(trk[0].step[0].time == ST_NOTE && trk[0].step[0].note[0] == 48, "... and keeps its pattern");
-        key_check("over Clipper's working project");
+              "over SLOOP's working project: not read, track 1 has its default sound (808 BOOM, TRN -24)");
+        check(track_empty(&trk[0]), "... and an empty pattern");
+        key_check("over SLOOP's working project");
     }
     printf("boot_sound: %d failed\n", fails);
     return fails != 0;

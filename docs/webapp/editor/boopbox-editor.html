@@ -2468,6 +2468,9 @@ const bkProjFormat = (d) => (d && d.length >= 4 && d[1] === 0x4E && d[2] === 0x5
 /* the newest project format a device reads, from its INFO: eight tracks 7 (format 7, variable length), 2.6 (71
    parameters) 6, 2.4 .. 2.5 (61) 5, older 4 */
 const bkDevFormat = (info) => (info.ntrk >= 8 ? 7 : info.pcount >= 71 ? 6 : info.pcount >= 61 ? 5 : 4);
+/* BoopBox (format 7) reads no four-track project of SLOOP's (formats 1..6): a backup or song holding one is refused
+   before anything is written (else the restore stopped at its first project, the preset banks already replaced) */
+const bkSloopInto = (m, ids, info) => bkDevFormat(info) >= 7 && ids.some((id) => m.has(id) && bkProjFormat(m.get(id)) >= 1 && bkProjFormat(m.get(id)) <= 6);
 /* "SLOOP 2.6" -> true when at least maj.min.patch */
 const bkFwAtLeast = (v, want) => {
   if (/boopbox/i.test(String(v || ""))) return true;   /* BoopBox (1.0.0 on) continues SLOOP 2.8.3: newer than any SLOOP */
@@ -2484,10 +2487,11 @@ async function backupRestore(rq, file, progress = () => {}) {
   const info = parse[CMD.INFO](await rq(req.info(), { timeout: 1000, retries: 2 }));
   const newest = Math.max(0, ...[0, 2, 3, 4, 5].filter((id) => m.has(id)).map((id) => bkProjFormat(m.get(id))));
   if (newest > bkDevFormat(info)) throw new BackupError("bkNewer", `${file.firmware || "?"} > ${info.version}`);
+  if (bkSloopInto(m, [0, 2, 3, 4, 5], info)) throw new BackupError("bkSloop", `${file.firmware || "?"} -> ${info.version}`);
   /* (2.6) a backup of a 2.6 FM-1 without object 10 had the MIDI settings at their defaults (nothing learned, channels
      1 2 3, drums 10, OTHER SEL, BEND 2): restored as such, not left as the device has them now */
   if (!m.has(10) && bkFwAtLeast(file.firmware, [2, 5, 1])) {
-    const d = new Uint8Array(40);
+    const d = new Uint8Array(bkDevFormat(info) >= 7 ? 48 : 40);   /* (BoopBox: the 48-byte part, its tail 0: the defaults) */
     d.set([1, 2, 3, 10, 2], 32);
     m.set(10, d);
   }
@@ -2722,6 +2726,7 @@ async function songLoad(rq, file, progress = () => {}) {
   const info = parse[CMD.INFO](await rq(req.info(), { timeout: 1000, retries: 2 }));
   const newest = Math.max(0, ...[...m.values()].map(bkProjFormat));
   if (newest > bkDevFormat(info)) throw new BackupError("bkNewer", `${file.firmware || "?"} > ${info.version}`);
+  if (bkSloopInto(m, [...m.keys()], info)) throw new BackupError("bkSloop", `${file.firmware || "?"} -> ${info.version}`);
   const total = [...m.values()].reduce((s, d) => s + d.length, 0) || 1;
   let done = 0;
   const step = (n) => { done += n; progress(done, total); };
@@ -4789,6 +4794,7 @@ const TEXT = {
     bkBad: "BoopBox のバックアップファイルではないか、壊れています: ", bkStop: "FM-1 の再生を止めてから、もう一度復元してください。",
     bkStale: "本体の内容が途中で変わりました。もう一度バックアップしてください: ", bkRead: "読み取りエラー: ", bkWrite: "書き込みエラー: ", bkRc4: "フラッシュがありません",
     bkNewer: "新しい BoopBox のバックアップです。先に FM-1 をアップデートしてから復元してください（何も変更していません）: ",
+    bkSloop: "SLOOP のプロジェクトを含むファイルです。BoopBox では開けません（何も変更していません）: ",
     system: "システム", firmware: "ファームウェア", sync: "同期", tracksN: "トラック", stepsN: "ステップ数", enginesL: "エンジン",
     smpSlots: "サンプルスロット", userBank: "ユーザープリセット", none: "なし",
     fm6Title: "FM6 の音色（6 オペレーター）", fm6Help: "FM6 エンジンの音色をまるごと編集します。本体のノブ（EDIT の 8 つ）はこの音色の上にかかるマクロです。トラックへ送るとすぐ鳴り、PTCH を回すか別の音を読み込むまでそのトラックの音色になります（プロジェクトは PTCH だけを保存します）。バンク（B1〜B27）に保存すると PTCH で呼び出せます（本体を停止してから）。",
@@ -5126,6 +5132,7 @@ const TEXT = {
     bkBad: "Not a BoopBox backup, or damaged: ", bkStop: "Stop the FM-1 (PLAY), then restore again.",
     bkStale: "The FM-1 changed during the backup; back up again: ", bkRead: "Read error: ", bkWrite: "Write error: ", bkRc4: "No flash",
     bkNewer: "This backup comes from a newer BoopBox: update the FM-1 first, then restore. Nothing was changed: ",
+    bkSloop: "This file holds SLOOP projects, which BoopBox does not open. Nothing was changed: ",
     system: "System", firmware: "Firmware", sync: "Sync", tracksN: "Tracks", stepsN: "Steps", enginesL: "Engines",
     smpSlots: "Sample slots", userBank: "User presets", none: "none",
     fm6Title: "FM6 patch (six operators)", fm6Help: "Edit the whole patch of the FM6 engine. The device's knobs (the eight EDIT values) are macros on top of it. Sent to a track it plays at once and stays that track's patch until PTCH turns or another sound loads (a project keeps PTCH only); stored in the bank (B1..B27) it is a PTCH value (stop the device first).",

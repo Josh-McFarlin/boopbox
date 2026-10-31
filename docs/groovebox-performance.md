@@ -66,11 +66,12 @@ Real build, JieLi toolchain 2026-07-30 (the 1.0.0 tree builds within 16 B of the
 | Build | App | Free |
 | --- | ---: | ---: |
 | the tree after SLOOP 2.8.4, the old six styles, web editor | 1,424 B over | — |
-| the default now: the six scenes, web editor | 580,840 | 724 |
-| no visualiser (`FELUCCA_VIS=0`) | 570,008 | 11,556 |
+| the six scenes, web editor (before the sound browser and the end of SLOOP's old formats) | 580,840 | 724 |
+| the default now (1.1.0): the six scenes, the sound browser, web editor | 576,164 | 5,400 |
+| no visualiser (`FELUCCA_VIS=0`, 1.1.0) | 565,412 | 16,152 |
 
-The visualiser is 10,832 B: its frame (the update, the FFT, the name) 2,640 and the six scenes. RAM .data + .bss is
-87,900 B of 98,304 (the pool unchanged).
+The visualiser is 10,752 B: its frame (the update, the FFT, the name) 2,640 and the six scenes. RAM .data + .bss is
+85,484 B of 98,304 in 1.1.0 (the pool unchanged).
 
 ### Growth per milestone (real build, default flags of each tree)
 
@@ -100,7 +101,7 @@ Each measured by building the final tree with that feature's entry points made e
 | Step components (engine and COMP strip) | 3,492 |
 | The CHORDS screen alone | 3,208 |
 | The PATTERNS screen | 3,104 |
-| The format 6 fallback writer | 1,104 |
+| The format 6 fallback writer (removed in 1.0.0) | 1,104 |
 | The sheet's LOCKS strip | 828 |
 | SAVE > TOOLS > KIND | 432 |
 | FX > PERF Q | 164 |

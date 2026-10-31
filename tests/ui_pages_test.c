@@ -838,21 +838,13 @@ int main(int argc, char **argv)
                 d.hi = 0;
                 d.crc = st_crc32(&d, 36u);
                 ok &= theme_check(&d);                /* dark values, a black accent on a light background: readable */
-                {   /* the first beta's THM1 (36 bytes, its CRC where hi is): taken, with a white accent (black on a
-                     * light background), as a THM2 */
+                {   /* SLOOP 2.7 first beta's THM1 (36 bytes, its CRC where hi is): not a theme */
                     theme_t o = d;
                     uint32_t c1;
-                    o.magic = THEME_MAGIC1;
+                    o.magic = 0x314D4854u;
                     c1 = st_crc32(&o, 32u);
                     o.hi = (uint16_t)c1, o.rsv = (uint16_t)(c1 >> 16), o.crc = 0xFFFFFFFFu;
-                    ok &= theme_check(&o) && o.magic == THEME_MAGIC && o.hi == 0u && o.c[4] == d.c[4];
-                    o = th;
-                    o.magic = THEME_MAGIC1;
-                    c1 = st_crc32(&o, 32u);
-                    o.hi = (uint16_t)c1, o.rsv = (uint16_t)(c1 >> 16);
-                    ok &= theme_check(&o) && o.hi == 0xFFFFu && o.rsv == 0u && theme_check(&o);
-                    o.magic = THEME_MAGIC1, o.name[1] ^= 1;
-                    ok &= !theme_check(&o);           /* (its CRC) */
+                    ok &= !theme_check(&o);
                 }
                 d = th;
                 d.name[0] = 7;
@@ -1875,6 +1867,67 @@ int main(int argc, char **argv)
         fav_at = -1; fav_dirty = 0;
         go_home(); frames(2);
     }
+    {   /* the sound browser: PRESETS on TRACKS opens it (the sound stays), the groups on the left, the sounds on the
+         * right; PRESETS / KNOB 2 the sound, KNOB 1 / SELECT the group, KNOB 3 VIEW; untouched, back to TRACKS */
+        uint16_t gs[BR_G + 1u];
+        uint8_t gid[BR_G];
+        uint32_t total, nf, cur, cg = 0, ng, e0, p0, i, k;
+        int ok;
+        ui.menu = 0; song.sel = 1; go_home(); frames(2);
+        br_kind = 0;
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok = !ui.home && cur_page()->graph == GR_BROWSE && trk[1].eng_req == e0 && trk[1].preset == p0;
+        check(ok, "browser: PRESETS on TRACKS opens it, the first detent keeps the sound");
+        ui.force = 1; frame(); ppm("page-browser");
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok = ng == NENGINES + 1u && gid[ng - 1u] == 255u;   /* the engines in order, then USER (no favourites) */
+        for (i = 0; i + 1u < ng; i++) ok &= gid[i] == i + 1u;
+        for (i = 0; i < total; i++) {                       /* every sound once in the view */
+            uint32_t n = br_n(i, nf), j;
+            for (j = i + 1u; j < total; j++) ok &= br_n(j, nf) != n;
+            ok &= n < total;
+        }
+        check(ok, "browser ENGINE view: the twelve engines in order then USER, every sound once");
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);        /* (the rest of the turn that opened it: no sound) */
+        check(br_pos(&total, &nf) == cur, "browser: a detent just after it opened (the same flick) moves nothing");
+        frames(10);
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok = br_pos(&total, &nf) == (cur + 1u) % total;
+        encs[panel.enc[EN_K2]] = -1; frames(2);
+        ok &= br_pos(&total, &nf) == cur;
+        check(ok, "browser: PRESETS / KNOB 2 the next / previous sound in the view");
+        encs[panel.enc[EN_K1]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ok = cur == gs[(cg + 1u) % ng] && trk[1].eng_req == gid[(cg + 1u) % ng] - 1u;
+        encs[panel.enc[EN_SELECT]] = -1; frames(2);
+        ok &= br_pos(&total, &nf) == gs[cg] && !ui.home && cur_page()->graph == GR_BROWSE;
+        check(ok, "browser: KNOB 1 / SELECT the first sound of the next / previous engine");
+        for (i = 0; i < 9u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(1); }
+        ui.force = 1; frame(); ppm("page-browser-scroll");
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_K3]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok = br_kind == 1u && trk[1].eng_req == e0 && trk[1].preset == p0 && ng == 9u && br_n(cur, nf) == cur;
+        check(ok, "browser: KNOB 3 VIEW = KIND, the eight kinds then USER, the PRESETS list's order, the sound kept");
+        ui.force = 1; frame(); ppm("page-browser-kind");
+        frames(BR_IDLE_MS / 16u - 20u);
+        ok = !ui.home && cur_page()->graph == GR_BROWSE;
+        frames(30);
+        check(ok && !ui.home && cur_page()->scope == SC_TRK && !br_back, "browser: untouched for 4 s, back to TRACKS");
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        open_family(FAM_ENV); frames(2);
+        frames(BR_IDLE_MS / 16u + 10u);
+        check(cur_page()->fam == FAM_ENV && !br_back, "browser: a button takes it elsewhere, it stays there");
+        song.sel = 3; go_home(); frames(2);                  /* the drum track: PRESETS is the kit, no browser */
+        k = trk[3].p[P_E0];
+        encs[panel.enc[EN_PRESET]] = k ? -1 : 1; frames(2);   /* (the last kit at power-on: one back) */
+        check(cur_page()->scope == SC_TRK && trk[3].p[P_E0] == (int16_t)(k ? k - 1u : 1u), "browser: not on the drum track (PRESETS: the kit)");
+        trk[3].p[P_E0] = (int16_t)k;
+        br_kind = 0; song.sel = 1; go_home(); frames(2);
+    }
     {   /* 2.7: the favourites in the settings' side record (after the theme): kept; a 2.7 beta's record (the theme
          * alone, the rest erased) or a damaged one: none */
         side_rec_t r;
@@ -1906,9 +1959,9 @@ int main(int argc, char **argv)
         song.playing = 0; transport_req = 0; song.rec = 0; rec_wait = 0; arrangement_enabled = 0; live_req = -1;
         live(0, 0, 0, 0);
         bpm = (int)(lv_out[3] | lv_out[4] << 7) - 8192;
-        ok &= lv_n == 50u && lv_out[0] == 0 && !(lv_out[1] & 1u) && bpm == song.g[G_BPM] && lv_out[12] == song.sel && lv_out[32] == 0u
+        ok &= lv_n == 65u && lv_out[0] == 0 && !(lv_out[1] & 1u) && bpm == song.g[G_BPM] && lv_out[12] == song.sel && lv_out[32] == 0u
               && lv_out[34] == (8u | 4u << 4);
-        check(ok, "LIVE (2.7): the state, 50 bytes (flags, BPM, sections, mix, punch, song, 4 x step / length / meter, master, throws, drum tune / decay)");
+        check(ok, "LIVE (2.7): the state, 65 bytes (flags, BPM, sections, mix, punch, song, 4 x step / length / meter, master, throws, drum tune / decay, v13 tracks 5..8)");
         live(1, 1, 0, 0); ok = transport_req == 1u; frames(30);
         live(0, 0, 0, 0); ok &= song.playing && (lv_out[1] & 1u) && lv_out[20] < trk_len(&trk[0]) && lv_out[21] == trk_len(&trk[0]);
         check(ok, "LIVE: PLAY plays; the reply says so");
@@ -1924,6 +1977,17 @@ int main(int argc, char **argv)
         live(2, LY_MIX, 9, 1); ok &= fill_arm == 1u && (lv_out[1] & 32u) != 0u;
         live(2, LY_MIX, 9, 1); ok &= !fill_arm;
         check(ok, "LIVE: GLO keys: mute, solo, fill while held, fill next bar (as GLO + key)");
+        {   /* v13: tracks 5..8 in the state; op 13 solos any track, whichever bank is selected */
+            uint8_t sel0 = song.sel;
+            trk[6].p[P_MUTE] = 1; song.rec = 0x20u; trk[7].seq_idx = 3;
+            live(13, 5, 0, 0); ok = song.solo == 0x20u && lv_out[51] == 2u;
+            live(13, 7, 0, 0); ok &= song.solo == 0xA0u && lv_out[51] == 10u && lv_out[50] == 4u && lv_out[52] == 2u;
+            ok &= lv_out[62] == 3u && lv_out[63] == trk_len(&trk[7]) && lv_out[54] == trk_len(&trk[4]);
+            live(13, 8, 0, 0); ok &= song.solo == 0xA0u;              /* (no track 9) */
+            live(13, 5, 0, 0); live(13, 7, 0, 0); ok &= !song.solo && song.sel == sel0;
+            trk[6].p[P_MUTE] = 0; song.rec = 0; trk[7].seq_idx = 0;
+            check(ok, "LIVE v13: tracks 5..8's mutes, solos, REC, steps and lengths in the state; op 13 solos any track");
+        }
         live(2, LY_SONG, 1, 1); live(2, LY_SONG, 1, 0);
         ok = live_req == 1 && chain_n == 0u && lv_out[6] == 2u;
         live_req = -1;

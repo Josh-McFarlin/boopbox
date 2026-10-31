@@ -190,7 +190,7 @@ C, MIX; ANALOG's filter FTYPE; ESYNC; LFO 2's LSYNC, LTRIG, LPOL): P_COUNT 71, P
 CH3, OTHER for GLO > MIDI; SRC, LEVEL, TONE, MOVE, RATE, WHEN, DUCK for GLO > TEXTURE; BEND for GLO > MIDI 2):
 G_COUNT 45. An editor reads both from `INFO` and maps a patch file by its own count (61 or 71 values; `pCount`,
 `pE0` in the file). User preset records of 61 values load with the new parameters at their defaults. Backup object
-10 holds the MIDI LEARN map and the GLO > MIDI settings (40 bytes; listed only when not the default).
+10 holds the MIDI LEARN map and the GLO > MIDI settings (on SLOOP 2.6: 40 bytes, listed only when not the default; BoopBox: 48, always).
 
 ## v2: live sync
 
@@ -222,9 +222,10 @@ G_COUNT 45. An editor reads both from `INFO` and maps a patch file by its own co
 - Level and mute are also `P_LEVEL` / `P_MUTE` of the selected track (`SET`); `TRACK_MIX` reaches the
   others. Presets and user presets change a part's sound but keep its mix (`P_LEVEL`, `P_PAN`,
   `P_MUTE`), its pattern parameters (`LEN DIV SWG GATE`) and its key (`ROOT SCL QNT`, `CHORD`).
-- Projects (`PROJECT`) save and load all four tracks and the selection (SLOOP 2.4: project format 5,
-  "FUN5", format 4 + nudges and locks; formats 4 ("FUN4", SLOOP 2.0: the drum lanes, levels and ratchets),
-  3, 2 and 1 from older firmware are converted when loaded, a format 1 project into track 1).
+- Projects (`PROJECT`) save and load all eight tracks and the selection. BoopBox 1.0.0 stores format 7 ("FUN7",
+  variable length) only and reads none of SLOOP's four-track formats ("FUN1" .. "FUN6": they read as an empty slot;
+  a backup object in one of them is refused, rc 2). See `docs/groovebox-storage.md`. The notes on formats 4..6 below
+  describe SLOOP.
 - Older firmware (no NTRK in `INFO`): one instrument; skip the track UI.
 
 ## v4: any track's parameters
@@ -324,7 +325,7 @@ device while a lock is in force wins: the value found is kept as the new base. S
   change of that step: `STEP_CHANGED` (index) for the selected track; re-read `MICRO_GET` / `LOCK_GET` (two
   requests) with the step. The editor's own `LOCK_SET` / `MICRO_SET` push nothing. While a lock is in force the
   parameter's live value is what `GET` / `DUMP` return and `CHANGED` reports (coalesced, as any knob).
-- **Projects** (`PROJECT`, the backup object 0 and 2..5) are format 5 ("FUN5", 3816 bytes): format 4 plus, per
+- **Projects** (`PROJECT`, the backup object 0 and 2..5) are, on SLOOP 2.4, format 5 ("FUN5", 3816 bytes): format 4 plus, per
   track, 64 nudge bytes, 24 × 4-byte locks and 16 bytes of fill conditions (v8, below). Format 4 projects (SLOOP
   2.0 .. 2.3) load with no nudge, no lock and no condition.
 - A device that does not know these commands (v6 and older) sends no reply: use `INFO`'s version byte.
@@ -419,11 +420,12 @@ Backup object **9** is the four kits (`dsu_bank_t`, 1464 bytes: "DSU1", version 
 crush, src, 2 reserved, 16 x 22). Its commit answers rc 3 while the song plays. A device before v10 answers the
 begin of object 9 with rc 5: the editor skips it (as object 8 on a v8 device).
 
-Backup object **10** (SLOOP 2.6) is the MIDI part, 40 bytes: the MIDI LEARN map, 16 entries of 2 bytes (little-endian),
+Backup object **10** (SLOOP 2.6) is the MIDI part: the MIDI LEARN map, 16 entries of 2 bytes (little-endian),
 each `cc | track << 7 | code << 9` (0: empty; code: a common parameter its id + 1, an engine parameter 120 + k for E k),
-then GLO > MIDI: CH1, CH2, CH3 (0 OFF, 1..16) and the drum channel | OTHER << 7, GLO > MIDI 2's BEND (1..12), 3 spare (a
-restore takes 32 and 36 bytes too: the map alone, the map and the channels). BK_LIST names it only while it is not the default (nothing learned, channels 1 2 3 10, OTHER SEL, BEND 2), so such a
-backup is one an older editor reads. Its commit checks every entry
+then GLO > MIDI: CH1, CH2, CH3 (0 OFF, 1..16) and the drum channel | OTHER << 7 (bit 5 DRUM PREVIEW, bit 6 STEP
+ADVANCE OFF), BEND (1..12) | FX FADE << 4, FX CH, DR MAP | CLK OUT << 1 | FILTER RESO << 2, REMOTE; then CH5..CH8,
+`ml_hi` (2 bytes) and REC KNOBS, one spare: 48 bytes on BoopBox 1.0.0 (`MIDI_PART_8`), always listed; a restore takes
+exactly 48 (SLOOP's 32, 36 and 40-byte parts are refused, rc 2). Its commit checks every entry
 (a CC that learns, a parameter the firmware knows; the others become empty), writes it with the settings, and answers rc 3
 while the song plays. A device before 2.6 answers its begin with rc 5: the editor skips it.
 
@@ -469,6 +471,28 @@ level + 1), the THROWs (bits), and the 16 drum sounds' TUNE + 8 | DECAY + 4 << 4
 fill bar…) are sent once, never repeated on a timeout. The notes are not SysEx: the page plays them as MIDI notes on
 the tracks' channels (GLO > MIDI; OTHER = SEL: a free channel on the selected track; DR MAP for the drums). A device
 before 2.7 does not answer `LIVE`: the page keeps its mixer and keys (TRACK_MIX, TRACK_PARAM, SET, notes).
+
+## v13: LIVE for eight tracks (BoopBox)
+
+`INFO` ends with 13. The LIVE state (above) gets 15 more bytes at its end, 65 in all: the mutes, the solos and the REC
+tracks of tracks 5..8 (each `>> 4`: bit 0 is track 5), then for each of tracks 5..8 its step, its pattern length and its
+meter, as tracks 1..4 have them. The first 50 bytes are as in v12 (their mute, solo and REC bytes still hold tracks 1..4
+in bits 0..3), so a v12 editor reads a v13 reply as before. One more op:
+
+| op | args | does |
+| --- | --- | --- |
+| 13 | track 0..7 | solo: toggles that track's solo (`song.solo`), whichever track is selected. Op 2's GLO keys 5..8 solo the selected track's bank of four, as on the FM-1 |
+
+Tracks 1..8 are reached by `TRACK`, `TRACK_MIX`, `TRACK_DUMP`, `TRACK_STEP`, `TRACK_PARAM`, `LOCK_*`, `MICRO_*` and
+`FILL_*` (track 0..7). A track's kind is its engine byte: NENGINES is a drum track (by default tracks 4 and 8; SAVE >
+TOOLS > KIND changes it), so an editor never takes the last track as *the* drum track. `TRACK` ends with the solo mask
+in two bytes (tracks 1..7, then track 8).
+
+**Patterns, chains, step components, the progression** have no command of their own: the editor's Patterns page reads
+backup object 0 (the working project, format 7: `docs/groovebox-storage.md`), changes it and writes it back whole with
+`BK_PUT` (rc 3 while the song plays; the commit loads it at once, as `project.c project_restore`). Its codec
+(`editor.html` PROJ7) writes the bytes the firmware writes: `tests/proj7_tool.c` captures and loads with the
+firmware's own code and `web/test_web.mjs` compares them.
 
 ## Notes for the editor
 

@@ -544,16 +544,17 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-    if (pg->graph == GR_BROWSE) {                         /* KNOB 1: one preset, KNOB 2: the next / previous engine */
-        if (slot == 0u && !is_drum(TSEL)) {
-            uint32_t total, cur = preset_pos(&total);
-            if (total)
-                preset_go((uint32_t)(((int32_t)cur + steps % (int32_t)total + (int32_t)total) % (int32_t)total));
-        } else if (slot == 1u && !is_drum(TSEL)) {
-            select_engine((TSEL->eng_req + (steps > 0 ? 1u : NENGINES - 1u)) % NENGINES);
-        } else if (slot == 3u && !is_drum(TSEL)) {          /* (2.7) KNOB 4: FAV, right adds the sound, left removes it */
+    if (pg->graph == GR_BROWSE) {                         /* the sound browser: KNOB 1 the group, KNOB 2 the sound,
+                                                           * KNOB 3 VIEW (ENGINE / KIND), KNOB 4 FAV */
+        if (is_drum(TSEL))
+            return;
+        if (slot < 2u)
+            br_step(steps, slot == 0u);
+        else if (slot == 2u)
+            br_kind = steps > 0;
+        else                                              /* (2.7) KNOB 4: FAV, right adds the sound, left removes it */
             fav_toggle(steps > 0);
-        }
+        ui.force = 1;
         return;
     }
     if (pg->graph == GR_USER) {                           /* KNOB 1 slot; LOAD / ERASE / SAVE: GO buttons */
@@ -1186,6 +1187,7 @@ UI_SMALL static void ui_input(void)
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */
     ml_poll();                                          /* MIDI LEARN: a CC came for the picked parameter (2.6) */
     page_fix();                                         /* (a page the track does not have: its neighbour, 2.6) */
+    br_poll();                                          /* the sound browser opened from TRACKS: back when idle */
     midi_entry();                                       /* (the STEP page's MIDI notes: read every frame, 2.6) */
     if (home == BT_HOLD) {                              /* HOME held: open the menu, or leave it */
         if (ui.menu) {
@@ -1364,12 +1366,14 @@ UI_SMALL static void ui_input(void)
     if ((s = panel_enc(EN_PRESET)) != 0 && (ui.home || cur_page()->graph == GR_BROWSE || cur_fam() == FAM_TRK)) {
         /* PRESETS browses the selected part's presets (all engines, then user presets) on HOME, the PRESETS
          * page and TRACKS only (the drum track: its kits); elsewhere a stray turn would throw away the sound
-         * being edited. Every detent counts */
-        uint32_t total, cur = preset_pos(&total);
+         * being edited. On TRACKS a synth track's first detent opens the sound browser (the sound stays); on the
+         * browser every detent counts, in its VIEW's order */
         if (is_drum(TSEL))
             DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
-        else if (total)
-            preset_go((uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total));
+        else if ((ui.home || cur_page()->graph != GR_BROWSE) && !rec_wait && !ft_on)
+            br_open();                                  /* TRACKS: the first detent opens the browser, the sound stays */
+        else if (fm1_ms - br_t0 > BR_OPEN_MS)           /* (the rest of the turn that opened it: nothing) */
+            br_step(s, 0);
     }
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* ALGORITHM: the selected track, on every page (not in a take) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
@@ -1380,7 +1384,10 @@ UI_SMALL static void ui_input(void)
         for (k = 0; k < 4u; k++)
             panel_enc(EN_K1 + k);
     }
-    if ((s = panel_enc(EN_SELECT)) != 0 && (rec_wait || ft_on || !page_walk(s))) {   /* SELECT: the pages of the
+    if (!ui.home && cur_page()->graph == GR_BROWSE && !rec_wait && !ft_on) {
+        if ((s = panel_enc(EN_SELECT)) != 0)            /* the sound browser: SELECT the group (as KNOB 1); read */
+            br_step(s, 1);                              /* once: a late detent is not a page turn */
+    } else if ((s = panel_enc(EN_SELECT)) != 0 && (rec_wait || ft_on || !page_walk(s))) {   /* SELECT: the pages of the
                                                      * family shown, else (and on the REC screen) the tempo */
         song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);
         ui.bpm_t = 40;                              /* the header's BPM lights up; no message over the header */
