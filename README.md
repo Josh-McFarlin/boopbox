@@ -57,6 +57,11 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
   key, lit in the colour of the track that plays it; a chord lights all its keys). See
   [the visualiser](BOOPBOX.md#the-visualiser).
+- **SYNTHWAVE, a screen palette** (MENU → SCREEN → COLOR, after MONO): night indigo, the tracks in cyan, magenta,
+  sunset orange and violet (5–8 periwinkle, rose, gold, orchid), neon rules with a glow under the headers, large
+  values fading from pink to orange, a neon floor to the horizon where a page has an empty half, and a sun setting on
+  the boot screen. The other palettes and your theme look as before. The web editor's Theme page can start from it.
+  See [every screen in SYNTHWAVE](assets/screens/all-synthwave/README.md).
 - **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
   their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
   own. LIVE solos any track (protocol v13: 32 bytes of firmware).
@@ -72,6 +77,8 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   starts instead of stored in the flash: byte for byte the same, so the sound and the screens do not change, and the
   build fits again with the fixes and the visualiser
   ([docs/groovebox-performance.md](docs/groovebox-performance.md)).
+- The CHORDS screen no longer shows what the page before it left under the track buttons (the TRACKS screen's dials,
+  for one).
 - Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
   settings opens as one of the new six.
 
@@ -115,6 +122,10 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 <p align="center"><img src="assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page with INSERT, ENV SYNC and LFO 2" width="760"></p>
 
 <p align="center"><sub>The web editor's Sound page: the envelope, the LFOs and the effects of the selected track (<code>tools/make_editor_screens.mjs</code>).</sub></p>
+
+<p align="center"><img src="assets/screens/boopbox-synthwave.png" alt="BoopBox screens in the SYNTHWAVE palette" width="760"></p>
+
+<p align="center"><sub>The same screens in SYNTHWAVE (MENU → SCREEN → COLOR). Every screen of the firmware, in <a href="assets/screens/all/README.md">MONO</a> and in <a href="assets/screens/all-synthwave/README.md">SYNTHWAVE</a> (<code>tools/make_all_screens.py</code>).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-midi-texture.png" alt="BoopBox web editor: MIDI and TEXTURE settings" width="760"></p>
 
@@ -281,7 +292,7 @@ Hold **HOME**. The menu is in four sections, as the pages are: **SCREEN** (COLOR
 
 | Item | Choices | What it does |
 | --- | --- | --- |
-| **COLOR** (SCREEN) | 5 palettes, then your theme (2.7) | the screen's colours; your own made on the editor's Theme page (and shared as one line of text) |
+| **COLOR** (SCREEN) | 6 palettes (GREEN, AMBER, CYAN, RED, MONO, SYNTHWAVE), then your theme (2.7) | the screen's colours; your own made on the editor's Theme page (and shared as one line of text) |
 | **ZOOM** (SCREEN) | OFF / ON | a large readout of the value you turn |
 | **KNOB ACCEL** (SCREEN, 2.7) | ON / OFF | ON: a fast turn sweeps wider, progressively (after JIANT FM); OFF: one value a detent |
 | **LIGHTS** (LIGHTS) | OFF / LOW / MID / HIGH | every button glows at that level; what is active stays at full light |
