@@ -36,10 +36,10 @@ MORE = [
     ("menu", "MENU (HOME held)", "screen, lights, audio, sequencer, system"),
     ("vis-scope", "OSCILLOSCOPE", "the visualiser: tap HOME on TRACKS"),
     ("vis-spectrum", "SPECTRUM", "32 bands with falling caps"),
-    ("vis-vu", "VU METERS", "the track pairs and the mix"),
+    ("vis-vu", "VU METERS", "the eight tracks and the mix"),
     ("vis-circle", "CIRCLE", "a ring that swells on every kick"),
-    ("vis-bounce", "BOUNCE", "a ball kicked up by the notes"),
-    ("vis-wires", "WIRES", "strings set swinging by the notes"),
+    ("vis-bounce", "BOUNCE", "a ball a track, kicked up by its notes"),
+    ("vis-wires", "WIRES", "a string a track, set swinging by its notes"),
 ]
 
 BG, BEZEL, TITLE, SUB = (28, 28, 32), (10, 10, 12), (236, 236, 240), (150, 150, 158)

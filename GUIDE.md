@@ -929,17 +929,17 @@ On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of wha
 | 2 | **SPECTRUM** | yes | 32 bands with falling caps |
 | 3 | **SPECTROGRAM** | — | the spectrum scrolling down, black → blue → green → yellow → white |
 | 4 | **LISSAJOUS** | — | the stereo image: the wider the cloud, the wider the sound |
-| 5 | **VU METERS** | yes | four meters and the mix, with peak holds |
+| 5 | **VU METERS** | yes | the eight tracks in their colours and the mix, with peak holds |
 | 6 | **CIRCLE** | yes | the wave round a ring that swells on every kick |
 | 7 | **TAPE** | — | two reels turning with the song, the level, the bar and the tempo |
 | 8 | **LCD** | — | the tempo in seven-segment digits, bar and beat, four meters |
-| 9 | **BOUNCE** | yes | four balls, kicked up by their tracks' notes |
+| 9 | **BOUNCE** | yes | a ball per track, kicked up by its notes |
 | 10 | **ORBIT** | — | four planets turning in 1, 2, 4 and 8 beats round a sun that pulses with the mix |
-| 11 | **WIRES** | yes | four strings, set swinging by their tracks' notes |
+| 11 | **WIRES** | yes | a string per track, set swinging by its notes |
 | 12 | **BOOPBOX** | — | the logo alive: its eight bars are the tracks, the speakers pulse with the mix, the box hops on the beat |
 
-The meters, balls, planets and strings are four (eight tracks: each one is a pair, 1 + 5, 2 + 6, 3 + 7, 4 + 8, in the pair's colour); BOOPBOX
-shows each of the eight on its own.
+VU METERS, BOUNCE, WIRES and BOOPBOX show each of the eight tracks on its own; ORBIT, LCD and TAPE (not built in) show
+four, each a pair of tracks (1 + 5 .. 4 + 8).
 
 The visualiser sees the mix **as if MASTER were all the way up**: with MASTER turned down, even to 0, it still moves at full size. It costs the sound nothing.
 
