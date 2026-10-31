@@ -36,6 +36,27 @@ UI_SMALL static int32_t batt_shown(void)
     return batt_level();
 }
 
+/* (1.2) a rule across the screen: in SYNTHWAVE a neon line with a glow row each side (gfx.c cv_rule) */
+UI_SMALL static void lcd_rule(uint32_t y, uint16_t c)
+{
+    if (pal_neon) {
+        uint16_t g = rgb565_over(TE_COL[1], 2u, 7u);
+        lcd_fill(0, y - 1u, 240, 1, g);
+        lcd_fill(0, y + 1u, 240, 1, g);
+        c = TE_COL[1];
+    }
+    lcd_fill(0, y, 240, 1, c);
+}
+/* (1.2) SYNTHWAVE: a floor of neon lines from the horizon y0 down to y1, toward the middle (the big pages' empty half) */
+UI_SMALL static void neon_floor(int32_t y0, int32_t y1)
+{
+    int32_t i, d = y1 - y0;
+    uint16_t far = rgb565_over(TE_COL[1], 1u, 4u), near = rgb565_over(TE_COL[1], 1u, 2u);
+    for (i = -6; i <= 6; i++)
+        cv_line(120 + i * 14, y0, 120 + i * 56, y1, far);
+    for (i = 1; i <= 6; i++)
+        cv_rect(0, y0 + d * i * i / 36, 240, 1, i > 3 ? near : far);
+}
 /* top bar: transport, BPM, octave | USB, battery, CPU; messages replace it */
 UI_SMALL static void draw_head(void)
 {
@@ -50,6 +71,7 @@ UI_SMALL static void draw_head(void)
         return;
     ui.head_sig = sig;
     cv_begin(240, H_HEAD, C_BLACK);
+    cv_glow(6, H_HEAD);                               /* (1.2) SYNTHWAVE: a glow rising from the rule under it */
     if (ui.msg_t) {
         cv_text(4, 1, &FONT_S, ui.msg, C_HI);
         cv_blit(0, Y_HEAD);
@@ -115,8 +137,8 @@ UI_SMALL static void draw_frame(void)
     lcd_fill(0, Y_GRAPH + H_GRAPH, 240, Y_FOOT - Y_GRAPH - H_GRAPH, C_BLACK);
     for (i = 0; i < 4u; i++)                            /* left inset of each column */
         lcd_fill(i * 60u, Y_LABEL, 4, Y_SEP_END - Y_LABEL, C_BLACK);
-    lcd_fill(0, H_HEAD, 240, 1, C_LINE);
-    lcd_fill(0, Y_FOOT - 2, 240, 1, C_LINE);
+    lcd_rule(H_HEAD, C_LINE);
+    lcd_rule(Y_FOOT - 2, C_LINE);
     for (i = 1; i < 4u; i++)
         lcd_fill(i * 60u - 1u, H_HEAD + 4, 1, Y_SEP_END - H_HEAD - 4, C_LINE);
 }
@@ -742,12 +764,17 @@ UI_SMALL static void graph_scope(uint16_t c)
  * alone (FILTER) across the width. The columns (draw_columns, drawn first) fill ui.big_* */
 UI_SMALL static void graph_big(void)
 {
-    uint32_t c, n = 0;
+    uint32_t c, n = 0, low = ui.big_l[2][0] || ui.big_l[3][0];
     for (c = 0; c < 4u; c++)
         n += ui.big_l[c][0] != 0;
     if (n > 1u) {
-        cv_rect(119, 6, 1, 112, C_LINE);
-        cv_rect(6, 62, 228, 1, C_LINE);
+        cv_rect(119, 6, 1, low || !pal_neon ? 112 : 56, C_LINE);
+        if (pal_neon && !low)                           /* (1.2) SYNTHWAVE: the empty half a floor to the horizon */
+            neon_floor(62, 120);
+        cv_rule(6, 62, 228, C_LINE);
+    } else if (pal_neon) {                              /* (one value: under it) */
+        neon_floor(88, 120);
+        cv_rule(6, 88, 228, C_LINE);
     }
     for (c = 0; c < 4u; c++) {
         int32_t x0 = c & 1u ? 126 : 6, y0 = c & 2u ? 64 : 2, x;

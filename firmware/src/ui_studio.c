@@ -193,6 +193,7 @@ UI_SMALL static void te_header(const char *title, uint16_t tc, uint32_t *cache, 
         return;
     *cache = sig;
     cv_begin(240, 40, C_BLACK);
+    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
     fmt_int(b, song.g[G_BPM]);
     cv_text(4, 4, &FONT_L, b, ui.bpm_t ? C_WHITE : TE_G4);
     cv_text(4 + text_w(&FONT_L, b) + 4, 20, &FONT_S, "bpm", TE_G3);
@@ -222,7 +223,7 @@ UI_SMALL static void te_header(const char *title, uint16_t tc, uint32_t *cache, 
         if (song.solo)
             cv_text(236 - text_w(&FONT_S, "solo"), 22, &FONT_S, "solo", C_WHITE);
     }
-    cv_rect(0, 39, 240, 1, TE_G1);
+    cv_rule(0, 39, 240, TE_G1);
     cv_blit(0, 0);
 }
 

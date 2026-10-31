@@ -34,6 +34,7 @@ UI_SMALL static void song_screen_draw(void)
     previous = ui.msg_t ? ~sig : sig;               /* redraw after a message expires */
     /* Draw one small band at a time: never exceed the 124-row canvas. */
     cv_begin(240, 40, C_BLACK);
+    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "SONG", C_WHITE);
     cv_text(76, 20, &FONT_S, arrangement_enabled ? "song mode" : "loop mode", arrangement_enabled ? SC[3] : TE_G3);
     if (arrangement.loop) {                         /* (groovebox) the song's loop region: entries a..b */
@@ -48,7 +49,7 @@ UI_SMALL static void song_screen_draw(void)
     cv_text(236 - 24, 4, &FONT_S, "bpm", TE_G3);
     cv_text(236 - text_w(&FONT_S, song.playing ? "playing" : "stopped"), 20, &FONT_S,
             song.playing ? "playing" : "stopped", song.playing ? SC[1] : TE_G3);
-    cv_rect(0, 39, 240, 1, TE_G1);
+    cv_rule(0, 39, 240, TE_G1);
     cv_blit(0, 0);
     for (i = 0; i < 5u; i++) {
         uint32_t pos = start + i;

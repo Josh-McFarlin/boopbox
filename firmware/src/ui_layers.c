@@ -680,6 +680,7 @@ UI_SMALL static void layer_title(const char *name, const char *sub, uint16_t col
         return;
     *cache = sig;
     cv_begin(240, 40, C_BLACK);
+    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
     cv_text(4, 2, &FONT_L, name, col);
     cv_text(4 + text_w(&FONT_L, name) + 10, 18, &FONT_S, ui.msg_t ? ui.msg : sub, ui.msg_t ? C_WHITE : TE_G3);
     if (locked) {                                         /* locked open (HOME): any button lets it go */
@@ -689,7 +690,7 @@ UI_SMALL static void layer_title(const char *name, const char *sub, uint16_t col
     } else if (hdr_r[0]) {                                /* (2.7.2) a right-aligned readout (FX: the fade), like a knob's */
         cv_text(236 - text_w(&FONT_S, hdr_r), 4, &FONT_S, hdr_r, TE_G3);
     }
-    cv_rect(0, 38, 240, 1, TE_G1);
+    cv_rule(0, 38, 240, TE_G1);
     cv_blit(0, 0);
 }
 

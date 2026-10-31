@@ -120,6 +120,7 @@ UI_SMALL static void draw_menu(void)
     if (ui.force)                                   /* head + rule + two bands cover rows 0..229 */
         lcd_fill(0, H_HEAD + 1 + 124 + 95, 240, 240 - (H_HEAD + 1 + 124 + 95), C_BLACK);
     cv_begin(240, H_HEAD, C_BLACK);
+    cv_glow(6, H_HEAD);                             /* (1.2) SYNTHWAVE */
     cv_text(4, 1, &FONT_S, ui.menu == 2 ? "ABOUT" : "MENU", C_HI);
     if (ui.menu != 2) {                             /* the section and its number, as a page's "ENV DEST 2/2" */
         char t[16];
@@ -131,7 +132,7 @@ UI_SMALL static void draw_menu(void)
         cv_text(236 - text_w(&FONT_S, t), 1, &FONT_S, t, C_GRAY);
     }
     cv_blit(0, Y_HEAD);
-    lcd_fill(0, H_HEAD, 240, 1, C_LINE);
+    lcd_rule(H_HEAD, C_LINE);
     for (pass = 0; pass < 2u; pass++) {             /* the canvas holds 124 rows: draw in two bands */
         cv_begin(240, pass ? 95u : 124u, C_BLACK);
         cv_oy = pass ? -124 : 0;
