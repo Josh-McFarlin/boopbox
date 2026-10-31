@@ -17,7 +17,7 @@ Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make roo
 
 | Control | Does |
 | --- | --- |
-| **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before), on the TRACKS screen only |
+| **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before), on the TRACKS, PATTERNS and CHORDS screens only |
 | **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 have a shade of the colours of tracks 1-4 (lighter; darker on a light theme), so each track has its own |
 | **GLO layer** (mute, solo, levels) | acts on the bank shown: keys 1-4 are tracks 1-4 or 5-8 |
 | **GLO > MIDI 4** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as GLO > MIDI does for tracks 1-3 and the drum channel (CH4) |
@@ -178,7 +178,7 @@ rows and their eight patterns as columns:
 
 | Control | Does |
 | --- | --- |
-| **ALGORITHM** | nothing (it selects the track on TRACKS only: pick the track there, its row number is white here) |
+| **ALGORITHM** | the track (its row number turns white) |
 | **KNOB 1** | the cursor: pattern 1 … 8 |
 | **OCT+** | asks for the cursor's pattern on the selected track |
 | **OCT−** | asks for the cursor's pattern on **every** track |
@@ -262,7 +262,7 @@ its bars; the one playing lit) and the eight tracks with their FOLLOW (*-* off, 
 | **KNOB 4** | how many chords the progression has, 1 … 8 |
 | **PRESETS** | the KEY |
 | **SELECT** | the SCALE |
-| **OCT+** | steps the selected track's FOLLOW round (OFF, TRANS, SCALE). **ALGORITHM** does nothing here: pick the track on TRACKS |
+| **ALGORITHM** | the track; **OCT+** steps its FOLLOW round (OFF, TRANS, SCALE) |
 | **OCT−** | PROG on / off (*PROGRESSION ON*) |
 | **ENV**, **LFO**, the layer buttons, **HOME** | as everywhere |
 

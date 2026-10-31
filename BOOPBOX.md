@@ -158,7 +158,7 @@ Other controls:
 | hold **REC** | clear the selected track (a ring fills: keep holding ~2 s; let go before and nothing happens) |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
 | **EDIT + OCT− / OCT+** | undo / redo |
-| **ALGORITHM** | select the track (on the TRACKS screen only) |
+| **ALGORITHM** | select the track (on the TRACKS, PATTERNS and CHORDS screens) |
 | **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends) · on the DRUMS screen: grid / kit |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |

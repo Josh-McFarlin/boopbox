@@ -3,7 +3,7 @@
  * PATTERNS (SEQ, a screen of its own, before SONG): the eight tracks' patterns (patbank.c) as a grid, a row a track,
  * a column a pattern: lit, the one playing; dim, one that holds something; dark, an empty one; a white frame blinking,
  * the one asked for (it waits for its boundary); a dot under it, a pattern of the track's chain.
- *   the track picked on TRACKS (ALGORITHM does nothing here), KNOB 1 the pattern (the cursor), OCT+ asks for it on the track, OCT- on every track (they
+ *   ALGORITHM the track, KNOB 1 the pattern (the cursor), OCT+ asks for it on the track, OCT- on every track (they
  *   change together on a bar quantization); KNOB 2 PAT Q (when a change happens: LOOP, 1, 2, 4 BAR); KNOB 3 the
  *   track's chain: OFF, or the cursor's pattern and the ones after it (2..8), each a loop, round; KNOB 4 right COPY
  *   (one detent arms, a second within 3 s copies the pattern playing into the cursor's), left CLEAR the cursor's
@@ -150,7 +150,8 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             return;
         }
     }
-    panel_enc(EN_ALGO);                              /* (ALGORITHM selects a track on TRACKS only) */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* (ALGORITHM picks the track here too, as on TRACKS) */
+        track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
     for (k = 0; k < 4u; k++) {
         if ((s = panel_enc(EN_K1 + k)) == 0)
             continue;
@@ -217,7 +218,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
  * playing lit; the eight tracks and how each follows (- off, T trans, S scale).
  *   The keys play chords: a white key its degree (F IV, G V .. as C I), a black key none (back to the progression, or
  *   I): latched, on G_HQ's boundary. KNOB 1 the chord of the progression, KNOB 2 its degree, KNOB 3 its bars, KNOB 4
- *   how many (1..8); PRESETS the key, SELECT the scale; OCT+ the selected track's FOLLOW round (OFF TRANS SCALE),
+ *   how many (1..8); PRESETS the key, SELECT the scale; ALGORITHM the track, OCT+ its FOLLOW round (OFF TRANS SCALE),
  *   OCT- PROG on / off. ENV / LFO open their pages. */
 static uint8_t chords_cursor;
 UI_SMALL static int on_chords_page(void) { return !ui.home && cur_page()->scope == SC_HARM; }
@@ -337,7 +338,8 @@ UI_SMALL static void chords_screen_input(uint32_t pressed, uint32_t home)
             return;
         }
     }
-    panel_enc(EN_ALGO);                              /* (ALGORITHM selects a track on TRACKS only) */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* (ALGORITHM picks the track here too, as on TRACKS) */
+        track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
     if ((s = panel_enc(EN_PRESET)) != 0)
         song.g[G_HKEY] = (int16_t)(((int32_t)song.g[G_HKEY] + s % 12 + 24) % 12);
     if ((s = panel_enc(EN_SELECT)) != 0)
