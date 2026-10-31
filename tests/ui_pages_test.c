@@ -20,7 +20,7 @@
  * then 20000 frames of random use: every draw stays on the screen. */
 #define FELUCCA_ARRANGER 1
 #ifndef FELUCCA_VIS_STYLES
-#define FELUCCA_VIS_STYLES 0xFFFu                   /* every visualiser style (the build has six: tests/vis_styles_test.c) */
+#define FELUCCA_VIS_STYLES 0x3Fu                    /* every visualiser style (some left out: tests/vis_styles_test.c) */
 #endif
 #define main hostsim_main
 #include "hostsim.c"
@@ -1460,7 +1460,7 @@ int main(int argc, char **argv)
         tap(B_HOME); frames(2);
         check(vis_shown() && vis_on, "visualiser: HOME on HOME opens it");
         vis_style = 0; ui.force = 1;
-        for (st = 0; st < 12u; st++) {
+        for (st = 0; st < VIS_N; st++) {
             char nm[80];
             frames(st == 0u ? 40u : 70u);           /* (past the name's second) */
             ui.force = 1; frames(2);
@@ -1470,7 +1470,7 @@ int main(int argc, char **argv)
             for (x = 0; nm[x]; x++) if (nm[x] == ' ') nm[x] = '-';
             ppm(nm);
             snprintf(nm, sizeof nm, "visualiser %2u %-12s draws (%u px lit)", st + 1u, VIS_NAME[st], lit);
-            check(lit > (st == 3u ? 400u : 1500u) && vis_style == st, nm);   /* (Lissajous: points) */
+            check(lit > 1500u && vis_style == st, nm);
             encs[panel.enc[EN_SELECT]] = 1; frame();
         }
         {   /* MASTER at 0: silence out, the picture as if MASTER were all the way up */
@@ -1484,11 +1484,11 @@ int main(int argc, char **argv)
             check(op < 64u && pk > 2000u && lit > 1500u, "visualiser: MASTER at 0: no sound, the picture as at full volume");
             song.master_q12 = m0; frames(4);
         }
-        check(vis_style == 0u, "visualiser: SELECT goes round (12 -> 1)");
+        check(vis_style == 0u, "visualiser: SELECT goes round (6 -> 1)");
         encs[panel.enc[EN_SELECT]] = -1; frames(2);
-        check(vis_style == 11u && (lights_word() >> 17 & 15u) == 11u, "visualiser: SELECT left: BOOPBOX (12), kept in the settings word");
+        check(vis_style == 5u && (lights_word() >> 17 & 15u) == 5u, "visualiser: SELECT left: KEY CITY (6), kept in the settings word");
         lights_from_word(lights_word());
-        check(vis_style == 11u, "visualiser: the style read back");
+        check(vis_style == 5u, "visualiser: the style read back");
         { int16_t bpm = song.g[G_BPM], lv = trk[0].p[P_LEVEL];
           encs[panel.enc[EN_K2]] = 5; frame();
           check(trk[0].p[P_LEVEL] == lv && song.g[G_BPM] == bpm, "visualiser: KNOB 2 (the hidden TRACKS screen) edits nothing, SELECT is not the tempo"); }

@@ -71,8 +71,7 @@
 #include "icons.c"           /* parameter icons (FELUCCA_ICONS), used by ui_draw.c */
 #include "ui_draw.c"
 #ifndef FELUCCA_VIS
-#define FELUCCA_VIS 1                /* the full-screen visualiser: on, with six of its styles (ui_vis.c FELUCCA_VIS_STYLES:
-                                      * the flash holds those beside the web editor) */
+#define FELUCCA_VIS 1                /* the full-screen visualiser: on, its six styles (ui_vis.c FELUCCA_VIS_STYLES) */
 #endif
 #if FELUCCA_VIS
 #include "ui_vis.c"           /* the full-screen visualiser (HOME on HOME, 2.4) */

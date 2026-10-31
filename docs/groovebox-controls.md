@@ -7,8 +7,8 @@ so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make room in the flash
 (`docs/groovebox-performance.md`):
 
-- **Six of the visualiser's twelve styles:** tapping HOME on the TRACKS screen opens it with OSCILLOSCOPE, SPECTRUM,
-  VU METERS, CIRCLE, BOUNCE and WIRES; SELECT steps over the others.
+- **The visualiser's six styles:** tapping HOME on the TRACKS screen opens it; SELECT steps through PALMS, NIGHT DRIVE,
+  HORIZON, FLYOVER, DENSE CITY and KEY CITY.
 - **The bitmap boot logo:** the boot screen shows "BOOPBOX" as text, BOOP in the tracks' colours.
 - **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
   recording below, so they sound a little different; every note below 70 sounds as before.

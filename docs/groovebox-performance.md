@@ -51,6 +51,28 @@ on the real build of this tree (the slot is 581,564 B):
 (This tree's app is 420 B more than the 576,212 above before the visualiser: the BoopBox About page and the eight
 tracks' own colours.)
 
+**Since then (BoopBox, the six scenes):** the SLOOP 2.8.4 fixes added about 2 KB and the default build no longer fit
+(1,424 B over). Three constant tables are now built in RAM at power-on instead of stored in the flash, each the same
+bytes as before (the host tests check every point; the golden renders and the screenshots are unchanged), and the
+visualiser's twelve styles gave way to six new ones (PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, KEY CITY).
+Real build, JieLi toolchain 2026-07-30 (the 1.0.0 tree builds within 16 B of the figures above with it):
+
+| Change | Flash | RAM |
+| --- | ---: | ---: |
+| `FM6_EXP2` (FM6's 2^x table, 1,025 points) from ten Q62 constants (`fm6_core.c fm6_x2_fill`) | −3,808 | +4,100 |
+| `SINE` (1,025 points) from its series in Q62, a quarter mirrored (`felucca_tables.h sine_fill`) | −1,712 | +2,050 |
+| The screen font's bitmaps LZ4-packed, unpacked at power-on (`felucca_font.h font_fill`) | −3,148 | +5,376 |
+
+| Build | App | Free |
+| --- | ---: | ---: |
+| the tree after SLOOP 2.8.4, the old six styles, web editor | 1,424 B over | — |
+| the six scenes, web editor (before the sound browser and the end of SLOOP's old formats) | 580,840 | 724 |
+| the default now (1.1.0): the six scenes, the sound browser, web editor | 576,164 | 5,400 |
+| no visualiser (`FELUCCA_VIS=0`, 1.1.0) | 565,412 | 16,152 |
+
+The visualiser is 10,752 B: its frame (the update, the FFT, the name) 2,640 and the six scenes. RAM .data + .bss is
+85,484 B of 98,304 in 1.1.0 (the pool unchanged).
+
 ### Growth per milestone (real build, default flags of each tree)
 
 | Tree | App | Added |
