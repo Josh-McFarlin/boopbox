@@ -17,6 +17,10 @@ static struct { volatile uint32_t notes, buttons; } fm1_in;
 static void fm1_irq_off(void) {}
 static void fm1_irq_on(void) {}
 #include "../src/core.h"
+/* the editor's four tracks (its LIVE page and track list): synths on 1..3, drums on 4, as tests/hostsim.c */
+#define TRK_DRUM TRK_DRUM_V6
+#define TDRUM (&trk[TRK_DRUM])
+#define NPART 3u
 #include "../src/engines.c"
 #include "../src/drums.c"
 #include "../src/params.c"
@@ -85,7 +89,7 @@ void preview_select(uint32_t k, uint32_t solo)
 void preview_step(uint32_t k, uint32_t i)
 {
     if (k >= NTRK || i >= NSTEP) return;
-    if (k == TRK_DRUM) memcpy(&trk[k].dstep[i], transfer, sizeof(dstep_t));
+    if (is_drum(&trk[k])) memcpy(&trk[k].dstep[i], transfer, sizeof(dstep_t));
     else {
         step_t *s = &trk[k].step[i];
         memcpy(s, transfer, sizeof *s);
@@ -136,7 +140,7 @@ void preview_hit(uint32_t kit, uint32_t lane, uint32_t velocity)
     if (kit >= DSU_N || lane >= DRUM_LANES) return;
     int16_t old = TDRUM->p[P_E0];
     TDRUM->p[P_E0] = (int16_t)(DRUM_SYN + kit);
-    drum_on(LANE_NOTE[lane], (uint8_t)clamp(velocity, 1, 127));
+    drum_on(TDRUM, LANE_NOTE[lane], (uint8_t)clamp(velocity, 1, 127));
     TDRUM->p[P_E0] = old;
 }
 void preview_note(uint32_t k, uint32_t note, uint32_t on)
