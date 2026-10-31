@@ -471,13 +471,13 @@ On the TRACKS screen, tap **HOME**: the whole screen becomes a visualiser of wha
 | 2 | **SPECTRUM** (built in) | 32 bands, lows to highs, with caps that fall |
 | 3 | **SPECTROGRAM** | the spectrum scrolling down, black → blue → green → yellow → white |
 | 4 | **LISSAJOUS** | the stereo image: the wider the cloud, the wider the sound |
-| 5 | **VU METERS** (built in) | four meters (the track pairs 1 + 5 .. 4 + 8) and the mix, with peak holds |
+| 5 | **VU METERS** (built in) | the eight tracks in their colours and the mix, with peak holds |
 | 6 | **CIRCLE** (built in) | the wave round a ring that swells on every kick |
 | 7 | **TAPE** | two reels turning with the song, the level on the head, the bar and the tempo |
 | 8 | **LCD** | the tempo in seven-segment digits, the bar and beat, four track meters |
-| 9 | **BOUNCE** (built in) | four balls (the track pairs), kicked up by their notes |
+| 9 | **BOUNCE** (built in) | a ball per track, kicked up by its notes |
 | 10 | **ORBIT** | four planets turning in 1, 2, 4 and 8 beats, sized by their track, round a sun that pulses with the mix |
-| 11 | **WIRES** (built in) | four strings (the track pairs), set swinging by their notes |
+| 11 | **WIRES** (built in) | a string per track, set swinging by its notes |
 | 12 | **BOOPBOX** | the logo alive: its eight bars are the tracks (lit to their level, flashing on a note), the speakers pulse with the mix, the box hops on the beat |
 
 It sees the mix as if **MASTER** were all the way up, so the picture does not follow the volume knob: with MASTER turned down, even to 0, it moves as at full volume. It only reads what the audio already leaves for the screen (that mix, the tracks' levels and notes, the clock): it costs the sound nothing.

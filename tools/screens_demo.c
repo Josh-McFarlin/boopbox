@@ -4,6 +4,7 @@
  * one 240 x 240 PPM per screen into the directory given.
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests tools/screens_demo.c -lm && ./a.out OUTDIR */
 #define UI_PAGES_HARNESS_ONLY 1
+#define FELUCCA_VIS_STYLES 0x533u                   /* the build's six styles (ui_vis.c), not the test's twelve */
 #include "ui_pages_test.c"
 
 static void open_page(uint32_t fam, const char *title)     /* the button tapped until its page of that title shows */
