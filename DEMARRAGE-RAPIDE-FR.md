@@ -219,6 +219,6 @@ Dans l'éditeur, onglet **Song & sections** → **Backup** : **Save a backup** e
 
 - **Secours USB :** maintiens **OCT−** seul à l'allumage (*BoopBox USB RESCUE*), puis réinstalle.
 - **Installation interrompue :** le FM-1 reste en mode mise à jour ; relance INSTALL et il termine. Un paquet abîmé est refusé et le FM-1 attend un paquet correct.
-- **Retour au firmware officiel :** sur la page d'installation, ouvre **Return to the official firmware (V15)** : fais d'abord une sauvegarde avec l'éditeur, télécharge FM-1 V15 sur m-vave.com, choisis son fichier FM-1.fwsc (seul ce fichier exact est accepté) et installe-le. M-UPGRADE de M-VAVE marche aussi (ferme les autres applis qui utilisent le MIDI).
+- **Retour au firmware officiel :** fais d'abord une sauvegarde avec l'éditeur. Puis utilise l'outil de M-VAVE, **M-UPGRADE** (m-vave.com → Downloads → PC Software), avec le firmware officiel de la **FM-1** (PC Firmware → FM-1, **V16**, `FM-1.fwsc`) ; ferme les autres applis qui utilisent le MIDI. Pour revenir à BoopBox, réinstalle-le et restaure ta sauvegarde.
 
 BoopBox est libre (GPL-3.0), basé sur Felucca de Leo Kuroshita (Hügelton Instruments). M-VAVE et FM-1 sont des marques de leurs propriétaires ; BoopBox n'y est pas affilié.
