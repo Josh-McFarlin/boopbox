@@ -539,7 +539,7 @@ static const page_t PAGES[] = {
                                                        * GR_ARP was never drawn, the middle stayed empty) */
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},
     {"NOTES", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 2, 3}},   /* (2.7.2: the NOTES editor; "STEP" before) */
-    {"PATTERN", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},
+    {"TIMING", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},   /* ("PATTERN" before: too like PATTERNS) */
     {"PLAY", FAM_SEQ, SC_PATT, GR_NONE, {PS_DIR, PS_SEED, 0xFF, 0xFF}},   /* the play direction, the components' seed */
     {"PATTERNS", FAM_SEQ, SC_PATS, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* the eight tracks' patterns (ui_pats.c) */
     {"SONG", FAM_SEQ, SC_SONG, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},
@@ -549,7 +549,7 @@ static const page_t PAGES[] = {
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 
 /* the drum track has no sound of its own: it uses the global pages (not the preset
- * pages, nor TOOLS > INIT: page_desc), STEP, PATTERN, SLICER and TRACKS; every other page
+ * pages, nor TOOLS > INIT: page_desc), NOTES, TIMING, SLICER and TRACKS; every other page
  * shows "DRUM TRACK" */
 static int page_for_drum(const page_t *pg)
 {

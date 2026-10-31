@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     outdir = argc > 1 ? argv[1] : "/tmp";
     panel = PANEL_DEFAULT;
     layers_init();
-    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 4);   /* MONO at power-on (panel.c) */
+    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 5);   /* SYNTHWAVE at power-on (panel.c) */
     palette_set(settings.palette);
     host_tracks_init();
     demo_project();

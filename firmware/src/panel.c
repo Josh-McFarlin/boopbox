@@ -149,7 +149,7 @@ UI_SMALL static void settings_init(void)
 {
     if (settings.magic != SETTINGS_MAGIC || settings.palette >= NPALETTES) {
         settings.magic = SETTINGS_MAGIC;
-        settings.palette = 4;                  /* MONO (default) */
+        settings.palette = 5;                  /* SYNTHWAVE (the default since 1.1.0; MONO before) */
         settings.lowcut = 0;
         settings.zoom = 0;                     /* large readout of the touched value: off */
     }
