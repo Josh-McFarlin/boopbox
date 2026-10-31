@@ -10,8 +10,10 @@
  * bands of 120 rows (the canvas holds 124): no cost to the audio. */
 #define VIS_N 12u
 #ifndef FELUCCA_VIS_STYLES
-#define FELUCCA_VIS_STYLES 0xFFFu                   /* (groovebox) the styles built in, a bit each (bit 0: OSCILLOSCOPE): the
-                                                     * flash is full; SELECT steps over the others */
+#define FELUCCA_VIS_STYLES 0x533u                   /* (groovebox) the styles built in, a bit each (bit 0: OSCILLOSCOPE):
+                                                     * OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES, what the
+                                                     * flash holds beside the web editor (0xFFF: all twelve, only with
+                                                     * FELUCCA_EDITOR=0); SELECT steps over the others */
 #endif
 #define VIS_HAS(s) ((FELUCCA_VIS_STYLES >> (s)) & 1u)
 static const char *const VIS_NAME[VIS_N] = {"OSCILLOSCOPE", "SPECTRUM", "SPECTROGRAM", "LISSAJOUS", "VU METERS",

@@ -15,15 +15,15 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 ---
 
-> **BoopBox is a renamed fork of SLOOP.** The version numbers continue SLOOP's, and the release notes below for 2.8 and earlier describe SLOOP's releases. Projects, backups, songs, themes and presets from SLOOP open in BoopBox as they are, and the installer updates an FM-1 that runs SLOOP or Felucca. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
+> **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. Projects, backups, songs, themes and presets from SLOOP open in BoopBox as they are, and the installer updates an FM-1 that runs SLOOP or Felucca. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 2.8.3 (hold a note under others: on a POLY track a note you hold keeps sounding while you record over it and on playback, free take included, it goes on through the notes already there when you overdub, and SEQ → NOTES LEN runs on under later notes — a long bass under a melody; a MONO or LEGATO sound says *MONO: SET VOICE POLY*; no stuck note after a MIDI burst; drums: on a busy beat the kick no longer drops out; a quick button tap no longer flashes its layer page; a sample or slice played again starts with its ATK, no click; the second core: a bad read no longer crashes the FM-1, BoopBox goes on with one core). 2.8.1 (the per-step note sheet, held with OCT+, now shows as a strip along the bottom of the screen instead of a box over the sequencer, so the piano roll and the drum grid stay fully visible; and it reopens on the row you last used, for a quick MOVE). 2.8: a NOTES piano-roll editor for the synth tracks and the same per-step sheet on the drums, the playing section A–D shown on the main screen, resonance on every filter, the FX filter on the drums, drum TUNE on the noise sounds, a settable punch-in fade, steadier MIDI clock in, MIDI Bank Select; fixes: a reliable USB RESCUE, the browser installer finds the FM-1's loader by its handshake, the in-browser return-to-stock removed — use M-UPGRADE. 2.7: two processor cores, fifteen arp modes, KBD HOLD, drum TUNE and DECAY, favourite sounds, looping samples, QUANT off, MIDI 3, your own screen colours; after 2.6's 27 punch-in effects, INSERT and MIDI LEARN. Still a beta: install at your own risk, and please [report](../../issues) what you find. Your projects, presets, samples and settings are kept when you update, and you can go back at any time (see [Going back](#going-back)).
+> **Status:** 1.0.0, the first BoopBox release, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Your projects, presets, samples and settings are kept when you update, and you can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
-1. [What's new in 2.8, 2.7 and 2.6](#whats-new-in-28)
+1. [What's new in 1.0.0](#whats-new-in-100)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -43,142 +43,53 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 2.8
+## What's new in 1.0.0
 
-3,000 of you now follow SLOOP — thank you. 2.8 is a deeper way to write and shape your music, and most of it comes from your comments and reports.
+- **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
+  *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
+  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
+  they are.
+- **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
+  (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
+  tracks 5–8 (GLO → MIDI 4).
+- **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
+  theme), your own theme's too.
+- **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
+  changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
+  chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
+  See [the groovebox controls](docs/groovebox-controls.md).
+- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
+- **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
+  repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
+- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
+  name as text) and the top recording of the BASS sample set
+  ([docs/groovebox-status.md](docs/groovebox-status.md)).
+- **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
+  step components or the chord progression (backups keep them).
 
-- **NOTES editor:** a piano-roll note editor for the synth tracks (SEQ → NOTES). KNOB 1 picks the notes (a chord's notes one by one), KNOB 2 the pitch, KNOB 3 the length, KNOB 4 the force; PRESETS zooms, EDIT deletes. Hold OCT+ on a step for its sheet: SLIDE, NUDGE, FILL, MOVE, COPY, DELETE.
-- **The same per-step sheet on the DRUMS grid:** hold OCT+ on a drum step for RATCHET, NUDGE, FILL, MOVE, COPY, DELETE — the groove, shaped step by step.
-- **The playing section on screen:** the TRACKS screen now shows which section (A to D) is playing, in its own colour.
-- **Filter resonance:** the per-track filter gains a resonance control, 0 (clean, as before) to 10 (AUDIO → FILTER RESO).
-- **The FX filter on the drum track:** the FX → FILTER page now works on drums too; sweep and shape the whole kit, live.
-- **Drum TUNE on the noise sounds:** TUNE now shapes the brightness of tone-less sounds (closed hats, shakers, claps) on the synthesised kits.
-- **A smoother punch-in:** a settable fade-in and out for the punch-in effects, from instant to about a third of a second (hold FX, then SELECT).
-- **MIDI Bank Select (CC 0):** reach every preset past the 128 Program Change range — the rest of the factory sounds, then your own user presets by slot.
+**Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
+Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
-**Fixed:** USB RESCUE (hold OCT- at power-on) now opens reliably; the browser installer finds the FM-1's update loader by its handshake, so a loader that Windows renames to a generic MIDI port is still found; steadier MIDI clock in; the SONG sections take the current theme's colours; FX FADE moved onto the FX layer's SELECT; the in-browser "return to the official firmware" option was removed (use M-VAVE's own updater M-UPGRADE instead).
-
----
-
-## What's new in 2.7
-
-**2.7.1** fixes a crash: when the FM-1's second core did not finish its share of the sound in time, BoopBox stops it and carries on on one core, but stopping it raised a false alarm on the chip, and the FM-1 showed a red FELUCCA CRASH screen and restarted. It now holds the second core the safe way (after Felucca 1.6.1): a short glitch, and the music goes on. The crash screen also says more (the stack, the second core's state) and stays 10 seconds, long enough for a photo.
-
-- **Two cores:** the sound now runs on both of the FM-1's cores (andrerezemini, #111): about twice the room, so many voices and INSERT effects no longer crackle. On by default (HOME menu → SYSTEM → 2ND CORE).
-- **Fifteen arp modes** from Felucca 1.5.1 (REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD), ORD in the order you pressed, and the arp keeps going when you change the sound.
-- **KBD HOLD** (#103): HOLD with the arp off holds your chord. **ARP SWG** works stopped too (#52).
-- **Samples that loop** while held (LOOP, LOOP+TAIL, zero-crossing loop points, a WAV's own loop), on the editor's Samples page.
-- **Tune and decay every drum sound** (DRUMS screen, new SOUND page), on every kit, kept with each section.
-- **Kicks you hear on any speaker:** the synthesised kits' kicks (808, 909, 606, TRAP…) were a 50 Hz sine the FM-1's speaker, a phone or earbuds cannot play: only a quiet click was left. They now have the drive and pitch sweep that carry them up there, and more level.
-- **Favourite sounds** at the top of the PRESETS list (PRESETS page, KNOB 4).
-- **QUANT off** on the REC screen keeps your timing as nudges; **overdub** over held notes.
-- **GLO → MIDI 3:** punch-in effects from MIDI (FX CH), drums from any 16 notes (DR MAP 1-16), the 14 buttons over MIDI (REMOTE), **CLOCK OUT** on USB (#106). **CC 74** sweeps each engine's own cutoff (after @renebohne, #71).
-- **Faster knobs** (KNOB ACCEL) and LEVEL / PAN glide, after JIANT FM.
-- **The editor's LIVE page:** play a whole show from a computer, tablet or phone: PLAY / REC, BPM and TAP, sections A–D on the next bar, a mixer (level, mute, solo, filter, pan, sends, sound), the 27 punch-in effects as pads, keys and drum pads, fills, full screen and computer-key shortcuts; songs saved as files and played from a **playlist**. **Scenes** (8, at once or morphed over bars, an A/B crossfader), a **PERFORM** card (every knob of the track you play, its steps), **chains**, **roll** and **erase** from the keys, the pattern's tools, each pad's tune and decay, **throws** and the master **volume**, **MIDI learn** for your controller, a **lock**, the set **recorded as WAV**, and a **?** on every card that explains it.
-- **Steadier on two cores:** the supplies at M-VAVE's own levels from power-on (after X0X 1.0.9).
-- **Your own screen colours:** the editor's Theme page (light themes too), MENU → COLOR.
-- **USB RATE** (44.1 / 48 kHz) for phones; the drum **MUTE mode stays** after EDIT (#126).
-- **SAVE → SECTION A–D** (was PROJECT 1–4): the FM-1 holds one song; keep several as editor backups.
-
-Details in [BOOPBOX.md](BOOPBOX.md#new-in-27). Projects, autosaves and backups from 2.6 load as they are; a project saved in 2.7 opens in 2.6 without the 2.7 features.
-
-## What's new in 2.6
-
-- **27 punch-in effects:** eleven more on the black keys (hold FX): KILL LOW / MID / HIGH, REWIND, OCT UP, FLANGER, AUTO-PAN, FREEZE, LOOP 8T, MONO, FADE OUT.
-- **From Felucca 1.4 / 1.5 (Leo Kuroshita):** an **INSERT** effect on every track (SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR, with dry / wet), **LFO 2** (tempo SYNC, TRIG NOTE / FREE, POL BI / UNI), **ENV SYNC** (attack, decay and release as note values), the **ANALOG filter** as LP, BP or HP, a note's **LEN** in steps and each step's **velocity**, **MIDI LEARN** (GLO + F#3), and the latched-arp fix (#191).
-- **TEXTURE:** a looping bed under the mix (vinyl, tape, rain, wind, radio, room tone or your own sample), breathing slowly with the tempo, without taking a track (GLO → TEXTURE).
-- **Live drum mutes:** EDIT + a black key, then the sounds' keys.
-- **Sustain pedal and pitch bend** from a MIDI keyboard (the bend's range: GLO → MIDI 2).
-- **Each track on its own MIDI channel** (GLO → MIDI: CH1, CH2, CH3, OTHER), in and out, for an external sequencer (drums 10, bass 2, pad 11, lead 8…). Thanks to the viewer who asked!
-- **Step entry from a MIDI keyboard:** on the STEP page, the notes your keyboard plays write the step, as the FM-1's keys do.
-- **Program Change, 1/4D delay, REV / ECHO THROW** (FX + OCT− / OCT+), after Felucca 1.5.1.
-- **Erase a saved loop:** SAVE → PROJECT → ERASE (KNOB 2) empties a project slot, song section A–D. Thanks to the viewer who asked!
-- **The web editor offline:** *Download the editor* saves it as one file that runs in Chrome or Edge without internet, or *Install the app* (Android too): the editor and the installer then open without internet.
-- **MIDI IN on one channel** (GLO → MIDI 2 → IN = CH 1 … 16), for a sequencer driving other gear on the same cable.
-- **A bolder screen:** Terminus Bold, all in capitals.
-- **No more clicks** when loading a sound over held notes, or when a filter (track, drums, master FILT) starts to close.
-- **A cleaner output:** the master limiter looks ahead, so loud kicks and basses no longer crackle with MASTER turned up (headphones especially).
-- **Fixed in the web editor:** the same value set on a second track (DIV 1/8 on the drums, then on track 1) is sent again.
-- **The installer finds an FM-1 running CLIPPER** (or another firmware naming its USB port its own way).
-
-Details in [BOOPBOX.md](BOOPBOX.md#new-in-26). Projects, autosaves and backups from 2.5 load as they are; a project saved in 2.6 does not open in 2.5 (keep a backup before updating). Going back to 2.5 after changing GLO → MIDI or learning CCs: restore your SYN drum kits from a backup (2.5 does not read the 2.6 settings and starts them over).
-
-## What's new in 2.5
-
-- **PHYS: physical models.** An eleventh engine, from Felucca 1.0 (the models of DaisySP and Mutable Instruments Rings, by Emilie Gillet): plucked and struck strings, bars and bells, drum heads, and strings with sympathetic strings that ring along. Guitars (NYLON GTR, STEEL GTR, MUTED GTR), PLUCK BASS, KOTO, BANJO, SITAR and TANPURA, PHYS HARP, CHIMES, BIG BELL, VIBRA BAR, STEEL PAN, WOOD BLOCK, CELLO BOW, GLASS BOWL, TABLA, CONGA, TIMPANI and more: 26 sounds.
-- **NOISE.** A twelfth engine, from Felucca 1.0: noise from analogue to digital, through a resonant filter. WIND, RAIN, OCEAN, VINYL, HISS, RISER, NZ SNARE, BITCRUSH, RADIO, NZ ARCADE, NZ METAL.
-- **153 factory sounds** (76 in 2.4): 77 new, every one level-matched. Besides PHYS and NOISE: bass guitar, mono and saw basses, harp, steel drum, glockenspiel, celesta, xylophone, tubular bell, pan flute, harmonica, accordion, a 70s string machine (ENSEMBLE), an 80s poly synth, rock and chapel organs, granular clouds (STR CLOUD, SHIMMER, DRONE, PNO FREEZE, HORN CLOUD), chip sounds (NES BASS, CHIP CHORD, WAVE LEAD…), CZ lead / pad / reso, ROBOT and VOX PAD. See [the sound bank](BOOPBOX.md#the-sound-bank).
-- **Two engines, no memory more.** GRAIN, FM6 and PHYS keep their big per-track state in one shared area (a track plays one engine at a time), so the new engines cost no memory at all; the pitch table now takes 768 bytes instead of 8 KB. Every sound of 2.4 renders bit for bit as before.
-- **The web editor: piano roll, MIDI files, song.** On the **Sequencer** page: a **length** control (1–64 steps; the steps redraw at once), a **piano roll** to draw, delete and stretch notes and chords with the mouse, and **Export MIDI / Import MIDI** for the selected track (the drum track too, as GM drum notes), with a preview that says what moves or does not fit before anything is written. A new **Song** page edits the order of the sections A–D, as the FM-1's SONG screen does. Thanks to the viewer who suggested them!
-- **USB audio at 48 kHz too: record into your phone.** The FM-1's USB audio input now also runs at 48 kHz when the phone, tablet or app asks for it (many only take 48 kHz), resampled in the FM-1 (after Felucca 1.1.5). Plug it into your phone and record into a sampler app. At 44.1 kHz nothing changed.
-- **Drum synth: make your own drum kits.** A new page in the web editor changes every value of the synthesised drum sounds — the tone and its pitch drop, the click, the noise (white, the 808's metal, chip, clap), the filter, drive and level — and the FM-1 plays each change at once. Four kits of your own, **SYN1–SYN4**, after the others on the drum track's KIT, stored on the FM-1, in backups and as files.
-- **DX7 cartridges in one go.** Drop a .syx file on the editor's FM6 panel, tick up to 27 of its voices (the first 27 are ticked) and **Store cartridge in bank** puts them in B1, B2… in one write, asking before it replaces anything. Choose to add them to the user presets too, and the FM-1's PRESETS and SELECT find them by name; or pick them with PTCH. Thanks to the viewer who asked!
-- **A delay send for the drums.** GLO → DRUMS → **DLY** (next to REV) sends the drum track into the tempo delay: echoing hats, dub snares. CC 94 on the drum channel sets it too. Thanks to the viewer who asked!
-- **MIDI CCs (after Felucca 1.1.5).** A controller's knobs now set the sound: CC 7 level, 10 pan, 74 the track's filter, 71 resonance, 73 / 75 / 72 attack / decay / release, 5 glide, 91 / 93 / 94 the reverb, chorus and delay sends, on the track the channel plays (as the notes). Until now BoopBox ignored every CC.
-- **Swing reads 0 to 100.** 0 is straight, 100 the strongest (a step pair played 75 / 25, MPC's 75 %); it used to read 50–75 %. The swing itself and your projects did not change.
-- **SEL, as printed on the button.** The key / scale button between FX and ENV is now called SEL everywhere (its pages SEL and SEL 2, the calibration, the guides); it was written SCL. Not to be mixed up with the SELECT knob.
-- **The DRUMS page's level dial** goes from ghost on the left to hard on the right (its needle followed the wrong order; the levels were right).
-- **Fixed** (2.4.1, folded into 2.5): imported DX7 patches with **AMS** above 0 (about one in four) played noise and static: they now sound as on a DX7. The **click** (and the REC count-in) is heard again with your own drum kits and with the drum track muted or another track soloed: it has its own sound now. In chord mode, a key on the **STEP** page writes the whole chord it plays, not only its root.
-
-Projects, autosaves and backups from 2.4 load as they are. Going back to 2.4: a track playing PHYS or NOISE opens with another engine there, and 2.4 does not keep the SYN kits (a drum track on SYN1–4 plays USR3+4 there), so keep a backup.
-
-## What's new in 2.4
-
-| | |
-| --- | --- |
-| **FM6: six-operator FM, DX7 patches** | A tenth engine: the classic 6-op FM of Dexed (msfa), as Felucca 1.0 ported it — 32 algorithms, a full patch per track, 8 factory patches, a bank of 27 on the FM-1. The web editor edits every operator, **imports DX7 SysEx** (one voice or a 32-voice bank) and stores a whole cartridge in the bank at once. |
-| **Parameter locks** | Hold a step: **PRESETS** gives one sound parameter another value for that step only, **ALGORITHM** picks which. 24 per track, several on one step. |
-| **Micro timing** | Hold a step: **KNOB 4** nudges it, half a step early to half a step late, in 1/64. |
-| **Fills** | Hold a step: **OCT+** makes it *fill only* or *no fill*. GLO + key **9** plays a fill while held, key **10** on the whole next bar. |
-| **Quick chain** | Hold SAVE and tap A B B C…: let go and the sections play in turn, each for its pattern's length, looped. |
-| **Clock only** | GLO → MIDI 2 → **IN** = **CLOCK**: follow a DAW's clock and ignore its notes. |
-| **Sequencer to MIDI out** | GLO → MIDI 2 (or SYSTEM) → **OUT** = **SEQ**: the steps, the arp and the rolls go out on USB MIDI — drive another synth, or record the notes in a DAW. |
-| **Your own drum kits** | A 4th sample slot (USR4). KIT USR1–USR4 or **USR3+4** (a big kit, about 15 s) on the drum track: 16 of your sounds, one per lane, built in the editor's new **Drum kit** page (drop WAVs on pads, sorted by name; pitch, gain, length; choose where; ZIP to share). |
-| **New web editor** | Rebuilt in the FM-1's own look (black, the four track colours, its pixel font): each button's pages as rows of four coloured knobs, values you drag like knobs, the steps as the device's tiles. |
-| **CHORD+** | In chord mode the black keys change the chord (major ↔ minor, 7th, sus4, 9th, inversion), even while it is held; STRUM strums the chords, VLEAD voices them smoothly. After HiChord and minichord. |
-| **The visualiser** | On the TRACKS screen, tap HOME: 12 full-screen styles (oscilloscope, spectrum, spectrogram, Lissajous, VU meters, circle, tape, LCD, bounce, orbit, wires, the BoopBox logo), SELECT to change. |
-| **A filter per track** | One knob, low-pass to the left, high-pass to the right, on each track and the drums: FX → FILTER, or FX held + KNOB 4. Lockable on a step. |
-| **Bigger values** | Pages without a graph (EDIT, VOICE, GLOBAL…) show their four values in large type in the middle of the screen. |
-| **SELECT turns the pages** | On a page (LFO, FX, EDIT…), SELECT goes to the next / previous page of its group. On HOME it is still the tempo. |
-| **Drums with the keys** | On the drum grid page, the keys are the steps of the sound you pick: press to set, again to clear. Picking a sound or a step plays it. |
-| **Longer steps, dotted delays** | DIV goes to **1/2**, **1 bar** and **2 bars**; the delay has **1/8 dotted** and **1/16 dotted**. |
-| **Fixes** | A MIDI START during the REC count-in records at once; swing leaves triplets alone; turning DIV right after PLAY no longer skips a step; the SEQ layer's DIV reaches 1/2, 1 bar, 2 bars; the editor never writes flash while the song plays; *12 kHz* reads in full. |
-
-Projects, autosaves and backups from 2.3 load as they are. The full list, and what came before: [BOOPBOX.md](BOOPBOX.md#new-in-24).
-
-## What's new in 2.3
-
-| | |
-| --- | --- |
-| **USB audio** | On USB the FM-1 is also an audio input (*BoopBox*, 44.1 or 48 kHz stereo, no driver): record it in your DAW, in Audacity or in a sampler app on your phone over the same cable. Its level follows the MASTER knob, or stays at a fixed full level (HOME menu → **USB AUDIO**). From Felucca 1.0. |
-| **MIDI keyboard on the jack** | The 3.5 mm TRS MIDI IN works: a keyboard or a pad controller through a TRS-to-DIN adapter. Channels 1–3 the synths, 10 the drums, 4–16 the selected track. No note left hanging. |
-| **MIDI clock in** | GLO → SYSTEM → **SYNC** = USB or TRS: BoopBox follows a DAW or a drum machine — tempo, START, CONTINUE, STOP — pulse by pulse, with no drift. |
-| **Record your way** | The REC screen has three dials: **mode** (*free*: the tempo follows your playing, or *tempo*: the tempo you set), **length** (1, 2 or 4 bars), **start** (your first note, or a one-bar **count-in** after PLAY). |
-| **Lights for playing in the dark** | HOME menu: **LIGHTS** (every button glows, LOW / MID / HIGH), **KEYS** (the C keys or every white key), **NOTES** (the notes playing light their keys, by @renebohne). |
-| **Backup and restore** | The web editor saves everything on the FM-1 in one file — the music in progress, projects, user presets, samples, settings — and puts it all back. |
-| **CHOP, any length** | A recording longer than a sample slot (about 7 s) works: keep the chops you want, shorten them, or **Fit to slot**. |
-| **Back to the official firmware** | From the installer page, with a backup first: select M-VAVE's FM-1 V15 file and install it. |
-| **Steadier** | Knobs that answer every click; no dropped notes over USB MIDI; one voice fades on overload, never the bass or the lead; keys a millisecond faster; no stuck note after a VOICE change; stricter checks of what is read back from flash. |
-
-The full list, and what came in 2.0, 2.1 and 2.2: [BOOPBOX.md](BOOPBOX.md#new-in-23). Release notes: [Releases](../../releases).
+Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
+is in [its repository](https://github.com/isod89/sloop-fm1).
 
 ## Screenshots
 
-<p align="center"><img src="assets/screens/sloop-2.6-screens.png" alt="SLOOP 2.6 screens on the FM-1" width="760"></p>
+<p align="center"><img src="assets/screens/boopbox-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
 
-<p align="center"><sub>The FM-1's screen in 2.6, in its bold font: the tracks playing, the 27 punch-in effects (FREEZE held, REV THROW on), an INSERT on a track, LFO 2 synced to the tempo, a note's LEN on the STEP page, the TEXTURE bed, every track's MIDI channel (GLO → MIDI, MIDI 2) and MIDI LEARN.</sub></p>
+<p align="center"><sub>The FM-1's screen in 1.0.0, eight tracks playing: both banks of tracks, the patterns, the drum grid, the piano roll, a chord progression, the punch-in effects, the mix layer of tracks 5–8 and the song. Drawn by the firmware's own code (<code>tools/make_screens.py</code>).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page with INSERT, ENV SYNC and LFO 2" width="760"></p>
 
-<p align="center"><sub>The web editor's Sound page in 2.6: the INSERT and its dry / wet, ENV SYNC, LFO 2 (SYNC, TRIG, POL).</sub></p>
+<p align="center"><sub>The web editor's Sound page: the envelope, the LFOs and the effects of the selected track (<code>tools/make_editor_screens.mjs</code>).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-midi-texture.png" alt="BoopBox web editor: MIDI and TEXTURE settings" width="760"></p>
 
-<p align="center"><sub>Settings: each track's MIDI channel, the other channels and the bend range; the TEXTURE bed.</sub></p>
+<p align="center"><sub>Settings: the MIDI channels, the bend range and the TEXTURE bed.</sub></p>
 
-<p align="center"><img src="assets/screens/sloop-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
+<p align="center"><img src="assets/screens/boopbox-visualiser.png" alt="BoopBox boot screen, ENV page, menu and visualiser styles" width="760"></p>
 
-<p align="center"><sub>And the rest, in 2.6's look: the drum grid and kit, a step held in the SEQ layer (its note, velocity, ratchet and a lock), the GLO mix layer, the SAVE layer's song sections and chain, PHYS, FM6, chords on the keys (SEL), the visualiser.</sub></p>
+<p align="center"><sub>The boot screen, a sound page (ENV), the menu, and the six visualiser styles (tap HOME on the TRACKS screen).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-drumsynth.png" alt="BoopBox web editor: the Drum synth page" width="760"></p>
 
@@ -322,7 +233,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | **KNOB 1–4** | what the four dials at the bottom of the screen show, each in its colour |
 | **OCT− / OCT+** | octave (both: back to 0) · on the drum track, held: ghost / hard hits |
 | **FX · SEL · ENV · LFO · EDIT · GLO** (top row) | tap: their pages · hold FX, SEL, EDIT, GLO: a layer. **SEL** is the second button of the top row, between FX and ENV (not the SELECT knob) |
-| **HOME** | the TRACKS screen · on it: the full-screen visualiser (SELECT: 12 styles; HOME again closes it) · hold: the menu · tapped while a layer is held: lock it |
+| **HOME** | the TRACKS screen · on it: the full-screen visualiser (SELECT: 6 styles; HOME again closes it) · hold: the menu · tapped while a layer is held: lock it |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages · hold: the song layer |
 | **ARP · SEQ** | tap: their pages · hold: note repeat · steps |
 | **PLAY** | start / stop all the tracks; its light flashes on every beat |

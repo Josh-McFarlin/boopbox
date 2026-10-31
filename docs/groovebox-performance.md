@@ -35,6 +35,22 @@ To fit, three things that cost no feature of the groovebox upgrade were taken ou
 The bitmap logo can be set back (`FELUCCA_LOGO_TEXT=0`: about 750 B are left). The visualiser fits again only without
 the web editor (`FELUCCA_VIS=1 FELUCCA_EDITOR=0`): see the variants below.
 
+**Since then (BoopBox):** the visualiser is back in the default build with six of its styles (`FELUCCA_VIS=1`,
+`FELUCCA_VIS_STYLES=0x533`: OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES), beside the web editor. Measured
+on the real build of this tree (the slot is 581,564 B):
+
+| Build | App | Free |
+| --- | ---: | ---: |
+| the default: six styles, web editor | 580,972 | 592 |
+| no visualiser (`FELUCCA_VIS=0`) | 576,632 | 4,932 |
+| BOOPBOX style only (`FELUCCA_VIS_STYLES=0x800`), web editor | 579,392 | 2,172 |
+| the six and BOOPBOX (`0x933`), web editor | 4 B over | — |
+| all twelve styles, web editor | 3,336 B over | — |
+| all twelve styles, no web editor (`FELUCCA_EDITOR=0`) | 571,064 | 10,500 |
+
+(This tree's app is 420 B more than the 576,212 above before the visualiser: the BoopBox About page and the eight
+tracks' own colours.)
+
 ### Growth per milestone (real build, default flags of each tree)
 
 | Tree | App | Added |
