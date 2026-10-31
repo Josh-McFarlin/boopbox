@@ -15,11 +15,11 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 ---
 
-> **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. Projects, backups, songs, themes and presets from SLOOP open in BoopBox as they are, and the installer updates an FM-1 that runs SLOOP or Felucca. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
+> **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. The installer updates an FM-1 that runs SLOOP or Felucca, but BoopBox has its own eight-track project format: projects and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples and themes carry over. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 1.1.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Your projects, presets, samples and settings are kept when you update, and you can go back at any time (see [Going back](#going-back)).
+> **Status:** 1.1.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
@@ -45,6 +45,11 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## What's new in 1.1.0
 
+- **A sound browser.** On TRACKS, PRESETS on a synth track opens the engines (or the kinds of sound) on the left
+  and their sounds on the right: PRESETS or KNOB 2 moves through the sounds (each one loads as
+  you land on it), SELECT or KNOB 1 jumps to the next group, KNOB 3 shows them by ENGINE or by KIND, KNOB 4 marks a
+  favourite. It closes by itself after 4 s; it replaces the SAVE > PRESETS page. The drum track's PRESETS is still the
+  kit.
 - **A new visualiser.** Six scenes at sunset and in neon replace the twelve styles, all built in beside the web
   editor: PALMS (the mix's wave as the sea's front wave), NIGHT DRIVE (the spectrum as a city, a car on a road that
   runs with the beat, its lights flaring on the kick; stopped, it slows down and parks), HORIZON (the spectrum as a
@@ -52,6 +57,13 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
   key, lit in the colour of the track that plays it; a chord lights all its keys). See
   [the visualiser](BOOPBOX.md#the-visualiser).
+- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
+  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
+  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
+- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
+  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
+  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
+- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
 - **SLOOP 2.8.4's fixes.** Clean fades (no distortion at the end of notes on the 3.5 mm output and USB), UNISON no
   longer stacks its voices in phase, PHYS strings in tune, NOISE's NZ ARCADE, SAMPLE and GRAIN follow the top keys,
   a firm press on a layer button opens its pages, on REC READY a knob changes only its own value, and more
@@ -70,8 +82,9 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
   *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
-  they are.
+  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
+  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
+  bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
   tracks 5–8 (GLO → MIDI 4).
@@ -88,7 +101,7 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them).
+  step components or the chord progression (backups keep them). *Lifted in 1.1.0: see [What's new in 1.1.0](#whats-new-in-110).*
 
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
 is in [its repository](https://github.com/isod89/sloop-fm1).
@@ -221,7 +234,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 
 ### Going back
 
-- **To an earlier BoopBox:** install the `.fwsc` of its [release](../../releases) (for example [2.3](../../releases/tag/v2.3)). Your samples, user presets and settings stay. **Projects saved by 2.4** (format FUN5: locks, nudges, fills) **do not open in 2.3 or older** — 2.3 sees them as empty, and its autosave can write over the music in progress; a 2.4 backup restores into 2.4 only. **Save a backup before you go back**, and restore it once you are on 2.4 again.
+- **To SLOOP:** install SLOOP's `.fwsc`. Your samples, user presets and settings stay, but SLOOP does not open BoopBox projects: its sections show as empty, and its autosave can write over the music in progress. **Save a backup with the BoopBox editor before you go back**, and restore it once you are on BoopBox again.
 - **To the official firmware:** on the installer page, open **Return to the official firmware (V15)**. Save a backup with the editor first, download FM-1 V15 from m-vave.com and select its `FM-1.fwsc` — only that exact file is accepted. M-VAVE's updater, M-UPGRADE, works too. To come back, install BoopBox again and restore your backup.
 
 ### Rescue
@@ -380,8 +393,9 @@ Audio preview requires the served site, rather than the downloaded single-file e
 
 - **Sound** — every parameter of the selected track, the engines and the presets; on an FM6 track the **FM6** panel: every operator, the bank, **Import / Export SysEx** (DX7 voices and banks).
 - **Sequencer** — the steps, as tiles or as a **piano roll**, and the track's length (1–64 steps); on the drum track a grid of 16 sounds × the steps, with levels and ratchets, and the kit. Click a step for its nudge, parameter locks and fill condition. **Export MIDI / Import MIDI**: the selected track as a MIDI file, and back.
-- **Tracks** — the four channel strips.
-- **Song** — the order of the sections A–D (the SONG screen): which section, how many bars, how many times, and whether the song starts again at the end.
+- **Patterns** (BoopBox) — each track's eight patterns (play one, copy, clear), its chain and FOLLOW; a pattern's step components, direction and seed; the song's chord progression. Read from the FM-1, change, **Send** (the song stopped).
+- **Tracks** — the eight channel strips.
+- **Song** — the order of the sections A–D (the SONG screen): which section, how many bars, how many times, whether the song starts again at the end, and the entries it loops.
 - **Library** — your user presets and preset files.
 - **Samples** — the three user slots, files and **CHOP**.
 - **Drum synth** (2.5) — your own synthesised kits SYN1–SYN4: every value of every drum sound, heard at once.

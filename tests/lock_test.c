@@ -249,15 +249,13 @@ static void t_saves(void)
         stop();
         check(t->p[P_ED_FLT] == 3, "  .. and it stays after STOP");
     }
-    /* format 7 keeps 32 locks and SLIDE; format 6 is not taken when they would be lost */
+    /* a project keeps 32 locks and SLIDE */
     reset();
-    for (k = 4; k < NTRK; k++)
-        trk_pon_now(k);                                 /* (tracks 5..8 as at power-on: format 6 could hold the rest) */
     t = &trk[0];
     for (k = 0; k < NLOCK; k++)
         lock_set(t, k, k % 2u ? P_DLY : P_ED_FLT, (int32_t)(k + 3u));
     lock_slide_set(t, 5, P_DLY, 1);
-    ok = !proj6_fits() && proj_capture(&p) && p.magic == PROJ_MAGIC;
+    ok = proj_capture(&p) && p.magic == PROJ_MAGIC;
     reset();
     proj_apply(&p, 1);
     t = &trk[0];
@@ -265,30 +263,7 @@ static void t_saves(void)
         int j = lock_find(t, k, k % 2u ? P_DLY : P_ED_FLT, 0);
         ok &= j >= 0 && t->lock[j].val == (int16_t)(k + 3u) && ((t->lock[j].param & LOCK_SLIDE) != 0) == (k == 5u);
     }
-    check(ok, "format 7: 32 locks and a SLIDE kept; format 6 refused for them (24, no SLIDE)");
-    for (k = NLOCK_V6; k < NLOCK; k++)
-        lock_del(t, k, P_COUNT);
-    check(!proj6_fits(), "  24 locks with a SLIDE: still not format 6");
-    lock_slide_set(t, 5, P_DLY, 0);
-    check(proj6_fits(), "  24 locks without: format 6 would keep them all");
-    {   /* format 6 capture packs the slots (they may be anywhere in the 32) */
-        static project_v6_t q;
-        for (k = 0; k < NLOCK_V6; k++)
-            lock_del(t, k, P_COUNT);
-        lock_set(t, 30, P_DLY, 9);
-        lock_set(t, 31, P_REV, 8);
-        for (k = 0; k < NLOCK; k++)                     /* (into the last slots) */
-            if (t->lock[k].step != LOCK_FREE && k < NLOCK - 2u) {
-                plock_t x = t->lock[k];
-                t->lock[k].step = LOCK_FREE;
-                t->lock[NLOCK - 1u - (x.param == P_REV)] = x;
-            }
-        proj6_capture(&q);
-        reset();
-        proj_apply((project_t *)&q, 1);
-        t = &trk[0];
-        check(lock_find(t, 30, P_DLY, 0) >= 0 && lock_find(t, 31, P_REV, 0) >= 0, "format 6: locks from slots 25..32 packed in, read back");
-    }
+    check(ok, "a project: 32 locks and a SLIDE kept");
 }
 
 int main(void)

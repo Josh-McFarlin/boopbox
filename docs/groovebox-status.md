@@ -6,7 +6,7 @@ in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-perform
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
 for the PC, with the FM-1's inputs simulated), and the default build (`./build.sh`, the JieLi toolchain) makes an
-image that fits the flash with 724 B to spare (1.1.0), the web editor and the visualiser's six styles included. **Nothing
+image that fits the flash with 5,400 B to spare (1.1.0), the web editor and the visualiser's six styles included. **Nothing
 was run on an FM-1** (section 4). To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
 three tables in RAM at power-on (section 2).
 
@@ -20,8 +20,8 @@ three tables in RAM at power-on (section 2).
 | Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of 2..8; COPY, CLEAR; the PATTERNS screen; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |
 | Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
 | Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
-| Storage | project format 7 (eight tracks, all the above), formats 1..6 read and converted, damage detected, never cut (refused whole), format 6 kept as a fallback | `project_test` and the feature tests' store checks |
-| Flash budget | the text boot logo is the default; the BASS set has three recordings; FM6's exponent, the sine and the font built in RAM at power-on (1.1.0); `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 580,840 B of 581,564 (1.1.0) |
+| Storage | project format 7 (eight tracks, all the above), the only format: SLOOP's formats 1..6 are not read nor written; damage detected, never cut (refused whole) | `project_test` and the feature tests' store checks |
+| Flash budget | the text boot logo is the default; the BASS set has three recordings; FM6's exponent, the sine and the font built in RAM at power-on (1.1.0); `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,164 B of 581,564 (1.1.0) |
 
 The existing BoopBox features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
 input, the M-UPGRADE update entry and the USB rescue are untouched (their host tests pass).
@@ -33,10 +33,13 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
   place of the twelve) fits beside the web editor because FM6's exponent table, the sine table and the screen font are
   built in RAM at power-on (8.7 KB of flash for 11.5 KB of RAM). See `docs/groovebox-performance.md`.
 
-- **Web editor:** its LIVE page and track list show 4 tracks (the protocol's frame sizes are unchanged). Its song
-  page saves the song without the loop region. It was not extended for the new features: it has no editing of step
-  components, patterns 2..8 or the chord progression (the FM-1 has; the editor's backup keeps them, because it copies
-  whole project objects).
+- **Web editor:** it shows all eight tracks (the track bar, the Tracks page, the LIVE page: protocol v13 adds tracks 5..8
+  to LIVE's state and a solo of any track, 32 bytes of flash). Its **Patterns** page edits patterns 1..8, chains, FOLLOW,
+  step components, direction and seed, and the chord progression, by reading the working project (backup object 0,
+  format 7), changing it in the browser (`web/editor.html` PROJ7, checked against the firmware's own capture and load by
+  `tests/proj7_tool.c`) and sending it back whole: no new command, and only while the song is stopped (the FM-1 loads
+  it at once). The Song page keeps and edits the loop region. The Patterns page edits the working project only: a
+  section A..D is edited by loading it on the FM-1, editing, and saving it into its section again.
 - **Screens** show 4 tracks at a time: the bank (1-4 or 5-8) of the selected track.
 - **Voices:** the 8 synth tracks share 8 sounding voices; 3 big engines (GRAIN, DRAWBAR, FM6, PHYS) at once; 4
   tracks with STUT at once.
@@ -51,8 +54,8 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
   what came before.
 - **Step component semantics** are this firmware's own definitions (listed in `docs/groovebox-controls.md`); they
   are not copied from another instrument.
-- **Going back to SLOOP 2.8.3:** it does not read format 7, so projects saved by this firmware show as empty there
-  (see `docs/groovebox-storage.md`, section 7). Back up first.
+- **SLOOP's projects:** BoopBox does not read SLOOP's four-track formats, and SLOOP does not read BoopBox's: going
+  either way, the sections show as empty (see `docs/groovebox-storage.md`, sections 4 and 7). Back up first.
 
 ## 3. Test results
 
@@ -85,7 +88,7 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
 ./build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
 ```
 
-The default build fits (`app ... 580840 B`, 1.1.0). The bitmap boot logo can be built back in place of the visualiser
+The default build fits (`app ... 576164 B`, 1.1.0). The bitmap boot logo can be built back in place of the visualiser
 with `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 ./build.sh`. When an image does not fit, `tools/build.py` fails and says so; it
 leaves nothing out by itself. With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB
 rescue, USB-MIDI and USB audio still work.
@@ -116,5 +119,5 @@ If something goes wrong:
 - an install was cut off: the FM-1 stays in update mode; install again;
 - the FM-1 does not start at all: [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
-To go back, install the `.fwsc` of a BoopBox release (for example `docs/firmware/boopbox-2.8.3.fwsc`) and restore your
-backup there. Projects saved by this firmware do not open in 2.8.3.
+To go back to SLOOP, install its `.fwsc` and restore a backup made with SLOOP. Projects saved by BoopBox do not open
+in SLOOP.

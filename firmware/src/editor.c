@@ -34,7 +34,8 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
 /* v10 (SLOOP 2.5): DSYN_LIST .. DSYN_PLAY = 72..76, editor_dsyn.c; backup object 9 = the SYN kits */
 /* v11 (SLOOP 2.7): backup object 11 = your theme (gfx.c theme_t), the editor's Theme page */
 /* v12 (SLOOP 2.7): LIVE = 77, editor_live.c: the LIVE page (transport, sections, mix keys, punch-in FX, REC, undo) */
-#define ED_PROTO 12u                                   /* the protocol version INFO ends with */
+/* v13 (BoopBox 1.1): LIVE's state ends with tracks 5..8; LIVE op 13 solos any track */
+#define ED_PROTO 13u                                   /* the protocol version INFO ends with */
 
 static uint8_t ed_out[600];
 static uint32_t ed_n;
@@ -444,12 +445,8 @@ UI_SMALL static const uint8_t *ed_bk_obj(uint32_t id, uint32_t *len)   /* 0 = no
         *len = sizeof dsu;
         return (const uint8_t *)&dsu;
     }
-    if (id == 10u) {                                      /* SLOOP 2.6: the MIDI part (the MIDI LEARN map, GLO > MIDI's
-                                                         * channels): listed only while it is not the default (a backup
-                                                         * without it stays one an older editor reads; its restore leaves
-                                                         * them as they are) */
-        if (!midi_part_default(ed_bk_ml))
-            *len = midi_part_len(ed_bk_ml);
+    if (id == 10u) {                                      /* the MIDI part (the MIDI LEARN map, GLO > MIDI's channels) */
+        *len = MIDI_PART_8;
         return ed_bk_ml;
     }
     if (id == 11u) {                                      /* SLOOP 2.7: your theme (gfx.c), listed only when there is one */
@@ -525,9 +522,9 @@ UI_SMALL static uint32_t ed_bk_commit(void)
         persist_t p;
         if (ed_flash_busy())
             return 3;
-        if (n != MIDI_PART && n != MIDI_PART_8 && n != 2u * ML_N && n != 2u * ML_N + 4u)
+        if (n != MIDI_PART_8)
             return 2;
-        midi_part_read(raw, n);                           /* (every entry and channel checked) */
+        midi_part_read(raw);                           /* (every entry and channel checked) */
         persist_fill(&p);
         if (!flash_ok || settings_write(&p))
             return 4;
@@ -540,7 +537,7 @@ UI_SMALL static uint32_t ed_bk_commit(void)
         if (ed_flash_busy())
             return 3;
         theme_t t;
-        if (n && n != sizeof(theme_t) && n != 36u)        /* (36: a first-beta THM1, taken with an accent) */
+        if (n && n != sizeof(theme_t))
             return 2;
         memset(&t, 0, sizeof t);
         memcpy(&t, raw, n);

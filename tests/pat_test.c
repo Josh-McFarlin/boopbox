@@ -346,8 +346,8 @@ static void t_store(void)
     ask(7, 4);
     block();
     dstep_set(&trk[7].dstep[1], 3, LV_NORM, 0);
-    ok = !proj6_fits() && proj_capture(&p) && p.magic == PROJ_MAGIC;
-    check(ok, "patterns, a chain, a pattern playing other than 1: format 7 (format 6 refused)");
+    ok = proj_capture(&p) && p.magic == PROJ_MAGIC;
+    check(ok, "patterns, a chain, a pattern playing other than 1: saved");
     reset();
     proj_apply(&p, 1);
     t = &trk[2];

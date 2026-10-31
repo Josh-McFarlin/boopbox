@@ -170,37 +170,37 @@ static void bk_restore(uint32_t id, const uint8_t *raw, uint32_t len)
     cmdv(ED_BK_PUT, a, 2);
 }
 
-/* random project content, the sum right */
+/* random project content, the sum right (its length: p->size) */
 static void proj_random(project_t *p)
 {
     uint32_t i;
     if (rn(2)) {
         proj_capture(p);
-        mutate((uint8_t *)p + 8, sizeof *p - 12);
+        mutate(p->d, p->size - PROJ_HDR);
         if (rn(2)) {
             uint32_t k = 4 + rn(60);
-            for (i = 0; i < k; i++) ((uint8_t *)p)[8 + rn(sizeof *p - 12)] = (uint8_t)rn(256);
+            for (i = 0; i < k; i++) p->d[rn(p->size - PROJ_HDR)] = (uint8_t)rn(256);
         }
     } else {
         rbytes((uint8_t *)p, sizeof *p, 1);
+        p->size = PROJ_HDR + rn(PROJ_MAX - PROJ_HDR + 1);
     }
     p->magic = PROJ_MAGIC;
-    p->size = sizeof *p;
-    p->sum = proj_sum(p);
+    p->sum = proj7_sum(p);
 }
+/* a project of SLOOP's ("FUN1" .. "FUN6", at its stored size, its check word right): BoopBox reads it as none */
 static void projv_random(uint8_t *b, uint32_t *len)
 {
-    static const uint32_t SZ[5] = {sizeof(project_v5_t), sizeof(project_v4_t), sizeof(project_v3_t), sizeof(project_v2_t), sizeof(project_v1_t)};
-    static const uint32_t MG[5] = {PROJ_MAGIC_V5, PROJ_MAGIC_V4, PROJ_MAGIC_V3, PROJ_MAGIC_V2, PROJ_MAGIC_V1};
-    uint32_t v = rn(5), n = SZ[v];
+    static const uint32_t SZ[6] = {688u, 2552u, 2584u, 3112u, 3840u, 3816u};
+    uint32_t v = rn(6), n = SZ[v], i, h = 0x811C9DC5u;
     rbytes(b, n, 1);
     if (rn(2)) {                                  /* mostly plausible values */
-        uint32_t i;
         for (i = 8; i < n - 4; i += 2) { b[i] = (uint8_t)rn(130); b[i + 1] = rn(8) ? 0 : (uint8_t)rn(256); }
     }
-    ((uint32_t *)b)[0] = MG[v];
+    ((uint32_t *)b)[0] = 0x46554E31u + v;
     ((uint32_t *)b)[1] = n;
-    *(uint32_t *)(b + n - 4) = proj_hash(b, n - 4);
+    for (i = 0; i < n - 4; i++) h = (h ^ b[i]) * 16777619u;
+    *(uint32_t *)(b + n - 4) = h;
     *len = n;
 }
 
@@ -288,7 +288,7 @@ static void cmd_rand(int bit8)
     }
     if ((cmd == ED_SET || cmd == ED_GET || cmd == ED_DESC) && na >= 2 && rn(2)) { f[4] = (uint8_t)rn(2); f[5] = (uint8_t)rn(f[4] ? G_COUNT + 2 : P_COUNT + 2); }
     if (cmd == ED_SET && na >= 4 && rn(2)) v14(f + 6, rval());
-    if (cmd == ED_LIVE && na >= 1 && rn(2)) f[4] = (uint8_t)rn(14);
+    if (cmd == ED_LIVE && na >= 1 && rn(2)) f[4] = (uint8_t)rn(15);
     if ((cmd == ED_TRACK_PARAM || cmd == ED_LOCK_SET) && na >= 3 && rn(2)) { f[4] = (uint8_t)rn(NTRK); f[5] = (uint8_t)rn(cmd == ED_LOCK_SET ? NSTEP : P_COUNT); }
     if (cmd == ED_LOCK_SET && na >= 5 && rn(2)) { f[6] = (uint8_t)rn(P_COUNT); v14(f + 7, rval()); }
     if (cmd == ED_TRACK_PARAM && na >= 4 && rn(2)) v14(f + 6, rval());
@@ -326,7 +326,7 @@ static void fz_seq_step(void)
         uint32_t id = rn(12);
         switch (id) {
         case 0: case 2: case 3: case 4: case 5:
-            if (rn(3)) { proj_random((project_t *)raw); len = sizeof(project_t); }
+            if (rn(3)) { proj_random((project_t *)raw); len = ((project_t *)raw)->size; }
             else projv_random(raw, &len);
             if (id && rn(10) == 0) len = 0;
             break;
@@ -355,13 +355,13 @@ static void fz_seq_step(void)
             len = sizeof *b;
             break;
         }
-        case 10: rbytes(raw, MIDI_PART, 1); len = rn(2) ? MIDI_PART : rn(2) ? 2 * ML_N : 2 * ML_N + 4; break;
+        case 10: rbytes(raw, MIDI_PART_8, 1); len = rn(4) ? MIDI_PART_8 : rn(MIDI_PART_8 + 8); break;
         case 11: {
             theme_t *t = (theme_t *)raw;
             rbytes(raw, sizeof *t, 1);
-            t->magic = rn(4) ? THEME_MAGIC : THEME_MAGIC1;
+            t->magic = rn(4) ? THEME_MAGIC : 0x314D4854u;   /* (or SLOOP 2.7 beta's THM1: refused) */
             t->crc = st_crc32(t, 36);
-            len = rn(8) ? (t->magic == THEME_MAGIC ? sizeof *t : 36) : 0;
+            len = rn(8) ? (rn(8) ? sizeof *t : 36) : 0;
             break;
         }
         default: len = 0;
@@ -491,9 +491,11 @@ static void flash_random(void)
         if (rn(2)) ps->arrangement.count = (uint8_t)rn(20);
         rbytes((uint8_t *)db, sizeof *db, 1);
         db->magic = DSU_MAGIC; db->ver = 1; db->n = DSU_N;
-        rbytes(raw + sizeof(persist_t) + sizeof(dsu_bank_t), MIDI_PART, 1);
+        rbytes(raw + sizeof(persist_t) + sizeof(dsu_bank_t), MIDI_PART_8, 1);
         {
-            static const uint32_t L[] = {sizeof(persist_t), PERSIST_SIZE_V22, 16u + sizeof(panel_t), 8u + sizeof(panel_t),
+            static const uint32_t L[] = {sizeof(persist_t) + sizeof(dsu_bank_t) + MIDI_PART_8,   /* (BoopBox's; then */
+                sizeof(persist_t) + sizeof(dsu_bank_t) + MIDI_PART_8, sizeof(persist_t),          /* SLOOP's layouts: */
+                sizeof(persist_t) - 4u, 16u + sizeof(panel_t), 8u + sizeof(panel_t),              /* not read) */
                 sizeof(persist_t) + sizeof(dsu_bank_t), sizeof(persist_t) + sizeof(dsu_bank_t) + 2 * ML_N,
                 sizeof(persist_t) + sizeof(dsu_bank_t) + 2 * ML_N + 4, sizeof(persist_t) + sizeof(dsu_bank_t) + MIDI_PART};
             len = L[rn(NELEM(L))];
@@ -501,7 +503,7 @@ static void flash_random(void)
         if (len == 16u + sizeof(panel_t)) ps->magic = 0x50455232u;
         if (len == 8u + sizeof(panel_t)) ps->magic = 0x50455231u;
         rbytes((uint8_t *)&sr, sizeof sr, 1);
-        sr.th.magic = rn(2) ? THEME_MAGIC : THEME_MAGIC1; sr.th.crc = st_crc32(&sr.th, 36);
+        sr.th.magic = rn(2) ? THEME_MAGIC : 0x314D4854u; sr.th.crc = st_crc32(&sr.th, 36);
         sr.fmagic = FAVS_MAGIC; sr.fcrc = st_crc32(&sr.fmagic, 4u + sizeof sr.fav);
         st_side = &sr; st_side_len = rn(4) ? sizeof sr : rn(sizeof sr);
         st_put(OBJ_SETTINGS, raw, len);
@@ -510,7 +512,7 @@ static void flash_random(void)
     for (i = 0; i < 5; i++) {                      /* the projects and the autosave */
         uint32_t obj = i < 4 ? OBJ_PROJECT0 + i : OBJ_AUTOSAVE;
         if (rn(3) == 0) continue;
-        if (rn(3)) { proj_random((project_t *)raw); len = sizeof(project_t); }
+        if (rn(3)) { proj_random((project_t *)raw); len = ((project_t *)raw)->size; }
         else projv_random(raw, &len);
         if (rn(10) == 0) len = rn(len + 1);
         st_put(obj, raw, len);
@@ -700,33 +702,28 @@ static int midi_hang_check(void)
  * (a) the editor's backup of object 0 read (LIST, GET) and restored (PUT, commit), (b) saved to a section and loaded,
  * (c) the autosave written and resumed: each must give back the same project, byte for byte */
 static project_t rt_a, rt_b;
-static const char *proj_field(uint32_t off)
+static int16_t rt_g[G_COUNT];                      /* the globals at rt_a's capture */
+/* the working project into rt_b, the globals a load does not take (the FM-1's settings: project.c proj7_apply) as
+ * they were at rt_a's capture: other use may have changed them, a load leaves them */
+static void rt_capture_b(void)
 {
-    static char b[96];
-    uint32_t t0 = (uint32_t)offsetof(project_t, t), ts = sizeof(proj_trk_t);
-    if (off < t0) { snprintf(b, sizeof b, "header/globals byte %u (g[%u])", off, off >= 8 ? (off - 8) / 2 : 0); return b; }
-    if (off >= t0 + NTRK * ts) { snprintf(b, sizeof b, "sum"); return b; }
-    {
-        uint32_t k = (off - t0) / ts, o = (off - t0) % ts;
-        if (o < offsetof(proj_trk_t, e)) snprintf(b, sizeof b, "track %u p[%u]", k, o / 2);
-        else if (o < offsetof(proj_trk_t, x)) snprintf(b, sizeof b, "track %u e[%u]", k, (o - (uint32_t)offsetof(proj_trk_t, e)) / 2);
-        else if (o < offsetof(proj_trk_t, engine)) snprintf(b, sizeof b, "track %u x[%u] (p[%u])", k, o - (uint32_t)offsetof(proj_trk_t, x), PROJ_NC6 + o - (uint32_t)offsetof(proj_trk_t, x));
-        else if (o < offsetof(proj_trk_t, step)) snprintf(b, sizeof b, "track %u engine/preset", k);
-        else if (o < offsetof(proj_trk_t, mf)) snprintf(b, sizeof b, "track %u step %u byte %u", k, (o - (uint32_t)offsetof(proj_trk_t, step)) / 10, (o - (uint32_t)offsetof(proj_trk_t, step)) % 10);
-        else if (o < offsetof(proj_trk_t, lock)) snprintf(b, sizeof b, "track %u mf[%u]", k, o - (uint32_t)offsetof(proj_trk_t, mf));
-        else snprintf(b, sizeof b, "track %u lock %u", k, (o - (uint32_t)offsetof(proj_trk_t, lock)) / 4);
-    }
-    return b;
+    uint32_t k;
+    for (k = 0; k < G_COUNT; k++)
+        if (g_setting(k) || k == G_LOAD || k == G_SAVE || k == G_INFO) song.g[k] = rt_g[k];
+    proj_capture(&rt_b);
+}
+static void rt_capture_a(void)
+{
+    proj_capture(&rt_a);
+    memcpy(rt_g, song.g, sizeof rt_g);
 }
 static int rt_cmp(const char *what)
 {
     uint32_t i, nd = 0;
-    const uint8_t *x = (const uint8_t *)&rt_a, *y = (const uint8_t *)&rt_b;
-    static const uint8_t SETTING[] = {G_SLOT, G_LOAD, G_SYNC, G_MIDI, G_ROUTE};   /* (in a project, not loaded: the FM-1's) */
-    for (i = 0; i < sizeof SETTING; i++) rt_b.g[SETTING[i]] = rt_a.g[SETTING[i]];
-    for (i = 0; i < sizeof rt_a - 4; i++)
-        if (x[i] != y[i]) {
-            if (nd < 6) fprintf(stderr, "%s: %s: %02X -> %02X\n", what, proj_field(i), x[i], y[i]);
+    if (rt_a.size != rt_b.size) { fprintf(stderr, "%s: %u bytes -> %u\n", what, rt_a.size, rt_b.size); return 0; }
+    for (i = 0; i < rt_a.size - PROJ_HDR; i++)
+        if (rt_a.d[i] != rt_b.d[i]) {
+            if (nd < 6) fprintf(stderr, "%s: data byte %u: %02X -> %02X\n", what, i, rt_a.d[i], rt_b.d[i]);
             nd++;
         }
     if (nd) fprintf(stderr, "%s: %u bytes differ\n", what, nd);
@@ -774,13 +771,13 @@ static void scramble_light(void)
     }
     stop_all();
 }
-static void bk_read0(uint8_t *raw)
+static void bk_read0(uint8_t *raw, uint32_t len)
 {
     uint8_t a[16];
     uint32_t off, n;
     cmdv(ED_BK_LIST, a, 0);
-    for (off = 0; off < sizeof(project_t); off += 256) {
-        uint32_t c = sizeof(project_t) - off > 256 ? 256 : (uint32_t)sizeof(project_t) - off, k, w;
+    for (off = 0; off < len; off += 256) {
+        uint32_t c = len - off > 256 ? 256 : len - off, k, w;
         n = 0; a[n++] = 0; n += put5(a + n, off); a[n++] = c & 127; a[n++] = (uint8_t)(c >> 7);
         cmdv(ED_BK_GET, a, n);
         if (rx_n < 13 || rx_last[6] != 0) { fprintf(stderr, "BK_GET rc %u\n", rx_n > 6 ? rx_last[6] : 99); fail("backup GET"); }
@@ -794,7 +791,7 @@ static int bk_restore_ok(const uint8_t *raw)
 {
     uint32_t tries;
     for (tries = 0; tries < 20; tries++) {             /* (bk_restore cuts some off at random: again) */
-        bk_restore(0, raw, sizeof(project_t));
+        bk_restore(0, raw, ((const project_t *)raw)->size);
         if (rx_n >= 8 && rx_last[5] == 2 && rx_last[7] == 0) return 1;   /* (the commit; not an abort) */
         stop_all();
     }
@@ -807,23 +804,23 @@ static void round_trip(void)
     stop_all();
     if (song.playing || transport_req) return;
     /* the backup of the working project reads as what it is */
-    proj_capture(&rt_a);
-    bk_read0(raw);
-    if (memcmp(raw, &rt_a, sizeof raw)) {
-        for (i = 0; i < sizeof raw && raw[i] == ((uint8_t *)&rt_a)[i]; i++) ;
-        fprintf(stderr, "the backup read differs from the capture at %s\n", proj_field(i));
+    rt_capture_a();
+    bk_read0(raw, rt_a.size);
+    if (memcmp(raw, &rt_a, rt_a.size)) {
+        for (i = 0; i < rt_a.size && raw[i] == ((uint8_t *)&rt_a)[i]; i++) ;
+        fprintf(stderr, "the backup read differs from the capture at byte %u\n", i);
         fail("backup GET data");
     }
     /* restored once (its values put in range), captured: the project as it loads */
     if (!bk_restore_ok(raw)) fail("restore of an unchanged backup refused");
     audio_blocks(2);
-    proj_capture(&rt_a);
+    rt_capture_a();
     memcpy(raw, &rt_a, sizeof raw);
     /* (a) other use, then that backup restored: the same project */
     scramble_light();
     if (!bk_restore_ok(raw)) fail("restore refused");
     audio_blocks(2);
-    proj_capture(&rt_b);
+    rt_capture_b();
     if (!rt_cmp("backup -> other use -> restore")) fail("a backup restored does not give the project back");
     /* (b) a section saved, other use, loaded (from RAM, or from flash) */
     {
@@ -834,14 +831,14 @@ static void round_trip(void)
         if (lost) proj_slot[sl].magic ^= 0xFFu;     /* (the RAM copy lost: from flash) */
         if (song.playing || transport_req) return;
         project_load(sl);
-        proj_capture(&rt_b);
+        rt_capture_b();
         if (!rt_cmp("section save -> other use -> load (before the audio)")) { fprintf(stderr, "slot %u, %s\n", sl, lost ? "from flash" : "from RAM"); fail("a section saved and loaded is not the same"); }
         audio_blocks(2);
-        proj_capture(&rt_b);
+        rt_capture_b();
         if (!rt_cmp("section save -> other use -> load")) { fprintf(stderr, "slot %u, %s\n", sl, lost ? "from flash" : "from RAM"); fail("a section saved and loaded is not the same"); }
     }
     /* (c) the autosave, other use, the power-on resume */
-    (void)st_save(OBJ_AUTOSAVE, &rt_a, sizeof rt_a);
+    (void)st_save(OBJ_AUTOSAVE, &rt_a, rt_a.size);
     scramble_light();
     {   /* (at power-on nothing sounds: autosave_resume switches the engines at once) */
         uint32_t k, v;
@@ -850,7 +847,7 @@ static void round_trip(void)
     }
     autosave_resume();
     audio_blocks(2);
-    proj_capture(&rt_b);
+    rt_capture_b();
     if (!rt_cmp("autosave -> other use -> resume")) fail("the autosave resumed is not the project saved");
 }
 

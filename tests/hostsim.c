@@ -35,7 +35,7 @@ static void fm1_irq_on(void) {}
 #include "../firmware/src/core.h"
 /* the four-track layout most tests were written for: synths on tracks 1..3, drums on 4 (the default project keeps it;
  * tracks 5..8 are there too, power-on synths 5..7 and drums on 8, host_tracks_init) */
-#define TRK_DRUM TRK_DRUM_V6
+#define TRK_DRUM 3u
 #define TDRUM (&trk[TRK_DRUM])
 #define NPART 3u
 #include "../firmware/src/cpu1.h"
