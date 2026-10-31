@@ -1,14 +1,37 @@
 <p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="480"></p>
 
-# BoopBox 1.0.0
+# BoopBox 1.1.0
 
 **A live groovebox firmware for the M-VAVE FM-1 — for any style.** Eight tracks — six synths and two drum machines by default, each drum machine with 16 sounds on the white keys (see [the groovebox controls](docs/groovebox-controls.md)) — twelve synthesis engines (six-operator FM with DX7 patches, and now physical models and noise), 153 sounds, 37 drum kits (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, reggaeton, synthwave, chiptune, ambient, jazz…), your own samples, ghost notes and ratchets, parameter locks, micro timing and fills, note repeat, one-key chords, 27 punch-in effects, a vinyl / sidechain / DJ-filter master, and a teenage-engineering-style screen that always shows what your hands can do next. No factory patterns, nothing to load: everything you hear, you play.
 
 BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/isod89/sloop-fm1) by isod89, itself based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments.
 
-> **Status:** 1.0.0, the first BoopBox release, tested in the host simulator but not yet on an FM-1. Install it at your own risk, and please report what you find (GitHub issues).
+> **Status:** 1.1.0, tested in the host simulator but not yet on an FM-1. Install it at your own risk, and please report what you find (GitHub issues).
 
 > **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide: every button, key combination, layer, page and editor page, with a [one-page cheat sheet](GUIDE.md#26-cheat-sheet).
+
+### New in 1.1.0
+
+- **A new visualiser.** Six scenes at sunset and in neon replace the twelve styles, all built in beside the web
+  editor: PALMS (the mix's wave as the sea's front wave), NIGHT DRIVE (the spectrum as a city, a car on a road that
+  runs with the beat, its lights flaring on the kick; stopped, it slows down and parks), HORIZON (the spectrum as a
+  neon range over a floor that lights up on the beat in the tracks' colours), FLYOVER (the spectrum over time as a
+  terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
+  key, lit in the colour of the track that plays it; a chord lights all its keys). See
+  [the visualiser](BOOPBOX.md#the-visualiser).
+- **SLOOP 2.8.4's fixes.** Clean fades (no distortion at the end of notes on the 3.5 mm output and USB), UNISON no
+  longer stacks its voices in phase, PHYS strings in tune, NOISE's NZ ARCADE, SAMPLE and GRAIN follow the top keys,
+  a firm press on a layer button opens its pages, on REC READY a knob changes only its own value, and more
+  ([SLOOP's releases](https://github.com/isod89/sloop-fm1)).
+- **Room in the flash.** Three tables (FM6's exponent, the sine, the screen font) are built in RAM when the FM-1
+  starts instead of stored in the flash: byte for byte the same, so the sound and the screens do not change, and the
+  build fits again with the fixes and the visualiser
+  ([docs/groovebox-performance.md](docs/groovebox-performance.md)).
+- Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
+  settings opens as one of the new six.
+
+**Not yet tested on an FM-1:** 1.1.0 is tested in the host simulator only (the firmware's own code on a computer).
+Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
 ### New in 1.0.0
 
@@ -25,17 +48,14 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
   changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
   chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
   See [the groovebox controls](docs/groovebox-controls.md).
-- **The visualiser,** six scenes at sunset and in neon: PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY and KEY CITY
-  (tap HOME on TRACKS).
+- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
 - **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
   repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
-- **Left out to fit the flash:** the bitmap boot logo (the boot screen shows the name as text) and the top recording of the BASS sample set
+- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
+  name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
   step components or the chord progression (backups keep them).
-
-**Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
-Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
 is in [its repository](https://github.com/isod89/sloop-fm1).
