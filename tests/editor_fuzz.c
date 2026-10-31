@@ -288,7 +288,7 @@ static void cmd_rand(int bit8)
     }
     if ((cmd == ED_SET || cmd == ED_GET || cmd == ED_DESC) && na >= 2 && rn(2)) { f[4] = (uint8_t)rn(2); f[5] = (uint8_t)rn(f[4] ? G_COUNT + 2 : P_COUNT + 2); }
     if (cmd == ED_SET && na >= 4 && rn(2)) v14(f + 6, rval());
-    if (cmd == ED_LIVE && na >= 1 && rn(2)) f[4] = (uint8_t)rn(14);
+    if (cmd == ED_LIVE && na >= 1 && rn(2)) f[4] = (uint8_t)rn(15);
     if ((cmd == ED_TRACK_PARAM || cmd == ED_LOCK_SET) && na >= 3 && rn(2)) { f[4] = (uint8_t)rn(NTRK); f[5] = (uint8_t)rn(cmd == ED_LOCK_SET ? NSTEP : P_COUNT); }
     if (cmd == ED_LOCK_SET && na >= 5 && rn(2)) { f[6] = (uint8_t)rn(P_COUNT); v14(f + 7, rval()); }
     if (cmd == ED_TRACK_PARAM && na >= 4 && rn(2)) v14(f + 6, rval());
