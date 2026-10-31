@@ -81,6 +81,7 @@ static void demo_project(void)
     trk[3].p[P_SLEN] = trk[7].p[P_SLEN] = 16;
 }
 
+#ifndef SCREENS_DEMO_NO_MAIN                        /* (tools/screens_all.c: its helpers, its own main) */
 int main(int argc, char **argv)
 {
     static const struct { uint8_t style; const char *name; } VIS[6] = {
@@ -156,3 +157,4 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+#endif

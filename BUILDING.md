@@ -98,6 +98,9 @@ The README's screenshots are made the same way, from the code: `python3 tools/ma
 screens with the firmware's own drawing code (`tools/screens_demo.c`, the host tests' harness, a demo project on the
 eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` takes the web editor's pages in its
 mock mode (Playwright and Chromium). Both write into `assets/screens/`.
+`python3 tools/make_all_screens.py` draws every screen of the firmware the same way (`tools/screens_all.c`: every
+page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
+screen and a contact sheet a group, listed in its `README.md`.
 
 ## Tests
 
