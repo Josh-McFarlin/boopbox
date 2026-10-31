@@ -434,7 +434,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         *unit = "st";
         break;
     case F_ENUM:
-        str_cpy(val, d->names[v < d->min ? d->min : v > d->max ? d->max : v], 6);
+        str_cpy(val, d->names[v < d->min ? d->min : v > d->max ? d->max : v], 9);   /* (1.2: eight letters, MASTER whole; the columns cut to their width) */
         if (d->unit)
             *unit = d->unit;
         break;
@@ -457,7 +457,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
             uint32_t k = 0;                           /* split evenly over the names (engine desc hooks) */
             while (d->names[k])
                 k++;
-            str_cpy(val, d->names[(uint32_t)(clamp(v, d->min, d->max) - d->min) * k / (uint32_t)(d->max - d->min + 1)], 6);
+            str_cpy(val, d->names[(uint32_t)(clamp(v, d->min, d->max) - d->min) * k / (uint32_t)(d->max - d->min + 1)], 9);
         } else {
             fmt_int(val, v);
         }
@@ -469,6 +469,8 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 
 /* ------------------------------------------------------------ pages --- */
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
+       FAM_MIDI,                 /* (1.2) the MIDI and sync setup: out of GLO's pages, opened from MENU > SEQ > MIDI
+                                  * SETTINGS; SELECT walks them, GLO lit */
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM,
        SC_PATT,                  /* SC_PATT: the selected track's pattern settings that are not parameters (PS_*) */
@@ -501,10 +503,10 @@ static const page_t PAGES[] = {
     {"LFO 2", FAM_LFO, SC_TRACK, GR_LFO, {P_LSYNC, P_LTRIG, P_LPOL, 0xFF}},   /* 2.6 (Felucca 1.4): SYNC TRIG POL */
     {"LFO DEST", FAM_LFO, SC_TRACK, GR_NONE, {P_LD_PIT, P_LD_FLT, P_LD_SHP, P_LD_AMP}},
     {"FX", FAM_FX, SC_TRACK, GR_FX, {P_DIST, P_CHOR, P_DLY, P_REV}},
-    {"FILTER", FAM_FX, SC_TRACK, GR_NONE, {P_TFLT, 0xFF, 0xFF, 0xFF}},   /* the track's filter (drum track too) */
+    {"FILTER", FAM_FX, SC_TRACK, GR_NONE, {P_TFLT, P_IMIX, 0xFF, 0xFF}},   /* the track's filter (drum track too); 1.2:
+                                                       * the INSERT's dry / wet beside it (INSERT 2, a page of one, gone) */
     {"SLICER", FAM_FX, SC_TRACK, GR_SLCR, {P_SLCR, P_SLPAT, P_SLRATE, P_SLDEPTH}},   /* drum track too */
     {"INSERT", FAM_FX, SC_TRACK, GR_INS, {P_ITYPE, P_IA, P_IB, P_IC}},   /* 2.6 (Felucca 1.5): the track's INSERT (fx.c), */
-    {"INSERT 2", FAM_FX, SC_TRACK, GR_INS, {P_IMIX, 0xFF, 0xFF, 0xFF}},  /* .. its dry / wet; the drum track too */
     {"DLY", FAM_FX, SC_GLOBAL, GR_NONE, {G_DTIME, G_DFDBK, G_DCOLOR, G_DMIX}},
     {"REV/CHO", FAM_FX, SC_GLOBAL, GR_NONE, {G_RSIZE, G_RDAMP, G_CRATE, G_CDEPTH}},
     {"PERF", FAM_FX, SC_GLOBAL, GR_NONE, {G_PFXT, G_PFXL, G_PFXQ, 0xFF}},   /* the punch-in FX: target, latch, quantized */
@@ -521,16 +523,17 @@ static const page_t PAGES[] = {
     {"VOICE 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_ALLOC, P_DETUNE, P_PAN, P_MUTE}},
     {"GLOBAL", FAM_GLO, SC_GLOBAL, GR_NONE, {G_BPM, G_SWING, G_CLOCK, G_TUNE}},
     {"MASTER", FAM_GLO, SC_GLOBAL, GR_NONE, {G_DUST, G_DUCK, G_FILT, G_ROLL}},
-    {"SYSTEM", FAM_GLO, SC_GLOBAL, GR_NONE, {G_MIDI, G_SYNC, G_ROUTE, G_INFO}},
-    {"DRUMS", FAM_GLO, SC_GLOBAL, GR_NONE, {G_DRCH, G_DRLVL, G_DRREV, G_DRDLY}},   /* GM kit on MIDI ch 10 */
-    {"MIDI", FAM_GLO, SC_GLOBAL, GR_NONE, {G_CH1, G_CH2, G_CH3, G_DRCH}},   /* 2.6: each track's channel, the drums' too */
-    {"MIDI 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_ROUTE, G_CHOTH, G_MIDI, G_BEND}},   /* 2.6: IN, OTHER, OUT, BEND: every MIDI
-                                                                           * setting in these two pages (IN and OUT on
-                                                                           * SYSTEM too, the drums' channel on DRUMS) */
-    {"MIDI 3", FAM_GLO, SC_GLOBAL, GR_NONE, {G_FXCH, G_DRMAP, G_RMCH, G_CLKOUT}},   /* 2.7: the punch-in FX over MIDI */
-    {"MIDI 4", FAM_GLO, SC_GLOBAL, GR_NONE, {G_CH5, G_CH6, G_CH7, G_CH8}},   /* eight tracks: tracks 5..8's channels */
+    {"DRUMS", FAM_GLO, SC_GLOBAL, GR_NONE, {G_DRLVL, G_DRREV, G_DRDLY, 0xFF}},   /* the drum track's mix (1.2: its MIDI
+                                                                           * channel on MIDI only) */
     {"TEXTURE", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXSRC, G_TXLVL, G_TXTONE, G_TXMOVE}},   /* 2.6: the bed under the mix */
     {"TEXTURE 2", FAM_GLO, SC_GLOBAL, GR_NONE, {G_TXRATE, G_TXWHEN, G_TXDUCK, 0xFF}},
+    /* (1.2) the MIDI setup, each setting on one page: its own family (MENU > SEQ > MIDI SETTINGS) */
+    {"MIDI", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_CH1, G_CH2, G_CH3, G_DRCH}},   /* each track's channel (CH4: the drums') */
+    {"MIDI 2", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_CH5, G_CH6, G_CH7, G_CH8}},   /* eight tracks: tracks 5..8's channels */
+    {"MIDI 3", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_ROUTE, G_CHOTH, G_MIDI, G_BEND}},   /* IN, OTHER, OUT, BEND */
+    {"MIDI 4", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_FXCH, G_DRMAP, G_RMCH, G_CLKOUT}},   /* the punch-in FX over MIDI, ... */
+    {"SYSTEM", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_SYNC, G_INFO, 0xFF, 0xFF}},   /* the clock it follows, USB (1.2: IN and
+                                                                           * OUT on MIDI 3 only) */
     {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"SECTION", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {G_SLOT, 0xFF, G_LOAD, G_SAVE}},   /* ("PROJECT" before 2.7) */   /* (KNOB 2: ERASE, 2.6: ui_input.c) */

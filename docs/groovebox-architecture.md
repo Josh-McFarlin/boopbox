@@ -124,7 +124,7 @@ New modules (all host-testable, no allocation, bounded loops):
   - Render units: one per track, eight bits in core 1's job argument; core 1's default share is tracks 3, 4, 7, 8.
     Two races found by the extended split test and fixed: the drum voices' shared `active` scan, the drum synth's
     shared scratch (`ds_buf`, now on the stack).
-  - MIDI: CH5..CH8 (`G_CH5..G_CH8`, GLO > MIDI 4), saved in an 8-byte tail of the settings' MIDI part that older
+  - MIDI: CH5..CH8 (`G_CH5..G_CH8`, MIDI 2), saved in an 8-byte tail of the settings' MIDI part that older
     firmware ignores; MIDI LEARN keeps a fourth track bit (`ml_hi`) there too.
   - Screens that list tracks (TRACKS, REC, the track meters, the GLO layer, the visualiser) show the bank of four the
     selected track is in; tracks 5-8 take the colours of 1-4.

@@ -49,9 +49,9 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 1.1.0` makes a release build: the package identity becomes `FM-1_911` and the version
-string `BOOPBOX 1.1.0`; the package is `build/felucca-1.1.0.fwsc`. A suffix is kept: `--release 1.1.0-beta`
-gives `BOOPBOX 1.1.0-BETA`.
+`./build.sh --release 1.2.0` makes a release build: the package identity becomes `FM-1_912` and the version
+string `BOOPBOX 1.2.0`; the package is `build/felucca-1.2.0.fwsc`. A suffix is kept: `--release 1.2.0-beta`
+gives `BOOPBOX 1.2.0-BETA`.
 
 Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 
@@ -67,7 +67,7 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY); SELECT skips the others |
 | `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
-The flash is full: the default build leaves 3,908 B of the app slot free (1.1.0 with SYNTHWAVE) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
+The flash is full: the default build leaves 1,812 B of the app slot free (1.2.0) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
 visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the build fails and
 says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes.
 
@@ -102,6 +102,8 @@ mock mode (Playwright and Chromium). Both write into `assets/screens/`.
 page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
 screen and a contact sheet a group, listed in its `README.md`. Both draw in SYNTHWAVE, the palette the FM-1 starts
 with; `--palette N` draws another (gfx.c `PALETTES`).
+To compare a change, copy that gallery aside first: `tools/make_before_after.py BEFORE AFTER OUT.png` puts every
+screen of the two side by side in one image (the UX review's, `docs/ux-review/`).
 
 ## Tests
 

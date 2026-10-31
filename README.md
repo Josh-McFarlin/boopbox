@@ -19,11 +19,11 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 1.1.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
+> **Status:** 1.2.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
-1. [What's new in 1.1.0](#whats-new-in-110)
+1. [What's new in 1.2.0](#whats-new-in-120)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -42,6 +42,38 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 17. [Licence](#licence)
 
 ---
+
+## What's new in 1.2.0
+
+A cleaner screen and quicker controls, after a review of every screen
+([the review](docs/ux-review/README.md), [every screen before and after](docs/ux-review/before-after-all.png)):
+
+- **Every value once, large, in its knob's corner.** The 29 pages without a graph (EDIT, VOICE, the DEST pages,
+  GLOBAL, MASTER, DLY…) showed each value twice: small in columns along the top and large below. They now show the
+  four values once, large, from just under the header: KNOB 1 top left, 2 top right, 3 bottom left, 4 bottom right,
+  each label in its knob's colour.
+- **Whole words.** Labels and values were cut at five letters (*TARGE MASTE*); they now keep up to eight
+  (*TARGET MASTER*).
+- **Page tabs.** The bottom line names the page between the one before and the one after it (what SELECT or the
+  button again brings), with a dot a page; the track's sound moved into the header, once.
+- **ALGORITHM picks the track on every page** (it worked on TRACKS, PATTERNS and CHORDS only). The page stays and the
+  header says *TRACK 3: LOFI FLUTE* for a moment.
+- **GLO has five pages** (GLOBAL, MASTER, DRUMS, TEXTURE, TEXTURE 2; it had ten). The MIDI setup has its own pages,
+  from the menu: hold HOME, SELECT to **SEQ**, OCT+ on **MIDI SETTINGS**. They are MIDI (CH1–4), MIDI 2 (CH5–8),
+  MIDI 3 (IN, OTHER, OUT, BEND), MIDI 4 (FX CH, DR MAP, REMOTE, CLOCK) and SYSTEM (SYNC, USB). No setting is on two
+  pages any more.
+- **FX → FILTER** holds the INSERT's MIX too (the one-value INSERT 2 page is gone): FX has seven pages.
+- **GLO held shows faders:** the bank's four levels, with mute and solo under each, and FILL, BAR and the tap tempo
+  below. The keys do what they did.
+- **The step's sheet says what OCT− and OCT+ do** (NOTES, OCT+ held): *OCT− CLOSE · OCT+ SLIDE*, *OCT+ OPEN*,
+  *OCT− BACK · OCT+ ADD*.
+- **The ENV curve in its knobs' colours:** attack, decay, sustain and release each in the colour of the knob that
+  sets it.
+- Settings that act on a second detent say *TURN AGAIN*.
+- Projects, songs, presets and settings from 1.1.0 open as they are.
+
+**Not yet tested on an FM-1:** 1.2.0 is tested in the host simulator only. Install it at your own risk, keep a
+backup, and please [report](../../issues) what you find.
 
 ## What's new in 1.1.0
 
@@ -85,9 +117,6 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 - Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
   settings opens as one of the new six.
 
-**Not yet tested on an FM-1:** 1.1.0 is tested in the host simulator only (the firmware's own code on a computer).
-Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
-
 ## What's new in 1.0.0
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
@@ -97,7 +126,7 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
   bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
-  tracks 5–8 (GLO → MIDI 4).
+  tracks 5–8 (MIDI 2).
 - **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
   theme), your own theme's too.
 - **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
@@ -120,7 +149,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 <p align="center"><img src="assets/screens/boopbox-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
 
-<p align="center"><sub>The FM-1's screen in 1.1.0, eight tracks playing: both banks of tracks, the patterns, the drum grid, the piano roll, a chord progression, the punch-in effects, the mix layer of tracks 5–8 and the song. Drawn by the firmware's own code (<code>tools/make_screens.py</code>); <a href="assets/screens/all/README.md">every screen of the firmware</a> (<code>tools/make_all_screens.py</code>).</sub></p>
+<p align="center"><sub>The FM-1's screen in 1.2.0, eight tracks playing: both banks of tracks, the patterns, the drum grid, the piano roll, a chord progression, the punch-in effects, the mix layer of tracks 5–8 and the song. Drawn by the firmware's own code (<code>tools/make_screens.py</code>); <a href="assets/screens/all/README.md">every screen of the firmware</a> (<code>tools/make_all_screens.py</code>); <a href="docs/ux-review/before-after-all.png">every screen in 1.1.0 and 1.2.0</a>.</sub></p>
 
 <p align="center"><img src="assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page with INSERT, ENV SYNC and LFO 2" width="760"></p>
 
@@ -209,7 +238,7 @@ Save up to four sections **A–D** (SAVE + keys 5–8), play them live on the ne
 - **TRS MIDI IN** (the 3.5 mm jack, 2.3) for a keyboard or a pad controller.
 - **MIDI clock in** (USB or TRS): tempo, START, CONTINUE, STOP.
 - **MIDI CCs** (2.5): level, pan, filter, resonance, envelope, glide and the sends from a controller's knobs; **MIDI LEARN** (2.6): any knob of yours onto any parameter of a track.
-- **MIDI out:** the keys always; the sequencer, the arp and the rolls too with GLO → MIDI 2 → OUT = SEQ (2.4).
+- **MIDI out:** the keys always; the sequencer, the arp and the rolls too with MIDI 3 → OUT = SEQ (2.4).
 - Details: [MIDI and USB audio](#midi-and-usb-audio).
 
 ### USB audio (2.3)
@@ -270,10 +299,10 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | Control | What it does |
 | --- | --- |
 | **MASTER** | volume (and the USB audio level, if USB AUDIO is on MASTER) |
-| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group · DRUMS: grid / kit |
-| **ALGORITHM** | the selected track: 1 · 2 · 3 (synths) · 4 (drums) |
+| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group (the tabs at the bottom name them) · DRUMS: grid / kit |
+| **ALGORITHM** | the selected track, 1–8, on every page (1.2.0; the header names it) |
 | **PRESETS** | the selected track's sound, or the drum kit |
-| **KNOB 1–4** | what the four dials at the bottom of the screen show, each in its colour |
+| **KNOB 1–4** | the four values on the screen, each in its colour: on a page of values KNOB 1 top left, 2 top right, 3 bottom left, 4 bottom right; on TRACKS and the other full screens, the dials at the bottom |
 | **OCT− / OCT+** | octave (both: back to 0) · on the drum track, held: ghost / hard hits |
 | **FX · SEL · ENV · LFO · EDIT · GLO** (top row) | tap: their pages · hold FX, SEL, EDIT, GLO: a layer. **SEL** is the second button of the top row, between FX and ENV (not the SELECT knob) |
 | **HOME** | the TRACKS screen · on it: the full-screen visualiser (SELECT: 6 styles; HOME again closes it) · hold: the menu · tapped while a layer is held: lock it |
@@ -287,7 +316,7 @@ Colours: **blue** track 1 and KNOB 1, **green** 2, **yellow** 3, **orange** 4 (d
 
 ## The menu: settings of the FM-1
 
-Hold **HOME**. The menu is in four sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE; 2.6: USB SERIAL), **SYSTEM** (HARDWARE CALIBRATION, ABOUT). **SELECT** goes from one section to the next, **KNOB 1, 2, 3** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
+Hold **HOME**. The menu is in five sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS), **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT). **SELECT** goes from one section to the next, **KNOB 1–4** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
 
 | Item | Choices | What it does |
 | --- | --- | --- |
@@ -301,12 +330,16 @@ Hold **HOME**. The menu is in four sections, as the pages are: **SCREEN** (COLOR
 | **USB AUDIO** | MASTER / FULL | the level of the USB audio input: follows the MASTER knob, or a fixed full level |
 | **USB SERIAL** (2.6 only) | OFF / ON | a serial console for developers; OFF (default) so macOS 13–15 show the USB audio input; at the next start. From 2.7 not in the FM-1's build (the flash is full) |
 | **USB RATE** (2.7) | AUTO / 44.1 KHZ / 48 KHZ | the rates the USB audio input offers; 44.1 KHZ if a phone records it distorted; at the next start |
+| **MIDI SETTINGS** (SEQ, 1.2.0) | | OCT+ opens the MIDI pages: MIDI (CH1–4), MIDI 2 (CH5–8), MIDI 3 (IN, OTHER, OUT, BEND), MIDI 4 (FX CH, DR MAP, REMOTE, CLOCK), SYSTEM (SYNC, USB); SELECT walks them, any button leaves |
 | **HARDWARE CALIBRATION** (SYSTEM) | | the panel table, if a key or a knob answers wrongly |
 | **ABOUT** | | the version (*SLOOP 2.4*) and its build date, the credits |
 
-Two more settings of the FM-1 live elsewhere: **SYNC** (GLO → SYSTEM: INT, USB or TRS) and the REC screen's **mode** and **start**.
+Two more settings of the FM-1 live elsewhere: **SYNC** (SYSTEM: INT, USB or TRS) and the REC screen's **mode** and **start**.
 
 ## MIDI and USB audio
+
+The MIDI settings below are on the **MIDI pages** (1.2.0): hold HOME, SELECT to **SEQ**, OCT+ on **MIDI SETTINGS**. Then
+SELECT walks MIDI, MIDI 2, MIDI 3, MIDI 4 and SYSTEM (they were GLO's pages before).
 
 ### MIDI in
 
@@ -317,25 +350,25 @@ BoopBox takes MIDI from two places at once:
 
 | MIDI channel | Plays |
 | --- | --- |
-| 1, 2, 3 | synth tracks 1, 2, 3 (2.6: GLO → MIDI → CH1, CH2, CH3 set any channel for each) |
-| 10 | the drum track (the nearest of its 16 sounds; GLO → MIDI → CH4 changes the channel) |
-| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (2.6: GLO → MIDI → OTHER = OFF ignores them) |
+| 1, 2, 3 | synth tracks 1, 2, 3 (2.6: MIDI → CH1, CH2, CH3 set any channel for each) |
+| 10 | the drum track (the nearest of its 16 sounds; MIDI → CH4 changes the channel) |
+| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (2.6: MIDI → OTHER = OFF ignores them) |
 
 **Your own channels (2.6).** For an external sequencer with its own channels (drums 10, bass 2, pad 11, lead 8…): GLO → **MIDI** sets each track's channel (CH1, CH2, CH3, CH4 the drums: OFF or 1–16, in and out; two tracks never share one) and GLO → **MIDI 2** the rest: **IN**, **OTHER** (SEL: the channels no track has play the selected track; OFF: ignored), **OUT**, **BEND**. Notes, CCs and MIDI out follow. Settings of the FM-1, kept through power-off.
 
-Your sequencer uses the other channels for other gear? GLO → MIDI 2 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
+Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
 A USB keyboard plugged **straight into the FM-1** cannot work: both are USB devices, and a USB link needs a host (a computer, a phone, or a USB MIDI host box). Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio on.
 
 ### MIDI out
 
-What you play on the keys always goes out on USB MIDI, each track on its channel (1–3 the synths, 10 the drums). GLO → MIDI 2 (or SYSTEM) → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too: every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back. Record the FM-1's MIDI in a DAW and you get your pattern as notes.
+What you play on the keys always goes out on USB MIDI, each track on its channel (1–3 the synths, 10 the drums). MIDI 3 → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too: every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back. Record the FM-1's MIDI in a DAW and you get your pattern as notes.
 
 ### MIDI clock in
 
-GLO → SYSTEM → **SYNC** = **USB** or **TRS** (INT: BoopBox's own tempo). START plays from the top, CONTINUE carries on, STOP stops; the tempo follows the master and the steps follow its 24 pulses a beat, so BoopBox never drifts. When the clock stops for half a second, PLAY on the FM-1 plays at its own tempo again.
+SYSTEM → **SYNC** = **USB** or **TRS** (INT: BoopBox's own tempo). START plays from the top, CONTINUE carries on, STOP stops; the tempo follows the master and the steps follow its 24 pulses a beat, so BoopBox never drifts. When the clock stops for half a second, PLAY on the FM-1 plays at its own tempo again.
 
-**Clock only (2.4):** GLO → MIDI 2 → **IN** = **CLOCK**: BoopBox follows the clock and ignores incoming notes (and CCs), handy when a DAW or a sequencer also sends notes to other gear.
+**Clock only (2.4):** MIDI 3 → **IN** = **CLOCK**: BoopBox follows the clock and ignores incoming notes (and CCs), handy when a DAW or a sequencer also sends notes to other gear.
 
 ### MIDI CCs (2.5)
 
@@ -351,7 +384,7 @@ The knobs of a MIDI controller set the sound, on the track the channel plays (as
 | 74 | the track's FILTER: 64 off, lower a low-pass, higher a high-pass (every engine, the drums too) |
 | 91 · 93 · 94 | the reverb, chorus and delay sends (on the drum channel 91 and 94 are GLO → DRUMS → REV and DLY) |
 
-Other CCs (mod wheel…) are ignored. From 2.6 the **sustain pedal** (CC 64) and **pitch bend** work too (the bend's range: GLO → MIDI 2 → BEND, 1–12 semitones).
+Other CCs (mod wheel…) are ignored. From 2.6 the **sustain pedal** (CC 64) and **pitch bend** work too (the bend's range: MIDI 3 → BEND, 1–12 semitones).
 
 **MIDI LEARN** (2.6, after Felucca 1.5): **GLO + F#3**, turn the knob of BoopBox you want, move a knob of your controller; GLO + F#3 again to finish. A learned CC sets that track's parameter on any channel, in place of the map above (up to 16; kept through power-off). HOME menu → SYSTEM → **MIDI LEARN CLEAR** forgets them. Details: [GUIDE.md](GUIDE.md#midi-learn-26).
 
@@ -435,7 +468,7 @@ The protocol is documented in [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md).
 
 **The black keys make no sound on a synth track.** That track plays chords or the scale on the white keys (in chord mode the black keys change the chord: CHORD+): hold **SEL** (between FX and ENV) and set **KNOB 1 CHORD** to OFF and **KNOB 3 KEYS** to OFF. The drum track always uses the black keys.
 
-**Nothing plays from the MIDI IN jack.** Try the other adapter type (A / B); check the keyboard's channel (1–3 synths, 10 drums, the others the selected track; 2.6: GLO → MIDI sets them).
+**Nothing plays from the MIDI IN jack.** Try the other adapter type (A / B); check the keyboard's channel (1–3 synths, 10 drums, the others the selected track; 2.6: MIDI sets them).
 
 **The USB audio input does not show.** Unplug the FM-1 and plug it back in (after an install the computer must find it again). On a Mac with macOS 15 or older, BoopBox up to 2.7.1 shows MIDI but no audio input (Apple's driver there read BoopBox's USB description badly): update to 2.7.2, then plug the FM-1 in again. With 2.6, also check that HOME menu → **USB SERIAL** is OFF (the default), then restart the FM-1. In Audacity: Transport → Rescan Audio Devices. On Windows: Sound settings → Recording → show disabled devices.
 

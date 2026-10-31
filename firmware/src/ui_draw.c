@@ -19,11 +19,23 @@ UI_SMALL static int is_eng_name(const char *s)                 /* one of the ENG
 }
 
 /* at most 5 characters, and no wider than maxw */
-UI_SMALL static void fit(char *d, const char *src, const felucca_font_t *f, int32_t maxw)
+/* src into d (at most n - 1 characters), cut to maxw pixels */
+UI_SMALL static void fitn(char *d, const char *src, const felucca_font_t *f, int32_t maxw, uint32_t n)
 {
-    str_cpy(d, src, is_eng_name(src) ? 8 : 6);           /* engine names are kept whole */
+    str_cpy(d, src, n);
     while (d[0] && text_w(f, d) > maxw)
         d[str_len(d) - 1u] = 0;
+}
+UI_SMALL static void fit(char *d, const char *src, const felucca_font_t *f, int32_t maxw)
+{
+    fitn(d, src, f, maxw, is_eng_name(src) ? 8u : 6u);   /* engine names are kept whole */
+}
+UI_SMALL static int big_page(const page_t *pg);
+/* (1.2) a page of values (no graph) on the track it applies to: its four values large, in their knobs' corners, and
+ * nowhere else (the columns at the top are not drawn) */
+UI_SMALL static int big_shown(void)
+{
+    return !ui.home && big_page(cur_page()) && (!is_drum(TSEL) || page_for_drum(cur_page()));
 }
 
 UI_SMALL static int32_t batt_level(void)                         /* ADC ch3 thresholds */
@@ -60,6 +72,19 @@ UI_SMALL static void neon_floor(int32_t y0, int32_t y1)
     for (i = 1; i <= 6; i++)
         cv_rect(0, y0 + d * i * i / 36, 240, 1, i > 3 ? near : far);
 }
+/* the selected track's sound: its kit, user preset or factory preset */
+UI_SMALL static void sound_name(char *pn)
+{
+    const track_t *t = TSEL;
+    const engine_t *e = ENGINES[t->eng_req % NENGINES];
+    pn[0] = 0;
+    if (is_drum(t))
+        str_cpy(pn, DRUM_KIT_NAMES[drum_kit(t)], 16);
+    else if (user_of(t) < UP_SLOTS)
+        up_name(user_of(t), pn);                       /* a user preset */
+    else if (e->npresets)
+        str_cpy(pn, e->presets[t->preset % e->npresets].name, 16);
+}
 /* top bar: transport, BPM, octave | USB, battery, CPU; messages replace it */
 UI_SMALL static void draw_head(void)
 {
@@ -67,9 +92,12 @@ UI_SMALL static void draw_head(void)
     uint32_t i;
     int32_t x;
     uint32_t rec = (song.rec >> song.sel) & 1u ? 2u : song.rec != 0u;   /* 2 the selected track armed, 1 another */
+    char pn[16];
     uint32_t sig = (uint32_t)song.playing * 3u + rec * 5u + (uint32_t)(song.octave + 8) * 11u + song.sel * 13131u +
                    (ui.msg_t ? str_hash(7u, ui.msg) : 0u) + (uint32_t)song.g[G_BPM] * 101u + (ui.bpm_t != 0) * 31u +
                    (uint32_t)batt_shown() * 7777u + (usb.config && !usb.suspended) * 99991u + mlu.on * 7919u;
+    sound_name(pn);
+    sig = str_hash(sig, pn);
     if (!ui.force && sig == ui.head_sig)
         return;
     ui.head_sig = sig;
@@ -102,6 +130,11 @@ UI_SMALL static void draw_head(void)
         fmt_int(b + str_len(b), song.octave);
         cv_text(x + 12, 1, &FONT_S, "OCT", C_GRAY);
         cv_text(x + 40, 1, &FONT_S, b, C_HI);
+    } else {                                          /* (1.2) the track's sound, here only (the footer had it) */
+        x += 10;
+        while (pn[0] && x + text_w(&FONT_S, pn) > 152)
+            pn[str_len(pn) - 1u] = 0;
+        cv_text(x, 1, &FONT_S, pn, C_AMB);
     }
     if (FELUCCA_ICONS) {                              /* the selected track: tape + number */
         cv_icon(156, 2, ICON_TAPE, C_GRAY);
@@ -171,9 +204,10 @@ UI_SMALL static void draw_column(uint32_t c, const char *label, const char *val,
         key[n + 2] = (char)(icon == ICON_NONE ? '~' : '!' + icon % 90u);   /* same label, other icon */
         key[n + 3] = 0;
     }
-    if (c < 4u) {                                       /* (the big values: their own fit) */
-        str_cpy(ui.big_l[c], l, 8);
-        fit(ui.big_v[c], val, &FONT_L, 112 - (unit[0] ? 4 : 0));
+    if (c < 4u) {                                       /* (the big values: their own fit; 1.2: whole words, not
+                                                         * the columns' five letters) */
+        fitn(ui.big_l[c], label, &FONT_S, 104, sizeof ui.big_l[c]);
+        fitn(ui.big_v[c], val, &FONT_L, 106 - (unit[0] ? text_w(&FONT_S, unit) + 4 : 0), sizeof ui.big_v[c]);
         str_cpy(ui.big_u[c], unit, 8);
         ui.big_c[c] = vc;
     }
@@ -181,6 +215,10 @@ UI_SMALL static void draw_column(uint32_t c, const char *label, const char *val,
         str_cpy(ui.focus_l, l, 8);
         str_cpy(ui.focus_v, v, 8);
         str_cpy(ui.focus_u, u, 8);
+    }
+    if (big_shown()) {                                  /* (1.2) shown large only (graph_big) */
+        ui.col[c][0] = 0;
+        return;
     }
     if (!ui.force && str_eq(key, ui.col[c]))
         return;
@@ -211,24 +249,25 @@ UI_SMALL static void graph_adsr(const track_t *t, uint16_t c)
     int32_t x0 = 6, x1 = x0 + a, x3 = 232 - r, i, px, py;
     int32_t e = 32768;                                                  /* exp(-4.6 u), Q15 */
 #define EGY(lvl) (bot - (lvl) * (bot - top) / 1000)
-    cv_line(x0, bot, x1, top, c);                                       /* attack: linear */
+    (void)c;                                                            /* (1.2) each part in the colour of its knob */
+    cv_line(x0, bot, x1, top, UI_COL[0]);                               /* attack: linear */
     px = x1;
     py = top;
     for (i = 1; i <= d; i++) {                                          /* decay: exponential to SUS */
         int32_t lvl;
         e = (e * (32768 - 150733 / d)) >> 15;           /* k^d = exp(-4.6) */
         lvl = sus + ((1000 - sus) * e >> 15);
-        cv_line(px, py, x1 + i, EGY(lvl), c);
+        cv_line(px, py, x1 + i, EGY(lvl), UI_COL[1]);
         px = x1 + i;
         py = EGY(lvl);
     }
-    cv_line(px, py, x3, EGY(sus), c);                                    /* sustain */
+    cv_line(px, py, x3, EGY(sus), UI_COL[2]);                            /* sustain */
     px = x3;
     py = EGY(sus);
     e = 32768;
     for (i = 1; i <= r; i++) {                                          /* release: exponential to 0 */
         e = (e * (32768 - 150733 / r)) >> 15;
-        cv_line(px, py, x3 + i, EGY(sus * e >> 15), c);
+        cv_line(px, py, x3 + i, EGY(sus * e >> 15), UI_COL[3]);
         px = x3 + i;
         py = EGY(sus * e >> 15);
     }
@@ -770,30 +809,35 @@ UI_SMALL static void graph_scope(uint16_t c)
  * alone (FILTER) across the width. The columns (draw_columns, drawn first) fill ui.big_* */
 UI_SMALL static void graph_big(void)
 {
-    uint32_t c, n = 0, low = ui.big_l[2][0] || ui.big_l[3][0];
+    uint32_t c, n = 0, low = ui.big_l[2][0] || ui.big_l[3][0], band;
     for (c = 0; c < 4u; c++)
         n += ui.big_l[c][0] != 0;
-    if (n > 1u) {
-        cv_rect(119, 6, 1, low || !pal_neon ? 112 : 56, C_LINE);
-        if (pal_neon && !low)                           /* (1.1.0) SYNTHWAVE: the empty half a floor to the horizon */
-            neon_floor(62, 120);
-        cv_rule(6, 62, 228, C_LINE);
-    } else if (pal_neon) {                              /* (one value: under it) */
-        neon_floor(88, 120);
-        cv_rule(6, 88, 228, C_LINE);
-    }
-    for (c = 0; c < 4u; c++) {
-        int32_t x0 = c & 1u ? 126 : 6, y0 = c & 2u ? 64 : 2, x;
-        if (!ui.big_l[c][0])
-            continue;
-        if (n == 1u) {                                  /* one value: in the middle */
-            x0 = (240 - text_w(&FONT_L, ui.big_v[c]) - (ui.big_u[c][0] ? text_w(&FONT_S, ui.big_u[c]) + 4 : 0)) / 2;
-            y0 = 30;
+    for (band = 0; band < 2u; band++) {                 /* (1.2) the screen under the header in two bands of 88 rows:
+                                                         * KNOB 1 and 2 at the top, 3 and 4 below (the columns are not
+                                                         * drawn: every value once) */
+        cv_begin(240, 88, C_BLACK);
+        if (band && n > 1u)
+            cv_rule(6, 0, 228, C_LINE);
+        if (n > 1u && (!band || low))
+            cv_rect(119, band ? 8 : 6, 1, 74, C_LINE);
+        if (band && pal_neon && (n == 1u || !low)) {    /* (SYNTHWAVE: the empty half a floor to the horizon) */
+            neon_floor(n == 1u ? 12 : 1, 86);
+            if (n == 1u)
+                cv_rule(6, 12, 228, C_LINE);
         }
-        cv_text(x0, y0 + 2, &FONT_S, ui.big_l[c], UI_COL[c & 3u]);
-        x = cv_text(x0, y0 + 20, &FONT_L, ui.big_v[c], ui.big_c[c] == C_DIM ? C_DIM : ui.big_c[c] == C_WHITE ? C_WHITE : C_HI);
-        if (ui.big_u[c][0])
-            cv_text(x + 4, y0 + 34, &FONT_S, ui.big_u[c], C_GRAY);
+        for (c = band * 2u; c < band * 2u + 2u; c++) {
+            int32_t x0 = c & 1u ? 132 : 14, x;
+            if (!ui.big_l[c][0])
+                continue;
+            if (n == 1u)                                /* one value: in the middle */
+                x0 = (240 - text_w(&FONT_L, ui.big_v[c]) - (ui.big_u[c][0] ? text_w(&FONT_S, ui.big_u[c]) + 4 : 0)) / 2;
+            cv_rect(x0 - 7, 15, 3, 11, UI_COL[c & 3u]);
+            cv_text(x0, 12, &FONT_S, ui.big_l[c], UI_COL[c & 3u]);
+            x = cv_text(x0, 34, &FONT_L, ui.big_v[c], ui.big_c[c] == C_DIM ? C_DIM : ui.big_c[c] == C_WHITE ? C_WHITE : C_HI);
+            if (ui.big_u[c][0])
+                cv_text(x + 4, 48, &FONT_S, ui.big_u[c], C_GRAY);
+        }
+        cv_blit(0, 22u + band * 88u);
     }
 }
 
@@ -812,6 +856,11 @@ UI_SMALL static void draw_graph(void)
     if (!ui.force && sig == ui.graph_sig)
         return;
     ui.graph_sig = sig;
+    if (big_shown()) {                               /* (1.2) the values, from under the header: their own bands */
+        graph_big();
+        ui.graph_top = 1;
+        return;
+    }
     cv_begin(240, H_GRAPH, C_BLACK);
     cv_oy = G_OY;
     if (ui.home) {
@@ -857,10 +906,6 @@ UI_SMALL static void draw_graph(void)
             graph_user();
             break;
         default:
-            if (big_page(pg)) {
-                cv_oy = 0;
-                graph_big();
-            }
             break;
         }
     }
@@ -898,44 +943,44 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
     return k;
 }
 
+/* (1.2) page i's name as its tab shows it: an EDIT page by the engine's own title (OSC, FLT ...) */
+UI_SMALL static const char *page_name(uint32_t i)
+{
+    const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
+    return PAGES[i].scope == SC_ENGINE ? e->page_title[PAGES[i].id[0] != P_E0] : PAGES[i].title;
+}
+/* (1.2) the page before (d < 0) or after the one shown in its family, as SELECT walks them; -1 at the ends */
+UI_SMALL static int32_t page_nb(int32_t d)
+{
+    uint32_t fam = cur_page()->fam;
+    int32_t i = (int32_t)ui.page + d;
+    for (; i >= 0 && i < (int32_t)NPAGES && PAGES[i].fam == fam; i += d)
+        if (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG && PAGES[i].scope != SC_DRUM &&
+            PAGES[i].scope != SC_PATS && PAGES[i].scope != SC_HARM)
+            return i;
+    return -1;
+}
+
 UI_SMALL static void draw_foot(void)
 {
-    char s[48], pn[16], en[10], ti[20];
     const track_t *t = TSEL;
-    uint32_t sig;
-    const page_t *pg = cur_page();
-    const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
-    const char *ename = is_drum(t) ? "DRUM" : e->name;
-    int32_t x;
-    pn[0] = 0;
-    if (is_drum(t))
-        str_cpy(pn, DRUM_KIT_NAMES[drum_kit(t)], sizeof pn);
-    else if (user_of(t) < UP_SLOTS)
-        up_name(user_of(t), pn);                       /* a user preset */
-    else if (e->npresets)
-        str_cpy(pn, e->presets[TSEL->preset % e->npresets].name, sizeof pn);
-    if (ui.home) {
-        str_cpy(ti, "HOME", sizeof ti);
-    } else {                                           /* page title + number in its family: "ENV DEST 2/2" */
-        uint32_t n, k = page_pos(&n);
-        const char *pt = pg->scope == SC_ENGINE ? e->page_title[pg->id[0] != P_E0] : 0;   /* EDIT: the engine's */
-        str_cpy(ti, pt ? pt : pg->title, 10);
-        if (n > 1) {
-            str_cpy(ti + str_len(ti), " ", 4);
-            fmt_int(ti + str_len(ti), (int32_t)k);
-            str_cpy(ti + str_len(ti), "/", 4);
-            fmt_int(ti + str_len(ti), (int32_t)n);
-        }
-    }
-    str_cpy(s, ename, sizeof s);
-    s[str_len(s) + 1u] = 0;
-    s[str_len(s)] = (char)('1' + song.sel);
-    str_cpy(s + str_len(s), pn, 16);
-    str_cpy(s + str_len(s), ti, sizeof ti);
+    uint32_t sig, n, k;
+    int32_t pv, nx;
+    if (ui.home)
+        return;
+    k = page_pos(&n);
+    pv = page_nb(-1);
+    nx = page_nb(1);
     {   /* step markers: the playhead only when it is in the shown bank, the cursor only in SEQ */
         uint32_t ph = song.playing && t->seq_idx / 16u == ui.bank ? t->seq_idx : 0xFFu;
-        sig = str_hash(0x9E3779B9u, s) + ph * 97u + (song.seq_mode ? ui.cursor : 0xFFu) * 3001u + steps_hash(t) +
-              ui.bank * 7u + (uint32_t)t->p[P_SLEN] * 13u;
+        sig = str_hash(0x9E3779B9u + ui.page * 7919u + k * 31u + n, page_name(ui.page)) + ph * 97u +
+              (song.seq_mode ? ui.cursor : 0xFFu) * 3001u + steps_hash(t) + ui.bank * 7u + (uint32_t)t->p[P_SLEN] * 13u +
+              song.sel * 104729u + ui.sheet * 7u + ui.csheet * 131u + ui.lsheet * 977u +
+              comp_sig(t, ui.cursor) * 65537u;
+        if (ui.sheet) {
+            uint8_t ls[NLOCK];
+            sig += lock_items(t, ui.cursor, ls) * 2654435761u;
+        }
     }
     if (!ui.force && sig == ui.foot_sig)
         return;
@@ -957,22 +1002,31 @@ UI_SMALL static void draw_foot(void)
                 cv_rect(sx - 1, 13, 3, 3, C_WHITE);
         }
     }
-    x = 4;
-    if (FELUCCA_ICONS) {                              /* row 2: engine icon + name, preset, page */
-        cv_icon(x, 21, engine_icon(ename), C_GRAY);
-        x += 14;
+    if (ui.sheet && cur_page()->scope == SC_STEP) {   /* (1.2) the sheet open: what OCT- and OCT+ do now */
+        static const char *const ACT[NSHEET] = {"SLIDE", "", "", "", "COPY", "DELETE", "OPEN", "OPEN"};
+        uint8_t sl[NCOMP > NLOCK ? NCOMP : NLOCK];
+        const char *a = ui.csheet ? (ui.csheet - 1u < comp_items(t, ui.cursor, sl) ? "REMOVE" : "ADD")
+                        : ui.lsheet ? (ui.lsheet - 1u < lock_items(t, ui.cursor, sl) ? "REMOVE" : "ADD")
+                                    : ACT[(ui.sheet - 1u) % NSHEET];
+        cv_text(4, 20, &FONT_S, ui.csheet || ui.lsheet ? "OCT- BACK" : "OCT- CLOSE", UI_G3);
+        if (a[0]) {
+            int32_t x = 236 - text_w(&FONT_S, a);
+            cv_text(x, 20, &FONT_S, a, C_WHITE);
+            cv_text(x - 48, 20, &FONT_S, "OCT+", UI_COL[3]);
+        }
+    } else {   /* (1.2) row 2: the page's tab between its neighbours (what SELECT or the button again brings), and a dot a
+                * page of the family, this one lit: the engine and the sound are in the header */
+        const char *nm = page_name(ui.page);
+        int32_t w = text_w(&FONT_S, nm) + 12, x = 120 - w / 2, i;
+        cv_rect(x, 19, w, 17, UI_G1);
+        cv_text(x + 6, 20, &FONT_S, nm, C_WHITE);
+        if (pv >= 0)
+            cv_text(4, 20, &FONT_S, page_name((uint32_t)pv), UI_G3);
+        if (nx >= 0)
+            cv_text(236 - text_w(&FONT_S, page_name((uint32_t)nx)), 20, &FONT_S, page_name((uint32_t)nx), UI_G3);
+        for (i = 0; n > 1u && i < (int32_t)n; i++)
+            cv_rect(120 - (int32_t)n * 3 + i * 6 + 1, 36, 3, 2, i + 1 == (int32_t)k ? C_WHITE : C_DIM);
     }
-    fit(en, ename, &FONT_S, 90 - (x - 4));
-    x = cv_text(x, 20, &FONT_S, en, C_HI);
-    {
-        char pf[16];
-        int32_t room = 236 - text_w(&FONT_S, ti) - 10 - (x + 10);
-        str_cpy(pf, pn, sizeof pf);
-        while (pf[0] && text_w(&FONT_S, pf) > room)
-            pf[str_len(pf) - 1u] = 0;
-        cv_text(x + 10, 20, &FONT_S, pf, C_AMB);
-    }
-    cv_text(236 - text_w(&FONT_S, ti), 20, &FONT_S, ti, C_GRAY);
     cv_blit(0, Y_FOOT);
 }
 UI_SMALL static void draw_columns(void)
@@ -1217,6 +1271,14 @@ UI_SMALL static void ui_draw(void)
         return;
     }
     cursor_fix();
+    {   /* (1.2) to or from a page of values (drawn from under the header, no columns): everything again */
+        static uint8_t big_was;
+        uint8_t b = (uint8_t)big_shown();
+        if (b != big_was) {
+            big_was = b;
+            ui.force = 1;
+        }
+    }
     if (ui.force)
         draw_frame();
     felucca_dbg.stage = 3;

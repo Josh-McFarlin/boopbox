@@ -187,10 +187,10 @@ GLO > DRUMS DLY, the drums' delay send): G_COUNT 33 (a 2.4 device says 32; the e
 the byte after `sel` (format 5 unchanged; 0 in older projects). SLOOP 2.4 had grown P_COUNT to 61 (P_E0 53: TFLT, STRUM,
 VLEAD and the others before it). SLOOP 2.6 adds ten track parameters just before P_E0 (ids 53..62: the INSERT's TYPE, A, B,
 C, MIX; ANALOG's filter FTYPE; ESYNC; LFO 2's LSYNC, LTRIG, LPOL): P_COUNT 71, P_E0 63; and twelve globals (ids 33..44: CH1, CH2,
-CH3, OTHER for GLO > MIDI; SRC, LEVEL, TONE, MOVE, RATE, WHEN, DUCK for GLO > TEXTURE; BEND for GLO > MIDI 2):
+CH3, OTHER for MIDI; SRC, LEVEL, TONE, MOVE, RATE, WHEN, DUCK for GLO > TEXTURE; BEND for MIDI 3):
 G_COUNT 45. An editor reads both from `INFO` and maps a patch file by its own count (61 or 71 values; `pCount`,
 `pE0` in the file). User preset records of 61 values load with the new parameters at their defaults. Backup object
-10 holds the MIDI LEARN map and the GLO > MIDI settings (on SLOOP 2.6: 40 bytes, listed only when not the default; BoopBox: 48, always).
+10 holds the MIDI LEARN map and the MIDI settings (on SLOOP 2.6: 40 bytes, listed only when not the default; BoopBox: 48, always).
 
 ## v2: live sync
 
@@ -422,7 +422,7 @@ begin of object 9 with rc 5: the editor skips it (as object 8 on a v8 device).
 
 Backup object **10** (SLOOP 2.6) is the MIDI part: the MIDI LEARN map, 16 entries of 2 bytes (little-endian),
 each `cc | track << 7 | code << 9` (0: empty; code: a common parameter its id + 1, an engine parameter 120 + k for E k),
-then GLO > MIDI: CH1, CH2, CH3 (0 OFF, 1..16) and the drum channel | OTHER << 7 (bit 5 DRUM PREVIEW, bit 6 STEP
+then MIDI: CH1, CH2, CH3 (0 OFF, 1..16) and the drum channel | OTHER << 7 (bit 5 DRUM PREVIEW, bit 6 STEP
 ADVANCE OFF), BEND (1..12) | FX FADE << 4, FX CH, DR MAP | CLK OUT << 1 | FILTER RESO << 2, REMOTE; then CH5..CH8,
 `ml_hi` (2 bytes) and REC KNOBS, one spare: 48 bytes on BoopBox 1.0.0 (`MIDI_PART_8`), always listed; a restore takes
 exactly 48 (SLOOP's 32, 36 and 40-byte parts are refused, rc 2). Its commit checks every entry
@@ -450,7 +450,7 @@ and every reply is `op` followed by the live state. Each op runs the code of the
 | 0 | — | nothing: the state only (the page asks about 8 times a second) |
 | 1 | 0 / 1 / 2 | PLAY: stop, play, or as the PLAY button (play / stop). Song mode with an empty section: *EMPTY SECTION: REC* |
 | 2 | layer, white key 0..15, down 1 / up 0 | a key of a layer, as the layer's button held + that key (`ui_layers.c layer_key`): layer 6 GLO (keys 1..4 mute, 5..8 solo, 9 fill while held, 10 fill the next bar, 16 tap tempo), 7 SAVE (1..4 play A..D on the next bar or, stopped, load it; 5..8 store the loop, a used section only on a second press within 3 s; 13 loop / song; 14 SONG REC), 5 SEL (the song's key) |
-| 3 | effect 0..26, on 1 / off 0 | a punch-in effect, as GLO > MIDI 3 > FX CH (`seq.c midi_fx`): one at a time; an FM-1 key with FX held takes over |
+| 3 | effect 0..26, on 1 / off 0 | a punch-in effect, as MIDI 4 > FX CH (`seq.c midi_fx`): one at a time; an FM-1 key with FX held takes over |
 | 4 | — | REC, as the REC button (`rec_toggle`) |
 | 5 | 0 undo / 1 redo | as EDIT + OCT− / OCT+ |
 | 6 | track, note (drums: lane 0..15), level (0 NORM, 1 GHOST, 2 SOFT, 3 HARD), down 1 / up 0 | ROLL, as ARP + key (`seq.c roll_start`): the note repeats at GLO's ROLL rate while held (recorded with REC on). The page's rolls use the key 0x80 + note, so letting go of ARP on the FM-1 does not end them; up does |
@@ -469,7 +469,7 @@ entry's bars, the sections stored (bit per section), then per track its step, it
 (8 log2 |peak|: 48 = −54 dB, 128 = +6 dB, 0 silent, as the TRACKS meters), the master (0: the knob, else the page's
 level + 1), the THROWs (bits), and the 16 drum sounds' TUNE + 8 | DECAY + 4 << 4. Requests that toggle (op 2's mute, solo,
 fill bar…) are sent once, never repeated on a timeout. The notes are not SysEx: the page plays them as MIDI notes on
-the tracks' channels (GLO > MIDI; OTHER = SEL: a free channel on the selected track; DR MAP for the drums). A device
+the tracks' channels (MIDI; OTHER = SEL: a free channel on the selected track; DR MAP for the drums). A device
 before 2.7 does not answer `LIVE`: the page keeps its mixer and keys (TRACK_MIX, TRACK_PARAM, SET, notes).
 
 ## v13: LIVE for eight tracks (BoopBox)
