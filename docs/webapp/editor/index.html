@@ -19,6 +19,9 @@
   :root {
     --bg: #000; --s1: #0b0b0e; --s2: #1a1a1e; --s3: #36363c; --line: #232329; --dim: #76767e; --fg2: #c4c4cc; --fg: #f2f2f2;
     --red: #ff2c34; --t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a; --trk: var(--t1);
+    /* tracks 5..8: a shade of 1..4, as the FM-1 draws them (gfx.c te_shade: 45 % of the way to white) */
+    --t5: color-mix(in srgb, var(--t1) 55%, #fff); --t6: color-mix(in srgb, var(--t2) 55%, #fff);
+    --t7: color-mix(in srgb, var(--t3) 55%, #fff); --t8: color-mix(in srgb, var(--t4) 55%, #fff);
     --font: "BoopBox Terminus", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
     color-scheme: dark;
   }
@@ -374,6 +377,24 @@
   table.song td.acts button { min-width: 34px; padding: 0 6px; margin-right: 4px; }
   table.song tr.bad td { color: var(--red); }
   #p-song .bad { color: var(--red); }
+  /* the Patterns page (BoopBox): eight tracks, eight patterns each, a pattern's steps and step components */
+  #p-patterns .bad { color: var(--red); }
+  .pattrk, .patcells { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .pattrk button { --c: var(--t1); border-left: 4px solid var(--c); min-width: 110px; text-align: left; }
+  .pattrk button[aria-pressed=true] { background: var(--c); color: #000; }
+  .patcells button { min-width: 92px; display: grid; gap: 2px; padding: 6px 8px; text-align: left; border: 1px solid var(--line); }
+  .patcells button .pn { font-size: 18px; }
+  .patcells button.empty { color: var(--dim); }
+  .patcells button.play { border-color: var(--trk); box-shadow: inset 0 0 0 1px var(--trk); }
+  .patcells button[aria-pressed=true] { background: var(--s3); }
+  .patchain b { display: inline-block; min-width: 26px; text-align: center; border: 1px solid var(--line); margin-right: 4px; cursor: pointer; }
+  .patsteps { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; margin: 8px 0; max-width: 720px; }
+  .patsteps button { height: 26px; padding: 0; border: 1px solid var(--line); background: var(--bg); font-size: 11px; position: relative; }
+  .patsteps button.on { background: color-mix(in srgb, var(--trk) 60%, var(--bg)); }
+  .patsteps button.out { opacity: 0.35; }
+  .patsteps button.cp::after { content: ""; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; background: var(--t3); }
+  .patsteps button.beat { border-left-color: var(--dim); }
+  #patcomps select { max-width: 150px; }
   details.more { margin-top: 8px; }
   details.more > summary { cursor: pointer; color: var(--dim); text-transform: lowercase; list-style: none; padding: 6px 0; }
   details.more > summary::before { content: "\25B8  "; }
@@ -881,6 +902,7 @@
       <button role="tab" data-tab="live" data-t="tabLive" data-ic="note_eight"></button>
       <button role="tab" data-tab="sound" data-t="sound" data-ic="symbol_audio"></button>
       <button role="tab" data-tab="sequencer" data-t="tabSeq" data-ic="symbol_grid"></button>
+      <button role="tab" data-tab="patterns" data-t="tabPatterns" data-ic="symbol_folder"></button>
       <button role="tab" data-tab="tracks" data-t="tabTracks" data-ic="ui_slider_vertical"></button>
       <button role="tab" data-tab="song" data-t="tabSong" data-ic="control_arrow_loop"></button>
       <div class="navh" data-t="navSounds"></div>
@@ -1023,6 +1045,45 @@
       </div>
     </section>
 
+    <section class="panel" id="p-patterns" data-tab="patterns" data-dev hidden>
+      <div class="card">
+        <h2 data-t="patTitle" data-ic="symbol_folder"></h2>
+        <p class="dim" data-t="patHelp"></p>
+        <p class="bad" id="paterr" hidden></p>
+        <p class="bar"><button type="button" id="patread" data-t="patRead" data-ic="control_arrow_loop"></button>
+          <button type="button" id="patsend" data-t="patSend" data-ic="symbol_upload"></button>
+          <span class="dim" id="patsize"></span></p>
+      </div>
+      <div id="patbody" hidden>
+        <div class="card">
+          <h2 data-t="patPatterns" data-ic="symbol_grid"></h2>
+          <div class="pattrk" id="pattrk" role="group"></div>
+          <div class="patcells" id="patcells" role="group"></div>
+          <p class="bar" id="patacts"></p>
+          <p class="bar"><span data-t="patChain"></span> <span id="patchain" class="patchain"></span></p>
+          <p class="bar" id="patchainadd"></p>
+          <p class="dim" data-t="patChainHelp"></p>
+        </div>
+        <div class="card">
+          <h2 id="patdh"></h2>
+          <div class="patsteps" id="patsteps"></div>
+          <p class="bar" id="patdir"></p>
+          <table class="song" id="patcomps"><thead><tr><th data-t="cpStep"></th><th data-t="cpType"></th><th>A</th><th>B</th><th data-t="cpWhat"></th><th></th></tr></thead>
+            <tbody id="patcrows"></tbody></table>
+          <p class="bar" id="patcadd"></p>
+          <p class="dim" data-t="cpHelp"></p>
+        </div>
+        <div class="card">
+          <h2 data-t="chTitle" data-ic="symbol_tuning"></h2>
+          <p class="dim" data-t="chHelp"></p>
+          <table class="song"><thead><tr><th>#</th><th data-t="chChord"></th><th data-t="songBars"></th><th></th></tr></thead>
+            <tbody id="chrows"></tbody></table>
+          <p class="bar"><button type="button" id="chadd" data-t="songAdd"></button> <button type="button" id="chreset" data-t="chReset"></button>
+            <span class="dim" id="chsum"></span></p>
+        </div>
+      </div>
+    </section>
+
     <section class="panel" id="p-tracks" data-tab="tracks" data-dev hidden>
       <div class="card">
         <h2 data-t="mixer" data-ic="ui_slider_vertical"></h2>
@@ -1043,6 +1104,8 @@
           <p class="bad" id="songempty" data-t="songEmpty" hidden></p>
           <p class="bar"><button type="button" id="songadd" data-t="songAdd"></button> <span class="dim" id="songsum"></span></p>
           <p class="bar"><span data-t="songLoop"></span> <span class="seg" id="songloop"><button type="button" data-v="0" data-t="songLoopOff"></button><button type="button" data-v="1" data-t="songLoopOn"></button></span></p>
+          <p class="bar"><span data-t="songRegion"></span> <select id="songrf" aria-label="from"></select> – <select id="songre" aria-label="to"></select>
+            <span class="dim" id="songrhint"></span></p>
           <p class="bar"><button type="button" id="songread" data-t="songRead" data-ic="control_arrow_loop"></button>
             <button type="button" id="songsend" data-t="songSend" data-ic="symbol_upload"></button></p>
           <p class="bar"><button type="button" id="songexp" data-t="sfSave" data-ic="symbol_download"></button>
@@ -1244,6 +1307,8 @@ const LIVE = { STATE: 0, PLAY: 1, KEY: 2, FX: 3, REC: 4, UNDO: 5, LY_KEY: 5, LY_
   /* (2.7) the page's own (editor_live.c 6..12): ROLL and ERASE while held, the pattern's tools, a chain of sections, THROW,
      the master level, a drum sound's TUNE / DECAY; a state with them is 50 bytes (s.pro) */
   ROLL: 6, ERASE: 7, PATTERN: 8, CHAIN: 9, THROW: 10, MASTER: 11, DRUM_TW: 12, CHAIN_MAX: 8,
+  /* v13 (BoopBox): tracks 5..8 in the state (65 bytes), SOLO_TRK solos any track (GLO keys solo the selected one's bank) */
+  SOLO_TRK: 13,
   /* the 27 punch-in effects (punch.c PUNCH_NAME): 16 on the white keys, 11 on the black keys */
   FX_NAMES: ["LOOP 4", "LOOP 8", "LOOP 16", "LOOP 32", "STUTTER", "REVERSE", "STOP", "HALF", "LOW", "HIGH", "PHONE", "CRUSH",
     "ALIAS", "GATE", "ECHO", "WOBBLE", "KILL LOW", "KILL MID", "KILL HIGH", "REWIND", "OCT UP", "FLANGER", "AUTO-PAN", "FREEZE",
@@ -1472,6 +1537,7 @@ const parse = {
     const o = { sel: r.b(), ntrk: r.b(), tracks: [] };
     for (let i = 0; i < o.ntrk; i++) o.tracks.push({ engine: r.b(), preset: r.b(), level: r.v(), mute: r.b(), armed: r.b() });
     o.solo = r.i < a.length ? r.b() : 0;             /* v5: the tracks soloed (bit per track) */
+    if (r.i < a.length) o.solo |= r.b() << 7;        /* (eight tracks: track 8's in a byte of its own) */
     return o;
   },
   [CMD.TRACK_MIX](a) { const r = new Reader(a); return { track: r.b(), level: r.v(), mute: r.b() }; },
@@ -1489,6 +1555,10 @@ const parse = {
       const m = r.b();
       o.pro = true; o.master = m ? m - 1 : -1; o.throws = r.b();
       o.dtw = Array.from({ length: 16 }, () => { const v = r.b(); return { tune: (v & 15) - 8, dec: ((v >> 4) & 7) - 4 }; });
+    }
+    if (r.i + 15 <= a.length) {                     /* v13 (BoopBox): tracks 5..8 (the bytes before hold 1..4 in bits 0..3) */
+      o.mutes = (o.mutes & 15) | r.b() << 4; o.solo = (o.solo & 15) | r.b() << 4; o.rec = (o.rec & 15) | r.b() << 4;
+      for (let k = 0; k < 4; k++) o.tracks.push({ step: r.b(), len: r.b(), meter: r.b() });
     }
     return o;
   },
@@ -2993,7 +3063,7 @@ function makeMockDevice(opt = {}) {
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
   const laneOf = (n) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
   const v5 = !opt.legacy && !opt.v3;              /* SLOOP 2.0: steps with level / ratchet, DRUM_STEP, TRACK solo */
-  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : 12;   /* INFO's protocol */
+  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : opt.v12 ? 12 : 13;   /* INFO's protocol */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
   const dOld = (d) => {
     const notes = [];
@@ -3155,17 +3225,19 @@ function makeMockDevice(opt = {}) {
   ];
   const P_E0 = TP.length, P_COUNT = P_E0 + 8, G_COUNT = GP.length, NSTEP = 64, G_ENGSEL = 20, P_SLCR = 45, P_CHORD = 49;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  /* four tracks (firmware v3); engine / preset / p / step below are the selected track's */
-  const NTRK = 4, TRK_DRUM = 3;
-  const newTrack = (i) => ({ engine: 0, preset: 0, drum: i === TRK_DRUM, fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
-    p: TP.map((d) => d.def).concat(i === TRK_DRUM ? [5, 0, 0, 0, 0, 0, 0, 0] : new Array(8).fill(0)),
+  /* v13 (BoopBox): eight tracks, drums on 4 and 8 (each drum track's level its own P_LEVEL); before (SLOOP, firmware v3..v12):
+     four, the drum track last (its level G_DRLVL). engine / preset / p / step below are the selected track's */
+  const NTRK = mockProto >= 13 ? 8 : 4, TRK_DRUM = 3, EIGHT = NTRK >= 8;
+  const isDrumIdx = (i) => (EIGHT ? i % 4 === 3 : i === TRK_DRUM);
+  const newTrack = (i) => ({ engine: 0, preset: 0, drum: isDrumIdx(i), fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
+    p: TP.map((d) => d.def).concat(isDrumIdx(i) ? [5, 0, 0, 0, 0, 0, 0, 0] : new Array(8).fill(0)),
     step: Array.from({ length: NSTEP }, () => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 })),
-    dstep: i === TRK_DRUM ? Array.from({ length: NSTEP }, emptyDrum) : null,
+    dstep: isDrumIdx(i) ? Array.from({ length: NSTEP }, emptyDrum) : null,
     micro: new Array(NSTEP).fill(0), locks: [],      /* v7: nudges, parameter locks (at most NLOCK) */
     fill: new Array(NSTEP / 4).fill(0) });           /* v8: fill conditions, 2 bits a step */
   const NLOCK = 24;
   const st = {
-    tracks: [0, 1, 2, 3].map(newTrack), sel: 0, rec: 0, solo: 0,
+    tracks: Array.from({ length: NTRK }, (_, i) => newTrack(i)), sel: 0, rec: 0, solo: 0,
     g: GP.map((d) => d.def),
     slots: [null, null, null, null],
     smp: [0, 1, 2, 3].map(() => ({ flash: new Uint8Array(SMP.SLOT_SIZE).fill(0xFF), zones: 0, name: "", len: 0, next: SMP.DATA_OFF })),   /* USR1..4 (2.4: USR4) */
@@ -3188,6 +3260,66 @@ function makeMockDevice(opt = {}) {
     Object.defineProperty(st, k, { enumerable: false, get: () => st.tracks[st.sel][k], set: (v) => { st.tracks[st.sel][k] = v; } });
   }
   const drumSel = () => st.tracks[st.sel].drum;
+  const ml48 = () => { const d = new Uint8Array(48); if (st.ml) d.set(st.ml.slice(0, 48)); else d.set([1, 2, 3, 10, 2], 32); return d; };
+  /* (BoopBox) backup object 0 as the firmware keeps it, format 7 (PROJ7): the mock's tracks (kind, sound, parameters,
+     the pattern playing: steps, nudges, fill conditions, locks) and what the last project sent kept (the other patterns,
+     the chains, the components, FOLLOW, the progression: st.p7). A project sent is applied to the tracks the same way */
+  const p7def = (t, k) => (k < P_E0 ? TP[k].def : t.drum ? (k === P_E0 ? KIT.def : 0) : ENG[t.engine].edit[k - P_E0].def);
+  const p7Pat = (t, keep) => {
+    const p = PROJ7.emptyPat(t.drum), pe0 = P_E0;
+    for (let k = 0; k < NSTEP; k++) {
+      if (t.drum) {
+        const d = t.dstep[k], lv = [0, 0, 0, 0], rt = [0, 0, 0, 0];
+        for (let l = 0; l < 16; l++) { lv[l >> 2] |= (d.lvl[l] & 3) << (2 * (l & 3)); rt[l >> 2] |= (d.rat[l] & 3) << (2 * (l & 3)); }
+        p.steps[k] = { on: [d.on & 0xFF, (d.on >> 8) & 0xFF], lvl: lv, rat: rt };
+      } else { const x = t.step[k]; p.steps[k] = { notes: x.notes.slice(), n: x.n, time: x.time, flags: x.flags, vel: x.vel, lvl: x.lvl | 0, rat: x.rat | 0 }; }
+      p.micro[k] = t.micro[k];
+      p.fill[k] = fillGet(t.fill, k);
+    }
+    p.locks = t.locks.map((l) => ({ step: l.step, slide: false, code: PROJ7.codeOf(l.param, pe0), val: l.value }));
+    if (keep) { p.comps = keep.comps.map((c) => ({ ...c })); p.dir = keep.dir; p.seed = keep.seed; }
+    return p;
+  };
+  function p7Bytes() {
+    const B = st.p7 || { harm: null, bank: [], tracks: [] }, gm = new Array((G_COUNT + 7) >> 3).fill(0), gv = [];
+    st.g.forEach((x, k) => { if (x !== GP[k].def) { gm[k >> 3] |= 1 << (k & 7); gv.push(x); } });
+    const w = PROJ7.writer(); w.u8(G_COUNT); gm.forEach((x) => w.u8(x)); gv.forEach((x) => w.v(x));
+    return PROJ7.encode({ g: w.o, sel: st.sel, harm: B.harm, bank: B.bank, other: [], tracks: st.tracks.map((t, i) => {
+      const o = B.tracks.find((x) => x.i === i);
+      return { i, kind: t.drum ? 1 : 0, eng: t.drum ? 0 : t.engine, pre: t.drum ? 0 : t.preset, nc: P_E0,
+        p: t.p.slice(0, P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, k)),
+        e: t.p.slice(P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, P_E0 + k)),
+        dtw: t.drum ? (o && o.dtw) || new Array(16).fill(0) : null, pat: p7Pat(t, o && o.pat), cur: o ? o.cur : 0, chain: o ? o.chain.slice() : [],
+        hfol: o ? o.hfol : 0, tail: 2 };
+    }) });
+  }
+  function p7Apply(P) {
+    for (const x of P.tracks) {
+      const t = st.tracks[x.i];
+      if (!t || (x.kind === 1) !== t.drum) continue;  /* (the mock keeps its kinds) */
+      if (!t.drum) { t.engine = x.eng % ENG.length; t.preset = x.pre; }
+      for (let k = 0; k < P_COUNT; k++) t.p[k] = p7def(t, k);
+      x.p.forEach(([k, v]) => { if (k < P_E0) t.p[k] = v; });
+      x.e.forEach(([k, v]) => { t.p[P_E0 + k] = v; });
+      for (let k = 0; k < NSTEP; k++) {
+        const s = x.pat.steps[k];
+        if (t.drum) {
+          const d = emptyDrum();
+          d.on = s.on[0] | (s.on[1] << 8);
+          for (let l = 0; l < 16; l++) { d.lvl[l] = (s.lvl[l >> 2] >> (2 * (l & 3))) & 3; d.rat[l] = (s.rat[l >> 2] >> (2 * (l & 3))) & 3; }
+          t.dstep[k] = d;
+        } else t.step[k] = { n: s.n, notes: s.notes.slice(), time: s.time, flags: s.flags, vel: s.vel, lvl: s.lvl, rat: s.rat };
+        t.micro[k] = x.pat.micro[k];
+        fillSet(t.fill, k, x.pat.fill[k]);
+      }
+      t.locks = x.pat.locks.map((l) => ({ step: l.step, param: PROJ7.idOf(l.code, P_E0), value: l.val })).filter((l) => l.param >= 0);
+    }
+    if (P.sel < NTRK) st.sel = P.sel;
+    st.p7 = P;
+  }
+  const drumFoc = () => (drumSel() ? st.sel : st.tracks.findIndex((t) => t.drum));   /* core.h drum_focus */
+  const lvlOf = (i) => (!EIGHT && st.tracks[i].drum ? st.g[25] : st.tracks[i].p[0]);   /* (four tracks: the drums' G_DRLVL) */
+  const setLvl = (i, lv) => { if (!EIGHT && st.tracks[i].drum) st.g[25] = lv; else st.tracks[i].p[0] = lv; };
   const engOf = (t) => (t.drum ? ENG.length : t.engine);   /* the engine byte: NENGINES = drums */
   const watchMs = opt.watchMs || 3000;
   const tdesc = (t, id) => (t.drum && id === P_E0 ? KIT : id >= P_E0 ? ENG[t.engine].edit[id - P_E0] : TP[id]);
@@ -3369,18 +3501,17 @@ function makeMockDevice(opt = {}) {
       case CMD.TRACK:
         if (a.length >= 1 && a[0] < NTRK) st.sel = a[0];
         b(st.sel); b(NTRK);
-        st.tracks.forEach((t, i) => { b(engOf(t)); b(t.preset); v(i === TRK_DRUM ? st.g[25] : t.p[0]); b(t.p[40] ? 1 : 0); b((st.rec >> i) & 1); });
-        if (v5) b(st.solo & 15);
+        st.tracks.forEach((t, i) => { b(engOf(t)); b(t.preset); v(lvlOf(i)); b(t.p[40] ? 1 : 0); b((st.rec >> i) & 1); });
+        if (v5 && EIGHT) { b(st.solo & 127); b(st.solo >> 7); } else if (v5) b(st.solo & 15);
         break;
       case CMD.TRACK_MIX: {
         if (a.length < 1 || a[0] >= NTRK) return null;
-        const t = st.tracks[a[0]], drum = a[0] === TRK_DRUM;
+        const t = st.tracks[a[0]];
         if (a.length >= 4) {
-          const lv = clamp(v14dec(a[1], a[2]), 0, 127);
-          if (drum) st.g[25] = lv; else t.p[0] = lv;
+          setLvl(a[0], clamp(v14dec(a[1], a[2]), 0, 127));
           t.p[40] = a[3] ? 1 : 0;
         }
-        b(a[0]); v(drum ? st.g[25] : t.p[0]); b(t.p[40] ? 1 : 0);
+        b(a[0]); v(lvlOf(a[0])); b(t.p[40] ? 1 : 0);
         break;
       }
       case CMD.TRACK_DUMP: {
@@ -3462,7 +3593,7 @@ function makeMockDevice(opt = {}) {
       }
       case CMD.DRUM_STEP: {                       /* v5: index [, on 3 x 7 bits, lvl 5 x 7, rat 5 x 7] */
         if (a.length < 1 || a[0] >= NSTEP) return null;
-        const d = st.tracks[TRK_DRUM].dstep[a[0]];
+        const d = st.tracks[Math.max(0, drumFoc())].dstep[a[0]];   /* (the drum track shown: core.h drum_focus) */
         if (a.length >= 14) {
           const g = (k, n) => a.slice(k, k + n).reduce((x, y, j) => x + y * 2 ** (7 * j), 0);
           const on = g(1, 3) & 0xFFFF, lv = g(4, 5) % 2 ** 32, rt = g(9, 5) % 2 ** 32;
@@ -3560,10 +3691,10 @@ function makeMockDevice(opt = {}) {
         if (opt.noBackup) return null;
         const enc = (o) => Uint8Array.from(Array.from(JSON.stringify(o), (c) => c.charCodeAt(0) & 0x7F));
         const bankOf = (h) => { const x = st.bank.slice(h * 16, h * 16 + 16); return x.some(Boolean) ? enc(x) : new Uint8Array(0); };
-        st.bkSnap = new Map([[0, enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k) => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
+        st.bkSnap = new Map([[0, EIGHT ? p7Bytes() : enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k) => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
           [6, bankOf(0)], [7, bankOf(1)], ...(v9 ? [[8, st.fm6bank.some(Boolean) ? FM6.bankObj(st.fm6bank) : new Uint8Array(0)]] : []),
           ...(v10 ? [[9, DSYN.bankEncode(dsynKits())]] : []),
-          ...(v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* MIDI LEARN (2.6): only when not the
+          ...(EIGHT ? [[10, ml48()]] : v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* (BoopBox: always, 48 bytes) */   /* MIDI LEARN (2.6): only when not the
                                                                                     * default (editor.c, project.c midi_part_default) */
           ...(v11 && st.theme ? [[11, st.theme.slice()]] : []),   /* your theme (2.7): only when there is one */
           ...st.smp.map((_, k) => [32 + k, st.smp[k].zones ? st.smp[k].flash.slice(0, SMP.DATA_OFF + st.smp[k].len) : new Uint8Array(0)])]);
@@ -3603,6 +3734,11 @@ function makeMockDevice(opt = {}) {
               if (st.playing && P.buf.subarray(ARR.OFF, ARR.OFF + ARR.SIZE).some((v, k) => v !== st.settings[ARR.OFF + k])) { rc = 3; }
               else st.settings = P.buf.slice();
             }
+            else if (id === 0 && EIGHT) {                  /* (BoopBox: format 7, as project.c project_restore) */
+              const P7 = PROJ7.decode(P.buf);
+              if (!P7) throw 0;
+              if (st.playing) rc = 3; else p7Apply(P7);
+            }
             else if (id === 0) { const o = js(); st.tracks = o.tracks; st.sel = o.sel; st.g = o.g; }
             else if (id <= 5) st.slots[id - 2] = P.len ? js() : null;
             else if (id === 11) {                           /* your theme (2.7; editor.c: stopped only; 0 bytes: none) */
@@ -3613,7 +3749,7 @@ function makeMockDevice(opt = {}) {
             }
             else if (id === 10) {                           /* the MIDI part (2.6; editor.c: stopped only): the LEARN
                                                                map (16 x 2 bytes), then GLO > MIDI's channels (4 bytes) */
-              if (P.len !== 32 && P.len !== 36 && P.len !== 40) throw 0;
+              if (EIGHT ? P.len !== 48 : P.len !== 32 && P.len !== 36 && P.len !== 40) throw 0;   /* (BoopBox: exactly 48) */
               if (st.playing) rc = 3;
               else st.ml = P.buf.slice();
             }
@@ -3733,8 +3869,9 @@ function makeMockDevice(opt = {}) {
       else if (!play && st.playing) { st.playing = false; L.next = -1; L.fillBar = false; if (st.rec) st.rec = 0; }
     } else if (op === LIVE.KEY && a.length >= 4 && x === LIVE.LY_MIX && y < 16) {
       if (!z) { if (y === LIVE.FILL) L.fillHeld = false; return; }
-      if (y < 4) st.tracks[y].p[40] = st.tracks[y].p[40] ? 0 : 1;
-      else if (y < 8) st.solo ^= 1 << (y - 4);
+      const bank = EIGHT ? (st.sel >> 2) * 4 : 0;    /* (eight tracks: the selected track's bank of four) */
+      if (y < 4) st.tracks[bank + y].p[40] = st.tracks[bank + y].p[40] ? 0 : 1;
+      else if (y < 8) st.solo ^= 1 << (bank + y - 4);
       else if (y === LIVE.FILL) L.fillHeld = true;
       else if (y === LIVE.FILL_BAR) { L.fillBar = !L.fillBar; L.fillAt = nextBar(); }
       else if (y === LIVE.TAP) {                     /* ui_layers.c tap_tempo: the last taps' mean, 40..240 */
@@ -3775,7 +3912,9 @@ function makeMockDevice(opt = {}) {
       const set = op === LIVE.ROLL ? L.rolls : L.erase, k = `${x}:${y}`, down = op === LIVE.ROLL ? a[4] : z;
       if (down) set.add(k); else set.delete(k);
       if (op === LIVE.ERASE && down && x === 3) st.tracks[3].dsteps?.forEach((d) => { if (d) d.on &= ~(1 << y); });
-    } else if (op === LIVE.PATTERN && a.length >= 4 && x < 4) {
+    } else if (op === LIVE.SOLO_TRK && mockProto >= 13 && a.length >= 2) {
+      if (x < NTRK) st.solo ^= 1 << x;
+    } else if (op === LIVE.PATTERN && a.length >= 4 && x < NTRK) {
       const t = st.tracks[x], len = lenOf(t);
       if (y === 1) t.p[29] = z ? Math.min(64, len * 2) : Math.max(1, len >> 1);
       L.pattern.push([x, y, z]);
@@ -3797,11 +3936,16 @@ function makeMockDevice(opt = {}) {
     b(st.playing ? 18 + Math.round(Math.random() * 6) : 9);
     b(0); b(4); b(0); b(4);                          /* (the song: entry 0 of 4, bar 0 of 4) */
     b(st.slots.reduce((m, x, k) => m | (x ? 1 << k : 0), 0));
-    st.tracks.forEach((t, i) => {
+    const trkOut = (t, i) => {
       const steps = st.playing ? Math.floor(el * st.g[0] / 15000) : 0, heard = st.playing && !t.p[40] && !(st.solo && !((st.solo >> i) & 1));
       b(steps % lenOf(t)); b(lenOf(t)); b(heard ? 70 + Math.round(Math.random() * 40) : 0);
-    });
+    };
+    st.tracks.slice(0, 4).forEach(trkOut);          /* (tracks 1..4: the 2.7 page's 50 bytes) */
     if (mockProto >= 12) { b(L.master); b(L.thr); L.dtw.forEach((x) => b(x)); }   /* (2.7: 50 bytes) */
+    if (mockProto >= 13) {                           /* v13: tracks 5..8 (65 bytes) */
+      b(mutes >> 4); b(st.solo >> 4); b(st.rec >> 4);
+      st.tracks.slice(4, 8).forEach((t, k) => trkOut(t, k + 4));
+    }
   }
 
   /* a WebMIDI-like access object: one input and one output named "Felucca" */
@@ -3868,11 +4012,11 @@ function makeMockDevice(opt = {}) {
       reloadPush();
       return i;
     },
-    /* TRACKS page KNOB 2: the selected track's level (the drum track: G_DRLVL); pushes CHANGED */
+    /* TRACKS page KNOB 2: the selected track's level (four tracks, the drum track: G_DRLVL); pushes CHANGED */
     level(v) {
-      const drum = st.sel === TRK_DRUM;
+      const drum = !EIGHT && drumSel();
       v = clamp(v, 0, 127);
-      if (drum) st.g[25] = v; else st.p[0] = v;
+      setLvl(st.sel, v);
       push(CMD.CHANGED, drum ? [1, 25, ...v14enc(v)] : [0, 0, ...v14enc(v)]);
       return v;
     },
@@ -4298,12 +4442,16 @@ const ARR = {
   decode(b) {
     const count = b[ARR.OFF], loop = b[ARR.OFF + 1], entries = [];
     for (let i = 0; i < Math.min(count, ARR.STEPS); i++) entries.push({ scene: b[ARR.OFF + 4 + 2 * i], bars: b[ARR.OFF + 5 + 2 * i] });
-    return { loop: loop === 1, entries };
+    const region = { first: b[ARR.OFF + 2], end: b[ARR.OFF + 3] };
+    return { loop: loop === 1, entries, region: ARR.regionOk(region, entries.length) ? region : null };
   },
+  /* (BoopBox) the loop region: the song loops from entry `first` to entry `end` - 1 (arranger.h arr_loop_first / end:
+     the two reserved bytes; 0, 0 = the whole song). Kept only while it fits the entries */
+  regionOk: (r, count) => !!r && r.end > 0 && r.first < r.end && r.end <= count,
   /* the settings bytes with this song order (the rest kept as it was) */
   encode(b, song) {
-    const o = Uint8Array.from(b), e = song.entries;
-    o[ARR.OFF] = e.length; o[ARR.OFF + 1] = song.loop ? 1 : 0; o[ARR.OFF + 2] = o[ARR.OFF + 3] = 0;
+    const o = Uint8Array.from(b), e = song.entries, r = ARR.regionOk(song.region, e.length) ? song.region : null;
+    o[ARR.OFF] = e.length; o[ARR.OFF + 1] = song.loop ? 1 : 0; o[ARR.OFF + 2] = r ? r.first : 0; o[ARR.OFF + 3] = r ? r.end : 0;
     for (let i = 0; i < ARR.STEPS; i++) {
       o[ARR.OFF + 4 + 2 * i] = i < e.length ? e[i].scene : i % 4;
       o[ARR.OFF + 5 + 2 * i] = i < e.length ? e[i].bars : 4;
@@ -4326,6 +4474,303 @@ const ARR = {
   expand: (rows) => rows.flatMap((r) => Array.from({ length: Math.max(1, r.times | 0) }, () => ({ scene: r.scene, bars: r.bars }))),
 };
 
+
+/* ------------------------------------- BoopBox: a project, format 7 ("FUN7") --- */
+/* The working project (backup object 0) and the song sections (2..5) as the firmware keeps them (firmware project.c
+   proj7_put / proj7_apply, patcodec.c pat_put / pat_get, patbank.c): a 12-byte header (magic, size, FNV-1a of the size's
+   4 bytes and the data), then chunks: a tag, a length (2 bytes, low first), its bytes. 'G' the globals, 'S' the selected
+   track, 'T' a track (its sound, the pattern playing, which one that is, the chain, FOLLOW), 'H' the chord progression
+   (only when not one chord of I for 4 bars), 'P' a stored pattern (track << 4 | pattern, its LEN, its bytes). The editor
+   decodes a project to that model, changes the patterns, the chains, the step components and the progression, and
+   encodes it the way the firmware does: decode then encode gives the same bytes, and the firmware captures a project
+   the editor wrote as the same bytes again (tests/proj7_tool.c, web/test_web.mjs). A value is one byte (-127..127) or
+   0x80 and two (pw_v). Every value is put in range by the firmware when it loads. */
+const PROJ7 = {
+  MAGIC: 0x46554E37, HDR: 12, MAX: 3840, NSTEP: 64, NPAT: 8, NCOMP: 16, NLOCK: 32, NHPROG: 8, PB_SIZE: 3072,
+  SYNTH: 0, DRUM: 1, ST_REST: 2, CP_PARAM: 12,
+  /* comp.c CP_NAME / CP_RANGE: a's range, b's range, a new one's a and b (PARAM's a: a lockable parameter) */
+  CP: [null, ["PULSE", 1, 8, 0, 0, 1, 0], ["HOLD", 1, 16, 0, 0, 1, 0], ["MULT", 2, 8, 0, 0, 2, 0], ["VEL", 1, 127, 0, 64, 100, 0],
+    ["RAMP+", 1, 16, 1, 7, 3, 1], ["RAMP-", 1, 16, 1, 7, 3, 1], ["RAND", 1, 12, 0, 0, 2, 0], ["PORTA", 1, 127, 0, 0, 40, 0],
+    ["BEND", -12, 12, 0, 1, 2, 0], ["TONE", -24, 24, 0, 0, 12, 0], ["JUMP", 1, 64, 1, 16, 1, 1], ["PARAM", 0, 70, 1, 100, 5, 25],
+    ["COND", -8, 8, 1, 8, 1, 2], ["TRIG", 1, 99, 0, 0, 50, 0]],
+  DIRS: ["FWD", "REV", "PEND", "RAND"],
+  HFOL: ["OFF", "TRANS", "SCALE"],
+  ROMAN: ["I", "II", "III", "IV", "V", "VI", "VII"],
+  u32: (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0,
+  sum(b, size) {                                  /* project.c proj7_sum */
+    let s = 0x811C9DC5;
+    for (let i = 0; i < 4; i++) s = Math.imul(s ^ ((size >>> (8 * i)) & 0xFF), 16777619) >>> 0;
+    for (let i = PROJ7.HDR; i < size; i++) s = Math.imul(s ^ b[i], 16777619) >>> 0;
+    return s >>> 0;
+  },
+  /* a reader never past its end (patcodec.c pr_t): bad once it tried */
+  reader: (b, i = 0, n = b.length) => ({
+    b, i, n, bad: false,
+    u8() { if (this.i >= this.n) { this.bad = true; return 0; } return this.b[this.i++]; },
+    v() { const x = this.u8(); if (x !== 0x80) return (x << 24) >> 24; const lo = this.u8(), hi = this.u8(); return ((lo | (hi << 8)) << 16) >> 16; },
+  }),
+  writer: () => ({ o: [], u8(x) { this.o.push(x & 0xFF); }, v(x) { if (x >= -127 && x <= 127) this.u8(x); else { this.u8(0x80); this.u8(x); this.u8(x >> 8); } } }),
+  /* ---- a step (10 bytes, core.h step_t / dstep_t) */
+  blank: (drum) => (drum ? { on: [0, 0], lvl: [0, 0, 0, 0], rat: [0, 0, 0, 0] } : { notes: [0, 0, 0, 0], n: 0, time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 }),
+  stepBytes: (s, drum) => (drum ? [...s.on, ...s.lvl, ...s.rat] : [...s.notes, s.n, s.time, s.flags, s.vel, s.lvl, s.rat]),
+  fromBytes(b, drum) {
+    if (drum) return { on: [b[0], b[1]], lvl: [b[2], b[3], b[4], b[5]], rat: [b[6], b[7], b[8], b[9]] };
+    return { notes: [b[0] & 127, b[1] & 127, b[2] & 127, b[3] & 127], n: Math.min(b[4], 4), time: Math.min(b[5], 2), flags: b[6], vel: b[7], lvl: b[8], rat: b[9] };
+  },
+  isBlank: (s, drum) => PROJ7.stepBytes(s, drum).every((x, i) => x === (!drum && i === 5 ? PROJ7.ST_REST : 0)),   /* patcodec.c step_blank */
+  stepSize(s, drum) {                             /* patcodec.c step_size */
+    if (drum) return 3 + (s.lvl.some(Boolean) ? 4 : 0) + (s.rat.some(Boolean) ? 4 : 0);
+    const n = Math.min(s.n, 4);
+    let all4 = s.n > 4;
+    for (let j = n; j < 4; j++) all4 = all4 || s.notes[j] !== 0;
+    return 1 + (all4 || s.lvl || s.rat ? 1 : 0) + (all4 ? 4 : n) + !!s.flags + !!s.vel + !!s.lvl + !!s.rat;
+  },
+  stepPut(w, s, drum) {                           /* patcodec.c step_put */
+    if (drum) {
+      const l = s.lvl.some(Boolean), r = s.rat.some(Boolean);
+      w.u8(s.on[0]); w.u8(s.on[1]); w.u8((l ? 1 : 0) | (r ? 2 : 0));
+      if (l) s.lvl.forEach((x) => w.u8(x));
+      if (r) s.rat.forEach((x) => w.u8(x));
+      return;
+    }
+    const n = Math.min(s.n, 4);
+    let all4 = s.n > 4;
+    for (let j = n; j < 4; j++) all4 = all4 || s.notes[j] !== 0;
+    const x = all4 || !!s.lvl || !!s.rat;
+    w.u8((s.n & 7) | (s.time & 3) << 3 | (s.flags ? 0x20 : 0) | (s.vel ? 0x40 : 0) | (x ? 0x80 : 0));
+    if (x) w.u8((s.lvl ? 1 : 0) | (s.rat ? 2 : 0) | (all4 ? 4 : 0));
+    for (let j = 0; j < (all4 ? 4 : n); j++) w.u8(s.notes[j]);
+    if (s.flags) w.u8(s.flags);
+    if (s.vel) w.u8(s.vel);
+    if (s.lvl) w.u8(s.lvl);
+    if (s.rat) w.u8(s.rat);
+  },
+  stepGet(r, drum) {                              /* patcodec.c step_get */
+    if (drum) {
+      const s = PROJ7.blank(true);
+      s.on = [r.u8(), r.u8()];
+      const m = r.u8();
+      if (m & 1) s.lvl = [r.u8(), r.u8(), r.u8(), r.u8()];
+      if (m & 2) s.rat = [r.u8(), r.u8(), r.u8(), r.u8()];
+      return s;
+    }
+    const b = r.u8(), x = b >> 7 ? r.u8() : 0, n = b & 7, s = { notes: [0, 0, 0, 0], n: Math.min(n, 4), time: Math.min((b >> 3) & 3, 2), flags: 0, vel: 0, lvl: 0, rat: 0 };
+    for (let j = 0; j < (x & 4 ? 4 : Math.min(n, 4)); j++) s.notes[j] = r.u8() & 127;
+    if (b & 0x20) s.flags = r.u8();
+    if (b & 0x40) s.vel = r.u8();
+    if (x & 1) s.lvl = r.u8();
+    if (x & 2) s.rat = r.u8();
+    return s;
+  },
+  /* ---- a pattern: its steps, each step's nudge and fill condition, its locks, its components, direction and seed */
+  emptyPat: (drum) => ({ steps: Array.from({ length: 64 }, () => PROJ7.blank(drum)), micro: new Array(64).fill(0), fill: new Array(64).fill(0),
+    locks: [], dir: 0, seed: 0, comps: [] }),
+  patIsEmpty: (p, drum) => !p.comps.length && !p.dir && !p.seed && !p.locks.length && p.micro.every((x) => !x) && p.fill.every((x) => !x)
+    && p.steps.every((s) => PROJ7.isBlank(s, drum)),
+  patClone: (p) => JSON.parse(JSON.stringify(p)),
+  patGet(r, drum) {                               /* patcodec.c pat_get (the values as written: the firmware clamps them) */
+    const p = PROJ7.emptyPat(drum);
+    let m = r.u8();
+    if (m === 1) {
+      for (let k = 0; k < 64; k++) { const b = []; for (let j = 0; j < 10; j++) b.push(r.u8()); p.steps[k] = PROJ7.fromBytes(b, drum); }
+    } else {
+      const map = []; for (let k = 0; k < 8; k++) map.push(r.u8());
+      for (let k = 0; k < 64 && !r.bad; k++) if ((map[k >> 3] >> (k & 7)) & 1) p.steps[k] = PROJ7.stepGet(r, drum);
+    }
+    m = r.u8();
+    if (m) {
+      let map = new Array(8).fill(0xFF);
+      if (m === 1) map = map.map(() => r.u8());
+      for (let k = 0; k < 64 && !r.bad; k++) if ((map[k >> 3] >> (k & 7)) & 1) {
+        const v = r.u8(), mi = v & 63, c = v >> 6;
+        p.micro[k] = mi >= 32 ? mi - 64 : mi;
+        p.fill[k] = c === 3 ? 0 : c;
+      }
+    }
+    const nl = r.u8();
+    for (let k = 0; k < nl && !r.bad; k++) { const st = r.u8(), code = r.u8(), val = r.v(); p.locks.push({ step: st & 0x7F, slide: !!(st & 0x80), code, val }); }
+    if (r.i + 3 > r.n || r.bad) return p;          /* (written before the components: none) */
+    p.dir = r.u8(); p.seed = r.u8();
+    const nc = r.u8();
+    for (let k = 0; k < nc && !r.bad; k++) {
+      const step = r.u8(), ty = r.u8(), a = r.u8(), b = r.u8();
+      p.comps.push({ step, type: ty & 0x7F, a: ty === (PROJ7.CP_PARAM | 0x80) ? a : (a << 24) >> 24, b: (b << 24) >> 24 });
+    }
+    return p;
+  },
+  patPut(w, p, drum) {                            /* patcodec.c pat_put */
+    const map = new Array(8).fill(0);
+    let sz = 8;
+    p.steps.forEach((s, k) => { if (!PROJ7.isBlank(s, drum)) { map[k >> 3] |= 1 << (k & 7); sz += PROJ7.stepSize(s, drum); } });
+    if (sz < 640) {
+      w.u8(0); map.forEach((x) => w.u8(x));
+      p.steps.forEach((s, k) => { if ((map[k >> 3] >> (k & 7)) & 1) PROJ7.stepPut(w, s, drum); });
+    } else {
+      w.u8(1); p.steps.forEach((s) => PROJ7.stepBytes(s, drum).forEach((x) => w.u8(x)));
+    }
+    const mf = p.micro.map((m, k) => (m & 63) | (p.fill[k] & 3) << 6), mm = new Array(8).fill(0);
+    let n = 0;
+    mf.forEach((v, k) => { if (v) { mm[k >> 3] |= 1 << (k & 7); n++; } });
+    if (!n) w.u8(0);
+    else if (8 + n < 64) { w.u8(1); mm.forEach((x) => w.u8(x)); mf.forEach((v) => { if (v) w.u8(v); }); }
+    else { w.u8(2); mf.forEach((v) => w.u8(v)); }
+    w.u8(p.locks.length);
+    for (const l of p.locks) { w.u8(l.step | (l.slide ? 0x80 : 0)); w.u8(l.code); w.v(l.val); }
+    w.u8(p.dir); w.u8(p.seed); w.u8(p.comps.length);
+    for (const c of p.comps) {
+      w.u8(c.step); w.u8(c.type === PROJ7.CP_PARAM ? PROJ7.CP_PARAM | 0x80 : c.type); w.u8(c.a); w.u8(c.b);
+    }
+  },
+  patBytes(p, drum) { const w = PROJ7.writer(); PROJ7.patPut(w, p, drum); return w.o; },
+  /* a lock's or PARAM's parameter code (patcodec.c lock_code: the engine's eight as 0xF0 + k, P_E0 moves) <-> its id */
+  codeOf: (id, pe0) => (id < pe0 ? id : 0xF0 + id - pe0),
+  idOf: (code, pe0) => (code >= 0xF0 ? (code - 0xF0 < 8 ? pe0 + code - 0xF0 : -1) : code < pe0 ? code : -1),
+  /* a component that the firmware keeps (comp.c comp_valid; PARAM's a: a lockable parameter's code) */
+  compValid(c, pe0) {
+    const r = PROJ7.CP[c.type];
+    if (!r || c.step >= 64) return false;
+    const a = c.type === PROJ7.CP_PARAM ? PROJ7.idOf(c.a, pe0) : c.a;
+    if (a < r[1] || a > r[2] || c.b < r[3] || c.b > r[4]) return false;
+    if (c.type === 13 && !c.a) return false;
+    return c.type !== PROJ7.CP_PARAM || lockable(a, pe0);
+  },
+  /* ---- a track ('T') */
+  trkGet(r) {
+    const t = { i: r.u8(), kind: r.u8(), eng: r.u8(), pre: r.u8(), nc: r.u8(), p: [], e: [], dtw: null, pat: null, cur: 0, chain: [], hfol: 0, tail: 0 };
+    const map = []; for (let k = 0; k < (t.nc + 7) >> 3; k++) map.push(r.u8());
+    for (let k = 0; k < t.nc; k++) if ((map[k >> 3] >> (k & 7)) & 1) t.p.push([k, r.v()]);
+    const em = r.u8();
+    for (let k = 0; k < 8; k++) if ((em >> k) & 1) t.e.push([k, r.v()]);
+    if (t.kind === PROJ7.DRUM) { t.dtw = []; for (let k = 0; k < 16; k++) t.dtw.push(r.u8()); }
+    t.pat = PROJ7.patGet(r, t.kind === PROJ7.DRUM);
+    if (r.i < r.n && !r.bad) {
+      t.tail = 1;
+      t.cur = r.u8() % 8;
+      const n = r.u8();
+      for (let k = 0; k < n && k < 8; k++) t.chain.push(r.u8() % 8);
+      if (r.i < r.n) { t.tail = 2; t.hfol = r.u8(); }
+    }
+    return t;
+  },
+  trkPut(w, t) {
+    w.u8(t.i); w.u8(t.kind); w.u8(t.eng); w.u8(t.pre); w.u8(t.nc);
+    const map = new Array((t.nc + 7) >> 3).fill(0);
+    t.p.forEach(([k]) => { map[k >> 3] |= 1 << (k & 7); });
+    map.forEach((x) => w.u8(x));
+    [...t.p].sort((x, y) => x[0] - y[0]).forEach(([, v]) => w.v(v));
+    let em = 0;
+    t.e.forEach(([k]) => { em |= 1 << k; });
+    w.u8(em);
+    [...t.e].sort((x, y) => x[0] - y[0]).forEach(([, v]) => w.v(v));
+    if (t.kind === PROJ7.DRUM) (t.dtw || new Array(16).fill(0)).forEach((x) => w.u8(x));
+    PROJ7.patPut(w, t.pat, t.kind === PROJ7.DRUM);
+    if (t.tail >= 1) { w.u8(t.cur); w.u8(t.chain.length); t.chain.forEach((x) => w.u8(x)); }
+    if (t.tail >= 2) w.u8(t.hfol);
+  },
+  /* a common parameter of the track (id < its count): stored only when not its default (def(id) from DESC) */
+  param(t, id, def) { const x = t.p.find(([k]) => k === id); return x ? x[1] : def; },
+  setParam(t, id, v, def) {
+    t.p = t.p.filter(([k]) => k !== id);
+    if (v !== def) t.p.push([id, v]);
+  },
+  /* ---- the whole project */
+  decode(b) {
+    b = Uint8Array.from(b);
+    if (b.length < PROJ7.HDR || PROJ7.u32(b, 0) !== PROJ7.MAGIC) return null;
+    const size = PROJ7.u32(b, 4);
+    if (size < PROJ7.HDR || size > PROJ7.MAX || size > b.length || PROJ7.u32(b, 8) !== PROJ7.sum(b, size)) return null;
+    const P = { g: null, sel: 0, tracks: [], harm: null, bank: [], other: [] }, pend = [];
+    const r = PROJ7.reader(b, PROJ7.HDR, size);
+    while (r.i + 3 <= r.n && !r.bad) {
+      const tag = r.u8(), len = r.u8() | (r.u8() << 8);
+      if (len > r.n - r.i) return null;              /* (cut short: the editor changes no project it cannot read whole) */
+      const body = b.subarray(r.i, r.i + len);
+      r.i += len;
+      const c = PROJ7.reader(body);
+      const ch = String.fromCharCode(tag);
+      if (ch === "G") P.g = Array.from(body);
+      else if (ch === "S") P.sel = body[0] | 0;
+      else if (ch === "T") { const t = PROJ7.trkGet(c); if (c.bad || c.i !== c.n) return null; P.tracks.push(t); }
+      else if (ch === "H") { const n = c.u8(); P.harm = []; for (let k = 0; k < n; k++) P.harm.push({ deg: c.u8(), bars: c.u8() }); if (c.bad) return null; }
+      else if (ch === "P") pend.push(body);
+      else P.other.push([tag, Array.from(body)]);
+    }
+    for (const body of pend) {                       /* (decoded with the kind of their track: the 'T' chunks come first) */
+      const t = P.tracks.find((x) => x.i === body[0] >> 4);
+      if (!t || body.length < 2) return null;
+      const c = PROJ7.reader(body, 2);
+      const pat = PROJ7.patGet(c, t.kind === PROJ7.DRUM);
+      if (c.bad || c.i !== c.n) return null;
+      P.bank.push({ trk: body[0] >> 4, pat: body[0] & 15, len: body[1], p: pat });
+    }
+    return P;
+  },
+  /* the chunks in the firmware's order (G, S, the tracks, H when not the default, the bank): the same bytes as it writes */
+  encodeBody(P) {
+    const w = PROJ7.writer(), chunk = (tag, f) => {
+      w.u8(tag.charCodeAt ? tag.charCodeAt(0) : tag); const at = w.o.length; w.u8(0); w.u8(0);
+      f(); const len = w.o.length - at - 2; w.o[at] = len & 0xFF; w.o[at + 1] = len >> 8;
+    };
+    if (P.g) chunk("G", () => P.g.forEach((x) => w.u8(x)));
+    chunk("S", () => w.u8(P.sel));
+    for (const t of P.tracks) chunk("T", () => PROJ7.trkPut(w, t));
+    if (P.harm && !PROJ7.harmDefault(P.harm)) chunk("H", () => { w.u8(P.harm.length); P.harm.forEach((c) => { w.u8(c.deg); w.u8(c.bars); }); });
+    for (const e of P.bank) {
+      const t = P.tracks.find((x) => x.i === e.trk);
+      chunk("P", () => { w.u8(e.trk << 4 | e.pat); w.u8(e.len); PROJ7.patPut(w, e.p, !!t && t.kind === PROJ7.DRUM); });
+    }
+    for (const [tag, body] of P.other) chunk(tag, () => body.forEach((x) => w.u8(x)));
+    return w.o;
+  },
+  encode(P) {
+    const body = PROJ7.encodeBody(P), size = PROJ7.HDR + body.length, b = new Uint8Array(size);
+    b.set(body, PROJ7.HDR);
+    const le = (o, v) => { b[o] = v & 0xFF; b[o + 1] = (v >>> 8) & 0xFF; b[o + 2] = (v >>> 16) & 0xFF; b[o + 3] = (v >>> 24) & 0xFF; };
+    le(0, PROJ7.MAGIC); le(4, size); le(8, PROJ7.sum(b, size));
+    return b;
+  },
+  /* the bytes the bank holds (patbank.c: 4 + a pattern's bytes an entry, PB_SIZE at most) and the project's size */
+  bankBytes: (P) => P.bank.reduce((s, e) => s + 4 + PROJ7.patBytes(e.p, (P.tracks.find((x) => x.i === e.trk) || {}).kind === PROJ7.DRUM).length, 0),
+  fits: (P) => PROJ7.bankBytes(P) <= PROJ7.PB_SIZE && PROJ7.HDR + PROJ7.encodeBody(P).length <= PROJ7.MAX,
+  harmDefault: (h) => !h || (h.length === 1 && h[0].deg === 0 && h[0].bars === 4),
+  /* ---- the patterns of a track: n 0..7 -> its pattern (the one playing is the track's own), null: empty */
+  track: (P, i) => P.tracks.find((x) => x.i === i) || null,
+  patOf(P, i, n) {
+    const t = PROJ7.track(P, i);
+    if (!t) return null;
+    if (n === t.cur) return t.pat;
+    const e = P.bank.find((x) => x.trk === i && x.pat === n);
+    return e ? e.p : null;
+  },
+  /* the LEN a pattern has (the one playing: the track's P_SLEN, ctx.len its id, ctx.def(id) its default) */
+  lenOf(P, i, n, ctx) {
+    const t = PROJ7.track(P, i);
+    if (n === t.cur) return PROJ7.param(t, ctx.len, ctx.def(ctx.len));
+    const e = P.bank.find((x) => x.trk === i && x.pat === n);
+    return e ? e.len : PROJ7.param(t, ctx.len, ctx.def(ctx.len));
+  },
+  /* pattern n of track i becomes p (null or empty: none) with that LEN; the one playing stays the track's own */
+  setPat(P, i, n, p, len, ctx) {
+    const t = PROJ7.track(P, i), drum = t.kind === PROJ7.DRUM;
+    if (n === t.cur) { t.pat = p ? PROJ7.patClone(p) : PROJ7.emptyPat(drum); if (len) PROJ7.setParam(t, ctx.len, len, ctx.def(ctx.len)); return; }
+    P.bank = P.bank.filter((x) => !(x.trk === i && x.pat === n));
+    if (p && !PROJ7.patIsEmpty(p, drum)) P.bank.push({ trk: i, pat: n, len: Math.max(1, Math.min(64, len | 0)), p: PROJ7.patClone(p) });
+  },
+  /* track i plays pattern n now (stopped, as patbank.c pat_swap: the one playing into the bank, n out of it, with its LEN) */
+  play(P, i, n, ctx) {
+    const t = PROJ7.track(P, i);
+    if (!t || n === t.cur) return;
+    const was = t.cur, wp = t.pat, wl = PROJ7.lenOf(P, i, was, ctx), np = PROJ7.patOf(P, i, n), nl = PROJ7.lenOf(P, i, n, ctx);
+    P.bank = P.bank.filter((x) => !(x.trk === i && x.pat === n));
+    t.cur = n;
+    t.pat = np ? PROJ7.patClone(np) : PROJ7.emptyPat(t.kind === PROJ7.DRUM);
+    PROJ7.setParam(t, ctx.len, nl, ctx.def(ctx.len));
+    PROJ7.setPat(P, i, was, wp, wl, ctx);
+    if (t.tail < 1) t.tail = 1;
+  },
+  /* a chain: 2..8 patterns (fewer: none) */
+  setChain(P, i, list) { const t = PROJ7.track(P, i); t.chain = list.length >= 2 ? list.slice(0, 8).map((x) => x & 7) : []; if (t.tail < 1) t.tail = 1; },
+};
 
 /* ------------------------------------- v10 (SLOOP 2.5): the SYN drum kits --- */
 /* A synthesised drum sound is the firmware's dsnd_t (drum_synth.c, tools/gen_drumkits.py), 22 bytes in this order.
@@ -4608,7 +5053,7 @@ const TEXT = {
     lvKeys: "鍵盤", lvTrack: "トラック", lvOct: "オクターブ", lvVel: "ベロシティ", lvArp: "アルペジオ", lvHold: "ホールド", lvLvl: ["GHOST", "SOFT", "NORM", "HARD"],
     lvNoChan: "このトラックはノートを受けません：GLO > MIDI にチャンネルがなく OTHER が OFF です。",
     lvClock: "GLO > SYSTEM > IN = CLOCK：FM-1 はノートを無視します。ここから演奏するには IN を NOTES に。",
-    lvShortcuts: "Space 再生/停止 · 1–4 セクション · 5–8 ミュート · Shift+5–8 ソロ · 9 フィル（押す間）· 0 次の小節フィル · B タップ · C 録音 · N 次のソング · Z / X オクターブ · ← → トラック · A W S E D F T G Y H U J K O L P 演奏 · Shift + それらのキー：エフェクト · F1–F8 シーン（Shift：保存）· Esc 全オフ",
+    lvShortcuts: "Space 再生/停止 · 1–4 セクション · 5–8 ミュート（演奏中のトラックの4トラック）· Shift+5–8 ソロ · 9 フィル（押す間）· 0 次の小節フィル · B タップ · C 録音 · N 次のソング · Z / X オクターブ · ← → トラック · A W S E D F T G Y H U J K O L P 演奏 · Shift + それらのキー：エフェクト · F1–F8 シーン（Shift：保存）· Esc 全オフ",
     lvPanic: "全オフ", lvStored: "ループを保存：セクション ",
     lvxHelpShow: "使い方", lvxViewAll: "表示：すべて", lvxViewSimple: "表示：基本",
     lvxGuideTitle: "はじめてのライブ 5 ステップ", lvxGuideOk: "わかった",
@@ -4925,6 +5370,66 @@ const TEXT = {
     songOld: "この FM-1 のファームウェアではソングを読めません（SLOOP 2.5 以降）。",
     songBad: "このソングは送れません（16 項目、1〜64 小節まで）", songRefused: "ソングを止めてから送ってください",
     songSent: "ソングを FM-1 に送りました",
+    songRegion: "ループするエントリ", songRegionAll: "すべて（ソング全体）",
+    songRegionOn: "範囲の最後まで再生し、範囲の最初に戻ります",
+    songRegionOff: "終わりを「最初に戻る」にすると使われます",
+    tabPatterns: "パターン",
+    patTitle: "パターン",
+    patHelp: "FM-1 の作業中のプロジェクト：各トラックの 8 つのパターン、チェーン、パターンのステップ・コンポーネント、ソングのコード進行。読み込んでここで変更し、「送る」と FM-1 がすぐに読み込みます（先にソングを止めてください）。送るまで FM-1 は変わりません。",
+    patRead: "FM-1 から読む",
+    patSend: "FM-1 に送る",
+    patPatterns: "パターンとチェーン",
+    patChain: "チェーン：",
+    patNoChain: "なし（そのパターンだけを再生）",
+    patChainHelp: "チェーンはパターンを順に 1 ループずつ再生します（2〜8）。チェーンのパターンをクリックすると外れます。",
+    patChainClear: "チェーンなし",
+    patPlaying: "再生中",
+    patSteps: "{n} ステップ",
+    patPlay: "P{n} を再生",
+    patCopyTo: "コピー先",
+    patCopy: "コピー",
+    patClear: "クリア",
+    patReplace: "P{n} にはパターンがあります。置き換えますか？",
+    patClearAsk: "P{n} をクリアしますか？",
+    patFollow: "コードに従う：",
+    patDetail: "トラック {t}・パターン {n}：ステップとステップ・コンポーネント",
+    patSize: "パターン {b} / {bm} B · プロジェクト {p} / {pm} B",
+    patUnsent: "未送信",
+    patOld: "パターンには FM-1 の BoopBox（8 トラック）が必要です。",
+    patBad: "FM-1 のプロジェクトを読めませんでした（フォーマット 7 のはず）。FM-1 で保存してから読み直してください。",
+    patFull: "送れません：パターンかプロジェクトが FM-1 の容量を超えています。パターンをクリアするか短くしてください。",
+    patStop: "ソングを止めてから送ってください",
+    patSent: "パターンを FM-1 に送りました",
+    patDiscard: "変更はまだ送られていません。FM-1 から読み直して変更を捨てますか？",
+    cpStep: "ステップ",
+    cpType: "コンポーネント",
+    cpWhat: "はたらき",
+    cpDir: "方向",
+    cpSeed: "シード",
+    cpAdd: "ステップ {s} に追加：",
+    cpCount: "{n} / {max}",
+    cpHelp: "コンポーネントはシーケンサーがそのステップに来るたびに鳴り方を変えます。1 ステップに各タイプ 1 つまで。FM-1 が再生できないもの（赤）は使われません。上のステップをクリックすると追加先を選べます。",
+    cpDup: "同じステップに同じタイプが 2 つ：使われません",
+    cpBad: "値が範囲外：使われません",
+    cpH1: "次の A ステップでもう一度鳴る",
+    cpH2: "次の A ステップの間鳴り続ける",
+    cpH3: "ステップ内で A 回鳴る",
+    cpH4: "ベロシティ A、ランダムに ±B",
+    cpH5: "毎回 B 度上がり、A 回で戻る",
+    cpH6: "毎回 B 度下がり、A 回で戻る",
+    cpH7: "±A 度のランダムな音",
+    cpH8: "GLIDE A でグライド",
+    cpH9: "A 半音ベンド（B 1：A から戻る）",
+    cpH10: "A 半音ずらす",
+    cpH11: "B 回ごとにステップ A へ飛ぶ",
+    cpH12: "A をランダムに ±B %",
+    cpH13: "B ループ中 A 回目に鳴る（A < 0：飛ばす）",
+    cpH14: "A % の確率で鳴る",
+    chTitle: "コード進行",
+    chChord: "コード",
+    chHelp: "ソングのコード：キーのスケールの度数と小節数（キーとスケールは FM-1 の SEL、またはサウンドページの KEY）。FOLLOW が TRANS か SCALE のトラックが従います。",
+    chReset: "コード 1 つ（I）",
+    chSum: "{n} / {max} コード、{bars} 小節",
   },
   en: {
     /* 2.7: the LIVE page */
@@ -4946,7 +5451,7 @@ const TEXT = {
     lvKeys: "keys", lvTrack: "track", lvOct: "octave", lvVel: "velocity", lvArp: "arp", lvHold: "hold", lvLvl: ["GHOST", "SOFT", "NORM", "HARD"],
     lvNoChan: "The FM-1 does not take notes for this track: GLO > MIDI gives it no channel and OTHER is OFF.",
     lvClock: "GLO > SYSTEM > IN = CLOCK: the FM-1 ignores notes. Set IN to NOTES to play from here.",
-    lvShortcuts: "Space play / stop · 1–4 sections · 5–8 mute · Shift+5–8 solo · 9 fill (hold) · 0 fill bar · B tap · C rec · N next song · Z / X octave · ← → track · keys A W S E D F T G Y H U J K O L P play · Shift + those keys: effects · F1–F8 scenes (Shift: store) · Esc all off",
+    lvShortcuts: "Space play / stop · 1–4 sections · 5–8 mute (the bank of four of the track played) · Shift+5–8 solo · 9 fill (hold) · 0 fill bar · B tap · C rec · N next song · Z / X octave · ← → track · keys A W S E D F T G Y H U J K O L P play · Shift + those keys: effects · F1–F8 scenes (Shift: store) · Esc all off",
     lvPanic: "all off", lvStored: "Loop saved into section ",
     lvxHelpShow: "how it works", lvxViewAll: "view: everything", lvxViewSimple: "view: essentials",
     lvxGuideTitle: "first live in 5 steps", lvxGuideOk: "got it",
@@ -5263,6 +5768,66 @@ const TEXT = {
     songOld: "This FM-1's firmware cannot share its song (SLOOP 2.5 or later).",
     songBad: "This song cannot be sent (16 entries, 1–64 bars each)", songRefused: "Stop the song first, then send",
     songSent: "Song sent to the FM-1",
+    songRegion: "Loop the entries", songRegionAll: "all (the whole song)",
+    songRegionOn: "the song plays to the end of the region, then from its start again",
+    songRegionOff: "used when the end is set to start again",
+    tabPatterns: "Patterns",
+    patTitle: "Patterns",
+    patHelp: "The FM-1's working project: each track's eight patterns, its chain, a pattern's step components, and the song's chord progression. Read it, change it here, then Send: the FM-1 loads it at once (stop the song first). Nothing changes on the FM-1 until you send.",
+    patRead: "Read from the FM-1",
+    patSend: "Send to the FM-1",
+    patPatterns: "Patterns and chains",
+    patChain: "Chain:",
+    patNoChain: "none (the pattern plays on its own)",
+    patChainHelp: "A chain plays its patterns in turn, one loop each (2 to 8). Click a pattern in the chain to remove it.",
+    patChainClear: "No chain",
+    patPlaying: "playing",
+    patSteps: "{n} steps",
+    patPlay: "Play P{n}",
+    patCopyTo: "copy to",
+    patCopy: "Copy",
+    patClear: "Clear",
+    patReplace: "P{n} holds a pattern: replace it?",
+    patClearAsk: "Clear P{n}?",
+    patFollow: "follows the chords:",
+    patDetail: "Track {t}, pattern {n}: steps and step components",
+    patSize: "patterns {b} of {bm} B · project {p} of {pm} B",
+    patUnsent: "not sent",
+    patOld: "Patterns need BoopBox (eight tracks) on the FM-1.",
+    patBad: "The FM-1's project could not be read (format 7 expected). Save it on the FM-1, then read again.",
+    patFull: "Too much to send: the patterns or the project are over the FM-1's room. Clear or shorten a pattern.",
+    patStop: "Stop the song first, then send",
+    patSent: "Patterns sent to the FM-1",
+    patDiscard: "Your changes are not sent. Read the FM-1's project again and lose them?",
+    cpStep: "Step",
+    cpType: "Component",
+    cpWhat: "What it does",
+    cpDir: "Direction",
+    cpSeed: "seed",
+    cpAdd: "Add to step {s}:",
+    cpCount: "{n} of {max}",
+    cpHelp: "A component changes how its step plays each time the sequencer reaches it. One of each type a step; the FM-1 leaves out one it cannot play (shown in red). Click a step above to choose where Add puts one.",
+    cpDup: "a second one of this type on this step: left out",
+    cpBad: "a value out of range: left out",
+    cpH1: "plays again on the next A steps",
+    cpH2: "sounds on through the next A steps",
+    cpH3: "A hits inside the step",
+    cpH4: "velocity A, ±B at random",
+    cpH5: "B degrees higher each time, back after A times",
+    cpH6: "B degrees lower each time, back after A times",
+    cpH7: "a random degree within ±A",
+    cpH8: "glides in, GLIDE A",
+    cpH9: "bends A semitones (B 1: from A back)",
+    cpH10: "A semitones away",
+    cpH11: "goes on at step A, every B-th time",
+    cpH12: "a random value of A within ±B %",
+    cpH13: "plays on loop A of every B (A < 0: skips)",
+    cpH14: "plays with an A % chance",
+    chTitle: "Chord progression",
+    chChord: "Chord",
+    chHelp: "The song's chords, each a degree of its key's scale, for so many bars (the key and scale: SEL on the FM-1, or the Sound page's KEY). Tracks whose FOLLOW is TRANS or SCALE play along.",
+    chReset: "One chord (I)",
+    chSum: "{n} of {max} chords, {bars} bars",
   },
 };
 let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
@@ -5294,7 +5859,7 @@ $("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; 
 
 /* ---------------------------------------------------------------- tabs --- */
 /* one panel at a time; the last one is remembered (localStorage) and in the URL hash (#sound ...) */
-const TABS = ["live", "sound", "sequencer", "tracks", "song", "library", "samples", "kits", "drumsynth", "projects", "settings", "theme"];
+const TABS = ["live", "sound", "sequencer", "patterns", "tracks", "song", "library", "samples", "kits", "drumsynth", "projects", "settings", "theme"];
 const TAB_KEY = "felucca-editor-tab";
 const TRACK_TABS = new Set(["sound", "sequencer", "tracks"]);
 let tab = (() => {
@@ -5304,6 +5869,29 @@ let tab = (() => {
   return "sound";
 })();
 const hasTracks = () => !!dev && !!dev.info && !!dev.info.ntrk;
+const nTrk = () => (dev && dev.info && dev.info.ntrk) || 0;
+/* a track's kind: its engine byte (NENGINES = drums), from TRACK (dev.mix), the LIVE page's reads or the selected track's
+   DUMP. BoopBox has eight tracks, drums on 4 and 8 by default, and any track may be either (SAVE > TOOLS > KIND); a
+   four-track firmware (SLOOP, Felucca) has its one drum track last */
+function isDrumTrk(i) {
+  if (!dev || !dev.info) return false;
+  const ne = dev.info.nengines, x = (dev.mix && dev.mix.tracks && dev.mix.tracks[i]) || (LV.tr && LV.tr[i]);
+  if (i === dev.sel && dev.dump && dev.dump.engine !== undefined) return dev.dump.engine >= ne;
+  if (x && x.engine !== undefined) return x.engine >= ne;
+  const n = nTrk() || 4;
+  return n >= 8 ? i % 4 === 3 : i === n - 1;
+}
+/* the drum track the FM-1's drum screens show (core.h drum_focus): the selected track if it is one, else the first */
+function drumFocus() {
+  if (!dev) return -1;
+  if (isDrumTrk(dev.sel)) return dev.sel;
+  for (let i = 0; i < (nTrk() || 4); i++) if (isDrumTrk(i)) return i;
+  return -1;
+}
+/* four-track firmware: the drum track's level and sends are globals (GLO > DRUMS: G_DRLVL, G_DRREV, G_DRDLY). BoopBox's
+   drum tracks have their own (P_LEVEL, P_REV, P_DLY: those globals only name the focused drum track's on the FM-1's
+   screen, so the editor sets the track's own) */
+const drumLvGlobal = () => nTrk() < 8;
 const devNlock = () => (dev && dev.info && dev.info.ntrk >= 8 ? 32 : 24);   /* locks a track: 32 on the eight-track firmware */
 function showTab(name) {
   if (!TABS.includes(name)) name = "sound";
@@ -5345,6 +5933,9 @@ function renderPanels() {
   if (want === "theme") renderTheme();                  /* (2.7) works without a device too */
   if (want === "live" && ready) lvShow(); else lvHide();   /* (2.7) the LIVE page reads the FM-1 while it shows */
   $("preview").hidden = !MOCK || want === "live";
+  if (want === "patterns" && ready) {                  /* (BoopBox) the project, read once per connection */
+    if (PT.dev !== dev) { Object.assign(PT, { dev, P: null, err: "", dirty: false, trk: dev.sel || 0, pat: undefined, step: 0 }); op(readPatterns); } else renderPatterns();
+  }
   if (want === "song" && ready) {                      /* (2.5) read the song order once per connection */
     if (SG.dev !== dev) { Object.assign(SG, { dev, rows: null, err: "", dirty: false }); op(readSong); } else renderSong();
   }
@@ -6173,25 +6764,26 @@ function buildUI() {
 
 /* the track selector (v3): T1..T3 synth parts, T4 the drum track; the editor shows the selected one */
 /* the device's track colours (ui_studio.c TE_COL): the selected one is the editor's accent (--trk) */
-const TCOL = ["var(--t1)", "var(--t2)", "var(--t3)", "var(--t4)"];
+const TCOL = ["var(--t1)", "var(--t2)", "var(--t3)", "var(--t4)", "var(--t5)", "var(--t6)", "var(--t7)", "var(--t8)"];
+const tcol = (i) => TCOL[(i | 0) % TCOL.length];
 function renderTrackbar() {
   renderPreviewKeys();
   const box = $("trackbtns");
   const ntrk = hasTracks() ? dev.info.ntrk : 0;
   if (box.children.length !== ntrk || box.dataset.lang !== lang) {
     box.dataset.lang = lang;
-    box.replaceChildren(...Array.from({ length: ntrk }, (_, i) => el("button", { type: "button", "data-i": i, style: `--c:${TCOL[i % 4]}`,
+    box.replaceChildren(...Array.from({ length: ntrk }, (_, i) => el("button", { type: "button", "data-i": i, style: `--c:${tcol(i)}`,
       onclick: () => selectTrack(i) }, el("span", { class: "no", text: String(i + 1) }), el("span", { class: "nm" }))));
   }
   for (const b of box.children) {
     const i = +b.dataset.i, x = dev.mix && dev.mix.tracks[i];
     b.setAttribute("aria-pressed", i === (dev.sel || 0) ? "true" : "false");
-    const nm = !x ? [i === ntrk - 1 ? "DRUMS" : "", ""] : x.engine >= dev.info.nengines ? [(dev.kitNames || [])[x.e0] || "", "drums"]
+    const nm = !x ? [isDrumTrk(i) ? "DRUMS" : "", ""] : x.engine >= dev.info.nengines ? [(dev.kitNames || [])[x.e0] || "", "drums"]
       : [(dev.names[x.engine] || [])[x.preset] || "", String(dev.info.engines[x.engine] || "").toLowerCase()];
     b.lastChild.replaceChildren(nm[0] + " ", el("span", { class: "dim", text: nm[1] }));
     b.title = `${t("track")} ${i + 1}`;
   }
-  document.documentElement.style.setProperty("--trk", TCOL[(dev.sel || 0) % 4]);
+  document.documentElement.style.setProperty("--trk", tcol(dev.sel || 0));
   renderPreview();
 }
 function selectTrack(i) {
@@ -6284,7 +6876,9 @@ function drumPanelBuild() {
   const step = (d) => { const n = U.kit.options.length || 1; userSet(0, pe0, ((dev.dump.p[pe0] ?? 0) + d + n) % n, true); drumPanelRender(); };
   U.prev = el("button", { type: "button", text: "‹", "aria-label": "previous", onclick: () => step(-1) });
   U.next = el("button", { type: "button", text: "›", "aria-label": "next", onclick: () => step(1) });
-  U.mix = [knob(t("lvLevel"), 1, gDrLvl()), knob(t("lvPan"), 0, 39), knob(t("lvFilter"), 0, 50), knob(t("lvRev"), 1, 26), knob(t("lvDly"), 1, 32)];
+  const gl = drumLvGlobal() ? 1 : 0;                    /* (BoopBox: the drum track's own level and sends) */
+  U.mix = [knob(t("lvLevel"), gl, gl ? gDrLvl() : P.LEVEL), knob(t("lvPan"), 0, 39), knob(t("lvFilter"), 0, 50),
+    knob(t("lvRev"), gl, gl ? 26 : lvP("REV", 36)), knob(t("lvDly"), gl, gl ? 32 : lvP("DLY", 35))];
   const itd = dev.pdesc[53];
   U.ins = el("select", { "aria-label": "INSERT" }, ...((itd && itd.names) || ["OFF"]).map((n, k) => el("option", { value: String(k), text: n })));
   U.ins.addEventListener("change", () => userSet(0, 53, +U.ins.value, true));
@@ -6339,7 +6933,7 @@ async function drumPanelTw(lane) {
 }
 /* a pad heard: a MIDI note on the drum track's channel (as the LIVE page's pads) */
 function drumHear(lane, on) {
-  const tr = (dev.info.ntrk || 4) - 1, tok = "dp:" + lane;
+  const tr = isDrumTrk(dev.sel) ? dev.sel : drumFocus(), tok = "dp:" + lane;
   const km = LV.kmode;
   LV.kmode = "play";                                    /* (always heard: not the LIVE page's roll / erase) */
   try { if (on) lvNoteOn(tok, tr, lvDrumNote(lane), 100); else lvNoteOff(tok); } finally { LV.kmode = km; }
@@ -7347,7 +7941,8 @@ $("dsplay").addEventListener("click", () => { if (DS.kit) op(() => dsPlay()); })
 $("dsuse").addEventListener("click", () => {
   if (!dev || !hasTracks() || !DS.kit) return;
   op(async () => {
-    const drum = dev.info.ntrk - 1;
+    const drum = drumFocus();
+    if (drum < 0) { sayK("kitNoKit"); return; }
     if (dev.sel !== drum) { dev.sel = parse[CMD.TRACK](await rq(req.track(drum))).sel; await afterSoundChange(); }
     const d = dev.pdesc[dev.info.pe0], i = d && d.names ? d.names.indexOf(dsKitName()) : -1;
     if (i < 0) { sayK("kitNoKit"); return; }
@@ -7398,12 +7993,12 @@ async function readSong() {
   }
   if (!ARR.ok(data)) { Object.assign(SG, { rows: null, err: "songOld" }); renderSong(); return; }
   const song = ARR.decode(data);
-  Object.assign(SG, { bytes: data, rows: ARR.group(song.entries), loop: song.loop, err: "", dirty: false });
+  Object.assign(SG, { bytes: data, rows: ARR.group(song.entries), loop: song.loop, region: song.region, err: "", dirty: false });
   renderSong();
 }
 async function sendSong() {
   if (!dev || !SG.rows) return;
-  const song = { loop: SG.loop, entries: ARR.expand(SG.rows) };
+  const song = { loop: SG.loop, entries: ARR.expand(SG.rows), region: SG.region };
   if (!ARR.valid(song)) { sayK("songBad"); return; }
   const d = ARR.encode(SG.bytes, song);
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(1, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
@@ -7450,6 +8045,15 @@ function renderSong() {
   $("songsend").disabled = n > ARR.STEPS || !n;
   $("songsend").classList.toggle("pri", SG.dirty);
   for (const b of $("songloop").children) b.setAttribute("aria-pressed", (b.dataset.v === "1") === SG.loop ? "true" : "false");
+  /* (BoopBox) the loop region, in entries (a row played n times is n entries) */
+  if (SG.region && !ARR.regionOk(SG.region, n)) SG.region = null;
+  const opts = (sel, from, lab) => { sel.replaceChildren(...lab, ...Array.from({ length: n }, (_, k) => el("option", { value: k, text: String(k + 1), disabled: k < from }))); };
+  opts($("songrf"), 0, [el("option", { value: -1, text: t("songRegionAll") })]);
+  opts($("songre"), SG.region ? SG.region.first : 0, []);
+  $("songrf").value = String(SG.region ? SG.region.first : -1);
+  $("songre").value = String(SG.region ? SG.region.end - 1 : Math.max(0, n - 1));
+  $("songre").disabled = !SG.region;
+  $("songrhint").textContent = SG.region ? t(SG.loop ? "songRegionOn" : "songRegionOff") : "";
   $("songempty").hidden = !SG.rows.some((r) => dev.slotUsed[r.scene] === false);
 }
 $("songadd").addEventListener("click", () => songEdit(() => {
@@ -7461,6 +8065,187 @@ $("songsend").addEventListener("click", () => op(sendSong));
 $("songexp").addEventListener("click", () => { if (dev) songExport(); });         /* (2.7) a song as one file */
 $("songimp").addEventListener("click", () => { if (dev) $("sf-file").click(); });
 for (const b of $("songloop").children) b.addEventListener("click", () => songEdit(() => { SG.loop = b.dataset.v === "1"; }));
+$("songrf").addEventListener("change", () => songEdit(() => {
+  const f = +$("songrf").value, n = songCount();
+  SG.region = f < 0 ? null : { first: f, end: Math.max(f + 1, SG.region ? SG.region.end : n) };
+  if (SG.region && SG.region.end > n) SG.region.end = n;
+}));
+$("songre").addEventListener("change", () => songEdit(() => { if (SG.region) SG.region.end = Math.max(SG.region.first + 1, +$("songre").value + 1); }));
+
+/* ---- BoopBox: the Patterns page. The working project (backup object 0, format 7: PROJ7) read from the FM-1, its
+   patterns 1..8 of each track, the chains, a pattern's step components, direction and seed, the tracks' FOLLOW and the
+   chord progression changed here, and sent back whole (BK_PUT; the FM-1 loads it at once, stopped only). Nothing is
+   sent until Send: the page edits a copy. */
+const PT = { dev: null, P: null, err: "", dirty: false, trk: 0, pat: 0, step: 0 };
+const ptOk = () => !!dev && !!dev.info && dev.info.ntrk >= 8 && dev.info.proto >= 6;
+const ptCtx = () => { const id = Math.max(0, dev.pdesc.findIndex((d, k) => d && k < dev.info.pe0 && d.label === "LEN")) || 29;
+  return { len: id, def: (x) => (dev.pdesc[x] ? dev.pdesc[x].def : 16) }; };
+const ptDrum = (i) => { const x = PT.P && PROJ7.track(PT.P, i); return !!x && x.kind === PROJ7.DRUM; };
+async function readPatterns() {
+  if (!ptOk()) { Object.assign(PT, { P: null, err: "patOld" }); renderPatterns(); return; }
+  const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));
+  const it = L.rc ? null : L.items.find((x) => x.id === 0);
+  if (!it) throw new Error("the project is not readable (rc " + L.rc + ")");
+  const P = PROJ7.decode(await bkReadObj(rq, it));
+  Object.assign(PT, { P, err: P ? "" : "patBad", dirty: false });
+  if (P && !PROJ7.track(P, PT.trk)) PT.trk = 0;
+  if (P) { const tr = PROJ7.track(P, PT.trk); if (tr && PT.pat === undefined) PT.pat = tr.cur; }
+  renderPatterns();
+}
+async function sendPatterns() {
+  if (!dev || !PT.P) return;
+  if (!PROJ7.fits(PT.P)) { sayK("patFull"); return; }
+  try { await bkWriteObj(rq, 0, PROJ7.encode(PT.P)); }
+  catch (e) { if (e.code === "bkStop") { sayK("patStop"); return; } throw e; }
+  PT.dirty = false;
+  await readPatterns();
+  dev.sel = parse[CMD.TRACK](await rq(req.track())).sel;   /* (the FM-1 loaded it: the other pages read it again) */
+  await afterSoundChange("patSent");
+}
+function ptEdit(fn) { fn(); PT.dirty = true; renderPatterns(); }
+const ptPatUsed = (i, n) => { const p = PROJ7.patOf(PT.P, i, n); return !!p && !PROJ7.patIsEmpty(p, ptDrum(i)); };
+const ptHits = (p, drum, k) => (drum ? (p.steps[k].on[0] | p.steps[k].on[1]) !== 0 : p.steps[k].n > 0 && p.steps[k].time === 0);
+const ptParamName = (id) => (id < dev.info.pe0 ? (dev.pdesc[id] || { label: String(id) }).label : "E" + (id - dev.info.pe0 + 1));
+function renderPatterns() {
+  if (!dev || !dev.dump) return;
+  $("paterr").hidden = !PT.err;
+  if (PT.err) $("paterr").textContent = t(PT.err);
+  $("patbody").hidden = !PT.P;
+  $("patsend").disabled = !PT.P;
+  $("patsend").classList.toggle("pri", PT.dirty);
+  if (!PT.P) { $("patsize").textContent = ""; return; }
+  const P = PT.P, ctx = ptCtx(), tr = PROJ7.track(P, PT.trk), drum = tr.kind === PROJ7.DRUM;
+  const bank = PROJ7.bankBytes(P), size = PROJ7.HDR + PROJ7.encodeBody(P).length, fits = bank <= PROJ7.PB_SIZE && size <= PROJ7.MAX;
+  $("patsize").textContent = t("patSize").replace("{b}", bank).replace("{bm}", PROJ7.PB_SIZE).replace("{p}", size).replace("{pm}", PROJ7.MAX)
+    + (PT.dirty ? " · " + t("patUnsent") : "");
+  $("patsize").classList.toggle("bad", !fits);
+  $("patsend").disabled = !fits;
+  document.documentElement.style.setProperty("--trk", tcol(PT.trk));
+  /* the tracks */
+  $("pattrk").replaceChildren(...P.tracks.map((x) => {
+    const name = x.kind === PROJ7.DRUM ? "DRUMS" : dev.info.engines[x.eng] || "";
+    return el("button", { type: "button", style: `--c:${tcol(x.i)}`, "aria-pressed": String(x.i === PT.trk),
+      onclick: () => { PT.trk = x.i; PT.pat = x.cur; renderPatterns(); } }, `${x.i + 1} ${name} · P${x.cur + 1}`);
+  }));
+  /* its eight patterns */
+  $("patcells").replaceChildren(...Array.from({ length: PROJ7.NPAT }, (_, n) => {
+    const used = ptPatUsed(PT.trk, n), play = n === tr.cur, p = PROJ7.patOf(P, PT.trk, n);
+    const hits = p ? p.steps.reduce((a, _, k) => a + (ptHits(p, drum, k) ? 1 : 0), 0) : 0;
+    return el("button", { type: "button", class: [play && "play", !used && "empty"].filter(Boolean).join(" ") || null, "aria-pressed": String(n === PT.pat),
+      onclick: () => { PT.pat = n; renderPatterns(); } },
+      el("span", { class: "pn", text: "P" + (n + 1) }),
+      el("span", { class: "dim", text: play ? t("patPlaying") : used ? t("patSteps").replace("{n}", hits) : t("empty") }),
+      el("span", { class: "dim", text: "LEN " + PROJ7.lenOf(P, PT.trk, n, ctx) }));
+  }));
+  /* what to do with the pattern picked */
+  const sel = PT.pat, selUsed = ptPatUsed(PT.trk, sel);
+  const to = el("select", { "aria-label": t("patCopyTo") }, ...Array.from({ length: 8 }, (_, n) => n).filter((n) => n !== sel)
+    .map((n) => el("option", { value: n, text: "P" + (n + 1) + (ptPatUsed(PT.trk, n) ? " ●" : "") })));
+  $("patacts").replaceChildren(
+    el("button", { type: "button", disabled: sel === tr.cur, onclick: () => ptEdit(() => PROJ7.play(P, PT.trk, sel, ctx)) }, t("patPlay").replace("{n}", sel + 1)),
+    el("span", { text: " " + t("patCopyTo") + " " }), to,
+    el("button", { type: "button", disabled: !selUsed, onclick: () => {
+      const n = +to.value;
+      if (ptPatUsed(PT.trk, n) && !confirm(t("patReplace").replace("{n}", n + 1))) return;
+      ptEdit(() => PROJ7.setPat(P, PT.trk, n, PROJ7.patOf(P, PT.trk, sel), PROJ7.lenOf(P, PT.trk, sel, ctx), ctx));
+    } }, t("patCopy")),
+    el("button", { type: "button", disabled: !selUsed, onclick: () => {
+      if (!confirm(t("patClearAsk").replace("{n}", sel + 1))) return;
+      ptEdit(() => PROJ7.setPat(P, PT.trk, sel, null, 0, ctx));
+    } }, t("patClear")),
+    ...(drum ? [] : [el("span", { text: " " + t("patFollow") + " " }), (() => {
+      const f = el("select", { onchange: (e) => ptEdit(() => { tr.hfol = +e.target.value; tr.tail = 2; }) },
+        ...PROJ7.HFOL.map((h, k) => el("option", { value: k, text: h })));
+      f.value = String(tr.hfol | 0);
+      return f;
+    })()]));
+  /* the chain */
+  $("patchain").replaceChildren(...(tr.chain.length ? tr.chain.map((n, k) => el("b", { title: t("songDel"),
+    onclick: () => ptEdit(() => { const c = tr.chain.slice(); c.splice(k, 1); PROJ7.setChain(P, PT.trk, c); }) }, "P" + (n + 1)))
+    : [el("span", { class: "dim", text: t("patNoChain") })]));
+  $("patchainadd").replaceChildren(...Array.from({ length: 8 }, (_, n) => el("button", { type: "button", disabled: tr.chain.length >= 8,
+    onclick: () => ptEdit(() => { const c = tr.chain.length ? tr.chain.slice() : [tr.cur]; c.push(n); PROJ7.setChain(P, PT.trk, c); }) }, "+P" + (n + 1))),
+    el("button", { type: "button", disabled: !tr.chain.length, onclick: () => ptEdit(() => PROJ7.setChain(P, PT.trk, [])) }, t("patChainClear")));
+  renderPatDetail(P, tr, drum, ctx);
+  renderChords(P);
+}
+/* the pattern picked: its steps (a dot: a component), direction, seed, components */
+function renderPatDetail(P, tr, drum, ctx) {
+  let p = PROJ7.patOf(P, PT.trk, PT.pat);
+  const len = PROJ7.lenOf(P, PT.trk, PT.pat, ctx);
+  const own = () => {                                   /* (an empty pattern: one made to hold what is added) */
+    if (!PROJ7.patOf(P, PT.trk, PT.pat)) PROJ7.setPat(P, PT.trk, PT.pat, PROJ7.emptyPat(drum), len, ctx);
+    let q = PROJ7.patOf(P, PT.trk, PT.pat);
+    if (!q) { P.bank.push({ trk: PT.trk, pat: PT.pat, len, p: PROJ7.emptyPat(drum) }); q = PROJ7.patOf(P, PT.trk, PT.pat); }
+    return q;
+  };
+  const tidy = () => { const q = PROJ7.patOf(P, PT.trk, PT.pat); if (q && PT.pat !== tr.cur && PROJ7.patIsEmpty(q, drum)) PROJ7.setPat(P, PT.trk, PT.pat, null, 0, ctx); };
+  $("patdh").textContent = t("patDetail").replace("{t}", PT.trk + 1).replace("{n}", PT.pat + 1);
+  const pv = p || PROJ7.emptyPat(drum);
+  $("patsteps").replaceChildren(...Array.from({ length: 64 }, (_, k) => el("button", { type: "button",
+    class: [ptHits(pv, drum, k) && "on", k >= len && "out", pv.comps.some((c) => c.step === k) && "cp", k % 4 === 0 && "beat"].filter(Boolean).join(" ") || null,
+    title: `${t("cpStep")} ${k + 1}`, onclick: () => { PT.step = k; renderPatterns(); } }, String(k + 1))));
+  const dir = el("span", { class: "seg" }, ...PROJ7.DIRS.map((d, k) => el("button", { type: "button", "aria-pressed": String((pv.dir | 0) === k),
+    onclick: () => ptEdit(() => { own().dir = k; tidy(); }) }, d)));
+  const seed = el("input", { type: "number", min: 0, max: 255, value: String(pv.seed | 0), "aria-label": t("cpSeed"),
+    onchange: (e) => ptEdit(() => { own().seed = Math.max(0, Math.min(255, Math.round(+e.target.value) || 0)); tidy(); }) });
+  $("patdir").replaceChildren(el("span", { text: t("cpDir") + " " }), dir, el("span", { text: " " + t("cpSeed") + " " }), seed);
+  /* the components: the firmware keeps 16 a pattern, one of a type a step, each value in its range (else drops it) */
+  const pe0 = dev.info.pe0, params = [...Array(pe0 + 8).keys()].filter((id) => lockable(id, pe0));
+  const seen = new Set();
+  $("patcrows").replaceChildren(...pv.comps.map((c, k) => {
+    const R = PROJ7.CP[c.type] || ["?", 0, 0, 0, 0], dup = seen.has(c.step + ":" + c.type);
+    seen.add(c.step + ":" + c.type);
+    const set = (f) => ptEdit(() => { f(own().comps[k]); });
+    const num = (v, lo, hi, f) => el("input", { type: "number", min: lo, max: hi, value: String(v), disabled: lo === hi,
+      onchange: (e) => set((x) => f(x, Math.max(lo, Math.min(hi, Math.round(+e.target.value) || 0)))) });
+    const ty = el("select", { onchange: (e) => set((x) => { const r = PROJ7.CP[+e.target.value]; x.type = +e.target.value;
+      x.a = x.type === PROJ7.CP_PARAM ? PROJ7.codeOf(r[5], pe0) : r[5]; x.b = r[6]; }) },
+      ...PROJ7.CP.map((r, i) => (r ? el("option", { value: i, text: r[0] }) : null)).filter(Boolean));
+    ty.value = String(c.type);
+    const a = c.type === PROJ7.CP_PARAM
+      ? (() => { const s2 = el("select", { onchange: (e) => set((x) => { x.a = PROJ7.codeOf(+e.target.value, pe0); }) },
+        ...params.map((id) => el("option", { value: id, text: ptParamName(id) }))); s2.value = String(PROJ7.idOf(c.a, pe0)); return s2; })()
+      : num(c.a, R[1], R[2], (x, v) => { x.a = c.type === 13 && !v ? 1 : v; });
+    const ok = PROJ7.compValid(c, pe0) && !dup;
+    return el("tr", { class: ok ? null : "bad" },
+      el("td", {}, num(c.step + 1, 1, 64, (x, v) => { x.step = v - 1; })), el("td", {}, ty), el("td", {}, a),
+      el("td", {}, num(c.b, R[3], R[4], (x, v) => { x.b = v; })),
+      el("td", { class: "dim", text: ok ? t("cpH" + c.type) : t(dup ? "cpDup" : "cpBad") }),
+      el("td", { class: "acts" }, el("button", { type: "button", title: t("songDel"), onclick: () => ptEdit(() => { own().comps.splice(k, 1); tidy(); }) }, "✕")));
+  }));
+  const addTy = el("select", { "aria-label": t("cpType") }, ...PROJ7.CP.map((r, i) => (r ? el("option", { value: i, text: r[0] }) : null)).filter(Boolean));
+  addTy.value = String(PT.addType || 10);
+  addTy.addEventListener("change", () => { PT.addType = +addTy.value; });
+  $("patcadd").replaceChildren(el("button", { type: "button", disabled: pv.comps.length >= PROJ7.NCOMP, onclick: () => ptEdit(() => {
+    const ty = +addTy.value, r = PROJ7.CP[ty];
+    PT.addType = ty;
+    own().comps.push({ step: PT.step, type: ty, a: ty === PROJ7.CP_PARAM ? PROJ7.codeOf(r[5], pe0) : r[5], b: r[6] });
+  }) }, t("cpAdd").replace("{s}", PT.step + 1)), addTy,
+    el("span", { class: "dim", text: " " + t("cpCount").replace("{n}", pv.comps.length).replace("{max}", PROJ7.NCOMP) }));
+}
+/* the song's chord progression: up to 8 chords, a degree of the key's scale (I..VII) for 1..16 bars */
+function renderChords(P) {
+  const h = P.harm || [{ deg: 0, bars: 4 }];
+  const edit = (f) => ptEdit(() => { const x = (P.harm || [{ deg: 0, bars: 4 }]).map((c) => ({ ...c })); f(x); P.harm = x; });
+  $("chrows").replaceChildren(...h.map((c, k) => {
+    const deg = el("select", { onchange: (e) => edit((x) => { x[k].deg = +e.target.value; }) }, ...PROJ7.ROMAN.map((r, i) => el("option", { value: i, text: r })));
+    deg.value = String(c.deg % 7);
+    return el("tr", {}, el("td", { class: "i", text: String(k + 1) }), el("td", {}, deg),
+      el("td", {}, el("input", { type: "number", min: 1, max: 16, value: String(c.bars),
+        onchange: (e) => edit((x) => { x[k].bars = Math.max(1, Math.min(16, Math.round(+e.target.value) || 1)); }) })),
+      el("td", { class: "acts" },
+        el("button", { type: "button", title: t("songUp"), disabled: k === 0, onclick: () => edit((x) => { x.splice(k - 1, 0, x.splice(k, 1)[0]); }) }, "▲"),
+        el("button", { type: "button", title: t("songDown"), disabled: k === h.length - 1, onclick: () => edit((x) => { x.splice(k + 1, 0, x.splice(k, 1)[0]); }) }, "▼"),
+        el("button", { type: "button", title: t("songDel"), disabled: h.length < 2, onclick: () => edit((x) => { x.splice(k, 1); }) }, "✕")));
+  }));
+  $("chadd").disabled = h.length >= PROJ7.NHPROG;
+  $("chsum").textContent = t("chSum").replace("{n}", h.length).replace("{max}", PROJ7.NHPROG).replace("{bars}", h.reduce((a, c) => a + c.bars, 0));
+}
+$("chadd").addEventListener("click", () => { if (PT.P) ptEdit(() => { const x = (PT.P.harm || [{ deg: 0, bars: 4 }]).map((c) => ({ ...c })); const l = x[x.length - 1]; x.push({ deg: (l.deg + 3) % 7, bars: l.bars }); PT.P.harm = x; }); });
+$("chreset").addEventListener("click", () => { if (PT.P) ptEdit(() => { PT.P.harm = null; }); });
+$("patread").addEventListener("click", () => { if (PT.dirty && !confirm(t("patDiscard"))) return; op(readPatterns); });
+$("patsend").addEventListener("click", () => op(sendPatterns));
 
 /* ---- v7 (SLOOP 2.4): the selected step's nudge and parameter locks (a grid cell or a drum column picks it) */
 let selStep = 0;
@@ -8262,11 +9047,12 @@ async function kitSend() {
   renderKits();
   if (done) sayK("kitSent", kitDest(d));
 }
-/* the drum track on that kit: select track 4, then its KIT (P_E0) = USRn */
+/* the drum track on that kit (the selected one, else the first: drumFocus), then its KIT (P_E0) = USRn */
 function kitUse(k) {
   if (!dev || !hasTracks()) return;
   op(async () => {
-    const drum = dev.info.ntrk - 1;
+    const drum = drumFocus();
+    if (drum < 0) { sayK("kitNoKit"); return; }
     if (dev.sel !== drum) { dev.sel = parse[CMD.TRACK](await rq(req.track(drum))).sel; await afterSoundChange(); }
     const d = dev.pdesc[dev.info.pe0], i = d && d.names ? d.names.indexOf(kitDest(k)) : -1;   /* (the drum track's DESC now) */
     if (i < 0) { sayK("kitNoKit"); return; }
@@ -8778,7 +9564,8 @@ let panning = false;                /* v3 firmware: another track is selected fo
 const mixTouched = (kind, i) => mixDrag === `${kind}:${i}` || performance.now() - (mixEdit.get(`${kind}:${i}`) || 0) < 600
   || (!!dev && kind === "lv" && dev.link.hasQueued("mix:" + i))
   || (kind === "pan" && (panWant.has(i) || (!!dev && dev.link.hasQueued("pan:" + i))));
-const drumTrack = (i) => !!dev && !!dev.mix && i === dev.mix.ntrk - 1;
+const drumTrack = (i) => !!dev && !!dev.mix && isDrumTrk(i);
+const drumLv = (i) => drumTrack(i) && drumLvGlobal();   /* its level is G_DRLVL (four-track firmware) */
 function trackName(x) {
   if (x.engine >= dev.info.nengines) return ["DRUMS", (dev.kitNames || [])[x.e0]].filter(Boolean).join(" ");
   return [dev.info.engines[x.engine], (dev.names[x.engine] || [])[x.preset]].filter(Boolean).join(" ");
@@ -8803,8 +9590,8 @@ async function readMixer() {
 /* the Sound view's values of the selected track (and the drum level, a global) -> the strips */
 function mixFromDump() {
   if (!dev || !dev.mix || !dev.dump || panning) return;
-  const m = dev.mix, ds = m.ntrk - 1, x = m.tracks[dev.sel];
-  if (!mixTouched("lv", ds)) m.tracks[ds].level = dev.dump.g[gDrLvl()];
+  const m = dev.mix, ds = drumLvGlobal() ? m.ntrk - 1 : -1, x = m.tracks[dev.sel];
+  if (ds >= 0 && !mixTouched("lv", ds)) m.tracks[ds].level = dev.dump.g[gDrLvl()];
   if (x) {
     if (!mixTouched("lv", dev.sel)) {
       if (dev.sel !== ds) x.level = dev.dump.p[P.LEVEL];
@@ -8818,9 +9605,9 @@ function mixFromDump() {
 function mixToSound(i) {
   const x = dev.mix.tracks[i];
   const put = (s, id, v) => { if (v == null) return; (s ? dev.dump.g : dev.dump.p)[id] = v; showValue(key(s, id), v, false); };
-  if (drumTrack(i)) put(1, gDrLvl(), x.level);
+  if (drumLv(i)) put(1, gDrLvl(), x.level);
   if (i !== dev.sel) return;
-  if (!drumTrack(i)) put(0, P.LEVEL, x.level);
+  if (!drumLv(i)) put(0, P.LEVEL, x.level);
   put(0, pMute(), x.mute ? 1 : 0);
   put(0, pPan(), x.pan);
 }
@@ -8838,8 +9625,7 @@ function renderMixer() {
   renderTrackbar();
 }
 function buildStrip(i) {
-  const drum = drumTrack(i);
-  const lvDesc = (drum ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL]) || { fmt: F.INT, min: 0, max: 127, def: 100 };
+  const lvDesc = (drumLv(i) ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL]) || { fmt: F.INT, min: 0, max: 127, def: 100 };
   const pDesc = dev.pdesc[pPan()] || { fmt: F.BIPCT, min: -64, max: 63, def: 0 };
   const fader = el("input", { type: "range", class: "fader", min: 0, max: 127, step: 1, "aria-label": `${t("level")} ${i + 1}` });
   fader.addEventListener("pointerdown", () => { mixDrag = "lv:" + i; });
@@ -8862,7 +9648,7 @@ function buildStrip(i) {
     panOut: el("span", { class: "v" }),
     selb: el("button", { type: "button", class: "selb", onclick: () => selectTrack(i) }),
   };
-  c.strip = el("div", { class: "strip", role: "group", style: `--c:${TCOL[i % 4]}`, "aria-label": `${t("track")} ${i + 1}` },
+  c.strip = el("div", { class: "strip", role: "group", style: `--c:${tcol(i)}`, "aria-label": `${t("track")} ${i + 1}` },
     c.num, c.snd, c.rec, c.solo, fader, c.lvOut, c.mute, el("span", { class: "v dim", ic: "symbol_pan" }, t("pan")), pan, c.panOut, c.selb);
   mixCtl[i] = c;
   return c.strip;
@@ -9959,7 +10745,9 @@ const LVP = () => ({ pan: lvP("PAN", 39), filt: lvP("FILT", 50), rev: lvP("REV",
 const LVG = () => ({ bpm: lvGany("BPM", 0), swing: lvGany("SWING", 1), filt: lvG("FILT", 29), dust: lvG("DUST", 27), duck: lvG("DUCK", 28),
   drRev: lvG("REV", 26), drDly: lvG("DLY", 32), ch: [lvG("CH1", 33), lvG("CH2", 34), lvG("CH3", 35)], drCh: lvG("CH4", 24),
   other: lvG("OTHER", 36), route: lvGany("IN", 14), fxCh: lvG("FX CH", 45), drMap: lvG("DR MAP", 46), remote: lvG("REMOTE", 47) });
-const lvDrum = (i) => i === (dev && dev.info ? dev.info.ntrk || 4 : 4) - 1;
+const lvDrum = (i) => isDrumTrk(i);
+const lvDrumLv = (i) => lvDrum(i) && drumLvGlobal();
+const lvNum = (i) => (lvDrum(i) ? (nTrk() >= 8 ? "D" + (i + 1) : "D") : String(i + 1));   /* (eight tracks: two drum tracks) */   /* a level that is G_DRLVL (four-track firmware) */
 const lvGv = (id) => (dev && dev.dump ? dev.dump.g[id] : 0);
 
 /* ---- requests: the buttons' ones go first in the queue and are never sent twice (a mute is a toggle) */
@@ -10028,7 +10816,8 @@ async function lvReadTrack(i) {
 /* the drum kits' names: the drum track's KIT (DESC of P_E0 with the drum track selected) */
 async function lvKits() {
   if (dev.kitNames && dev.kitNames.length) { LV.kitNames = dev.kitNames; return; }
-  const ds = (dev.info.ntrk || 4) - 1, sel = dev.sel;
+  const ds = drumFocus(), sel = dev.sel;
+  if (ds < 0) return;
   try {
     if (sel !== ds) await rq(req.track(ds));
     const kd = await getDescOrNull(0, dev.info.pe0);
@@ -10188,9 +10977,11 @@ function lvGlobal(id, v, final = true) {
 }
 async function lvSolo(i) {
   if (!lvOk()) return;
+  if (dev.info.proto >= 13) { LV.solo ^= 1 << i; lvRenderStrip(i); await lvSend(LIVE.SOLO_TRK, i); return; }   /* v13: any track */
+  if ((i >> 2) !== ((dev.sel | 0) >> 2)) return;      /* (before v13 the GLO keys solo the selected track's bank of four) */
   LV.solo ^= 1 << i;
   lvRenderStrip(i);
-  await lvTap(LIVE.LY_MIX, LIVE.SOLO + i);
+  await lvTap(LIVE.LY_MIX, LIVE.SOLO + (i & 3));
 }
 /* the keys play this track: it is selected on the FM-1 too (REC records it; OTHER = SEL channels reach it) */
 async function lvTarget(i) {
@@ -10502,7 +11293,7 @@ function lvBuild() {
   const fxBox = el("div", { class: "card lvcard lvfxbox" }, el("div", { class: "lvhead" }, el("h2", { text: t("lvFx") }), U.latch),
     el("p", { class: "dim lvhint", text: t("lvFxHint") }), ...groups);
   /* the keys */
-  U.targets = [0, 1, 2, 3].slice(0, n).map((i) => el("button", { type: "button", class: "tog", style: `--trk:${TCOL[i]}`, text: lvDrum(i) ? "D" : String(i + 1), onclick: () => lvTarget(i) }));
+  U.targets = Array.from({ length: n }, (_, i) => el("button", { type: "button", class: "tog", style: `--trk:${tcol(i)}`, text: lvNum(i), onclick: () => lvTarget(i) }));
   U.octDn = el("button", { type: "button", text: "−", "aria-label": t("lvOct") + " −", onclick: () => { LV.oct = Math.max(1, LV.oct - 1); lvRenderPlay(); } });
   U.octUp = el("button", { type: "button", text: "+", "aria-label": t("lvOct") + " +", onclick: () => { LV.oct = Math.min(7, LV.oct + 1); lvRenderPlay(); } });
   U.octV = el("span", { class: "lvoct" });
@@ -10556,7 +11347,7 @@ function lvStrip(i) {
   const drum = lvDrum(i), P = LVP(), g = LVG();
   const tr = () => LV.tr[i] || { p: [] };
   const pd = (id, d) => dev.pdesc[id] || d;
-  const lvD = (drum ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL ?? 0]) || { min: 0, max: 127, def: 100 };
+  const lvD = (lvDrumLv(i) ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL ?? 0]) || { min: 0, max: 127, def: 100 };
   const s = {};
   s.name = el("div", { class: "lsname" });
   s.sound = el("select", { class: "lssound", "aria-label": t(drum ? "lvKit" : "lvSound") });
@@ -10578,11 +11369,12 @@ function lvStrip(i) {
     return lvKnob(lbl, { min: d.min, max: d.max, def: d.def, bip,
       get: () => (glob ? lvGv(id) : tr().p[id] ?? 0), set: (v, f) => (glob ? lvGlobal(id, v, f) : lvParam(i, id, v)), mid: glob ? `g:${id}` : `s${i}:${id}` });
   };
-  s.knobs = drum
+  s.knobs = drum && drumLvGlobal()
     ? [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), g.drRev, false, true), kn(t("lsDly"), g.drDly, false, true)]
+    : drum ? [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly)]
     : [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly), kn(t("lsCho"), P.cho), kn(t("lsDrv"), P.dst)];
-  s.node = el("div", { class: "lstrip" + (drum ? " drum" : ""), style: `--c:${TCOL[i % 4]}`, role: "group", "aria-label": `${t("lvTrack")} ${i + 1}` },
-    el("div", { class: "lshead" }, el("span", { class: "lsnum", text: drum ? "D" : String(i + 1) }), s.name, drum ? "" : s.fav),
+  s.node = el("div", { class: "lstrip" + (drum ? " drum" : ""), style: `--c:${tcol(i)}`, role: "group", "aria-label": `${t("lvTrack")} ${i + 1}` },
+    el("div", { class: "lshead" }, el("span", { class: "lsnum", text: lvNum(i) }), s.name, drum ? "" : s.fav),
     el("div", { class: "lssnd" }, s.prev, s.sound, s.next), s.prog,
     el("div", { class: "lsbody" }, s.fader, el("div", { class: "lsknobs" }, ...s.knobs)),
     el("div", { class: "lsbtns" }, s.mute, s.solo, s.sel));
@@ -10702,8 +11494,8 @@ function lvRenderPlay() {
   U.lvls.forEach((b, k) => b.setAttribute("aria-pressed", String(k === LV.dlv)));
   U.octV.textContent = `C${LV.oct}–C${LV.oct + 2}`;
   U.vel.style.setProperty("--p", (LV.vel / 127 * 100).toFixed(1) + "%");
-  U.keys.style.setProperty("--trk", TCOL[LV.target % 4]);
-  U.pads.style.setProperty("--trk", TCOL[3]);
+  U.keys.style.setProperty("--trk", tcol(LV.target));
+  U.pads.style.setProperty("--trk", tcol(LV.target));
   const md = dev.pdesc[P.mode];
   if (md && md.names && U.arp.options.length !== md.names.length) U.arp.replaceChildren(...md.names.map((n, k) => el("option", { value: String(k), text: n })));
   if (!drum && document.activeElement !== U.arp) U.arp.value = String(o.p[P.mode] ?? 0);
@@ -10756,7 +11548,7 @@ function lvRenderState() {
   U.fillbar.setAttribute("aria-pressed", String(!!(s && s.fillBar)));
   U.cpu.textContent = s ? `${t("lvCpu")} ${s.cpu}%` : "";
   /* the position: the drum track's step as bar.beat (16 steps a bar), the song's part */
-  const ds = s && s.tracks[s.tracks.length - 1];
+  const ds = s && (s.tracks[drumFocus()] || s.tracks[s.tracks.length - 1]);
   const st = ds ? ds.step : 0;
   U.pos.replaceChildren(el("b", { text: playing && ds ? `${Math.floor(st / 16) + 1}.${Math.floor((st % 16) / 4) + 1}` : "–.–" }),
     el("span", { class: "dim", text: s && s.songRuns ? `${t("lvSong")} ${s.songAt + 1}/${s.songLen} · ${t("lvBar")} ${s.songBar + 1}/${s.songBars}` : t("lvBar") }),
@@ -11016,8 +11808,8 @@ function lvxBuildPerf() {
   if (!U.perf) return;
   const i = LV.target, drum = lvDrum(i), o = LV.tr[i] || { p: [] }, pd = (id) => dev.pdesc[id], gd = (id) => dev.gdesc[id];
   U.perfTabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === LVS.tab)));
-  U.perfTrk.textContent = drum ? "DRUMS" : `${t("lvTrack")} ${i + 1} · ${dev.info.engines[o.engine] || ""}`;
-  U.perf.style.setProperty("--c", TCOL[i % 4]);
+  U.perfTrk.textContent = drum ? (nTrk() >= 8 ? `DRUMS ${i + 1}` : "DRUMS") : `${t("lvTrack")} ${i + 1} · ${dev.info.engines[o.engine] || ""}`;
+  U.perf.style.setProperty("--c", tcol(i));
   const ctls = [];
   const row = (title, list) => { const xs = list.filter(Boolean); ctls.push(...xs); return xs.length ? el("div", { class: "lvxgrp" }, el("span", { class: "dim", text: t(title) }), el("div", { class: "lvknobs" }, ...xs)) : ""; };
   let body = [];
@@ -11486,14 +12278,14 @@ function livePush(f) {
     const c = parse[CMD.TRACK_CHANGED](f.a), o = LV.tr[c.track];
     if (!o) return;
     if (c.id === LVP().mute) { if (!lvTouched("lv:" + c.track)) o.mute = c.value ? 1 : 0; }
-    else if (c.id === 0 && !lvDrum(c.track)) { if (!lvTouched("lv:" + c.track)) o.level = c.value; }
+    else if (c.id === 0 && !lvDrumLv(c.track)) { if (!lvTouched("lv:" + c.track)) o.level = c.value; }
     else if (!lvTouched(`p:${c.track}:${c.id}`)) o.p[c.id] = c.value;
     lvRenderStrip(c.track);
   } else if (f.cmd === CMD.CHANGED) {
     const c = parse[CMD.CHANGED](f.a), o = LV.tr[dev.sel];
-    if (c.scope) { lvRenderMaster(); if (c.id === gDrLvl()) { const ds = (dev.info.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; lvRenderStrip(ds); } lvRenderPlay(); return; }
+    if (c.scope) { lvRenderMaster(); if (c.id === gDrLvl() && drumLvGlobal()) { const ds = (dev.info.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; lvRenderStrip(ds); } lvRenderPlay(); return; }
     if (!o) return;
-    if (c.id === 0 && !lvDrum(dev.sel)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
+    if (c.id === 0 && !lvDrumLv(dev.sel)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
     else if (c.id === LVP().mute) { if (!lvTouched("lv:" + dev.sel)) o.mute = c.value ? 1 : 0; }
     else if (!lvTouched(`p:${dev.sel}:${c.id}`)) o.p[c.id] = c.value;
     lvRenderStrip(dev.sel);
@@ -11517,7 +12309,10 @@ window.addEventListener("keydown", (e) => {
   else if (digit) {
     const d = +digit[1];
     if (d >= 1 && d <= 4) lvTap(LIVE.LY_SONG, LIVE.SEC + d - 1);
-    else if (d >= 5 && d <= 8) { if (e.shiftKey) lvSolo(d - 5); else if (LV.tr[d - 5]) lvMute(d - 5, !LV.tr[d - 5].mute); }
+    else if (d >= 5 && d <= 8) {                   /* the bank of four of the track played (as GLO on the FM-1) */
+      const i = (nTrk() >= 8 ? (LV.target >> 2) * 4 : 0) + d - 5;
+      if (e.shiftKey) lvSolo(i); else if (LV.tr[i]) lvMute(i, !LV.tr[i].mute);
+    }
     else if (d === 9) { lvKey(LIVE.LY_MIX, LIVE.FILL, true); up = () => lvKey(LIVE.LY_MIX, LIVE.FILL, false); }
     else if (d === 0) lvTap(LIVE.LY_MIX, LIVE.FILL_BAR);
   } else if (k === "b") lvTap(LIVE.LY_MIX, LIVE.TAP);
