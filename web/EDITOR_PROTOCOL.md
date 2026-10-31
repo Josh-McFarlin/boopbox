@@ -472,6 +472,22 @@ fill bar…) are sent once, never repeated on a timeout. The notes are not SysEx
 the tracks' channels (GLO > MIDI; OTHER = SEL: a free channel on the selected track; DR MAP for the drums). A device
 before 2.7 does not answer `LIVE`: the page keeps its mixer and keys (TRACK_MIX, TRACK_PARAM, SET, notes).
 
+## v13: LIVE for eight tracks (BoopBox)
+
+`INFO` ends with 13. The LIVE state (above) gets 15 more bytes at its end, 65 in all: the mutes, the solos and the REC
+tracks of tracks 5..8 (each `>> 4`: bit 0 is track 5), then for each of tracks 5..8 its step, its pattern length and its
+meter, as tracks 1..4 have them. The first 50 bytes are as in v12 (their mute, solo and REC bytes still hold tracks 1..4
+in bits 0..3), so a v12 editor reads a v13 reply as before. One more op:
+
+| op | args | does |
+| --- | --- | --- |
+| 13 | track 0..7 | solo: toggles that track's solo (`song.solo`), whichever track is selected. Op 2's GLO keys 5..8 solo the selected track's bank of four, as on the FM-1 |
+
+Tracks 1..8 are reached by `TRACK`, `TRACK_MIX`, `TRACK_DUMP`, `TRACK_STEP`, `TRACK_PARAM`, `LOCK_*`, `MICRO_*` and
+`FILL_*` (track 0..7). A track's kind is its engine byte: NENGINES is a drum track (by default tracks 4 and 8; SAVE >
+TOOLS > KIND changes it), so an editor never takes the last track as *the* drum track. `TRACK` ends with the solo mask
+in two bytes (tracks 1..7, then track 8).
+
 ## Notes for the editor
 
 - **One request at a time.** Wait for the reply, about 10–50 ms, before sending the next.

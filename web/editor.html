@@ -19,6 +19,9 @@
   :root {
     --bg: #000; --s1: #0b0b0e; --s2: #1a1a1e; --s3: #36363c; --line: #232329; --dim: #76767e; --fg2: #c4c4cc; --fg: #f2f2f2;
     --red: #ff2c34; --t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a; --trk: var(--t1);
+    /* tracks 5..8: a shade of 1..4, as the FM-1 draws them (gfx.c te_shade: 45 % of the way to white) */
+    --t5: color-mix(in srgb, var(--t1) 55%, #fff); --t6: color-mix(in srgb, var(--t2) 55%, #fff);
+    --t7: color-mix(in srgb, var(--t3) 55%, #fff); --t8: color-mix(in srgb, var(--t4) 55%, #fff);
     --font: "BoopBox Terminus", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
     color-scheme: dark;
   }
@@ -1244,6 +1247,8 @@ const LIVE = { STATE: 0, PLAY: 1, KEY: 2, FX: 3, REC: 4, UNDO: 5, LY_KEY: 5, LY_
   /* (2.7) the page's own (editor_live.c 6..12): ROLL and ERASE while held, the pattern's tools, a chain of sections, THROW,
      the master level, a drum sound's TUNE / DECAY; a state with them is 50 bytes (s.pro) */
   ROLL: 6, ERASE: 7, PATTERN: 8, CHAIN: 9, THROW: 10, MASTER: 11, DRUM_TW: 12, CHAIN_MAX: 8,
+  /* v13 (BoopBox): tracks 5..8 in the state (65 bytes), SOLO_TRK solos any track (GLO keys solo the selected one's bank) */
+  SOLO_TRK: 13,
   /* the 27 punch-in effects (punch.c PUNCH_NAME): 16 on the white keys, 11 on the black keys */
   FX_NAMES: ["LOOP 4", "LOOP 8", "LOOP 16", "LOOP 32", "STUTTER", "REVERSE", "STOP", "HALF", "LOW", "HIGH", "PHONE", "CRUSH",
     "ALIAS", "GATE", "ECHO", "WOBBLE", "KILL LOW", "KILL MID", "KILL HIGH", "REWIND", "OCT UP", "FLANGER", "AUTO-PAN", "FREEZE",
@@ -1472,6 +1477,7 @@ const parse = {
     const o = { sel: r.b(), ntrk: r.b(), tracks: [] };
     for (let i = 0; i < o.ntrk; i++) o.tracks.push({ engine: r.b(), preset: r.b(), level: r.v(), mute: r.b(), armed: r.b() });
     o.solo = r.i < a.length ? r.b() : 0;             /* v5: the tracks soloed (bit per track) */
+    if (r.i < a.length) o.solo |= r.b() << 7;        /* (eight tracks: track 8's in a byte of its own) */
     return o;
   },
   [CMD.TRACK_MIX](a) { const r = new Reader(a); return { track: r.b(), level: r.v(), mute: r.b() }; },
@@ -1489,6 +1495,10 @@ const parse = {
       const m = r.b();
       o.pro = true; o.master = m ? m - 1 : -1; o.throws = r.b();
       o.dtw = Array.from({ length: 16 }, () => { const v = r.b(); return { tune: (v & 15) - 8, dec: ((v >> 4) & 7) - 4 }; });
+    }
+    if (r.i + 15 <= a.length) {                     /* v13 (BoopBox): tracks 5..8 (the bytes before hold 1..4 in bits 0..3) */
+      o.mutes = (o.mutes & 15) | r.b() << 4; o.solo = (o.solo & 15) | r.b() << 4; o.rec = (o.rec & 15) | r.b() << 4;
+      for (let k = 0; k < 4; k++) o.tracks.push({ step: r.b(), len: r.b(), meter: r.b() });
     }
     return o;
   },
@@ -2993,7 +3003,7 @@ function makeMockDevice(opt = {}) {
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
   const laneOf = (n) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
   const v5 = !opt.legacy && !opt.v3;              /* SLOOP 2.0: steps with level / ratchet, DRUM_STEP, TRACK solo */
-  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : 12;   /* INFO's protocol */
+  const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : opt.v12 ? 12 : 13;   /* INFO's protocol */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
   const dOld = (d) => {
     const notes = [];
@@ -3155,17 +3165,19 @@ function makeMockDevice(opt = {}) {
   ];
   const P_E0 = TP.length, P_COUNT = P_E0 + 8, G_COUNT = GP.length, NSTEP = 64, G_ENGSEL = 20, P_SLCR = 45, P_CHORD = 49;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  /* four tracks (firmware v3); engine / preset / p / step below are the selected track's */
-  const NTRK = 4, TRK_DRUM = 3;
-  const newTrack = (i) => ({ engine: 0, preset: 0, drum: i === TRK_DRUM, fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
-    p: TP.map((d) => d.def).concat(i === TRK_DRUM ? [5, 0, 0, 0, 0, 0, 0, 0] : new Array(8).fill(0)),
+  /* v13 (BoopBox): eight tracks, drums on 4 and 8 (each drum track's level its own P_LEVEL); before (SLOOP, firmware v3..v12):
+     four, the drum track last (its level G_DRLVL). engine / preset / p / step below are the selected track's */
+  const NTRK = mockProto >= 13 ? 8 : 4, TRK_DRUM = 3, EIGHT = NTRK >= 8;
+  const isDrumIdx = (i) => (EIGHT ? i % 4 === 3 : i === TRK_DRUM);
+  const newTrack = (i) => ({ engine: 0, preset: 0, drum: isDrumIdx(i), fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
+    p: TP.map((d) => d.def).concat(isDrumIdx(i) ? [5, 0, 0, 0, 0, 0, 0, 0] : new Array(8).fill(0)),
     step: Array.from({ length: NSTEP }, () => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 })),
-    dstep: i === TRK_DRUM ? Array.from({ length: NSTEP }, emptyDrum) : null,
+    dstep: isDrumIdx(i) ? Array.from({ length: NSTEP }, emptyDrum) : null,
     micro: new Array(NSTEP).fill(0), locks: [],      /* v7: nudges, parameter locks (at most NLOCK) */
     fill: new Array(NSTEP / 4).fill(0) });           /* v8: fill conditions, 2 bits a step */
   const NLOCK = 24;
   const st = {
-    tracks: [0, 1, 2, 3].map(newTrack), sel: 0, rec: 0, solo: 0,
+    tracks: Array.from({ length: NTRK }, (_, i) => newTrack(i)), sel: 0, rec: 0, solo: 0,
     g: GP.map((d) => d.def),
     slots: [null, null, null, null],
     smp: [0, 1, 2, 3].map(() => ({ flash: new Uint8Array(SMP.SLOT_SIZE).fill(0xFF), zones: 0, name: "", len: 0, next: SMP.DATA_OFF })),   /* USR1..4 (2.4: USR4) */
@@ -3188,6 +3200,10 @@ function makeMockDevice(opt = {}) {
     Object.defineProperty(st, k, { enumerable: false, get: () => st.tracks[st.sel][k], set: (v) => { st.tracks[st.sel][k] = v; } });
   }
   const drumSel = () => st.tracks[st.sel].drum;
+  const ml48 = () => { const d = new Uint8Array(48); if (st.ml) d.set(st.ml.slice(0, 48)); else d.set([1, 2, 3, 10, 2], 32); return d; };
+  const drumFoc = () => (drumSel() ? st.sel : st.tracks.findIndex((t) => t.drum));   /* core.h drum_focus */
+  const lvlOf = (i) => (!EIGHT && st.tracks[i].drum ? st.g[25] : st.tracks[i].p[0]);   /* (four tracks: the drums' G_DRLVL) */
+  const setLvl = (i, lv) => { if (!EIGHT && st.tracks[i].drum) st.g[25] = lv; else st.tracks[i].p[0] = lv; };
   const engOf = (t) => (t.drum ? ENG.length : t.engine);   /* the engine byte: NENGINES = drums */
   const watchMs = opt.watchMs || 3000;
   const tdesc = (t, id) => (t.drum && id === P_E0 ? KIT : id >= P_E0 ? ENG[t.engine].edit[id - P_E0] : TP[id]);
@@ -3369,18 +3385,17 @@ function makeMockDevice(opt = {}) {
       case CMD.TRACK:
         if (a.length >= 1 && a[0] < NTRK) st.sel = a[0];
         b(st.sel); b(NTRK);
-        st.tracks.forEach((t, i) => { b(engOf(t)); b(t.preset); v(i === TRK_DRUM ? st.g[25] : t.p[0]); b(t.p[40] ? 1 : 0); b((st.rec >> i) & 1); });
-        if (v5) b(st.solo & 15);
+        st.tracks.forEach((t, i) => { b(engOf(t)); b(t.preset); v(lvlOf(i)); b(t.p[40] ? 1 : 0); b((st.rec >> i) & 1); });
+        if (v5 && EIGHT) { b(st.solo & 127); b(st.solo >> 7); } else if (v5) b(st.solo & 15);
         break;
       case CMD.TRACK_MIX: {
         if (a.length < 1 || a[0] >= NTRK) return null;
-        const t = st.tracks[a[0]], drum = a[0] === TRK_DRUM;
+        const t = st.tracks[a[0]];
         if (a.length >= 4) {
-          const lv = clamp(v14dec(a[1], a[2]), 0, 127);
-          if (drum) st.g[25] = lv; else t.p[0] = lv;
+          setLvl(a[0], clamp(v14dec(a[1], a[2]), 0, 127));
           t.p[40] = a[3] ? 1 : 0;
         }
-        b(a[0]); v(drum ? st.g[25] : t.p[0]); b(t.p[40] ? 1 : 0);
+        b(a[0]); v(lvlOf(a[0])); b(t.p[40] ? 1 : 0);
         break;
       }
       case CMD.TRACK_DUMP: {
@@ -3462,7 +3477,7 @@ function makeMockDevice(opt = {}) {
       }
       case CMD.DRUM_STEP: {                       /* v5: index [, on 3 x 7 bits, lvl 5 x 7, rat 5 x 7] */
         if (a.length < 1 || a[0] >= NSTEP) return null;
-        const d = st.tracks[TRK_DRUM].dstep[a[0]];
+        const d = st.tracks[Math.max(0, drumFoc())].dstep[a[0]];   /* (the drum track shown: core.h drum_focus) */
         if (a.length >= 14) {
           const g = (k, n) => a.slice(k, k + n).reduce((x, y, j) => x + y * 2 ** (7 * j), 0);
           const on = g(1, 3) & 0xFFFF, lv = g(4, 5) % 2 ** 32, rt = g(9, 5) % 2 ** 32;
@@ -3563,7 +3578,7 @@ function makeMockDevice(opt = {}) {
         st.bkSnap = new Map([[0, enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k) => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
           [6, bankOf(0)], [7, bankOf(1)], ...(v9 ? [[8, st.fm6bank.some(Boolean) ? FM6.bankObj(st.fm6bank) : new Uint8Array(0)]] : []),
           ...(v10 ? [[9, DSYN.bankEncode(dsynKits())]] : []),
-          ...(v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* MIDI LEARN (2.6): only when not the
+          ...(EIGHT ? [[10, ml48()]] : v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* (BoopBox: always, 48 bytes) */   /* MIDI LEARN (2.6): only when not the
                                                                                     * default (editor.c, project.c midi_part_default) */
           ...(v11 && st.theme ? [[11, st.theme.slice()]] : []),   /* your theme (2.7): only when there is one */
           ...st.smp.map((_, k) => [32 + k, st.smp[k].zones ? st.smp[k].flash.slice(0, SMP.DATA_OFF + st.smp[k].len) : new Uint8Array(0)])]);
@@ -3613,7 +3628,7 @@ function makeMockDevice(opt = {}) {
             }
             else if (id === 10) {                           /* the MIDI part (2.6; editor.c: stopped only): the LEARN
                                                                map (16 x 2 bytes), then GLO > MIDI's channels (4 bytes) */
-              if (P.len !== 32 && P.len !== 36 && P.len !== 40) throw 0;
+              if (EIGHT ? P.len !== 48 : P.len !== 32 && P.len !== 36 && P.len !== 40) throw 0;   /* (BoopBox: exactly 48) */
               if (st.playing) rc = 3;
               else st.ml = P.buf.slice();
             }
@@ -3733,8 +3748,9 @@ function makeMockDevice(opt = {}) {
       else if (!play && st.playing) { st.playing = false; L.next = -1; L.fillBar = false; if (st.rec) st.rec = 0; }
     } else if (op === LIVE.KEY && a.length >= 4 && x === LIVE.LY_MIX && y < 16) {
       if (!z) { if (y === LIVE.FILL) L.fillHeld = false; return; }
-      if (y < 4) st.tracks[y].p[40] = st.tracks[y].p[40] ? 0 : 1;
-      else if (y < 8) st.solo ^= 1 << (y - 4);
+      const bank = EIGHT ? (st.sel >> 2) * 4 : 0;    /* (eight tracks: the selected track's bank of four) */
+      if (y < 4) st.tracks[bank + y].p[40] = st.tracks[bank + y].p[40] ? 0 : 1;
+      else if (y < 8) st.solo ^= 1 << (bank + y - 4);
       else if (y === LIVE.FILL) L.fillHeld = true;
       else if (y === LIVE.FILL_BAR) { L.fillBar = !L.fillBar; L.fillAt = nextBar(); }
       else if (y === LIVE.TAP) {                     /* ui_layers.c tap_tempo: the last taps' mean, 40..240 */
@@ -3775,7 +3791,9 @@ function makeMockDevice(opt = {}) {
       const set = op === LIVE.ROLL ? L.rolls : L.erase, k = `${x}:${y}`, down = op === LIVE.ROLL ? a[4] : z;
       if (down) set.add(k); else set.delete(k);
       if (op === LIVE.ERASE && down && x === 3) st.tracks[3].dsteps?.forEach((d) => { if (d) d.on &= ~(1 << y); });
-    } else if (op === LIVE.PATTERN && a.length >= 4 && x < 4) {
+    } else if (op === LIVE.SOLO_TRK && mockProto >= 13 && a.length >= 2) {
+      if (x < NTRK) st.solo ^= 1 << x;
+    } else if (op === LIVE.PATTERN && a.length >= 4 && x < NTRK) {
       const t = st.tracks[x], len = lenOf(t);
       if (y === 1) t.p[29] = z ? Math.min(64, len * 2) : Math.max(1, len >> 1);
       L.pattern.push([x, y, z]);
@@ -3797,11 +3815,16 @@ function makeMockDevice(opt = {}) {
     b(st.playing ? 18 + Math.round(Math.random() * 6) : 9);
     b(0); b(4); b(0); b(4);                          /* (the song: entry 0 of 4, bar 0 of 4) */
     b(st.slots.reduce((m, x, k) => m | (x ? 1 << k : 0), 0));
-    st.tracks.forEach((t, i) => {
+    const trkOut = (t, i) => {
       const steps = st.playing ? Math.floor(el * st.g[0] / 15000) : 0, heard = st.playing && !t.p[40] && !(st.solo && !((st.solo >> i) & 1));
       b(steps % lenOf(t)); b(lenOf(t)); b(heard ? 70 + Math.round(Math.random() * 40) : 0);
-    });
+    };
+    st.tracks.slice(0, 4).forEach(trkOut);          /* (tracks 1..4: the 2.7 page's 50 bytes) */
     if (mockProto >= 12) { b(L.master); b(L.thr); L.dtw.forEach((x) => b(x)); }   /* (2.7: 50 bytes) */
+    if (mockProto >= 13) {                           /* v13: tracks 5..8 (65 bytes) */
+      b(mutes >> 4); b(st.solo >> 4); b(st.rec >> 4);
+      st.tracks.slice(4, 8).forEach((t, k) => trkOut(t, k + 4));
+    }
   }
 
   /* a WebMIDI-like access object: one input and one output named "Felucca" */
@@ -3868,11 +3891,11 @@ function makeMockDevice(opt = {}) {
       reloadPush();
       return i;
     },
-    /* TRACKS page KNOB 2: the selected track's level (the drum track: G_DRLVL); pushes CHANGED */
+    /* TRACKS page KNOB 2: the selected track's level (four tracks, the drum track: G_DRLVL); pushes CHANGED */
     level(v) {
-      const drum = st.sel === TRK_DRUM;
+      const drum = !EIGHT && drumSel();
       v = clamp(v, 0, 127);
-      if (drum) st.g[25] = v; else st.p[0] = v;
+      setLvl(st.sel, v);
       push(CMD.CHANGED, drum ? [1, 25, ...v14enc(v)] : [0, 0, ...v14enc(v)]);
       return v;
     },
@@ -4608,7 +4631,7 @@ const TEXT = {
     lvKeys: "鍵盤", lvTrack: "トラック", lvOct: "オクターブ", lvVel: "ベロシティ", lvArp: "アルペジオ", lvHold: "ホールド", lvLvl: ["GHOST", "SOFT", "NORM", "HARD"],
     lvNoChan: "このトラックはノートを受けません：GLO > MIDI にチャンネルがなく OTHER が OFF です。",
     lvClock: "GLO > SYSTEM > IN = CLOCK：FM-1 はノートを無視します。ここから演奏するには IN を NOTES に。",
-    lvShortcuts: "Space 再生/停止 · 1–4 セクション · 5–8 ミュート · Shift+5–8 ソロ · 9 フィル（押す間）· 0 次の小節フィル · B タップ · C 録音 · N 次のソング · Z / X オクターブ · ← → トラック · A W S E D F T G Y H U J K O L P 演奏 · Shift + それらのキー：エフェクト · F1–F8 シーン（Shift：保存）· Esc 全オフ",
+    lvShortcuts: "Space 再生/停止 · 1–4 セクション · 5–8 ミュート（演奏中のトラックの4トラック）· Shift+5–8 ソロ · 9 フィル（押す間）· 0 次の小節フィル · B タップ · C 録音 · N 次のソング · Z / X オクターブ · ← → トラック · A W S E D F T G Y H U J K O L P 演奏 · Shift + それらのキー：エフェクト · F1–F8 シーン（Shift：保存）· Esc 全オフ",
     lvPanic: "全オフ", lvStored: "ループを保存：セクション ",
     lvxHelpShow: "使い方", lvxViewAll: "表示：すべて", lvxViewSimple: "表示：基本",
     lvxGuideTitle: "はじめてのライブ 5 ステップ", lvxGuideOk: "わかった",
@@ -4946,7 +4969,7 @@ const TEXT = {
     lvKeys: "keys", lvTrack: "track", lvOct: "octave", lvVel: "velocity", lvArp: "arp", lvHold: "hold", lvLvl: ["GHOST", "SOFT", "NORM", "HARD"],
     lvNoChan: "The FM-1 does not take notes for this track: GLO > MIDI gives it no channel and OTHER is OFF.",
     lvClock: "GLO > SYSTEM > IN = CLOCK: the FM-1 ignores notes. Set IN to NOTES to play from here.",
-    lvShortcuts: "Space play / stop · 1–4 sections · 5–8 mute · Shift+5–8 solo · 9 fill (hold) · 0 fill bar · B tap · C rec · N next song · Z / X octave · ← → track · keys A W S E D F T G Y H U J K O L P play · Shift + those keys: effects · F1–F8 scenes (Shift: store) · Esc all off",
+    lvShortcuts: "Space play / stop · 1–4 sections · 5–8 mute (the bank of four of the track played) · Shift+5–8 solo · 9 fill (hold) · 0 fill bar · B tap · C rec · N next song · Z / X octave · ← → track · keys A W S E D F T G Y H U J K O L P play · Shift + those keys: effects · F1–F8 scenes (Shift: store) · Esc all off",
     lvPanic: "all off", lvStored: "Loop saved into section ",
     lvxHelpShow: "how it works", lvxViewAll: "view: everything", lvxViewSimple: "view: essentials",
     lvxGuideTitle: "first live in 5 steps", lvxGuideOk: "got it",
@@ -5304,6 +5327,29 @@ let tab = (() => {
   return "sound";
 })();
 const hasTracks = () => !!dev && !!dev.info && !!dev.info.ntrk;
+const nTrk = () => (dev && dev.info && dev.info.ntrk) || 0;
+/* a track's kind: its engine byte (NENGINES = drums), from TRACK (dev.mix), the LIVE page's reads or the selected track's
+   DUMP. BoopBox has eight tracks, drums on 4 and 8 by default, and any track may be either (SAVE > TOOLS > KIND); a
+   four-track firmware (SLOOP, Felucca) has its one drum track last */
+function isDrumTrk(i) {
+  if (!dev || !dev.info) return false;
+  const ne = dev.info.nengines, x = (dev.mix && dev.mix.tracks && dev.mix.tracks[i]) || (LV.tr && LV.tr[i]);
+  if (i === dev.sel && dev.dump && dev.dump.engine !== undefined) return dev.dump.engine >= ne;
+  if (x && x.engine !== undefined) return x.engine >= ne;
+  const n = nTrk() || 4;
+  return n >= 8 ? i % 4 === 3 : i === n - 1;
+}
+/* the drum track the FM-1's drum screens show (core.h drum_focus): the selected track if it is one, else the first */
+function drumFocus() {
+  if (!dev) return -1;
+  if (isDrumTrk(dev.sel)) return dev.sel;
+  for (let i = 0; i < (nTrk() || 4); i++) if (isDrumTrk(i)) return i;
+  return -1;
+}
+/* four-track firmware: the drum track's level and sends are globals (GLO > DRUMS: G_DRLVL, G_DRREV, G_DRDLY). BoopBox's
+   drum tracks have their own (P_LEVEL, P_REV, P_DLY: those globals only name the focused drum track's on the FM-1's
+   screen, so the editor sets the track's own) */
+const drumLvGlobal = () => nTrk() < 8;
 const devNlock = () => (dev && dev.info && dev.info.ntrk >= 8 ? 32 : 24);   /* locks a track: 32 on the eight-track firmware */
 function showTab(name) {
   if (!TABS.includes(name)) name = "sound";
@@ -6173,25 +6219,26 @@ function buildUI() {
 
 /* the track selector (v3): T1..T3 synth parts, T4 the drum track; the editor shows the selected one */
 /* the device's track colours (ui_studio.c TE_COL): the selected one is the editor's accent (--trk) */
-const TCOL = ["var(--t1)", "var(--t2)", "var(--t3)", "var(--t4)"];
+const TCOL = ["var(--t1)", "var(--t2)", "var(--t3)", "var(--t4)", "var(--t5)", "var(--t6)", "var(--t7)", "var(--t8)"];
+const tcol = (i) => TCOL[(i | 0) % TCOL.length];
 function renderTrackbar() {
   renderPreviewKeys();
   const box = $("trackbtns");
   const ntrk = hasTracks() ? dev.info.ntrk : 0;
   if (box.children.length !== ntrk || box.dataset.lang !== lang) {
     box.dataset.lang = lang;
-    box.replaceChildren(...Array.from({ length: ntrk }, (_, i) => el("button", { type: "button", "data-i": i, style: `--c:${TCOL[i % 4]}`,
+    box.replaceChildren(...Array.from({ length: ntrk }, (_, i) => el("button", { type: "button", "data-i": i, style: `--c:${tcol(i)}`,
       onclick: () => selectTrack(i) }, el("span", { class: "no", text: String(i + 1) }), el("span", { class: "nm" }))));
   }
   for (const b of box.children) {
     const i = +b.dataset.i, x = dev.mix && dev.mix.tracks[i];
     b.setAttribute("aria-pressed", i === (dev.sel || 0) ? "true" : "false");
-    const nm = !x ? [i === ntrk - 1 ? "DRUMS" : "", ""] : x.engine >= dev.info.nengines ? [(dev.kitNames || [])[x.e0] || "", "drums"]
+    const nm = !x ? [isDrumTrk(i) ? "DRUMS" : "", ""] : x.engine >= dev.info.nengines ? [(dev.kitNames || [])[x.e0] || "", "drums"]
       : [(dev.names[x.engine] || [])[x.preset] || "", String(dev.info.engines[x.engine] || "").toLowerCase()];
     b.lastChild.replaceChildren(nm[0] + " ", el("span", { class: "dim", text: nm[1] }));
     b.title = `${t("track")} ${i + 1}`;
   }
-  document.documentElement.style.setProperty("--trk", TCOL[(dev.sel || 0) % 4]);
+  document.documentElement.style.setProperty("--trk", tcol(dev.sel || 0));
   renderPreview();
 }
 function selectTrack(i) {
@@ -6284,7 +6331,9 @@ function drumPanelBuild() {
   const step = (d) => { const n = U.kit.options.length || 1; userSet(0, pe0, ((dev.dump.p[pe0] ?? 0) + d + n) % n, true); drumPanelRender(); };
   U.prev = el("button", { type: "button", text: "‹", "aria-label": "previous", onclick: () => step(-1) });
   U.next = el("button", { type: "button", text: "›", "aria-label": "next", onclick: () => step(1) });
-  U.mix = [knob(t("lvLevel"), 1, gDrLvl()), knob(t("lvPan"), 0, 39), knob(t("lvFilter"), 0, 50), knob(t("lvRev"), 1, 26), knob(t("lvDly"), 1, 32)];
+  const gl = drumLvGlobal() ? 1 : 0;                    /* (BoopBox: the drum track's own level and sends) */
+  U.mix = [knob(t("lvLevel"), gl, gl ? gDrLvl() : P.LEVEL), knob(t("lvPan"), 0, 39), knob(t("lvFilter"), 0, 50),
+    knob(t("lvRev"), gl, gl ? 26 : lvP("REV", 36)), knob(t("lvDly"), gl, gl ? 32 : lvP("DLY", 35))];
   const itd = dev.pdesc[53];
   U.ins = el("select", { "aria-label": "INSERT" }, ...((itd && itd.names) || ["OFF"]).map((n, k) => el("option", { value: String(k), text: n })));
   U.ins.addEventListener("change", () => userSet(0, 53, +U.ins.value, true));
@@ -6339,7 +6388,7 @@ async function drumPanelTw(lane) {
 }
 /* a pad heard: a MIDI note on the drum track's channel (as the LIVE page's pads) */
 function drumHear(lane, on) {
-  const tr = (dev.info.ntrk || 4) - 1, tok = "dp:" + lane;
+  const tr = isDrumTrk(dev.sel) ? dev.sel : drumFocus(), tok = "dp:" + lane;
   const km = LV.kmode;
   LV.kmode = "play";                                    /* (always heard: not the LIVE page's roll / erase) */
   try { if (on) lvNoteOn(tok, tr, lvDrumNote(lane), 100); else lvNoteOff(tok); } finally { LV.kmode = km; }
@@ -7347,7 +7396,8 @@ $("dsplay").addEventListener("click", () => { if (DS.kit) op(() => dsPlay()); })
 $("dsuse").addEventListener("click", () => {
   if (!dev || !hasTracks() || !DS.kit) return;
   op(async () => {
-    const drum = dev.info.ntrk - 1;
+    const drum = drumFocus();
+    if (drum < 0) { sayK("kitNoKit"); return; }
     if (dev.sel !== drum) { dev.sel = parse[CMD.TRACK](await rq(req.track(drum))).sel; await afterSoundChange(); }
     const d = dev.pdesc[dev.info.pe0], i = d && d.names ? d.names.indexOf(dsKitName()) : -1;
     if (i < 0) { sayK("kitNoKit"); return; }
@@ -8262,11 +8312,12 @@ async function kitSend() {
   renderKits();
   if (done) sayK("kitSent", kitDest(d));
 }
-/* the drum track on that kit: select track 4, then its KIT (P_E0) = USRn */
+/* the drum track on that kit (the selected one, else the first: drumFocus), then its KIT (P_E0) = USRn */
 function kitUse(k) {
   if (!dev || !hasTracks()) return;
   op(async () => {
-    const drum = dev.info.ntrk - 1;
+    const drum = drumFocus();
+    if (drum < 0) { sayK("kitNoKit"); return; }
     if (dev.sel !== drum) { dev.sel = parse[CMD.TRACK](await rq(req.track(drum))).sel; await afterSoundChange(); }
     const d = dev.pdesc[dev.info.pe0], i = d && d.names ? d.names.indexOf(kitDest(k)) : -1;   /* (the drum track's DESC now) */
     if (i < 0) { sayK("kitNoKit"); return; }
@@ -8778,7 +8829,8 @@ let panning = false;                /* v3 firmware: another track is selected fo
 const mixTouched = (kind, i) => mixDrag === `${kind}:${i}` || performance.now() - (mixEdit.get(`${kind}:${i}`) || 0) < 600
   || (!!dev && kind === "lv" && dev.link.hasQueued("mix:" + i))
   || (kind === "pan" && (panWant.has(i) || (!!dev && dev.link.hasQueued("pan:" + i))));
-const drumTrack = (i) => !!dev && !!dev.mix && i === dev.mix.ntrk - 1;
+const drumTrack = (i) => !!dev && !!dev.mix && isDrumTrk(i);
+const drumLv = (i) => drumTrack(i) && drumLvGlobal();   /* its level is G_DRLVL (four-track firmware) */
 function trackName(x) {
   if (x.engine >= dev.info.nengines) return ["DRUMS", (dev.kitNames || [])[x.e0]].filter(Boolean).join(" ");
   return [dev.info.engines[x.engine], (dev.names[x.engine] || [])[x.preset]].filter(Boolean).join(" ");
@@ -8803,8 +8855,8 @@ async function readMixer() {
 /* the Sound view's values of the selected track (and the drum level, a global) -> the strips */
 function mixFromDump() {
   if (!dev || !dev.mix || !dev.dump || panning) return;
-  const m = dev.mix, ds = m.ntrk - 1, x = m.tracks[dev.sel];
-  if (!mixTouched("lv", ds)) m.tracks[ds].level = dev.dump.g[gDrLvl()];
+  const m = dev.mix, ds = drumLvGlobal() ? m.ntrk - 1 : -1, x = m.tracks[dev.sel];
+  if (ds >= 0 && !mixTouched("lv", ds)) m.tracks[ds].level = dev.dump.g[gDrLvl()];
   if (x) {
     if (!mixTouched("lv", dev.sel)) {
       if (dev.sel !== ds) x.level = dev.dump.p[P.LEVEL];
@@ -8818,9 +8870,9 @@ function mixFromDump() {
 function mixToSound(i) {
   const x = dev.mix.tracks[i];
   const put = (s, id, v) => { if (v == null) return; (s ? dev.dump.g : dev.dump.p)[id] = v; showValue(key(s, id), v, false); };
-  if (drumTrack(i)) put(1, gDrLvl(), x.level);
+  if (drumLv(i)) put(1, gDrLvl(), x.level);
   if (i !== dev.sel) return;
-  if (!drumTrack(i)) put(0, P.LEVEL, x.level);
+  if (!drumLv(i)) put(0, P.LEVEL, x.level);
   put(0, pMute(), x.mute ? 1 : 0);
   put(0, pPan(), x.pan);
 }
@@ -8838,8 +8890,7 @@ function renderMixer() {
   renderTrackbar();
 }
 function buildStrip(i) {
-  const drum = drumTrack(i);
-  const lvDesc = (drum ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL]) || { fmt: F.INT, min: 0, max: 127, def: 100 };
+  const lvDesc = (drumLv(i) ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL]) || { fmt: F.INT, min: 0, max: 127, def: 100 };
   const pDesc = dev.pdesc[pPan()] || { fmt: F.BIPCT, min: -64, max: 63, def: 0 };
   const fader = el("input", { type: "range", class: "fader", min: 0, max: 127, step: 1, "aria-label": `${t("level")} ${i + 1}` });
   fader.addEventListener("pointerdown", () => { mixDrag = "lv:" + i; });
@@ -8862,7 +8913,7 @@ function buildStrip(i) {
     panOut: el("span", { class: "v" }),
     selb: el("button", { type: "button", class: "selb", onclick: () => selectTrack(i) }),
   };
-  c.strip = el("div", { class: "strip", role: "group", style: `--c:${TCOL[i % 4]}`, "aria-label": `${t("track")} ${i + 1}` },
+  c.strip = el("div", { class: "strip", role: "group", style: `--c:${tcol(i)}`, "aria-label": `${t("track")} ${i + 1}` },
     c.num, c.snd, c.rec, c.solo, fader, c.lvOut, c.mute, el("span", { class: "v dim", ic: "symbol_pan" }, t("pan")), pan, c.panOut, c.selb);
   mixCtl[i] = c;
   return c.strip;
@@ -9959,7 +10010,9 @@ const LVP = () => ({ pan: lvP("PAN", 39), filt: lvP("FILT", 50), rev: lvP("REV",
 const LVG = () => ({ bpm: lvGany("BPM", 0), swing: lvGany("SWING", 1), filt: lvG("FILT", 29), dust: lvG("DUST", 27), duck: lvG("DUCK", 28),
   drRev: lvG("REV", 26), drDly: lvG("DLY", 32), ch: [lvG("CH1", 33), lvG("CH2", 34), lvG("CH3", 35)], drCh: lvG("CH4", 24),
   other: lvG("OTHER", 36), route: lvGany("IN", 14), fxCh: lvG("FX CH", 45), drMap: lvG("DR MAP", 46), remote: lvG("REMOTE", 47) });
-const lvDrum = (i) => i === (dev && dev.info ? dev.info.ntrk || 4 : 4) - 1;
+const lvDrum = (i) => isDrumTrk(i);
+const lvDrumLv = (i) => lvDrum(i) && drumLvGlobal();
+const lvNum = (i) => (lvDrum(i) ? (nTrk() >= 8 ? "D" + (i + 1) : "D") : String(i + 1));   /* (eight tracks: two drum tracks) */   /* a level that is G_DRLVL (four-track firmware) */
 const lvGv = (id) => (dev && dev.dump ? dev.dump.g[id] : 0);
 
 /* ---- requests: the buttons' ones go first in the queue and are never sent twice (a mute is a toggle) */
@@ -10028,7 +10081,8 @@ async function lvReadTrack(i) {
 /* the drum kits' names: the drum track's KIT (DESC of P_E0 with the drum track selected) */
 async function lvKits() {
   if (dev.kitNames && dev.kitNames.length) { LV.kitNames = dev.kitNames; return; }
-  const ds = (dev.info.ntrk || 4) - 1, sel = dev.sel;
+  const ds = drumFocus(), sel = dev.sel;
+  if (ds < 0) return;
   try {
     if (sel !== ds) await rq(req.track(ds));
     const kd = await getDescOrNull(0, dev.info.pe0);
@@ -10188,9 +10242,11 @@ function lvGlobal(id, v, final = true) {
 }
 async function lvSolo(i) {
   if (!lvOk()) return;
+  if (dev.info.proto >= 13) { LV.solo ^= 1 << i; lvRenderStrip(i); await lvSend(LIVE.SOLO_TRK, i); return; }   /* v13: any track */
+  if ((i >> 2) !== ((dev.sel | 0) >> 2)) return;      /* (before v13 the GLO keys solo the selected track's bank of four) */
   LV.solo ^= 1 << i;
   lvRenderStrip(i);
-  await lvTap(LIVE.LY_MIX, LIVE.SOLO + i);
+  await lvTap(LIVE.LY_MIX, LIVE.SOLO + (i & 3));
 }
 /* the keys play this track: it is selected on the FM-1 too (REC records it; OTHER = SEL channels reach it) */
 async function lvTarget(i) {
@@ -10502,7 +10558,7 @@ function lvBuild() {
   const fxBox = el("div", { class: "card lvcard lvfxbox" }, el("div", { class: "lvhead" }, el("h2", { text: t("lvFx") }), U.latch),
     el("p", { class: "dim lvhint", text: t("lvFxHint") }), ...groups);
   /* the keys */
-  U.targets = [0, 1, 2, 3].slice(0, n).map((i) => el("button", { type: "button", class: "tog", style: `--trk:${TCOL[i]}`, text: lvDrum(i) ? "D" : String(i + 1), onclick: () => lvTarget(i) }));
+  U.targets = Array.from({ length: n }, (_, i) => el("button", { type: "button", class: "tog", style: `--trk:${tcol(i)}`, text: lvNum(i), onclick: () => lvTarget(i) }));
   U.octDn = el("button", { type: "button", text: "−", "aria-label": t("lvOct") + " −", onclick: () => { LV.oct = Math.max(1, LV.oct - 1); lvRenderPlay(); } });
   U.octUp = el("button", { type: "button", text: "+", "aria-label": t("lvOct") + " +", onclick: () => { LV.oct = Math.min(7, LV.oct + 1); lvRenderPlay(); } });
   U.octV = el("span", { class: "lvoct" });
@@ -10556,7 +10612,7 @@ function lvStrip(i) {
   const drum = lvDrum(i), P = LVP(), g = LVG();
   const tr = () => LV.tr[i] || { p: [] };
   const pd = (id, d) => dev.pdesc[id] || d;
-  const lvD = (drum ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL ?? 0]) || { min: 0, max: 127, def: 100 };
+  const lvD = (lvDrumLv(i) ? dev.gdesc[gDrLvl()] : dev.pdesc[P.LEVEL ?? 0]) || { min: 0, max: 127, def: 100 };
   const s = {};
   s.name = el("div", { class: "lsname" });
   s.sound = el("select", { class: "lssound", "aria-label": t(drum ? "lvKit" : "lvSound") });
@@ -10578,11 +10634,12 @@ function lvStrip(i) {
     return lvKnob(lbl, { min: d.min, max: d.max, def: d.def, bip,
       get: () => (glob ? lvGv(id) : tr().p[id] ?? 0), set: (v, f) => (glob ? lvGlobal(id, v, f) : lvParam(i, id, v)), mid: glob ? `g:${id}` : `s${i}:${id}` });
   };
-  s.knobs = drum
+  s.knobs = drum && drumLvGlobal()
     ? [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), g.drRev, false, true), kn(t("lsDly"), g.drDly, false, true)]
+    : drum ? [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly)]
     : [kn(t("lsFilt"), P.filt, true), kn(t("lsPan"), P.pan, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly), kn(t("lsCho"), P.cho), kn(t("lsDrv"), P.dst)];
-  s.node = el("div", { class: "lstrip" + (drum ? " drum" : ""), style: `--c:${TCOL[i % 4]}`, role: "group", "aria-label": `${t("lvTrack")} ${i + 1}` },
-    el("div", { class: "lshead" }, el("span", { class: "lsnum", text: drum ? "D" : String(i + 1) }), s.name, drum ? "" : s.fav),
+  s.node = el("div", { class: "lstrip" + (drum ? " drum" : ""), style: `--c:${tcol(i)}`, role: "group", "aria-label": `${t("lvTrack")} ${i + 1}` },
+    el("div", { class: "lshead" }, el("span", { class: "lsnum", text: lvNum(i) }), s.name, drum ? "" : s.fav),
     el("div", { class: "lssnd" }, s.prev, s.sound, s.next), s.prog,
     el("div", { class: "lsbody" }, s.fader, el("div", { class: "lsknobs" }, ...s.knobs)),
     el("div", { class: "lsbtns" }, s.mute, s.solo, s.sel));
@@ -10702,8 +10759,8 @@ function lvRenderPlay() {
   U.lvls.forEach((b, k) => b.setAttribute("aria-pressed", String(k === LV.dlv)));
   U.octV.textContent = `C${LV.oct}–C${LV.oct + 2}`;
   U.vel.style.setProperty("--p", (LV.vel / 127 * 100).toFixed(1) + "%");
-  U.keys.style.setProperty("--trk", TCOL[LV.target % 4]);
-  U.pads.style.setProperty("--trk", TCOL[3]);
+  U.keys.style.setProperty("--trk", tcol(LV.target));
+  U.pads.style.setProperty("--trk", tcol(LV.target));
   const md = dev.pdesc[P.mode];
   if (md && md.names && U.arp.options.length !== md.names.length) U.arp.replaceChildren(...md.names.map((n, k) => el("option", { value: String(k), text: n })));
   if (!drum && document.activeElement !== U.arp) U.arp.value = String(o.p[P.mode] ?? 0);
@@ -10756,7 +10813,7 @@ function lvRenderState() {
   U.fillbar.setAttribute("aria-pressed", String(!!(s && s.fillBar)));
   U.cpu.textContent = s ? `${t("lvCpu")} ${s.cpu}%` : "";
   /* the position: the drum track's step as bar.beat (16 steps a bar), the song's part */
-  const ds = s && s.tracks[s.tracks.length - 1];
+  const ds = s && (s.tracks[drumFocus()] || s.tracks[s.tracks.length - 1]);
   const st = ds ? ds.step : 0;
   U.pos.replaceChildren(el("b", { text: playing && ds ? `${Math.floor(st / 16) + 1}.${Math.floor((st % 16) / 4) + 1}` : "–.–" }),
     el("span", { class: "dim", text: s && s.songRuns ? `${t("lvSong")} ${s.songAt + 1}/${s.songLen} · ${t("lvBar")} ${s.songBar + 1}/${s.songBars}` : t("lvBar") }),
@@ -11016,8 +11073,8 @@ function lvxBuildPerf() {
   if (!U.perf) return;
   const i = LV.target, drum = lvDrum(i), o = LV.tr[i] || { p: [] }, pd = (id) => dev.pdesc[id], gd = (id) => dev.gdesc[id];
   U.perfTabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === LVS.tab)));
-  U.perfTrk.textContent = drum ? "DRUMS" : `${t("lvTrack")} ${i + 1} · ${dev.info.engines[o.engine] || ""}`;
-  U.perf.style.setProperty("--c", TCOL[i % 4]);
+  U.perfTrk.textContent = drum ? (nTrk() >= 8 ? `DRUMS ${i + 1}` : "DRUMS") : `${t("lvTrack")} ${i + 1} · ${dev.info.engines[o.engine] || ""}`;
+  U.perf.style.setProperty("--c", tcol(i));
   const ctls = [];
   const row = (title, list) => { const xs = list.filter(Boolean); ctls.push(...xs); return xs.length ? el("div", { class: "lvxgrp" }, el("span", { class: "dim", text: t(title) }), el("div", { class: "lvknobs" }, ...xs)) : ""; };
   let body = [];
@@ -11486,14 +11543,14 @@ function livePush(f) {
     const c = parse[CMD.TRACK_CHANGED](f.a), o = LV.tr[c.track];
     if (!o) return;
     if (c.id === LVP().mute) { if (!lvTouched("lv:" + c.track)) o.mute = c.value ? 1 : 0; }
-    else if (c.id === 0 && !lvDrum(c.track)) { if (!lvTouched("lv:" + c.track)) o.level = c.value; }
+    else if (c.id === 0 && !lvDrumLv(c.track)) { if (!lvTouched("lv:" + c.track)) o.level = c.value; }
     else if (!lvTouched(`p:${c.track}:${c.id}`)) o.p[c.id] = c.value;
     lvRenderStrip(c.track);
   } else if (f.cmd === CMD.CHANGED) {
     const c = parse[CMD.CHANGED](f.a), o = LV.tr[dev.sel];
-    if (c.scope) { lvRenderMaster(); if (c.id === gDrLvl()) { const ds = (dev.info.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; lvRenderStrip(ds); } lvRenderPlay(); return; }
+    if (c.scope) { lvRenderMaster(); if (c.id === gDrLvl() && drumLvGlobal()) { const ds = (dev.info.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; lvRenderStrip(ds); } lvRenderPlay(); return; }
     if (!o) return;
-    if (c.id === 0 && !lvDrum(dev.sel)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
+    if (c.id === 0 && !lvDrumLv(dev.sel)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
     else if (c.id === LVP().mute) { if (!lvTouched("lv:" + dev.sel)) o.mute = c.value ? 1 : 0; }
     else if (!lvTouched(`p:${dev.sel}:${c.id}`)) o.p[c.id] = c.value;
     lvRenderStrip(dev.sel);
@@ -11517,7 +11574,10 @@ window.addEventListener("keydown", (e) => {
   else if (digit) {
     const d = +digit[1];
     if (d >= 1 && d <= 4) lvTap(LIVE.LY_SONG, LIVE.SEC + d - 1);
-    else if (d >= 5 && d <= 8) { if (e.shiftKey) lvSolo(d - 5); else if (LV.tr[d - 5]) lvMute(d - 5, !LV.tr[d - 5].mute); }
+    else if (d >= 5 && d <= 8) {                   /* the bank of four of the track played (as GLO on the FM-1) */
+      const i = (nTrk() >= 8 ? (LV.target >> 2) * 4 : 0) + d - 5;
+      if (e.shiftKey) lvSolo(i); else if (LV.tr[i]) lvMute(i, !LV.tr[i].mute);
+    }
     else if (d === 9) { lvKey(LIVE.LY_MIX, LIVE.FILL, true); up = () => lvKey(LIVE.LY_MIX, LIVE.FILL, false); }
     else if (d === 0) lvTap(LIVE.LY_MIX, LIVE.FILL_BAR);
   } else if (k === "b") lvTap(LIVE.LY_MIX, LIVE.TAP);
