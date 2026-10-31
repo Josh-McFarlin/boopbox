@@ -2,7 +2,7 @@
 
 Drawn by the firmware's own code on the host (`python3 tools/make_all_screens.py`), with the demo project
 of `tools/screens_demo.c` on the eight tracks playing. Each screen is 240 × 240 on the FM-1, 2x here.
-MENU → SCREEN → COLOR: **MONO** (`python3 tools/make_all_screens.py --palette 4`).
+MENU → SCREEN → COLOR: **SYNTHWAVE** (`python3 tools/make_all_screens.py --palette 5`).
 
 110 screens in 8 groups.
 
@@ -65,7 +65,7 @@ Every page of the page table (params.c PAGES), on track 1 (ANALOG); DRUMS on the
 | ARP > ARP | [`pages/arp-arp.png`](pages/arp-arp.png) | page 38 of 46 |
 | ARP > ARP 2 | [`pages/arp-arp-2.png`](pages/arp-arp-2.png) | page 39 of 46 |
 | SEQ > NOTES | [`pages/seq-notes.png`](pages/seq-notes.png) | page 40 of 46 |
-| SEQ > PATTERN | [`pages/seq-pattern.png`](pages/seq-pattern.png) | page 41 of 46 |
+| SEQ > TIMING | [`pages/seq-timing.png`](pages/seq-timing.png) | page 41 of 46 |
 | SEQ > PLAY | [`pages/seq-play.png`](pages/seq-play.png) | page 42 of 46 |
 | SEQ > PATTERNS | [`pages/seq-patterns.png`](pages/seq-patterns.png) | page 43 of 46 |
 | SEQ > SONG | [`pages/seq-song.png`](pages/seq-song.png) | page 44 of 46 |
@@ -89,7 +89,7 @@ The drum track: the grid's KIT and SOUND views, a hit's sheet, and the pages it 
 | FX > INSERT (drum track) | [`drums/drum-fx-insert.png`](drums/drum-fx-insert.png) | a page the drum track shares |
 | FX > INSERT 2 (drum track) | [`drums/drum-fx-insert-2.png`](drums/drum-fx-insert-2.png) | a page the drum track shares |
 | SCL > FOLLOW (drum track) | [`drums/drum-scl-follow.png`](drums/drum-scl-follow.png) | a page the drum track shares |
-| SEQ > PATTERN (drum track) | [`drums/drum-seq-pattern.png`](drums/drum-seq-pattern.png) | a page the drum track shares |
+| SEQ > TIMING (drum track) | [`drums/drum-seq-timing.png`](drums/drum-seq-timing.png) | a page the drum track shares |
 | SEQ > PLAY (drum track) | [`drums/drum-seq-play.png`](drums/drum-seq-play.png) | a page the drum track shares |
 | ENV (drum track) | [`drums/drum-env-no-sound.png`](drums/drum-env-no-sound.png) | a page of a synth sound: DRUM TRACK |
 

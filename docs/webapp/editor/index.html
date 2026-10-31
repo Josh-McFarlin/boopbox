@@ -5019,7 +5019,7 @@ const GLYPH = {
 };
 /* section headings (LAYOUT titles) and page titles */
 const HEAD_IC = { ENV: "function_env_adsr_exp", LFO: "waveform_sine", EDIT: "ui_knob", VOICE: "symbol_keyboard",
-  FX: "symbol_effector", SEL: "symbol_tuning", ARP: "control_arrow_up_down", "SEQ PATTERN": "symbol_grid",
+  FX: "symbol_effector", SEL: "symbol_tuning", ARP: "control_arrow_up_down", "SEQ TIMING": "symbol_grid",
   GLOBAL: "symbol_cog", MASTER: "ui_slider_vertical", DRUMS: "symbol_drum", INSTRUMENT: "symbol_keyboard" };
 const PAGE_IC = { FLT: "function_filter_lpf_peak", FILT: "function_filter_lpf_peak", DLY: "symbol_echo", "REV/CHO": "symbol_spring", SLICER: "symbol_grid" };
 /* WAVE / WAVE2 choices; phase-distortion shapes without a close glyph (SPLS, RSAW, RTRI, RTRP) get none */
@@ -6540,7 +6540,7 @@ const LAYOUT = (pe0) => {
       ...opt(v251, ["INSERT", 0, [53, 54, 55, 56]], ["INSERT 2", 0, [57]]), ["DLY", 1, [4, 5, 6, 7]], ["REV/CHO", 1, [8, 9, 10, 11]]] },
     { t: "SEL", pages: [["SEL", 0, [25, 26, 27, 49]], ["SEL 2", 0, [28, 51, 52]]] },
     { t: "ARP", pages: [["ARP", 0, [17, 18, 19, 20]], ["ARP 2", 0, [21, 22, 23, 24]]] },
-    { t: "SEQ PATTERN", tab: "seqgroups", pages: [["PATTERN", 0, [29, 30, 31, 32]]] },
+    { t: "SEQ TIMING", tab: "seqgroups", pages: [["TIMING", 0, [29, 30, 31, 32]]] },
     { t: "GLOBAL", tab: "setgroups", pages: [["GLOBAL", 1, [0, 1, 2, 3]]] },
     { t: "MASTER", tab: "setgroups", pages: [["MASTER", 1, [27, 28, 29, 30]]] },
     { t: "DRUMS", tab: "setgroups", pages: [["DRUMS", 1, [24, 25, 26, 32]]] },

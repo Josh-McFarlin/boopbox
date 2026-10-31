@@ -504,7 +504,7 @@ On the TRACKS screen, tap **HOME**: the whole screen becomes a visualiser of wha
 | 1 | **PALMS** | the mix's wave, sample for sample, as the sea's front wave at sunset; the sun's reflection shimmers with the mix |
 | 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat, the car's lights flare on every kick; stopped, the car slows down and parks |
 | 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat tiles of the floor light up in the colours of the tracks playing |
-| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height |
+| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height; while the song plays the ground always moves, and after STOP it moves on until the last peak has gone |
 | 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top) with the peak floor held white, as VU meters; searchlights sweep with the beat |
 | 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights its key's tower in its track's colour (a chord, all its keys; a note outside the two octaves, the same note in them); the drum tracks light the street lights |
 

@@ -469,7 +469,7 @@ int main(int argc, char **argv)
     open_family(FAM_FX); frame();                     /* the FX page: KNOB 1 = DIST */
     encs[panel.enc[EN_K1]] = 2; frame();
     check(ui.lock_par == P_DIST && trk[0].p[P_DIST] > 0, "a sound knob turned (FX > DIST): the lock parameter");
-    open_family(FAM_SEQ); frame();                    /* PATTERN page knobs (LEN, DIV..) do not lock */
+    open_family(FAM_SEQ); frame();                    /* TIMING page knobs (LEN, DIV..) do not lock */
     open_family(FAM_SEQ); frame();
     if (cur_page()->id[1] == P_SDIV) { encs[panel.enc[EN_K2]] = 1; frame(); encs[panel.enc[EN_K2]] = -1; frame(); }
     check(ui.lock_par == P_DIST, "a pattern knob (DIV) is not a lock parameter");
@@ -917,7 +917,7 @@ int main(int argc, char **argv)
             ui.menu_sel = MI_USB; ui.force = 1; frame();      /* (back to AUDIO) */
             check(ok, "MENU > COLOR (2.7): your theme after MONO, by its name; its colours, background and the tracks'; bit 30");
         }
-        {   /* 2.7: the page counter counts the pages SELECT walks (SEQ: STEP 1/2, PATTERN 2/2; SONG not counted) */
+        {   /* 2.7: the page counter counts the pages SELECT walks (SEQ: NOTES 1/3, TIMING 2/3, PLAY 3/3; SONG not counted) */
             uint32_t n, k1, n1, k2, n2, k3 = 0, n3 = 0, menu0 = ui.menu, sel0 = ui.menu_sel;
             int ok = 1;
             ui.menu = 0; go_home(); frame();
@@ -925,7 +925,7 @@ int main(int argc, char **argv)
             while (strcmp(PAGES[ui.page].title, "NOTES")) { open_family(FAM_SEQ); frame(); }
             k1 = page_pos(&n1);
             open_family(FAM_SEQ); frame();
-            ok &= !strcmp(PAGES[ui.page].title, "PATTERN");
+            ok &= !strcmp(PAGES[ui.page].title, "TIMING");
             k2 = page_pos(&n2);
             open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
             ok &= !strcmp(PAGES[ui.page].title, "PLAY");
@@ -944,8 +944,8 @@ int main(int argc, char **argv)
             ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;   /* (SONG: 4/4,
                                                        * the screen shown counts; PATTERNS, its own, not) */
             if (!ok)
-                printf("ui:   counter: STEP %u/%u PATTERN %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
-            check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, PATTERN 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
+                printf("ui:   counter: NOTES %u/%u TIMING %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
+            check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, TIMING 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
         }
         {   /* 2.7: a sound loaded under a running arp keeps it (settings and the notes it holds); arp OFF: the preset's */
             track_t *t = &trk[0];
@@ -1245,7 +1245,7 @@ int main(int argc, char **argv)
         SEL(9);
         check(!strcmp(PT(), "VOICE 2"), "SELECT on EDIT: up to VOICE 2");
         tap(B_SEQ); SEL(9);
-        check(!strcmp(PT(), "PLAY"), "SELECT on SEQ: NOTES <-> PATTERN <-> PLAY, not into the SONG screen");
+        check(!strcmp(PT(), "PLAY"), "SELECT on SEQ: NOTES <-> TIMING <-> PLAY, not into the SONG screen");
         tap(B_ENV);
         check(!strcmp(PT(), "ENV"), "the button still opens its family");
         tap(B_ENV);
@@ -1518,6 +1518,31 @@ int main(int argc, char **argv)
         tap(B_HOME); frames(2);
         tap(B_LFO); frames(2);
         check(!vis_shown() && !vis_on && !strcmp(PAGES[ui.page].title, "LFO"), "visualiser: a page button closes it and opens its page");
+        {   /* FLYOVER: playing, the ground always moves (silent bars too); stopped, it moves on until the peaks are off
+             * the back of the screen, then holds still */
+            uint8_t f0;
+            uint32_t r, c, top = 0;
+            int ok, moved;
+            go_home(); frames(4); tap(B_HOME); frames(2);
+            vis_style = 3; ui.force = 1; frames(60);
+            f0 = vs.fly0; frames(8);
+            ok = vis_shown() && song.playing && vs.fly0 != f0;
+            transport_req = 2; frames(2);
+            f0 = vs.fly0; frames(8);
+            moved = vs.fly0 != f0;                  /* (just stopped: the peaks still on the screen) */
+            frames(240);                            /* (the reverb's tail, then the rows off the back) */
+            f0 = vs.fly0; frames(20);
+            for (r = 0; r < VIS_FLY; r++)
+                for (c = 0; c < 32u; c++)
+                    top = vis_fly[r][c] > top ? vis_fly[r][c] : top;
+            ok &= moved && !song.playing && vs.fly0 == f0 && top == 0u;
+            for (j = 0; j < NTRK; j++) steps_clear(&trk[j]);
+            transport_req = 1; frames(60);          /* playing, nothing sounding */
+            f0 = vs.fly0; frames(8);
+            ok &= song.playing && vs.peak < VIS_FLY_QUIET && vs.fly0 != f0;
+            check(ok, "visualiser: FLYOVER moves while playing (silent too), drains after STOP, then holds still");
+            tap(B_HOME); frames(2);
+        }
         transport_req = 2; frames(4);
         for (j = 0; j < NTRK; j++) steps_clear(&trk[j]);
         vis_style = 0; song.sel = 0; go_home(); frames(20);

@@ -4,7 +4,7 @@
 
   tools/make_all_screens.py [--palette N] [OUT_DIR]      (default: assets/screens/all)
 
---palette: the menu's COLOR, its number in gfx.c PALETTES (0 GREEN .. 4 MONO, the default, 5 SYNTHWAVE).
+--palette: the menu's COLOR, its number in gfx.c PALETTES (0 GREEN .. 4 MONO, 5 SYNTHWAVE, the default).
 
 Builds and runs tools/screens_all.c (tools/screens_demo.c's demo project on the eight tracks playing; it needs the
 generated headers in build/gen: ./build.sh, or HOST_ONLY=1 tests/run_tests.sh) and writes:
@@ -55,7 +55,7 @@ def sheet(items, out):
 
 
 def main():
-    args, palette = sys.argv[1:], "4"
+    args, palette = sys.argv[1:], "5"
     if args[:1] == ["--palette"]:
         palette, args = args[1], args[2:]
     out = Path(args[0]) if args else ROOT / "assets" / "screens" / "all"

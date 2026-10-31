@@ -42,7 +42,8 @@ static struct {
     int16_t bar[32], cap[32], capv[32];             /* the spectrum: bars, caps and their fall speed (0..1000) */
     int16_t vu[NTRK + 1], pk[NTRK + 1], pkt[NTRK + 1];   /* DENSE CITY: the tracks and the master (NTRK), peak holds */
     int16_t tlv[NTRK], mlv;                         /* each track's level, the master's (0..1000) this frame */
-    uint8_t kick, key[24], keyt[24], drum[2], drumt[2], fly0, flyh, tn;   /* a kick, KEY CITY's keys and drums, FLYOVER */
+    uint8_t kick, key[24], keyt[24], drum[2], drumt[2], fly0, flyh, flyq, tn;   /* a kick, KEY CITY's keys and drums,
+                                                     * FLYOVER (flyq: flat rows in front, VIS_FLY: the screen flat) */
     uint32_t free_q8, last_ms, ms;                  /* beats (1/256) when stopped; the clock (ms) */
     uint32_t drv, spd, lastb;                       /* the drive: beats (1/256) that slow to a stop; its speed (256: on) */
     vis_tile_t tile[24];
@@ -374,11 +375,17 @@ UI_SMALL static void vis_update(void)
                 vs.cap[i] = (int16_t)(vs.cap[i] > vs.capv[i] ? vs.cap[i] - vs.capv[i] : 0);
             }
         }
-        if (st == 3u && mpk >= VIS_FLY_QUIET && (vs.flyh ^= 1u) == 0u) {   /* FLYOVER: a row every other frame, the
-                                                     * newest in front; silent (no note sounding), it holds still */
+        /* FLYOVER: a row every other frame, the newest in front. Playing, the ground always moves (silent bars: flat
+         * rows); stopped, it moves on while a note sounds and until the last peak has gone off the back, then holds */
+        if (st == 3u && (song.playing || mpk >= VIS_FLY_QUIET || vs.flyq < VIS_FLY) && (vs.flyh ^= 1u) == 0u) {
+            uint32_t top = 0;
             vs.fly0 = (uint8_t)((vs.fly0 + VIS_FLY - 1u) % VIS_FLY);
-            for (i = 0; i < 32u; i++)
-                vis_fly[vs.fly0][i] = (uint8_t)(vs.bar[i] * 255 / 1000);
+            for (i = 0; i < 32u; i++) {             /* (under VIS_FLY_QUIET: flat ground, not the noise floor) */
+                uint32_t v = mpk >= VIS_FLY_QUIET ? (uint32_t)(vs.bar[i] * 255 / 1000) : 0u;
+                vis_fly[vs.fly0][i] = (uint8_t)v;
+                top = v > top ? v : top;
+            }
+            vs.flyq = top ? 0u : (uint8_t)(vs.flyq < VIS_FLY ? vs.flyq + 1u : VIS_FLY);
         }
     }
 }
