@@ -100,8 +100,8 @@ eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` ta
 mock mode (Playwright and Chromium). Both write into `assets/screens/`.
 `python3 tools/make_all_screens.py` draws every screen of the firmware the same way (`tools/screens_all.c`: every
 page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
-screen and a contact sheet a group, listed in its `README.md`; `--palette 5 assets/screens/all-synthwave` draws them in
-SYNTHWAVE. `make_screens.py` also makes `boopbox-synthwave.png`, the README's screens in SYNTHWAVE.
+screen and a contact sheet a group, listed in its `README.md`. Both draw in SYNTHWAVE, the palette the FM-1 starts
+with; `--palette N` draws another (gfx.c `PALETTES`).
 
 ## Tests
 

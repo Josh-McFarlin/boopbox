@@ -4,7 +4,7 @@
  * sections and the visualiser, drawn by the firmware's own code on the host with tools/screens_demo.c's demo project
  * on the eight tracks playing. Writes one 240 x 240 PPM a screen into the directory given, and a list of them
  * (index.txt: group, file, title, a line).
- * PALETTE: the menu's COLOR, its number in gfx.c PALETTES (default 4, MONO, as at power-on).
+ * PALETTE: the menu's COLOR, its number in gfx.c PALETTES (default 5, SYNTHWAVE, as at power-on).
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests -Itools tools/screens_all.c -lm && ./a.out OUTDIR [PALETTE] */
 #define SCREENS_DEMO_NO_MAIN 1
 #include "screens_demo.c"
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     assert(idx);
     panel = PANEL_DEFAULT;
     layers_init();
-    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 4);
+    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 5);
     palette_set(settings.palette);
     host_tracks_init();
     demo_project();
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
         put("pages", name, title, line);
     }
 
-    /* the drum track's own pages: the shared ones it has (FX > SLICER, SEQ > PATTERN ...) and the grid's views */
+    /* the drum track's own pages: the shared ones it has (FX > SLICER, SEQ > TIMING ...) and the grid's views */
     song.sel = 3; go_home(); frames(2);
     studio_open(SC_DRUM); frames(10);
     drum_lane = 4; drum_cursor = 6;
