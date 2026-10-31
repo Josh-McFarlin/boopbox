@@ -544,14 +544,10 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
         tracks_edit(slot, steps);
         return;
     }
-    if (pg->graph == GR_BROWSE) {                         /* the sound browser: KNOB 1 the group, KNOB 2 the sound,
-                                                           * KNOB 3 VIEW (ENGINE / KIND), KNOB 4 FAV */
-        if (is_drum(TSEL))
-            return;
-        if (slot < 2u)
-            br_step(steps, slot == 0u);
-        else if (slot == 2u)
-            br_kind = steps > 0;
+    if (pg->graph == GR_BROWSE) {                         /* the sound browser: KNOB 1 the TYPE (SYNTH / DRUMS),
+                                                           * KNOB 2 the engine, KNOB 3 the sound, KNOB 4 FAV */
+        if (slot < 3u)
+            br_step(steps, slot == 0u ? BR_TYPE : slot == 1u ? BR_ENG : BR_SOUND);
         else                                              /* (2.7) KNOB 4: FAV, right adds the sound, left removes it */
             fav_toggle(steps > 0);
         ui.force = 1;
@@ -642,14 +638,8 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
     case G_KIND: {                                              /* (eight tracks) the selected track SYNTH <-> DRUM */
         uint32_t to = is_drum(TSEL) ? TK_SYNTH : TK_DRUM;
         *vp = 0;
-        if (to == TK_SYNTH && !eng_room(TSEL, trk_def_kind(song.sel % NTRK) == TK_SYNTH ? TRK_DEF[song.sel % NTRK][1] : 0u)) {
-            ui_message("ENGINE BUSY: NO CHANGE");
-            break;
-        }
-        if (undo.valid && undo.trk == song.sel % NTRK)
-            undo.valid = 0;                                     /* (the undo was the other kind's pattern) */
-        track_set_kind(TSEL, to);
-        ui_message(to == TK_DRUM ? "NOW A DRUM TRACK" : "NOW A SYNTH TRACK");
+        if (track_kind_switch(to, 0u))
+            ui_message(to == TK_DRUM ? "NOW A DRUM TRACK" : "NOW A SYNTH TRACK");
         break;
     }
     case G_NEWPRJ:
@@ -1364,18 +1354,18 @@ UI_SMALL static void ui_input(void)
         ui.force = 1;
     }
     if ((s = panel_enc(EN_PRESET)) != 0 && (ui.home || cur_page()->graph == GR_BROWSE || cur_fam() == FAM_TRK)) {
-        /* PRESETS browses the selected part's presets (all engines, then user presets) on HOME, the PRESETS
-         * page and TRACKS only (the drum track: its kits); elsewhere a stray turn would throw away the sound
-         * being edited. On TRACKS a synth track's first detent opens the sound browser (the sound stays); on the
-         * browser every detent counts, in its VIEW's order */
-        if (is_drum(TSEL))
-            DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
-        else if ((ui.home || cur_page()->graph != GR_BROWSE) && !rec_wait && !ft_on)
+        /* PRESETS browses the selected part's presets (all engines, the drum kits, then user presets) on HOME, the
+         * PRESETS page and TRACKS only; elsewhere a stray turn would throw away the sound being edited. On TRACKS the
+         * first detent opens the sound browser (the sound stays, a drum track's kit too); on the browser every detent
+         * counts, in its VIEW's order, up to the ends of the group */
+        if ((ui.home || cur_page()->graph != GR_BROWSE) && !rec_wait && !ft_on)
             br_open();                                  /* TRACKS: the first detent opens the browser, the sound stays */
         else if (fm1_ms - br_t0 > BR_OPEN_MS)           /* (the rest of the turn that opened it: nothing) */
-            br_step(s, 0);
+            br_step(s, BR_SOUND);
     }
-    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* ALGORITHM: the selected track, on every page (not in a take) */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on && on_home())   /* ALGORITHM: the selected track, on TRACKS (the home
+                                                     * screen; PATTERNS and CHORDS too, ui_pats.c) only: elsewhere a stray
+                                                     * turn leaves the track (not in a take) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
     if (vis_shown() && !rec_wait && !ft_on) {           /* the visualiser: SELECT its style; KNOB 1..4 (the TRACKS
                                                          * screen's, out of sight) do nothing */
@@ -1385,8 +1375,10 @@ UI_SMALL static void ui_input(void)
             panel_enc(EN_K1 + k);
     }
     if (!ui.home && cur_page()->graph == GR_BROWSE && !rec_wait && !ft_on) {
-        if ((s = panel_enc(EN_SELECT)) != 0)            /* the sound browser: SELECT the group (as KNOB 1); read */
-            br_step(s, 1);                              /* once: a late detent is not a page turn */
+        if ((s = panel_enc(EN_SELECT)) != 0) {          /* the sound browser: SELECT the VIEW (right KIND, left */
+            br_kind = s > 0;                            /* ENGINE); read once: a late detent is not a page turn */
+            ui.force = 1;
+        }
     } else if ((s = panel_enc(EN_SELECT)) != 0 && (rec_wait || ft_on || !page_walk(s))) {   /* SELECT: the pages of the
                                                      * family shown, else (and on the REC screen) the tempo */
         song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);

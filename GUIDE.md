@@ -182,12 +182,12 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 | **7** | light yellow | a synth | KNOB 3 |
 | **8** | light orange | a second drum machine, its own kit | KNOB 4 |
 
-Any track can be a synth or a drum track (SAVE → TOOLS → KIND). Tracks 5–8 take a lighter shade of the colours of
+Any track can be a synth or a drum track (SAVE → TOOLS → KIND, or KNOB 1 in the [sound browser](#the-sound-browser)). Tracks 5–8 take a lighter shade of the colours of
 tracks 1–4 (a darker one on a light theme), so each track has its own colour, your own theme's too. The screens that
 list tracks show the bank of four the selected track is in: 1–4 or 5–8. More in
 [the groovebox controls](docs/groovebox-controls.md).
 
-**ALGORITHM** picks the track you play, record and edit, on every screen (1 to 8). The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
+**ALGORITHM** picks the track you play, record and edit (1 to 8), on the TRACKS screen (HOME takes you there) and on the PATTERNS and CHORDS screens; on other screens it does nothing, so the track does not change by accident. The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
 
 ### Tap and hold
 
@@ -236,8 +236,8 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEQ** | SEQ pages (STEP, PATTERN, SONG) · with the drum track: the **DRUMS** screen (2.7.1: from any page; it opened STEP from ARP's) · on DRUMS: grid ↔ kit | step layer |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
-| **ALGORITHM** | select track 1–4, on every screen (inside a layer it waits; not during a free take, on the SONG screen or in the menu) | — |
-| **PRESETS** | on TRACKS and HOME, a synth track: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it · drum track: the **kit** · on the DRUMS screen: the kit | — |
+| **ALGORITHM** | select the track, on the TRACKS screen (the home screen: HOME takes you there) and the PATTERNS and CHORDS screens. On other screens it does nothing, so a stray turn does not change the track (inside a layer it waits; not during a free take) | — |
+| **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it (a drum track: its **kits**) · on the DRUMS screen: the kit | — |
 | **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends) · DRUMS screen: grid ↔ kit · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
 | **MASTER** | output volume (the visualiser ignores it) | — |
@@ -823,23 +823,29 @@ Notes:
 | **Stab** | MIN STAB, MIN7 STAB, RAVE STAB, DUB CHORD (TRIO: one key plays the chord) · SYN BRASS (ANALOG) · CZ BRASS (PHASE) · BRASS SECT (FM6) · 80S POLY (TRIO) · HORN STAB, STRING STB (SAMPLE) · CHIP CHORD (LOFI) · POWER STAB (TRIO) |
 | **FX** | SCRATCH (scratch, backspin, rewind across the keys) · GM KIT (SAMPLE) · HAND DRUM, MEMB TOMS, TABLA, CONGA, TIMPANI (PHYS) · RAIN, NZ METAL, VINYL, HISS, RISER, NZ SNARE, BITCRUSH, RADIO (NOISE) · CHIP NOISE (LOFI) |
 
-<a id="the-sound-browser"></a>**The sound browser.** On TRACKS (or HOME), with a synth track selected, turn **PRESETS**: the browser opens, like the
-OP-1's and the OP-XY's, with the sound you have unchanged. On the left the **groups**, on the right every **sound** of the
-selected group, the one playing on a bar in white; a scroll bar shows where you are in a long group. Each sound loads as
-you land on it, so play the keys to hear it.
+<a id="the-sound-browser"></a>**The sound browser.** On TRACKS (or HOME), on any track, turn **PRESETS**: the browser opens, like the
+OP-1's and the OP-XY's, with the sound you have unchanged. It has three levels: the **TYPE** (SYNTH or DRUMS), its
+**engines** on the left, and every **sound** of the selected engine on the right, the one playing on a bar in white; a
+scroll bar shows where you are in a long engine. Each sound loads as you land on it, so play the keys to hear it.
 
 | Control | In the browser |
 | --- | --- |
-| **PRESETS** · **KNOB 2** | the next / previous sound (on from one group into the next) |
-| **SELECT** · **KNOB 1** | the next / previous group: its first sound |
-| **KNOB 3 VIEW** | **ENG**: the twelve engines in order, each with its sounds · **KIND**: basses, keys, organs, pads, leads, plucks and bells, stabs, FX (the order of the list before) |
-| **KNOB 4 FAV** | right adds the sound to your favourites, left removes it |
-| **ALGORITHM** | another track: the browser shows its sound |
+| **KNOB 1 TYPE** | right **DRUMS**, left **SYNTH**: the track becomes a drum track or a synth track (see below) |
+| **KNOB 2 ENG** | the next / previous engine of the type: its first sound. It stops at the first and last engine |
+| **PRESETS** · **KNOB 3 SOUND** | the next / previous sound of the engine. It stops at the first and last sound: it never scrolls into the next engine |
+| **SELECT** | the VIEW: right **KIND** (basses, keys, organs, pads, leads, plucks and bells, stabs, FX: the order of the list before), left **ENG** (the twelve engines in order, each with its sounds) |
+| **KNOB 4 FAV** | right adds the sound to your favourites, left removes it (synth sounds) |
 
-Your favourites are the first group (**FAV**) and your user presets the last (**USER**), in both views. Opened from
-TRACKS, the browser goes back there by itself after 4 s without a knob, key or button; a button goes where it always
-does. It is also the SAVE → **PRESETS** page (it stays open there). The drum track's PRESETS is still the kit. MIDI
-Program Change counts the list in the KIND order, as before.
+**SYNTH** starts with your favourites (**FAV**) and ends with your user presets (**USER**), in both views. **DRUMS** has
+no engines: its kits are grouped by kind instead. **GM KIT** is the sampled kit and its treatments, **MACHINE** the
+synthesised kits (808, 909, TRAP…), **USR SMP** your sample kits (USR1–4, USR3+4) and **USR SYN** your synth kits
+(SYN1–4). When you change the TYPE, the track changes kind (as SAVE → TOOLS → KIND does), and that clears its pattern.
+If the track has a pattern, the first click says *AGAIN* and a second click within about 1.5 s changes it. On an
+empty track, it changes at once.
+
+Opened from TRACKS, the browser goes back there by itself after 4 s without a knob, key or button; a button goes where
+it always does. It is also the SAVE → **PRESETS** page (it stays open there). MIDI Program Change counts the list in
+the KIND order, as before.
 
 To start from the engine's defaults: SAVE → TOOLS → **INIT**.
 
@@ -975,9 +981,9 @@ sunset and in neon.
 | # | Style | What it shows |
 | --- | --- | --- |
 | 1 | **PALMS** | the mix's wave, sample for sample, as the sea's front wave at sunset; the sun's reflection shimmers with the mix |
-| 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat, the car's lights flare on every kick; stopped, the car slows down and parks |
+| 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat (three lane stripes go past each beat), the car's lights flare on every kick; stopped, the car slows down and parks |
 | 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat tiles of the floor light up in the colours of the tracks playing |
-| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height |
+| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height. When nothing sounds, it stops moving |
 | 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top) with the peak floor held white, as VU meters; searchlights sweep with the beat |
 | 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights its key's tower in its track's colour (a chord, all its keys; a note outside the two octaves, the same note in them); the drum tracks light the street lights |
 
