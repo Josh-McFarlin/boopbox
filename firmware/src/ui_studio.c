@@ -738,13 +738,7 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
                 ui.force = 1;
             }
     }
-    if ((s = panel_enc(EN_ALGO)) && !ft_on) {
-        track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
-        if (!is_drum(TSEL)) {
-            go_home();
-            return;
-        }
-    }
+    panel_enc(EN_ALGO);                                /* (ALGORITHM selects a track on TRACKS only: HOME, then turn) */
     if ((s = panel_enc(EN_PRESET))) DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
     for (k = 0; k < 4u; k++) if ((s = panel_enc(EN_K1 + k))) {
         ui.hot_col = (uint8_t)k;

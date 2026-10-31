@@ -12,6 +12,9 @@ UI_SMALL static int is_eng_name(const char *s)                 /* one of the ENG
     for (e = 0; e < NENGINES; e++)
         if (s == ENGINES[e]->name)
             return 1;
+    for (e = 0; e < 4u; e++)                                  /* (and the sound browser's kinds of kit, ui.c) */
+        if (s == BR_KITG[e])
+            return 1;
     return 0;
 }
 
@@ -492,23 +495,24 @@ UI_SMALL static uint32_t graph_signature(void)
     }
     return h;
 }
-/* the sound browser (ui.c br_*): the groups on the left in KNOB 1's colour, the selected group's sounds on the right
- * in KNOB 2's, seven rows each, the selected ones on a bar in white; a scroll bar when a group has more than seven */
+/* the sound browser (ui.c br_*): the engines of the TYPE on the left in KNOB 2's colour, the selected one's sounds on
+ * the right in KNOB 3's, seven rows each, the selected ones on a bar in white; a scroll bar when a group has more than seven */
 UI_SMALL static void graph_browse(void)
 {
     uint16_t gs[BR_G + 1u];
     uint8_t gid[BR_G];
-    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, n, lo, k;
+    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, n, lo, k, g0, g1;
     int32_t row, first;
-    if (!total || is_drum(TSEL))
+    if (!total)
         return;
     ng = br_groups(gs, gid, cur, total, nf, &cg);
-    first = clamp((int32_t)cg - 3, 0, (int32_t)ng > 7 ? (int32_t)ng - 7 : 0);
-    for (row = 0; row < 7 && (uint32_t)(first + row) < ng; row++) {
+    br_side(gid, ng, br_gdrum(gid[cg]), &g0, &g1);       /* (the engines of the TYPE shown) */
+    first = clamp((int32_t)cg - 3, (int32_t)g0, (int32_t)g1 > (int32_t)g0 + 7 ? (int32_t)g1 - 7 : (int32_t)g0);
+    for (row = 0; row < 7 && (uint32_t)(first + row) < g1; row++) {
         int32_t y = 4 + row * 17, sel = (uint32_t)(first + row) == cg;
         if (sel)
             cv_rect(0, y - 1, 74, 17, C_LINE);
-        cv_text(4, y, &FONT_S, br_gname(gid[first + row]), sel ? C_WHITE : UI_COL[0]);
+        cv_text(4, y, &FONT_S, br_gname(gid[first + row]), sel ? C_WHITE : UI_COL[1]);
     }
     cv_rect(77, 3, 1, 118, C_LINE);
     lo = gs[cg];
@@ -516,12 +520,14 @@ UI_SMALL static void graph_browse(void)
     first = clamp((int32_t)(cur - lo) - 3, 0, (int32_t)n > 7 ? (int32_t)n - 7 : 0);
     for (row = 0; row < 7 && (uint32_t)(first + row) < n; row++) {
         int32_t y = 4 + row * 17, x = 84;
-        uint32_t p = lo + (uint32_t)(first + row), e = preset_at(br_n(p, nf), &k), sel = p == cur;
-        uint16_t c = sel ? C_WHITE : UI_COL[1];
+        uint32_t p = lo + (uint32_t)(first + row), n = br_n(p, nf), e = n & BR_KIT ? 0u : preset_at(n, &k), sel = p == cur;
+        uint16_t c = sel ? C_WHITE : UI_COL[2];
         char nm[13];
         if (sel)
             cv_rect(80, y - 1, 154, 17, C_LINE);
-        if (e == NENGINES) {                             /* a user preset: "U07" and its name */
+        if (n & BR_KIT) {                                /* a drum kit: its name */
+            str_cpy(nm, DRUM_KIT_NAMES[(n & ~BR_KIT) % DRUM_KITS], sizeof nm);
+        } else if (e == NENGINES) {                             /* a user preset: "U07" and its name */
             up_slot_label(nm, k);
             x = cv_text(x, y, &FONT_S, nm, sel ? C_GRAY : C_DIM) + 8;
             up_name(k, nm);
@@ -1009,19 +1015,19 @@ UI_SMALL static void draw_columns(void)
         draw_column(3, "PAN", val, unit, VAL(3u), RATIO(&TP[P_PAN], t->p[P_PAN]), param_icon(&TP[P_PAN], t->p[P_PAN]));
         return;
     }
-    if (cur_page()->graph == GR_BROWSE) {                /* the sound browser: GROUP SOUND VIEW FAV */
+    if (cur_page()->graph == GR_BROWSE) {                /* the sound browser: TYPE ENG SOUND FAV */
         uint16_t gs[BR_G + 1u];
         uint8_t gid[BR_G];
         uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0;
         char u[8];
         br_groups(gs, gid, cur, total, nf, &cg);
-        draw_column(0, br_kind ? "KIND" : "ENG", br_gname(gid[cg]), "", VAL(0u), -1, ICON_NONE);
+        draw_column(0, "TYPE", br_gdrum(gid[cg]) ? "DRUMS" : "SYNTH", "", VAL(0u), -1, ICON_NONE);
+        draw_column(1, br_gdrum(gid[cg]) ? "KITS" : br_kind ? "KIND" : "ENG", br_gname(gid[cg]), "", VAL(1u), -1, ICON_NONE);
         fmt_int(val, (int32_t)(cur - gs[cg]) + 1);
         str_cpy(u, "/", 8);
         fmt_int(u + 1, gs[cg + 1u] - gs[cg]);
-        draw_column(1, "SOUND", val, u, VAL(1u), -1, ICON_NONE);
-        draw_column(2, "VIEW", br_kind ? "KIND" : "ENG", "", VAL(2u), -1, ICON_NONE);
-        draw_column(3, "FAV", fav_has(fav_key()) ? "ON" : "--", "", VAL(3u), -1, ICON_NONE);   /* (2.7) KNOB 4 */
+        draw_column(2, "SOUND", val, u, VAL(2u), -1, ICON_NONE);
+        draw_column(3, "FAV", !is_drum(TSEL) && fav_has(fav_key()) ? "ON" : "--", "", VAL(3u), -1, ICON_NONE);   /* (2.7) KNOB 4 */
         return;
     }
     if (cur_page()->graph == GR_USER) {                  /* SLOT, then three GO buttons */
