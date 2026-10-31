@@ -1959,9 +1959,9 @@ int main(int argc, char **argv)
         song.playing = 0; transport_req = 0; song.rec = 0; rec_wait = 0; arrangement_enabled = 0; live_req = -1;
         live(0, 0, 0, 0);
         bpm = (int)(lv_out[3] | lv_out[4] << 7) - 8192;
-        ok &= lv_n == 50u && lv_out[0] == 0 && !(lv_out[1] & 1u) && bpm == song.g[G_BPM] && lv_out[12] == song.sel && lv_out[32] == 0u
+        ok &= lv_n == 65u && lv_out[0] == 0 && !(lv_out[1] & 1u) && bpm == song.g[G_BPM] && lv_out[12] == song.sel && lv_out[32] == 0u
               && lv_out[34] == (8u | 4u << 4);
-        check(ok, "LIVE (2.7): the state, 50 bytes (flags, BPM, sections, mix, punch, song, 4 x step / length / meter, master, throws, drum tune / decay)");
+        check(ok, "LIVE (2.7): the state, 65 bytes (flags, BPM, sections, mix, punch, song, 4 x step / length / meter, master, throws, drum tune / decay, v13 tracks 5..8)");
         live(1, 1, 0, 0); ok = transport_req == 1u; frames(30);
         live(0, 0, 0, 0); ok &= song.playing && (lv_out[1] & 1u) && lv_out[20] < trk_len(&trk[0]) && lv_out[21] == trk_len(&trk[0]);
         check(ok, "LIVE: PLAY plays; the reply says so");
@@ -1977,6 +1977,17 @@ int main(int argc, char **argv)
         live(2, LY_MIX, 9, 1); ok &= fill_arm == 1u && (lv_out[1] & 32u) != 0u;
         live(2, LY_MIX, 9, 1); ok &= !fill_arm;
         check(ok, "LIVE: GLO keys: mute, solo, fill while held, fill next bar (as GLO + key)");
+        {   /* v13: tracks 5..8 in the state; op 13 solos any track, whichever bank is selected */
+            uint8_t sel0 = song.sel;
+            trk[6].p[P_MUTE] = 1; song.rec = 0x20u; trk[7].seq_idx = 3;
+            live(13, 5, 0, 0); ok = song.solo == 0x20u && lv_out[51] == 2u;
+            live(13, 7, 0, 0); ok &= song.solo == 0xA0u && lv_out[51] == 10u && lv_out[50] == 4u && lv_out[52] == 2u;
+            ok &= lv_out[62] == 3u && lv_out[63] == trk_len(&trk[7]) && lv_out[54] == trk_len(&trk[4]);
+            live(13, 8, 0, 0); ok &= song.solo == 0xA0u;              /* (no track 9) */
+            live(13, 5, 0, 0); live(13, 7, 0, 0); ok &= !song.solo && song.sel == sel0;
+            trk[6].p[P_MUTE] = 0; song.rec = 0; trk[7].seq_idx = 0;
+            check(ok, "LIVE v13: tracks 5..8's mutes, solos, REC, steps and lengths in the state; op 13 solos any track");
+        }
         live(2, LY_SONG, 1, 1); live(2, LY_SONG, 1, 0);
         ok = live_req == 1 && chain_n == 0u && lv_out[6] == 2u;
         live_req = -1;

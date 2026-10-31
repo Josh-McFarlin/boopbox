@@ -63,6 +63,16 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 
 ---
 
+## Since 1.0.0 (not yet released)
+
+- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
+  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
+  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
+- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
+  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
+  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
+- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
+
 ## What's new in 1.0.0
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
@@ -86,7 +96,7 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them).
+  step components or the chord progression (backups keep them). *Lifted since 1.0.0: see [Since 1.0.0](#since-100-not-yet-released).*
 
 **Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
 Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
@@ -1175,7 +1185,7 @@ Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/), the
 
 **As an app, also on Android (2.6).** Open the [online editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) or the installer once with internet, then *Install the app* (under Connect, or on the installer page; or Chrome's menu → *Install app* / *Add to Home screen*). From then on the BoopBox app opens the editor without internet, and its link to the installer works offline too (with the firmware it installs). It stays the online site kept by the browser, so it uses the same sound library as the online editor, and it takes each new BoopBox version by itself the next time it opens online. On Android, use the app rather than the downloaded file: Chrome on Android does not allow MIDI in a downloaded file.
 
-**Layout:** the side bar has the pages in three groups — **Track** (LIVE, Sound, Sequencer, Tracks, Song), **Sounds** (Library, Samples, Drum kit, Drum synth), **Device** (Projects, Settings) — and the connection. On top: the page title, the messages, and on the Track pages the **four tracks** (number, sound, engine): click one to select it. With the side bar focused, the arrow keys move between pages.
+**Layout:** the side bar has the pages in three groups — **Track** (LIVE, Sound, Sequencer, Patterns, Tracks, Song), **Sounds** (Library, Samples, Drum kit, Drum synth), **Device** (Projects, Settings) — and the connection. On top: the page title, the messages, and on the Track pages the **eight tracks** (number, sound, engine): click one to select it. With the side bar focused, the arrow keys move between pages.
 
 **Values:** each value is a tile you **drag up or down like a knob** (Shift: fine), or a bar: click it, then the wheel or the arrow keys (Shift: steps of 10); **double-click** resets it.
 
@@ -1184,8 +1194,9 @@ Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/), the
 | **LIVE** (2.7) | the whole FM-1 under your hands for a show, from a computer, a tablet or a phone: see [LIVE](#live) |
 | **Sound** | every parameter of the selected track, as on the device: a card per button (ENV, LFO, EDIT, VOICE, FX, SEL, ARP), its pages as rows of four coloured values. **Engine** and **Presets** pickers, **Init sound**, **Copy to library**, **Save to file / Load file** (a sound as a file). On an FM6 track, the **FM6** panel: the six operators, **Read from track**, **Send to track** (*Send while editing* to hear every change), **Store in bank** (B1–B27), **Import SysEx** (or drop a .syx), **Store cartridge in bank** (2.5: the ticked voices of a bank into B1… in one write, and as user presets if you choose), **Export SysEx**, **Export bank as SysEx**. **The drum track** (2.7): **DRUMS** — the kit (‹ ›), level, pan, filter, reverb, delay, the INSERT, and the 16 pads: tap one to hear it, its **tune** and **decay** as the DRUMS screen's SOUND page (**all pads as the kit** puts them back) |
 | **Sequencer** | the pattern settings (LEN, DIV, SWG, GATE) and the steps as the device's tiles; the **step list** takes typed note names (*C4 E4 G4*). On the drum track: a **grid** of the 16 sounds × the steps, with the **kit**: choose a **level** (GHOST, SOFT, NORM, HARD) and a **roll** (x1–x4), then click a cell — a hit; click again (same level and roll) — cleared; **Shift+click** — one level louder. Click a step for its **detail**: **Nudge**, **Parameter locks** (+ lock, pick the parameter, set or delete), **Fill** (normal, fill only, no fill). **Reload**, **Clear sequence**. **Length**: − / + or type 1–64. **Grid / Piano roll** and **Export MIDI / Import MIDI**: see below |
-| **Tracks** | the four channel strips: level, pan, mute, select; SOLO and REC shown as on the device |
-| **Song** | the song order of the [SONG screen](#14-song-mode-sections-chains-songs): a row per section (A–D), its **bars** (1–64) and how many **times** in a row; **▲ ▼** move a row, **✕** removes it, **Add**; **At the end**: stop or start again. **Read from the FM-1**, **Send to the FM-1** (16 entries in all; stop the song first). A section whose slot is empty is marked: save it on the FM-1 first (SAVE + key 5–8) |
+| **Patterns** (BoopBox) | the working project's patterns: pick a track, then its eight patterns (*playing*, the steps it holds, empty; each one's LEN): **Play P*n*** makes one play, **Copy to** another, **Clear**; **follows the chords** (FOLLOW: OFF, TRANS, SCALE); the **Chain** (2–8 patterns, **+P1…+P8**, click one to take it out, **No chain**). Below, the pattern picked: its 64 steps (a dot: a component; click one to choose where **Add** puts a component), **Direction** (FWD, REV, PEND, RAND) and **seed**, and its **step components** (step, type, A, B, what it does; one the FM-1 would leave out is red, 16 at most). **Chord progression**: up to 8 chords (I–VII, 1–16 bars), **▲ ▼ ✕**, **Add**, **One chord (I)**. **Read from the FM-1**, **Send to the FM-1** (the FM-1 loads it at once; stop the song first). Nothing changes on the FM-1 until you send; the room left (patterns of 3,072 B, the project of 3,840 B) is shown |
+| **Tracks** | the eight channel strips: level, pan, mute, select; SOLO and REC shown as on the device |
+| **Song** | the song order of the [SONG screen](#14-song-mode-sections-chains-songs): a row per section (A–D), its **bars** (1–64) and how many **times** in a row; **▲ ▼** move a row, **✕** removes it, **Add**; **At the end**: stop or start again; **Loop the entries** from … to … (the loop region: with *start again*, the song goes back to its first entry). **Read from the FM-1**, **Send to the FM-1** (16 entries in all; stop the song first). A section whose slot is empty is marked: save it on the FM-1 first (SAVE + key 5–8) |
 | **Library** | your sound library, kept in the browser: **Save current sound**, search by name or tag, filter by engine, sort, **Audition**, **To device slot**, **Rename**, **Tags**, **Duplicate**, **Delete**, **Export** / **Import** / **Export library**; copy factory presets in. Next to it the **32 user presets on the device**: **Load**, **Store current sound**, **To library**, **Erase**, **Export bank**. Drag sounds between the library and the slots |
 | **Samples** | your instruments in USR1–USR4, in three steps (see [above](#an-instrument-editor--samples)), with CHOP |
 | **Drum kit** | your own drum kits, in three steps (see [above](#a-drum-kit-editor--drum-kit)) |

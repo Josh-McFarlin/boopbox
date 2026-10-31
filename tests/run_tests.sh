@@ -192,6 +192,8 @@ $CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/perf_test" tests/p
 run "performance FX: LATCH (keys, MIDI), Q (1/16 .. bar), TARGET (master, drums, synths, the selected track)" "$OUT/perf_test"
 $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/project_test" tests/project_test.c -lm
 run "project format: FUN7 (eight tracks) round trips, damage, too big refused whole; SLOOP's FUN1..FUN6 not read" "$OUT/project_test"
+# the firmware's project format for the web editor's codec (web/test_web.mjs: gen, load and capture again)
+$CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/proj7_tool" tests/proj7_tool.c -lm
 $CC -O1 -w -DARENA_STATS -Ibuild/gen -Ifirmware/src -o "$OUT/arena_test" tests/arena_test.c -lm
 run "engine arenas: no stale state, no engine on another's arena, a random session (lent to the tracks)" "$OUT/arena_test"
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -o "$OUT/slicer_test" tests/slicer_test.c -lm
