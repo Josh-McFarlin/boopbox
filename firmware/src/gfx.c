@@ -49,8 +49,21 @@ static const palette_t PALETTES[] = {
     {"CYAN", {RGB(0, 30, 50), RGB(0, 62, 96), RGB(16, 112, 160), RGB(56, 172, 222), RGB(140, 222, 255)}},
     {"RED", {RGB(52, 8, 8), RGB(100, 18, 14), RGB(170, 36, 26), RGB(226, 64, 48), RGB(255, 112, 92)}},
     {"MONO", {RGB(40, 40, 40), RGB(80, 80, 80), RGB(130, 130, 130), RGB(186, 186, 186), RGB(226, 226, 226)}},
+    {"SYNTHWAVE", {RGB(56, 26, 104), RGB(96, 48, 160), RGB(168, 124, 232), RGB(96, 220, 255), RGB(255, 84, 222)}},
 };
 #define NPALETTES (sizeof(PALETTES) / sizeof(PALETTES[0]))
+/* BoopBox 1.1.0: SYNTHWAVE (after MONO) is more than five steps: as a theme, its own background (night indigo), accent
+ * (cyan), the tracks' colours (cyan, magenta, sunset orange, violet) and the full screens' greys (purples). An older
+ * firmware reads its number as out of range and starts on MONO */
+#define PAL_SYNTH 5u
+#define SYNTH_BG RGB(16, 4, 40)
+#define SYNTH_HI RGB(128, 252, 255)
+static const uint16_t SYNTH_TRK[4] = {RGB(0, 228, 255), RGB(255, 44, 212), RGB(255, 140, 56), RGB(160, 96, 255)};
+static const uint16_t SYNTH_G[4] = {RGB(36, 18, 70), RGB(70, 38, 122), RGB(150, 118, 210), RGB(214, 196, 244)};
+/* tracks 5..8: colours of their own (periwinkle, rose, gold, orchid), not 1..4 lightened: a pale cyan dimmed went grey */
+static const uint16_t SYNTH_TRK2[4] = {RGB(110, 140, 255), RGB(255, 112, 168), RGB(255, 214, 90), RGB(224, 128, 255)};
+#define SYNTH_SUN RGB(255, 150, 60)              /* the sunset's bottom: large values fade pink -> orange */
+static uint8_t pal_neon;                         /* (1.1.0) SYNTHWAVE shown: the neon touches (gradients, rules, grid, sun) */
 static uint16_t pal[5];
 #define C_LINE pal[0]                /* 1 rules, separators */
 #define C_DIM pal[1]                 /* 2 inactive, empty steps, units */
@@ -132,6 +145,17 @@ static uint16_t rgb565_over(uint32_t c, uint32_t a, uint32_t n)
     bl = ((b & 31u) * (n - a) + (c & 31u) * a) / n;
     return (uint16_t)(r << 11 | g << 5 | bl);
 }
+/* a + (b - a) * num / den, channel by channel */
+static uint16_t rgb565_mix(uint32_t a, uint32_t b, uint32_t num, uint32_t den)
+{
+    uint32_t k, out = 0;
+    static const uint8_t SH[3] = {11, 5, 0}, MX[3] = {31, 63, 31};
+    for (k = 0; k < 3u; k++) {
+        int32_t x = (int32_t)((a >> SH[k]) & MX[k]), y = (int32_t)((b >> SH[k]) & MX[k]);
+        out |= (uint32_t)(x + (y - x) * (int32_t)num / (int32_t)den) << SH[k];
+    }
+    return (uint16_t)out;
+}
 static int theme_shown(void) { return theme_on && theme_valid; }
 /* (2.7) the greys of the full screens (tiles, empty steps, labels, secondary text) are drawn for black: on a theme's
  * background, each the same share of the way from it toward white (a dark one) or black (a light one). On black: as
@@ -171,21 +195,29 @@ static uint16_t ui_shade(uint32_t c)
 static void palette_set(uint32_t i)              /* built-in palette i, or the theme when it is chosen (2.7) */
 {
     uint32_t k;
-    int cu = theme_shown();
+    int cu = theme_shown(), sw = !cu && i % NPALETTES == PAL_SYNTH;
     for (k = 0; k < 5u; k++)
         pal[k] = cu ? theme.c[k] : PALETTES[i % NPALETTES].c[k];
-    pal_bg = cu ? theme.bg : 0u;
-    pal_hi = cu ? theme.hi : 0xFFFFu;
+    pal_bg = cu ? theme.bg : sw ? SYNTH_BG : 0u;
+    pal_hi = cu ? theme.hi : sw ? SYNTH_HI : 0xFFFFu;
     for (k = 0; k < 4u; k++)
-        ui_g[k] = ui_gray(UI_G_DEF[k]);
+        ui_g[k] = sw ? SYNTH_G[k] : ui_gray(UI_G_DEF[k]);
     for (k = 0; k < 4u; k++) {
-        UI_COL[k] = cu ? theme.trk[k] : UI_COL_DEF[k];
-        UI_MID[k] = cu ? rgb565_scale(theme.trk[k], 2u, 3u) : UI_MID_DEF[k];
-        UI_DIM[k] = cu ? rgb565_scale(theme.trk[k], 1u, 3u) : UI_DIM_DEF[k];
-        UI_COL[k + 4u] = ui_shade(UI_COL[k]);           /* tracks 5..8: a shade of 1..4 */
+        uint16_t t = cu ? theme.trk[k] : SYNTH_TRK[k];
+        UI_COL[k] = cu || sw ? t : UI_COL_DEF[k];
+        UI_MID[k] = cu || sw ? rgb565_scale(t, 2u, 3u) : UI_MID_DEF[k];
+        UI_DIM[k] = cu || sw ? rgb565_scale(t, 1u, 3u) : UI_DIM_DEF[k];
+        UI_COL[k + 4u] = sw ? SYNTH_TRK2[k] : ui_shade(UI_COL[k]);   /* tracks 5..8: a shade of 1..4 */
         UI_MID[k + 4u] = rgb565_scale(UI_COL[k + 4u], 2u, 3u);
         UI_DIM[k + 4u] = rgb565_scale(UI_COL[k + 4u], 1u, 3u);
     }
+    pal_neon = (uint8_t)sw;
+    if (sw)                                             /* SYNTHWAVE: two thirds and two fifths of the way over the indigo
+                                                         * (not toward black: a dark magenta tile hid its letter) */
+        for (k = 0; k < 8u; k++) {
+            UI_MID[k] = rgb565_over(UI_COL[k], 2u, 3u);
+            UI_DIM[k] = rgb565_over(UI_COL[k], 2u, 5u);
+        }
 }
 
 static inline uint16_t swap16(uint32_t c) { return (uint16_t)(((c >> 8) & 0xFFu) | ((c & 0xFFu) << 8)); }
@@ -258,6 +290,25 @@ static void cv_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)
     }
 }
 
+/* (1.1.0) a rule across: in SYNTHWAVE a neon line (magenta) with a faint glow row each side; otherwise as before */
+static void cv_rule(int32_t x, int32_t y, int32_t w, uint16_t c)
+{
+    if (pal_neon) {
+        uint16_t g = rgb565_over(UI_COL[1], 2u, 7u);
+        cv_rect(x, y - 1, w, 1, g);
+        cv_rect(x, y + 1, w, 1, g);
+        c = UI_COL[1];
+    }
+    cv_rect(x, y, w, 1, c);
+}
+/* (1.1.0) SYNTHWAVE: rows y0 .. y1-1 of the canvas from the background to a magenta glow at the bottom (the header) */
+static void cv_glow(uint32_t y0, uint32_t y1)
+{
+    uint32_t y;
+    if (pal_neon)
+        for (y = y0; y < y1; y++)
+            cv_rect(0, (int32_t)y, (int32_t)cv_w, 1, rgb565_over(UI_COL[1], (y - y0) * (y - y0), (y1 - y0) * (y1 - y0) * 3u));
+}
 /* glyph index of a character: the screen shows capitals only (SLOOP 2.6: bold capitals read better on the
  * small screen), so lower case folds to upper case, Latin-1 too (\xfc -> \xdc; not the division sign, nor sharp
  * s and y diaeresis, which have none); anything missing (and C1 controls) draws as '?' */
@@ -275,6 +326,10 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
 {
     uint16_t ramp[16];
     uint32_t a;
+    /* (1.1.0) SYNTHWAVE: large text in a bright colour fades: the values (C_HI, hot pink) to the sunset's orange, the rest
+     * from a white sheen at the top to its colour by half way (chrome). Labels, dim and grey text stay flat */
+    int grad = pal_neon && f->h >= 32u && c != C_DIM && c != C_GRAY && c != C_LINE && c != UI_G3 && c != UI_G4 &&
+               c != C_BLACK;
     for (a = 0; a < 16u; a++)
         ramp[a] = rgb565_over(c, a, 15u);              /* (on black: c * a / 15, as before) */
     for (; *s; s++) {
@@ -284,12 +339,17 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
         gd = f->data + f->off[gi];
         if (f->bits == 1u) {                           /* on / off pixels: full colour where a bit is set */
             uint32_t sw = w >> f->sh;
-            for (gy = 0; gy < f->h; gy++)
+            for (gy = 0; gy < f->h; gy++) {
+                uint16_t rc = ramp[15];
+                if (grad)                              /* (1.1.0) SYNTHWAVE, large text: a gradient top to bottom */
+                    rc = c == C_HI ? rgb565_mix(c, SYNTH_SUN, gy, f->h)
+                                   : gy < f->h / 2u ? rgb565_mix(0xFFFFu, c, gy + 2u, f->h / 2u + 2u) : c;
                 for (gx = 0; gx < w; gx++) {
                     uint32_t i = (gy >> f->sh) * sw + (gx >> f->sh);
                     if ((gd[i >> 3] >> (7u - (i & 7u))) & 1u)
-                        cv_pset(x - f->pad + (int32_t)gx, y + (int32_t)gy, ramp[15]);
+                        cv_pset(x - f->pad + (int32_t)gx, y + (int32_t)gy, rc);
                 }
+            }
             x += f->adv[gi];
             continue;
         }

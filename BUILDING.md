@@ -67,7 +67,7 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY); SELECT skips the others |
 | `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
-The flash is full: the default build leaves 5,400 B of the app slot free (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
+The flash is full: the default build leaves 3,908 B of the app slot free (1.1.0 with SYNTHWAVE) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
 visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the build fails and
 says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes.
 
@@ -98,6 +98,10 @@ The README's screenshots are made the same way, from the code: `python3 tools/ma
 screens with the firmware's own drawing code (`tools/screens_demo.c`, the host tests' harness, a demo project on the
 eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` takes the web editor's pages in its
 mock mode (Playwright and Chromium). Both write into `assets/screens/`.
+`python3 tools/make_all_screens.py` draws every screen of the firmware the same way (`tools/screens_all.c`: every
+page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
+screen and a contact sheet a group, listed in its `README.md`; `--palette 5 assets/screens/all-synthwave` draws them in
+SYNTHWAVE. `make_screens.py` also makes `boopbox-synthwave.png`, the README's screens in SYNTHWAVE.
 
 ## Tests
 
