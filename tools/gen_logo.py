@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""The BoopBox logo: a boombox face (a handle, a rounded body, two speakers) whose display holds four
-level bars in the four track colours (blue, green, yellow, orange), and a geometric monoline wordmark.
+"""The BoopBox logo: a boombox face (a handle, a rounded body, two speakers) whose display holds eight
+level bars, the eight tracks: 1..4 on top in the four track colours (blue, green, yellow, orange), 5..8 below in
+their shades (as the firmware draws tracks 5..8: gfx.c te_shade), and a geometric monoline wordmark.
 
   tools/gen_logo.py OUT.h          firmware boot splash (RLE, 16-colour palette, RGB565)
   tools/gen_logo.py --assets DIR   boopbox-logo.svg/png, boopbox-icon.svg/png, boopbox-splash.png
@@ -18,21 +19,30 @@ WHITE, BLACK = (242, 242, 242), (0, 0, 0)
 HEX = lambda c: "#%02X%02X%02X" % c
 BARS = [BLUE, GREEN, YELLOW, ORANGE]
 
+
+def shade(c):
+    """tracks 5..8's colour from 1..4's: 45 % of the way to white (gfx.c te_shade, on a dark background)"""
+    return tuple(v + (255 - v) * 9 // 20 for v in c)
+
+
+SHADES = [shade(c) for c in BARS]
+
 # ---- geometry (units: the icon is 240 x 240, the wordmark x-height is 72) -------------------
 # the body (outline), the handle above it, the display's four bars, the two speakers (ring + cone)
 ICON = dict(w=12, body=(18, 74, 222, 210), body_r=28, handle=(70, 38, 170), handle_r=16,
-            bars=(44, 92, 196, 108), bar_gap=8, spk=((78, 156), (162, 156)), spk_r=30, cone_r=10)
+            bars=(44, 88, 196, 98), bar_row=14, bar_gap=8, spk=((78, 158), (162, 158)), spk_r=29, cone_r=10)
 XH, SW = 72, 12                                  # wordmark x-height, stroke
 WORD = "boopbox"
 
 
 def bar_boxes(ox, oy, k):
-    """the display's four bars: (colour, x0, y0, x1, y1)"""
+    """the display's eight bars, two rows of four (tracks 1..4, then 5..8): (colour, x0, y0, x1, y1)"""
     x0, y0, x1, y1 = ICON["bars"]
-    g = ICON["bar_gap"]
+    g, dy = ICON["bar_gap"], ICON["bar_row"]
     bw = (x1 - x0 - 3 * g) / 4
-    return [(c, ox + (x0 + i * (bw + g)) * k, oy + y0 * k, ox + (x0 + i * (bw + g) + bw) * k, oy + y1 * k)
-            for i, c in enumerate(BARS)]
+    return [(c, ox + (x0 + i * (bw + g)) * k, oy + (y0 + r * dy) * k, ox + (x0 + i * (bw + g) + bw) * k,
+             oy + (y1 + r * dy) * k)
+            for r, row in enumerate((BARS, SHADES)) for i, c in enumerate(row)]
 
 
 def rrect(d, box, r, fill):
@@ -197,10 +207,13 @@ def rgb565(c):
 
 def splash_header(path):
     im = render("v", SPLASH_W, SPLASH_H, SPLASH_K)
-    # a fixed palette: black, and each logo colour at 1/3, 2/3 and full (the anti-aliased edges)
-    cols = [BLACK]
-    for c in (WHITE, BLUE, GREEN, YELLOW, ORANGE):
-        cols += [tuple(round(v * f) for v in c) for f in (1 / 3, 2 / 3, 1.0)]
+    # a fixed palette of 16: black, white at 1/3, 2/3 and full (the anti-aliased edges of the outlines and the
+    # wordmark), each track colour at 1/2 and full, and the four shades (tracks 5..8)
+    cols = [BLACK] + [tuple(round(v * f) for v in WHITE) for f in (1 / 3, 2 / 3, 1.0)]
+    for c in BARS:
+        cols += [tuple(round(v * f) for v in c) for f in (1 / 2, 1.0)]
+    cols += SHADES
+    assert len(cols) == 16
     src = im.tobytes()
     px = []
     cache = {}

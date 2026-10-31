@@ -99,7 +99,7 @@ Everything from 2.7 is unchanged and still here. Projects, autosaves and backups
 
 | Control | Kind | Main job |
 | --- | --- | --- |
-| **PLAY** | button | start / stop all four tracks |
+| **PLAY** | button | start / stop all the tracks |
 | **REC** | button | record (tap), clear the track (hold) |
 | **SAVE** | button | song layer (hold), song screen / save pages (tap) |
 | **HOME** | button | TRACKS screen, visualiser (tap), menu (hold), lock a layer |
@@ -123,16 +123,25 @@ Everything from 2.7 is unchanged and still here. Projects, autosaves and backups
 
 ## 3. The big ideas: tracks, colours, tap and hold
 
-### Four tracks
+### Eight tracks
 
-| Track | Colour | Plays | Knob of the same colour |
+| Track | Colour | Plays (at power-on) | Knob of the same colour |
 | --- | --- | --- | --- |
-| **1** | blue | a synth (3 synth tracks share 8 voices) | KNOB 1 |
+| **1** | blue | a synth (the synth tracks share 8 voices) | KNOB 1 |
 | **2** | green | a synth | KNOB 2 |
 | **3** | yellow | a synth | KNOB 3 |
-| **4** | orange | the drum machine: 16 sounds, one per white key | KNOB 4 |
+| **4** | orange | a drum machine: 16 sounds, one per white key | KNOB 4 |
+| **5** | light blue | a synth | KNOB 1 |
+| **6** | light green | a synth | KNOB 2 |
+| **7** | light yellow | a synth | KNOB 3 |
+| **8** | light orange | a second drum machine, its own kit | KNOB 4 |
 
-**ALGORITHM** picks the track you play, record and edit, on every screen. The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
+Any track can be a synth or a drum track (SAVE → TOOLS → KIND). Tracks 5–8 take a lighter shade of the colours of
+tracks 1–4 (a darker one on a light theme), so each track has its own colour, your own theme's too. The screens that
+list tracks show the bank of four the selected track is in: 1–4 or 5–8. More in
+[the groovebox controls](docs/groovebox-controls.md).
+
+**ALGORITHM** picks the track you play, record and edit, on every screen (1 to 8). The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
 
 ### Tap and hold
 
@@ -609,7 +618,7 @@ A muted track fades out in a few milliseconds and plays no new notes; its patter
 | **Clear the selected track** | **hold REC** ~2 s (after 0.7 s a ring fills; let go before it is full: nothing). Undo brings it back |
 | **Clear the pattern** | SAVE → TOOLS → **CLRSQ** (GO) |
 | **Reset the sound** | SAVE → TOOLS → **INIT** (GO): the engine's defaults and first preset |
-| **New loop** | SAVE → TOOLS → **NEW** (GO): the four tracks of your working loop back to their power-on sounds, empty patterns, 90 BPM (*NEW LOOP, A-D KEPT*: the saved sections are not touched; stop the song first in song mode; undo brings back only the last track's pattern, so save a section first if in doubt) |
+| **New loop** | SAVE → TOOLS → **NEW** (GO): every track of your working loop back to its power-on sound, empty patterns, 90 BPM (*NEW LOOP, A-D KEPT*: the saved sections are not touched; stop the song first in song mode; undo brings back only the last track's pattern, so save a section first if in doubt) |
 | **Save the loop as a section** | **SAVE + key 5–8** (A–D) |
 | **Save / load a section** | SAVE → SECTION: **SECT** A–D, **LOAD** (GO), **SAVE** (GO) |
 | **Erase a saved section** (2.6) | SAVE → SECTION: **SECT** A–D, **ERASE** on KNOB 2 (GO), the song stopped: the slot is *EMPTY* again and its section key goes dark. The steps of the song that played it are taken out (the others keep their order; none left: the default song A B C D). Your working loop is not touched. No undo: save it into another slot first if in doubt |
@@ -637,7 +646,7 @@ GO: one click shows *AGAIN: SAVE* (or LOAD…), a second click within about 1.5 
 
 ## 14. Song mode: sections, chains, songs
 
-The FM-1 holds **one song**: up to **16 steps** of **4 sections, A–D**. Each section holds the four tracks (sounds, patterns, kit): SAVE → SECTION shows them. For more songs, keep one editor backup file per song.
+The FM-1 holds **one song**: up to **16 steps** of **4 sections, A–D**. Each section holds every track (sounds, patterns, kit): SAVE → SECTION shows them. For more songs, keep one editor backup file per song.
 
 ### Make it live, by playing
 

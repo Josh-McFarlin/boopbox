@@ -7,7 +7,7 @@ so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 Three things of SLOOP 2.8.3 are left out of this build to make room in the flash (`docs/groovebox-performance.md`):
 
 - **The visualiser:** tapping HOME on the TRACKS screen does nothing.
-- **The bitmap boot logo:** the boot screen shows "BoopBox" as text in the tracks' colours.
+- **The bitmap boot logo:** the boot screen shows "BOOPBOX" as text, BOOP in the tracks' colours.
 - **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
   recording below, so they sound a little different; every note below 70 sounds as before.
 
@@ -16,7 +16,7 @@ Three things of SLOOP 2.8.3 are left out of this build to make room in the flash
 | Control | Does |
 | --- | --- |
 | **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before) |
-| **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 use the colours of tracks 1-4 |
+| **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 have a shade of the colours of tracks 1-4 (lighter; darker on a light theme), so each track has its own |
 | **GLO layer** (mute, solo, levels) | acts on the bank shown: keys 1-4 are tracks 1-4 or 5-8 |
 | **GLO > MIDI 4** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as GLO > MIDI does for tracks 1-3 and the drum channel (CH4) |
 | **GLO > DRUMS** | LVL, REV and DLY of the selected drum track; on a synth track, of the first drum track |

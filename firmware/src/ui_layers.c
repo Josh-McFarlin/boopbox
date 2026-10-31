@@ -709,7 +709,7 @@ UI_SMALL static void layer_screen_draw(void)
     int32_t ratio[4] = {-1, -1, -1, -1};
     uint32_t i, layer = ui.layer, sel = song.sel;
     track_t *t = TSEL;
-    uint16_t col = TE_COL[sel & 3u];
+    uint16_t col = TE_COL[sel];
     if (!layer_shown) {
         lcd_fill(0, 0, 240, 240, C_BLACK);
         ui.force = 1;
@@ -841,7 +841,7 @@ UI_SMALL static void layer_screen_draw(void)
             }
             if (!tl[i].lab[0])
                 fmt_int(tl[i].lab, (int32_t)idx + 1);
-            tl[i].bg = on ? (lv == LV_GHOST ? TE_DIM[sel & 3u] : lv == LV_SOFT ? TE_MID[sel & 3u] : lv == LV_HARD ? C_WHITE : col)
+            tl[i].bg = on ? (lv == LV_GHOST ? TE_DIM[sel] : lv == LV_SOFT ? TE_MID[sel] : lv == LV_HARD ? C_WHITE : col)
                           : TE_G1;
             tl[i].fg = on ? C_BLACK : TE_G3;
             tl[i].marks = (uint8_t)(on ? rt : 0u);
@@ -969,13 +969,13 @@ UI_SMALL static void layer_screen_draw(void)
             int m = trk[base + i].p[P_MUTE] != 0, so = (song.solo >> (base + i)) & 1u;
             str_cpy(tl[i].lab, "mute 1", 8);
             tl[i].lab[5] = (char)('1' + base + i);
-            tl[i].bg = m ? TE_G2 : TE_COL[i];
+            tl[i].bg = m ? TE_G2 : TE_COL[base + i];
             tl[i].fg = m ? TE_G3 : C_BLACK;
             str_cpy(tl[4 + i].lab, "solo 1", 8);
             tl[4 + i].lab[5] = (char)('1' + base + i);
             tl[4 + i].bg = so ? C_WHITE : TE_G1;
             tl[4 + i].fg = so ? C_BLACK : TE_G3;
-            tl[4 + i].top = TE_DIM[i];
+            tl[4 + i].top = TE_DIM[base + i];
         }
         str_cpy(tl[8].lab, "fill", 8);                  /* key 9: held = a fill; key 10: the next bar is one */
         tl[8].bg = fill_now ? C_WHITE : TE_G1;
@@ -1052,7 +1052,9 @@ UI_SMALL static void layer_screen_draw(void)
     {   /* (a message shows in the title: the dials stay) */
         uint8_t m = ui.msg_t;
         ui.msg_t = 0;
+        te_dials_trk = layer == LY_MIX ? (uint8_t)(song.sel / 4u * 4u) : 0u;   /* (MIX: the bank's tracks, own colours) */
         te_dials(184, lab, val, ratio, layer * 7919u, &foot);
+        te_dials_trk = 0;
         ui.msg_t = m;
     }
 }

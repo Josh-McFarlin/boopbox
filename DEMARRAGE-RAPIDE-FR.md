@@ -2,7 +2,7 @@
 
 # SLOOP 2.7 — démarrage rapide
 
-**BoopBox** transforme le M-VAVE FM-1 en groovebox à jouer en live, pour tous les styles : trois synthés et une batterie de 16 sons sur les touches blanches, 12 moteurs de synthèse (dont la FM à six opérateurs avec les patchs DX7, les modèles physiques et le bruit), 153 sons rangés par famille (basses, claviers, orgues, nappes, leads, plucks, stabs), 37 kits de batterie (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, synthwave, chiptune, ambient…) et tes propres kits, tes propres samples, ghost notes et ratchets, verrous de paramètre, décalage des pas et fills, note repeat, accords sur une touche, 27 effets punch-in, et un écran à la teenage engineering qui montre toujours ce que tes mains peuvent faire. Aucun motif d'usine : tout ce que tu entends, tu le joues.
+**BoopBox** transforme le M-VAVE FM-1 en groovebox à jouer en live, pour tous les styles : huit pistes, par défaut six synthés et deux batteries de 16 sons sur les touches blanches, 12 moteurs de synthèse (dont la FM à six opérateurs avec les patchs DX7, les modèles physiques et le bruit), 153 sons rangés par famille (basses, claviers, orgues, nappes, leads, plucks, stabs), 37 kits de batterie (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, synthwave, chiptune, ambient…) et tes propres kits, tes propres samples, ghost notes et ratchets, verrous de paramètre, décalage des pas et fills, note repeat, accords sur une touche, 27 effets punch-in, et un écran à la teenage engineering qui montre toujours ce que tes mains peuvent faire. Aucun motif d'usine : tout ce que tu entends, tu le joues.
 
 Le guide complet, chaque bouton, combinaison et page, avec un aide-mémoire d'une page (en anglais) : [GUIDE.md](GUIDE.md). Le manuel (en anglais) : [BOOPBOX.md](BOOPBOX.md).
 
@@ -65,7 +65,7 @@ Chaque bouton de fonction a deux vies. **Tapé** (appuyé puis relâché sans ri
 
 | Commande | Action |
 | --- | --- |
-| **PLAY** | lecture / arrêt des quatre pistes (marche aussi dans un calque) |
+| **PLAY** | lecture / arrêt de toutes les pistes (marche aussi dans un calque) |
 | **REC** | en lecture : enregistre tout de suite / arrête · à l'arrêt : arme (la première note démarre) · prise libre : ferme la boucle |
 | **REC maintenu** | efface la piste choisie (un anneau se remplit, ~2 s ; relâche avant et rien ne se passe) |
 | **SAVE** | sur TRACKS : l'écran SONG · ailleurs : les pages SAVE |
@@ -159,7 +159,7 @@ Réglables avec FX maintenu (KNOB 1–3) ou GLO → MASTER.
 
 ## Mode chanson
 
-Une chanson enchaîne 4 sections, **A–D** (chacune garde les 4 pistes : sons, motifs, kit). Elle se construit en jouant :
+Une chanson enchaîne 4 sections, **A–D** (chacune garde toutes les pistes : sons, motifs, kits). Elle se construit en jouant :
 
 1. Fais une boucle (le couplet). Maintiens **SAVE** et appuie sur la **5ᵉ touche blanche** (*save A*). Change la boucle (le refrain) et sauve-la dans **B** (6ᵉ touche), un pont dans **C**, une fin dans **D**. Sur une section déjà utilisée, rappuie dans les 3 s pour confirmer.
 2. **Jouer les sections en direct :** SAVE + touche blanche **1–4**. En lecture, la section démarre à la mesure suivante, toujours en rythme ; à l'arrêt, elle devient la boucle tout de suite.
