@@ -855,12 +855,19 @@ int main(int argc, char **argv)
                       "printable name); a first-beta THM1 taken with an accent");
             ui.menu = 1; ui.menu_sel = MI_COLOR; ui.force = 1; frame();
             settings.palette = 4; theme_on = 0; palette_set(4);
-            encs[panel.enc[EN_K1]] = 1; frame();      /* no theme: MONO -> GREEN, as ever */
-            ok = settings.palette == 0u && !theme_on;
-            settings.palette = 4; palette_set(4);
+            encs[panel.enc[EN_K1]] = 1; frame();      /* no theme: MONO -> SYNTHWAVE (BoopBox 1.2), its own background,
+                                                       * accent, tracks' colours and greys */
+            ok = settings.palette == PAL_SYNTH && !theme_on && !strcmp(mi_value(MI_COLOR, &(uint16_t){0}), "SYNTHWAVE") &&
+                 C_BLACK == SYNTH_BG && C_WHITE == SYNTH_HI && TE_COL[1] == SYNTH_TRK[1] && TE_G1 == SYNTH_G[0] &&
+                 TE_MID[2] == rgb565_scale(SYNTH_TRK[2], 2, 3) && TE_COL[5] == te_shade(SYNTH_TRK[1]);
+            encs[panel.enc[EN_K1]] = 1; frame();      /* SYNTHWAVE -> GREEN, round */
+            ok &= settings.palette == 0u && !theme_on && C_BLACK == 0u && C_WHITE == 0xFFFFu && TE_COL[1] == TE_COL_DEF[1] &&
+                  TE_G1 == TE_G_DEF[0];
+            check(ok, "MENU > COLOR (1.2): SYNTHWAVE after MONO (indigo, cyan accent, neon tracks); round to GREEN");
+            settings.palette = PAL_SYNTH; palette_set(PAL_SYNTH);
             theme = th; theme_valid = 1;
-            encs[panel.enc[EN_K1]] = 1; frame();      /* MONO -> SUNSET */
-            ok &= theme_on && settings.palette == 4u && pal[0] == th.c[0] && pal[4] == th.c[4] && C_BLACK == th.bg &&
+            encs[panel.enc[EN_K1]] = 1; frame();      /* SYNTHWAVE -> SUNSET */
+            ok = theme_on && settings.palette == PAL_SYNTH && pal[0] == th.c[0] && pal[4] == th.c[4] && C_BLACK == th.bg &&
                   TE_COL[0] == th.trk[0] && TE_COL[3] == th.trk[3] && TE_MID[1] == rgb565_scale(th.trk[1], 2, 3) &&
                   (lights_word() >> 30 & 1u) && !strcmp(mi_value(MI_COLOR, &(uint16_t){0}), "SUNSET") && C_WHITE == th.hi;
             ui.force = 1; frame(); ppm("menu-theme");

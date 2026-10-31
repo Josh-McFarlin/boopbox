@@ -2,6 +2,7 @@
 
 Drawn by the firmware's own code on the host (`python3 tools/make_all_screens.py`), with the demo project
 of `tools/screens_demo.c` on the eight tracks playing. Each screen is 240 × 240 on the FM-1, 2x here.
+MENU → SCREEN → COLOR: **MONO** (`python3 tools/make_all_screens.py --palette 4`).
 
 110 screens in 8 groups.
 

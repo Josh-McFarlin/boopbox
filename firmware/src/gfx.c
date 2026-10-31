@@ -49,8 +49,17 @@ static const palette_t PALETTES[] = {
     {"CYAN", {RGB(0, 30, 50), RGB(0, 62, 96), RGB(16, 112, 160), RGB(56, 172, 222), RGB(140, 222, 255)}},
     {"RED", {RGB(52, 8, 8), RGB(100, 18, 14), RGB(170, 36, 26), RGB(226, 64, 48), RGB(255, 112, 92)}},
     {"MONO", {RGB(40, 40, 40), RGB(80, 80, 80), RGB(130, 130, 130), RGB(186, 186, 186), RGB(226, 226, 226)}},
+    {"SYNTHWAVE", {RGB(56, 26, 104), RGB(96, 48, 160), RGB(168, 124, 232), RGB(96, 220, 255), RGB(255, 84, 222)}},
 };
 #define NPALETTES (sizeof(PALETTES) / sizeof(PALETTES[0]))
+/* BoopBox 1.2: SYNTHWAVE (after MONO) is more than five steps: as a theme, its own background (night indigo), accent
+ * (cyan), the tracks' colours (cyan, magenta, sunset orange, violet) and the TE pages' greys (purples). An older
+ * firmware reads its number as out of range and starts on MONO */
+#define PAL_SYNTH 5u
+#define SYNTH_BG RGB(16, 4, 40)
+#define SYNTH_HI RGB(128, 252, 255)
+static const uint16_t SYNTH_TRK[4] = {RGB(0, 228, 255), RGB(255, 44, 212), RGB(255, 140, 56), RGB(160, 96, 255)};
+static const uint16_t SYNTH_G[4] = {RGB(36, 18, 70), RGB(70, 38, 122), RGB(150, 118, 210), RGB(214, 196, 244)};
 static uint16_t pal[5];
 #define C_LINE pal[0]                /* 1 rules, separators */
 #define C_DIM pal[1]                 /* 2 inactive, empty steps, units */
@@ -171,17 +180,18 @@ static uint16_t te_shade(uint32_t c)
 static void palette_set(uint32_t i)              /* built-in palette i, or the theme when it is chosen (2.7) */
 {
     uint32_t k;
-    int cu = theme_shown();
+    int cu = theme_shown(), sw = !cu && i % NPALETTES == PAL_SYNTH;
     for (k = 0; k < 5u; k++)
         pal[k] = cu ? theme.c[k] : PALETTES[i % NPALETTES].c[k];
-    pal_bg = cu ? theme.bg : 0u;
-    pal_hi = cu ? theme.hi : 0xFFFFu;
+    pal_bg = cu ? theme.bg : sw ? SYNTH_BG : 0u;
+    pal_hi = cu ? theme.hi : sw ? SYNTH_HI : 0xFFFFu;
     for (k = 0; k < 4u; k++)
-        te_g[k] = te_gray(TE_G_DEF[k]);
+        te_g[k] = sw ? SYNTH_G[k] : te_gray(TE_G_DEF[k]);
     for (k = 0; k < 4u; k++) {
-        TE_COL[k] = cu ? theme.trk[k] : TE_COL_DEF[k];
-        TE_MID[k] = cu ? rgb565_scale(theme.trk[k], 2u, 3u) : TE_MID_DEF[k];
-        TE_DIM[k] = cu ? rgb565_scale(theme.trk[k], 1u, 3u) : TE_DIM_DEF[k];
+        uint16_t t = cu ? theme.trk[k] : SYNTH_TRK[k];
+        TE_COL[k] = cu || sw ? t : TE_COL_DEF[k];
+        TE_MID[k] = cu || sw ? rgb565_scale(t, 2u, 3u) : TE_MID_DEF[k];
+        TE_DIM[k] = cu || sw ? rgb565_scale(t, 1u, 3u) : TE_DIM_DEF[k];
         TE_COL[k + 4u] = te_shade(TE_COL[k]);           /* tracks 5..8: a shade of 1..4 */
         TE_MID[k + 4u] = rgb565_scale(TE_COL[k + 4u], 2u, 3u);
         TE_DIM[k + 4u] = rgb565_scale(TE_COL[k + 4u], 1u, 3u);

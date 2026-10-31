@@ -4,7 +4,8 @@
  * sections and the visualiser, drawn by the firmware's own code on the host with tools/screens_demo.c's demo project
  * on the eight tracks playing. Writes one 240 x 240 PPM a screen into the directory given, and a list of them
  * (index.txt: group, file, title, a line).
- *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests tools/screens_all.c -lm && ./a.out OUTDIR */
+ * PALETTE: the menu's COLOR, its number in gfx.c PALETTES (default 4, MONO, as at power-on).
+ *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests -Itools tools/screens_all.c -lm && ./a.out OUTDIR [PALETTE] */
 #define SCREENS_DEMO_NO_MAIN 1
 #include "screens_demo.c"
 
@@ -63,8 +64,8 @@ int main(int argc, char **argv)
     assert(idx);
     panel = PANEL_DEFAULT;
     layers_init();
-    settings.palette = 4;
-    palette_set(4);
+    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 4);
+    palette_set(settings.palette);
     host_tracks_init();
     demo_project();
     boopbox_splash();
