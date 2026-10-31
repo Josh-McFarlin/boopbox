@@ -145,7 +145,7 @@ UI_SMALL static __attribute__((noinline)) void step_get(pr_t *r, track_t *t, uin
         if (b & 0x20u)
             s->flags = (uint8_t)pr_u8(r);
         if (b & 0x40u)
-            s->vel = (uint8_t)pr_u8(r);
+            s->vel = (uint8_t)(pr_u8(r) & 127u);   /* (past 127 from a file: up to twice as loud) */
         if (x & 1u)
             s->lvl = (uint8_t)pr_u8(r);
         if (x & 2u)

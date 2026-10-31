@@ -444,12 +444,8 @@ UI_SMALL static const uint8_t *ed_bk_obj(uint32_t id, uint32_t *len)   /* 0 = no
         *len = sizeof dsu;
         return (const uint8_t *)&dsu;
     }
-    if (id == 10u) {                                      /* SLOOP 2.6: the MIDI part (the MIDI LEARN map, GLO > MIDI's
-                                                         * channels): listed only while it is not the default (a backup
-                                                         * without it stays one an older editor reads; its restore leaves
-                                                         * them as they are) */
-        if (!midi_part_default(ed_bk_ml))
-            *len = midi_part_len(ed_bk_ml);
+    if (id == 10u) {                                      /* the MIDI part (the MIDI LEARN map, GLO > MIDI's channels) */
+        *len = MIDI_PART_8;
         return ed_bk_ml;
     }
     if (id == 11u) {                                      /* SLOOP 2.7: your theme (gfx.c), listed only when there is one */
@@ -525,9 +521,9 @@ UI_SMALL static uint32_t ed_bk_commit(void)
         persist_t p;
         if (ed_flash_busy())
             return 3;
-        if (n != MIDI_PART && n != MIDI_PART_8 && n != 2u * ML_N && n != 2u * ML_N + 4u)
+        if (n != MIDI_PART_8)
             return 2;
-        midi_part_read(raw, n);                           /* (every entry and channel checked) */
+        midi_part_read(raw);                           /* (every entry and channel checked) */
         persist_fill(&p);
         if (!flash_ok || settings_write(&p))
             return 4;
@@ -540,7 +536,7 @@ UI_SMALL static uint32_t ed_bk_commit(void)
         if (ed_flash_busy())
             return 3;
         theme_t t;
-        if (n && n != sizeof(theme_t) && n != 36u)        /* (36: a first-beta THM1, taken with an accent) */
+        if (n && n != sizeof(theme_t))
             return 2;
         memset(&t, 0, sizeof t);
         memcpy(&t, raw, n);

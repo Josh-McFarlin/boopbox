@@ -18,7 +18,7 @@ static void fm1_irq_off(void) {}
 static void fm1_irq_on(void) {}
 #include "../src/core.h"
 /* the editor's four tracks (its LIVE page and track list): synths on 1..3, drums on 4, as tests/hostsim.c */
-#define TRK_DRUM TRK_DRUM_V6
+#define TRK_DRUM 3u
 #define TDRUM (&trk[TRK_DRUM])
 #define NPART 3u
 #include "../src/engines.c"

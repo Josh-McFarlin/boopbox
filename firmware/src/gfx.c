@@ -63,8 +63,6 @@ static uint16_t pal[5];
  * palette number stays a built-in one, the one an older SLOOP shows). Kept in the settings object's side record
  * (project.c, storage.c st_side): an older SLOOP never reads it, and forgets it when it saves its settings. */
 #define THEME_MAGIC 0x324D4854u                  /* "THM2" (2.7 beta 2: with the accent) */
-#define THEME_MAGIC1 0x314D4854u                 /* "THM1": the first beta's, 36 bytes (its CRC where hi is now),
-                                                  * taken with a white accent (black on a light background) */
 typedef struct {
     uint32_t magic;
     char name[8];                                /* ASCII, 0-padded (not terminated when 8 long) */
@@ -118,14 +116,6 @@ static int theme_apart(uint32_t c, uint32_t bg)
 static int theme_check(theme_t *t)
 {
     uint32_t k;
-    if (t->magic == THEME_MAGIC1) {
-        if (((uint32_t)t->hi | (uint32_t)t->rsv << 16) != st_crc32(t, 32u))
-            return 0;
-        t->hi = theme_apart(0xFFFFu, t->bg) ? 0xFFFFu : 0u;
-        t->rsv = 0;
-        t->magic = THEME_MAGIC;
-        t->crc = st_crc32(t, __builtin_offsetof(theme_t, crc));
-    }
     if (t->magic != THEME_MAGIC || t->crc != st_crc32(t, __builtin_offsetof(theme_t, crc)))
         return 0;
     for (k = 0; k < sizeof t->name; k++)

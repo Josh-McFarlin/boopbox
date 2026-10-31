@@ -34,7 +34,7 @@ const E = vm.runInNewContext(proto + `
    CHOP, chopNovelty, chopHits, chopSnap, chopGrid, chopEqual, chopList, chopPick, chopFit, chopZones, wavFile, zipStore, crc32,
    UP, bank, capturePatch, auditionPatch, startWatch, libraryFile, readLibraryFile, paramKeys, patternFromSteps, stepsFromPattern, upName,
    mixer, GM_DRUM, drumName, parseNotes, fmtValue, F, DRUM_LANES, LV_NAMES, emptyDrum, lockable, MICRO, FC, fillGet, fillSet, pack7, unpack7,
-   loudDb, matchGains, withGain, LEVEL_MIN, backupCapture, backupRestore, backupObjects, b64enc, b64dec, FM6, KIT, kitPad, kitZones, kitLen, kitBytes, kitFit, kitSplit, kitLaneOf, kitPlace, zipRead, ROLL, SMF, ARR, mockSettings, fm6CartWrite, fm6CartPreset, fm6CartSlots, fm6CartPresets, DSYN, DSYN_MOCK_NAMES, DSYN_MOCK_KITS, SetGate, bkProjFormat, bkDevFormat, bkFwAtLeast, THEME, FM1_PORT_ED: FM1_PORT, fm1Ports, LOOP, LIVE, LVX, SONGF, songCapture, songLoad, songObjects })`,
+   loudDb, matchGains, withGain, LEVEL_MIN, backupCapture, backupRestore, backupObjects, b64enc, b64dec, FM6, KIT, kitPad, kitZones, kitLen, kitBytes, kitFit, kitSplit, kitLaneOf, kitPlace, zipRead, ROLL, SMF, ARR, mockSettings, fm6CartWrite, fm6CartPreset, fm6CartSlots, fm6CartPresets, DSYN, DSYN_MOCK_NAMES, DSYN_MOCK_KITS, SetGate, bkProjFormat, bkDevFormat, bkSloopInto, bkFwAtLeast, THEME, FM1_PORT_ED: FM1_PORT, fm1Ports, LOOP, LIVE, LVX, SONGF, songCapture, songLoad, songObjects })`,
 { setTimeout, clearTimeout, setInterval, clearInterval, console, TextEncoder, TextDecoder, Blob, Response, DecompressionStream });
 
 async function editorMock() {
@@ -1131,6 +1131,13 @@ async function editorDsyn() {
       && !E.bkFwAtLeast("FELUCCA SLOOP 2.0 (MOCK)", [2, 5, 1])
       && E.bkFwAtLeast("FELUCCA BOOPBOX 1.0.0", [2, 5, 1]) && E.bkFwAtLeast("BOOPBOX 1.0.0", [2, 8, 3]),
       "backup: the project format of an object, what a device reads (INFO: eight tracks read format 7), the firmware compared (BoopBox 1.0.0 after SLOOP 2.8.3)");
+    {   /* BoopBox reads no SLOOP project: a backup or song holding one is refused on a BoopBox FM-1 (on SLOOP it is not) */
+      const f7 = Uint8Array.of(0x37, 0x4E, 0x55, 0x46, 12, 0, 0, 0), f6s = Uint8Array.of(0x36, 0x4E, 0x55, 0x46, 1);
+      const bb = { pcount: 71, ntrk: 8 }, sl = { pcount: 71, ntrk: 4 };
+      ok(E.bkSloopInto(new Map([[0, f7], [2, f6s]]), [0, 2, 3, 4, 5], bb) && !E.bkSloopInto(new Map([[0, f7], [2, f7]]), [0, 2, 3, 4, 5], bb)
+        && !E.bkSloopInto(new Map([[0, f7], [3, new Uint8Array(0)]]), [0, 2, 3, 4, 5], bb) && !E.bkSloopInto(new Map([[2, f6s]]), [2], sl),
+        "backup: a SLOOP project (format 1..6) into BoopBox refused (bkSloop); BoopBox's own, an empty section, or a SLOOP FM-1: not");
+    }
     let err = null, writes = 0;
     const rq25 = async (r, o) => {                    /* a 2.5 FM-1 (INFO: 61 parameters); anything else counts as a write */
       if (r[0] === C.INFO) return { info25: { ...E.parse[C.INFO](await rq(r, o)), pcount: 61, pe0: 53 } };
@@ -1379,7 +1386,7 @@ async function editorTheme() {
   const pals = [...gfx.matchAll(/\{"(\w+)", \{(RGB[^}]*)\}\}/g)].map((m) => [m[1], rgb(m[2])]);
   const tdef = rgb((/UI_COL_DEF\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
   ok(js(pals) === js(T.BUILTIN) && js(tdef) === js(T.TRACKS), "theme: the built-in palettes and track colours == gfx.c (PALETTES, UI_COL_DEF)");
-  ok(/#define THEME_MAGIC 0x324D4854u/.test(gfx) && /#define THEME_MAGIC1 0x314D4854u/.test(gfx)
+  ok(/#define THEME_MAGIC 0x324D4854u/.test(gfx)
     && /char name\[8\];[^]*uint16_t c\[5\];[^]*uint16_t trk\[4\];[^]*uint16_t bg;[^]*uint16_t hi;[^]*uint16_t rsv;[^]*uint32_t crc;/.test(gfx)
     && /sizeof\(theme_t\) == 40u/.test(gfx) && T.SIZE === 40 && T.MAGIC === 0x324D4854 && T.MAGIC1 === 0x314D4854,
     "theme: the record == gfx.c theme_t (THM2, name 8, 5 + 4 colours, background, accent, CRC: 40 bytes)");
