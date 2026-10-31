@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 """Build Felucca: the app, the update loader and an installable .fwsc package.
 
-  tools/build.py [--release X.Y[-suffix]]
+  tools/build.py [--release X.Y.Z[-suffix]]
 
 Outputs in build/: felucca.bin (app), loader/ota.bin (update loader),
 felucca.fwsc (package). See BUILDING.md for the toolchain and the SDK.
@@ -103,7 +103,7 @@ def generate():
             [tools / "gen_samples.py", GEN / "felucca_samples.h"],
             [tools / "gen_drumkits.py", GEN / "felucca_drumkits.h"],
             [tools / "gen_fm6_patches.py", GEN / "felucca_fm6.h"],
-            [tools / "gen_logo.py", GEN / "sloop_logo.h"]]
+            [tools / "gen_logo.py", GEN / "boopbox_logo.h"]]
     procs = [subprocess.Popen([sys.executable, *map(str, c)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True) for c in cmds]
     failed = []
@@ -318,16 +318,16 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string X.Y")
+    ap.add_argument("--release", metavar="X.Y.Z", help="release build: identity FM-1_9XY, version string BOOPBOX X.Y.Z")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "felucca.fwsc"
-    if a.release:                   # one digit each: the identity has room for two
-        m = re.fullmatch(r"(\d)\.(\d)(-[A-Za-z0-9]+)?", a.release)
+    if a.release:                   # X and Y one digit each: the identity has room for two (Z: the version string only)
+        m = re.fullmatch(r"(\d)\.(\d)(\.\d+)?(-[A-Za-z0-9]+)?", a.release)
         if not m:
-            raise SystemExit(f"--release {a.release}: use X.Y or X.Y-suffix, one digit each")
+            raise SystemExit(f"--release {a.release}: use X.Y.Z or X.Y.Z-suffix (X and Y one digit each)")
         PRODUCT = "FM-1_9" + m[1] + m[2]
-        VERSION = a.release.upper() if "BETA" in a.release.upper() else a.release.upper() + " BETA"
+        VERSION = "BOOPBOX " + a.release.upper()    # (the splash shows what follows "BOOPBOX ")
         name = f"felucca-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
@@ -338,15 +338,16 @@ def main():
         gen, ldr = ex.submit(generate), ex.submit(build_loader)
         gen.result()
         ota = ldr.result()
-    # (groovebox) the boot logo as text and no full-screen visualiser are the defaults now (felucca.c, splash.c): the
-    # flash is full. When the image still does not fit, the build fails and says what else could go; nothing is left
-    # out silently
+    # (groovebox) the boot logo as text and six of the visualiser's twelve styles are the defaults now (felucca.c,
+    # splash.c, ui_vis.c): the flash is full. When the image still does not fit, the build fails and says what else
+    # could go; nothing is left out silently
     try:
         img, syms, dis, rt = build_app()
     except SystemExit:
         if "overflow" in LAST_ERR:
-            print("build: the flash is full: the image does not fit. By hand: FELUCCA_EDITOR=0 builds without the web "
-                  "editor's SysEx (about 14 KB less; updates and recovery stay); see docs/groovebox-performance.md")
+            print("build: the flash is full: the image does not fit. By hand: FELUCCA_VIS=0 leaves the visualiser out "
+                  "(about 4.3 KB less), FELUCCA_EDITOR=0 the web editor's SysEx (about 14 KB less; updates and recovery "
+                  "stay); see docs/groovebox-performance.md")
         raise
     errors, notes = check(img, syms, dis, rt)
     hal_err = mmio_check()

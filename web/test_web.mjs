@@ -643,7 +643,7 @@ async function editorV5() {
   const C = E.CMD;
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 });
   const info = E.parse[C.INFO](await rq(E.req.info()));
-  ok(info.proto === 12 && /SLOOP/.test(info.version) && info.pcount === 71 && info.gcount === 50 && info.pe0 === 63, "v5..v12: INFO ends with the protocol version (12: LIVE); 50 globals (2.5: drum DLY; 2.6: GLO > MIDI, TEXTURE, BEND; 2.7: FX CH, DR MAP, REMOTE, CLK OUT; 2.7.2: FX FADE)");
+  ok(info.proto === 12 && /BOOPBOX/.test(info.version) && info.pcount === 71 && info.gcount === 50 && info.pe0 === 63, "v5..v12: INFO ends with the protocol version (12: LIVE); 50 globals (2.5: drum DLY; 2.6: GLO > MIDI, TEXTURE, BEND; 2.7: FX CH, DR MAP, REMOTE, CLK OUT; 2.7.2: FX FADE)");
   /* the firmware says the same: ED_DRUM_STEP is command 33, INFO sends 5, P_CHORD / the master globals as the mock has them */
   const ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8"), pc = readFileSync(join(HERE, "../firmware/src/params.c"), "utf8");
   const en = (/enum \{ ED_INFO = 1,([^}]*)\}/.exec(ec) || [])[1] || "";
@@ -1066,7 +1066,7 @@ async function editorDsyn() {
   let bad = "";
   try { DSYN.fromFile({ format: "sloop-drumsynth", sounds: [[1, 2]] }); } catch (e) { bad = e.message; }
   const bank = DSYN.bankEncode([kit, kit, kit, kit]), dec = DSYN.bankDecode(bank);
-  ok(back.name === "MY 808" && back.crush === 0x21 && js(back.sounds.map((x) => Array.from(x))) === js(kit.sounds.map((x) => Array.from(x))) && /not a SLOOP/.test(bad)
+  ok(back.name === "MY 808" && back.crush === 0x21 && js(back.sounds.map((x) => Array.from(x))) === js(kit.sounds.map((x) => Array.from(x))) && /not a BoopBox/.test(bad)
     && bank.length === 1464 && dec && dec[3].name === "MY 808" && dec[2].crush === 0x21 && js(Array.from(dec[1].sounds[15])) === js(Array.from(kit.sounds[15]))
     && DSYN.bankDecode(bank.slice(1)) === null, "dsyn: a kit file and the backup object, there and back; a wrong file refused");
   /* the device (mock): LIST / GET / PUT / STORE / PLAY */
@@ -1128,8 +1128,9 @@ async function editorDsyn() {
       && E.bkDevFormat({ pcount: 71, ntrk: 8 }) === 7 && E.bkDevFormat({ pcount: 71, ntrk: 4 }) === 6
       && E.bkProjFormat(Uint8Array.of(0x37, 0x4E, 0x55, 0x46, 12, 0, 0, 0)) === 7
       && E.bkFwAtLeast("SLOOP 2.6", [2, 5, 1]) && E.bkFwAtLeast("SLOOP 2.6", [2, 5, 1]) && !E.bkFwAtLeast("SLOOP 2.5", [2, 5, 1])
-      && !E.bkFwAtLeast("FELUCCA SLOOP 2.0 (MOCK)", [2, 5, 1]),
-      "backup: the project format of an object, what a device reads (INFO: eight tracks read format 7), the firmware compared");
+      && !E.bkFwAtLeast("FELUCCA SLOOP 2.0 (MOCK)", [2, 5, 1])
+      && E.bkFwAtLeast("FELUCCA BOOPBOX 1.0.0", [2, 5, 1]) && E.bkFwAtLeast("BOOPBOX 1.0.0", [2, 8, 3]),
+      "backup: the project format of an object, what a device reads (INFO: eight tracks read format 7), the firmware compared (BoopBox 1.0.0 after SLOOP 2.8.3)");
     let err = null, writes = 0;
     const rq25 = async (r, o) => {                    /* a 2.5 FM-1 (INFO: 61 parameters); anything else counts as a write */
       if (r[0] === C.INFO) return { info25: { ...E.parse[C.INFO](await rq(r, o)), pcount: 61, pe0: 53 } };
@@ -1633,7 +1634,7 @@ const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
 
 /* an FM-1 on WebMIDI: identity, then "device asks, host answers" reads of the image */
 class FakeFM1 {
-  constructor(image, { unplugAfter = Infinity, finalIdentity = "FM-1_900", name = "FM-1", identity = "FM-1_015", loaderName = "Felucca Update" } = {}) {
+  constructor(image, { unplugAfter = Infinity, finalIdentity = "FM-1_900", name = "FM-1", identity = "FM-1_015", loaderName = "BoopBox Update" } = {}) {
     this.image = image; this.unplugAfter = unplugAfter; this.served = 0; this.bad = 0;
     this.finalIdentity = finalIdentity; this.loaderName = loaderName;
     this.access = { inputs: new Map(), outputs: new Map() };
@@ -1672,7 +1673,7 @@ class FakeFM1 {
       this.served++;
       if (this.served >= this.unplugAfter) { this.input.state = this.output.state = "disconnected"; return; }
       if (addr === 0xE0000000) setTimeout(() => this.boot("ota-FM-1_900", this.loaderName), 300);
-      else if (addr === 0xF0000000) setTimeout(() => this.boot(this.finalIdentity, "Felucca"), 300);
+      else if (addr === 0xF0000000) setTimeout(() => this.boot(this.finalIdentity, "BoopBox"), 300);
       else this.next();
     }
   }
@@ -1695,7 +1696,7 @@ async function updater() {
   const steps = [];
   const got = await new Updater(dev.access).install(image, "FM-1_900", (k) => steps.push(k));
   ok(got === "FM-1_900" && dev.bad === 0 && steps.includes("write") && steps.at(-1) === "done",
-    `fm1ota.js: install: running firmware -> loader -> Felucca (${dev.served} reads)`);
+    `fm1ota.js: install: running firmware -> loader -> BoopBox (${dev.served} reads)`);
 
   {   /* Windows names the re-enumerated update loader generically ("USB MIDI Device"): the name filter
          misses it, so the installer must find it by its handshake or the loader "does not appear" (#loader) */
@@ -1741,9 +1742,9 @@ async function updater() {
     const e6 = await new Updater(other.access).install(image, "FM-1_900").then(() => null, (x) => x);
     ok(e6 && e6.code === "notfound" && other.served === 0 && /Arturia KeyStep Pro/.test(e6.detail),
        `fm1ota.js: a port of other gear is left alone; 'not found' lists it${e6 ? e6.detail : ""}`);
-    ok(["FM-1", "Felucca", "Felucca Update", "Clipper", "SLOOP", "MIDIIN2 (Clipper)", "USB-MIDI"].every((n) => FM1_PORT.test(n)) &&
+    ok(["FM-1", "BoopBox", "BoopBox Update", "Felucca", "Felucca Update", "Clipper", "SLOOP", "MIDIIN2 (Clipper)", "USB-MIDI"].every((n) => FM1_PORT.test(n)) &&
        !["Arturia KeyStep Pro", "loopMIDI Port", "Microsoft GS Wavetable Synth"].some((n) => FM1_PORT.test(n)),
-       "fm1ota.js: FM1_PORT takes the FM-1's names (SLOOP, CLIPPER, the loader, the stock firmware), not other gear");
+       "fm1ota.js: FM1_PORT takes the FM-1's names (BoopBox, SLOOP, CLIPPER, the loaders, the stock firmware), not other gear");
     /* the editor finds the FM-1 by the installer's names (a port name kept from another firmware: "X0X FM-1") */
     ok(E.FM1_PORT_ED.source === FM1_PORT.source && E.FM1_PORT_ED.flags === FM1_PORT.flags,
        "editor: its FM1_PORT is the installer's");
@@ -1757,6 +1758,8 @@ async function updater() {
     ok(pn(acc(["Arturia KeyStep Pro", "USB-MIDI", "X0X FM-1", "Felucca"], ["SLOOP"])) ===
        "Felucca/Felucca,X0X FM-1/X0X FM-1,USB-MIDI/USB-MIDI",
        "editor: Felucca first, then FM-1, then generic names; other gear and unplugged ports left out");
+    ok(pn(acc(["USB-MIDI", "X0X FM-1", "BoopBox"])) === "BoopBox/BoopBox,X0X FM-1/X0X FM-1,USB-MIDI/USB-MIDI",
+       "editor: BoopBox first, then FM-1, then generic names");
     ok(pn(acc(["Arturia KeyStep Pro", "loopMIDI Port"])) === "", "editor: no FM-1 name: nothing to try");
   }
   const stock = new FakeFM1(image);

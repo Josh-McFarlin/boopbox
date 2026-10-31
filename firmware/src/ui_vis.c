@@ -3,19 +3,21 @@
  * any page closes it; SELECT steps through the twelve styles (the name shows a second); a layer held shows
  * its screen as ever, then the visualiser comes back. The keys, PLAY and REC work as always.
  *   1 OSCILLOSCOPE  2 SPECTRUM  3 SPECTROGRAM  4 LISSAJOUS  5 VU METERS  6 CIRCLE
- *   7 TAPE  8 LCD  9 BOUNCE  10 ORBIT  11 WIRES  12 SLOOP (the logo: the sail's bands are the tracks)
+ *   7 TAPE  8 LCD  9 BOUNCE  10 ORBIT  11 WIRES  12 BOOPBOX (the logo: the display's bars are the tracks)
  * It reads what the audio already leaves for the UI: the scope buffers (audio.c, the mix at 22 kHz, left and
  * right, as if MASTER were all the way up: the picture does not follow the volume knob, even at 0), the tracks' peaks (fx.c / drums.c, as the TRACKS meters read them), the notes that started
  * (voice.c vis_hit) and the transport clock. Everything is drawn in the main loop, every other frame, in two
  * bands of 120 rows (the canvas holds 124): no cost to the audio. */
 #define VIS_N 12u
 #ifndef FELUCCA_VIS_STYLES
-#define FELUCCA_VIS_STYLES 0xFFFu                   /* (groovebox) the styles built in, a bit each (bit 0: OSCILLOSCOPE): the
-                                                     * flash is full; SELECT steps over the others */
+#define FELUCCA_VIS_STYLES 0x533u                   /* (groovebox) the styles built in, a bit each (bit 0: OSCILLOSCOPE):
+                                                     * OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES, what the
+                                                     * flash holds beside the web editor (0xFFF: all twelve, only with
+                                                     * FELUCCA_EDITOR=0); SELECT steps over the others */
 #endif
 #define VIS_HAS(s) ((FELUCCA_VIS_STYLES >> (s)) & 1u)
 static const char *const VIS_NAME[VIS_N] = {"OSCILLOSCOPE", "SPECTRUM", "SPECTROGRAM", "LISSAJOUS", "VU METERS",
-                                            "CIRCLE", "TAPE", "LCD", "BOUNCE", "ORBIT", "WIRES", "SLOOP"};
+                                            "CIRCLE", "TAPE", "LCD", "BOUNCE", "ORBIT", "WIRES", "BOOPBOX"};
 /* vis_on, vis_shown_last, vis_name_t: ui_draw.c; vis_style: panel.c (kept with the settings) */
 #define VIS_FFT 512u
 #define VIS_SG_W 48u                                /* spectrogram: 48 columns of 5 px, 72 rows of 3 px */
@@ -30,12 +32,14 @@ static uint8_t vis_lj[3][256][2];                   /* Lissajous: the last three
 static struct {
     int32_t scale, ljscale, peak;                   /* auto-scales (smoothed peaks), this frame's peak */
     int16_t bar[32], cap[32], capv[32];             /* spectrum: bars, caps and their fall speed (0..1000) */
-    int16_t vu[5], pk[5], pkt[5];                   /* VU: tracks + master, peak holds */
+    int16_t vu[NTRK + 1], pk[NTRK + 1], pkt[NTRK + 1];   /* VU METERS: the eight tracks and the master (NTRK), peak holds */
     int16_t lvl[5];                                 /* the tracks' levels (0..1000) this frame, the master */
-    int16_t bh[4], bv[4];                           /* BOUNCE: height and speed (1/256 units) */
-    uint8_t flash[4], kick;                         /* frames since a note started (0 = none) / a kick, fading */
-    int16_t wamp[4];                                /* WIRES: each string's swing (0..1000) */
-    uint8_t wn[4];                                  /* its wave count (from the note) */
+    int16_t tlv[NTRK], tvu[NTRK];                   /* each track's own level (0..1000), and as BOOPBOX shows it */
+    uint8_t tfl[NTRK];                              /* frames since each track's note started (0 = none) */
+    int16_t bh[NTRK], bv[NTRK];                     /* BOUNCE: each track's ball, height and speed (1/256 units) */
+    uint8_t kick;                                   /* a kick, fading */
+    int16_t wamp[NTRK];                             /* WIRES: each track's string, its swing (0..1000) */
+    uint8_t wn[NTRK];                               /* its wave count (from the note) */
     uint32_t free_q8, last_ms, wph;                 /* beats (1/256) when stopped; the wires' phase */
     uint8_t lj_n;
 } vs;
@@ -226,7 +230,7 @@ static void vis_bands(int16_t *out)
 static void vis_update(void)
 {
     uint32_t i, w, hit, now = fm1_ms;
-    int32_t pk[4], mpk = 0;
+    int32_t pk[4], p8[NTRK], mpk = 0;
     /* the scope: the last 512 frames (left, right) */
     w = scope_w;
     for (i = 0; i < VIS_FFT; i++) {
@@ -237,10 +241,12 @@ static void vis_update(void)
     }
     /* the tracks' peaks since the last look (as the TRACKS meters take them) and the notes that started */
     fm1_irq_off();
-    for (i = 0; i < 4u; i++) {                      /* (eight tracks: two in each of the four colours, 1 + 5 .. 4 + 8) */
-        pk[i] = trk[i].peak > trk[i + 4u].peak ? trk[i].peak : trk[i + 4u].peak;
-        trk[i].peak = trk[i + 4u].peak = 0;
+    for (i = 0; i < NTRK; i++) {                    /* (each track's own, for BOOPBOX) */
+        p8[i] = trk[i].peak;
+        trk[i].peak = 0;
     }
+    for (i = 0; i < 4u; i++)                        /* (eight tracks: two in each of the four colours, 1 + 5 .. 4 + 8) */
+        pk[i] = p8[i] > p8[i + 4u] ? p8[i] : p8[i + 4u];
     hit = vis_hit;
     vis_hit = 0;
     if (vis_kick_hit) {
@@ -248,17 +254,20 @@ static void vis_update(void)
         vs.kick = 255;
     }
     fm1_irq_on();
-    for (i = 0; i < 4u; i++) {
-        int32_t v = (trk_level(i) && !trk[i].p[P_MUTE]) || (trk_level(i + 4u) && !trk[i + 4u].p[P_MUTE]) ? vis_lvl(pk[i]) : 0;
-        vs.lvl[i] = (int16_t)v;                     /* (as the TRACKS meters) */
-        if (((hit | hit >> 4) >> i) & 1u) {
-            vs.flash[i] = 8;
-            vs.wn[i] = (uint8_t)(2u + vis_note[(hit >> i) & 1u ? i : i + 4u] % 12u / 2u);
+    for (i = 0; i < 4u; i++)                        /* (the four colours' pairs, as the TRACKS meters: ORBIT, LCD, TAPE) */
+        vs.lvl[i] = (int16_t)((trk_level(i) && !trk[i].p[P_MUTE]) || (trk_level(i + 4u) && !trk[i + 4u].p[P_MUTE]) ?
+                              vis_lvl(pk[i]) : 0);
+    for (i = 0; i < NTRK; i++) {                    /* each track on its own: VU METERS, BOUNCE, WIRES, BOOPBOX */
+        int32_t v = trk_level(i) && !trk[i].p[P_MUTE] ? vis_lvl(p8[i]) : 0;
+        vs.tlv[i] = (int16_t)v;
+        if ((hit >> i) & 1u) {
+            vs.tfl[i] = 8;
+            vs.wn[i] = (uint8_t)(2u + vis_note[i] % 12u / 2u);
             if (vs.wamp[i] < 1000) vs.wamp[i] = 1000;
             if (vs.bh[i] < 8 * 256)                 /* BOUNCE: a kick, unless already high up */
-                vs.bv[i] = (int16_t)(3 * 256 + 51 * (int32_t)i);
-        } else if (vs.flash[i]) {
-            vs.flash[i]--;
+                vs.bv[i] = (int16_t)(3 * 256 + 26 * (int32_t)i);
+        } else if (vs.tfl[i]) {
+            vs.tfl[i]--;
         }
         vs.wamp[i] = (int16_t)(vs.wamp[i] > v ? vs.wamp[i] - (vs.wamp[i] - v) / 6 - 4 : v);
         if (vs.wamp[i] < 0) vs.wamp[i] = 0;
@@ -336,8 +345,8 @@ static void vis_update(void)
         break;
     }
     case 4:                                         /* VU: fall 3 % a frame, peaks held a second */
-        for (i = 0; i < 5u && VIS_HAS(4); i++) {
-            int32_t v = vs.lvl[i];
+        for (i = 0; i <= NTRK && VIS_HAS(4); i++) {
+            int32_t v = i < NTRK ? vs.tlv[i] : vs.lvl[4];
             vs.vu[i] = (int16_t)(v > vs.vu[i] - 30 ? v : vs.vu[i] - 30);
             if (v >= vs.pk[i]) {
                 vs.pk[i] = (int16_t)v;
@@ -347,9 +356,11 @@ static void vis_update(void)
             }
         }
         break;
-    case 11:                                        /* SLOOP: the sail's bands and the dial fall slowly */
-        for (i = 0; i < 5u && VIS_HAS(11); i++)
-            vs.vu[i] = (int16_t)(vs.lvl[i] > vs.vu[i] - 30 ? vs.lvl[i] : vs.vu[i] - 30);
+    case 11:                                        /* BOOPBOX: the bars and the speakers fall slowly */
+        for (i = 0; i < NTRK && VIS_HAS(11); i++)
+            vs.tvu[i] = (int16_t)(vs.tlv[i] > vs.tvu[i] - 30 ? vs.tlv[i] : vs.tvu[i] - 30);
+        if (VIS_HAS(11))
+            vs.vu[NTRK] = (int16_t)(vs.lvl[4] > vs.vu[NTRK] - 30 ? vs.lvl[4] : vs.vu[NTRK] - 30);
         break;
     default:
         break;
@@ -433,21 +444,21 @@ static void vis_lissajous(void)
     cv_text(6, 112, &FONT_S, "L", C_DIM);
     cv_text(226, 112, &FONT_S, "R", C_DIM);
 }
-static void vis_meters(void)
+static void vis_meters(void)                        /* the eight tracks, each in its colour, and the master (M) */
 {
     uint32_t i, k;
-    for (i = 0; i < 5u; i++) {
-        int32_t x0 = 10 + (int32_t)i * 46, on = vs.vu[i] * 24 / 1000, pk = vs.pk[i] * 24 / 1000;
-        uint16_t c = i < 4u ? UI_COL[i] : C_WHITE;
-        char lab[2] = {(char)(i < 4u ? '1' + i : 'M'), 0};
+    for (i = 0; i <= NTRK; i++) {
+        int32_t x0 = 6 + (int32_t)i * 26, on = vs.vu[i] * 24 / 1000, pk = vs.pk[i] * 24 / 1000;
+        uint16_t c = i < NTRK ? UI_COL[i] : C_WHITE;
+        char lab[2] = {(char)(i < NTRK ? '1' + i : 'M'), 0};
         for (k = 0; k < 24u; k++) {
             int32_t y = 206 - (int32_t)k * 8;
             uint16_t col = (int32_t)k < on ? (k < 18u ? c : k < 22u ? UI_COL[2] : RGB(255, 44, 52)) : UI_G1;
             if ((int32_t)k == pk && pk > 0)
                 col = C_WHITE;
-            cv_rect(x0, y - 5, 35, 6, col);
+            cv_rect(x0, y - 5, 20, 6, col);
         }
-        cv_text(x0 + 13, 216, &FONT_S, lab, c);
+        cv_text(x0 + 6, 216, &FONT_S, lab, c);
     }
 }
 static void vis_ring(void)
@@ -521,20 +532,18 @@ static void vis_lcd(void)
             cv_rect(18 + (int32_t)k * 15, 186 + (int32_t)i * 12, 13, 9,
                     (int32_t)k < vs.lvl[i] * 14 / 1000 + (vs.lvl[i] > 0) ? UI_COL[i] : ui_gray(RGB(30, 30, 34)));
 }
-static void vis_bounce(void)
+static void vis_bounce(void)                        /* a ball a track, kicked up by its notes */
 {
     uint32_t i;
-    for (i = 0; i < 4u; i++) {
-        int32_t x = 36 + (int32_t)i * 56, h = vs.bh[i], y = 196 - h * 45 / 2560, sh = 16 - h / 512;
-        int32_t sq = h < 512 && vs.bv[i] < 0 ? 4 : 0;   /* squashed as it lands */
-        vis_ellipse(x, 205, sh < 4 ? 4 : sh, 3, ui_gray(RGB(30, 30, 34)));
-        vis_ellipse(x, y, 16 + sq, 16 - sq, UI_COL[i]);
-        {
-            char lab[2] = {(char)('1' + i), 0};
-            cv_text(x - 4, 220, &FONT_S, lab, UI_COL[i]);
-        }
+    for (i = 0; i < NTRK; i++) {
+        int32_t x = 19 + (int32_t)i * 29, h = vs.bh[i], y = 200 - h * 45 / 2560, sh = 11 - h / 768;
+        int32_t sq = h < 512 && vs.bv[i] < 0 ? 3 : 0;   /* squashed as it lands */
+        char lab[2] = {(char)('1' + i), 0};
+        vis_ellipse(x, 205, sh < 3 ? 3 : sh, 2, ui_gray(RGB(30, 30, 34)));
+        vis_ellipse(x, y, 11 + sq, 11 - sq, UI_COL[i]);
+        cv_text(x - 4, 220, &FONT_S, lab, UI_COL[i]);
     }
-    cv_rect(8, 212, 224, 2, C_LINE);
+    cv_rect(4, 212, 232, 2, C_LINE);
 }
 static void vis_orbit(void)
 {
@@ -554,67 +563,68 @@ static void vis_orbit(void)
     }
     vis_ellipse(120, 120, rs, rs, C_WHITE);
 }
-static void vis_wires(void)
+static void vis_wires(void)                         /* a string a track, set swinging by its notes */
 {
     uint32_t i, x;
-    for (i = 0; i < 4u; i++) {
-        int32_t y0 = 40 + (int32_t)i * 52, amp = vs.wamp[i] * 22 / 1000, py = y0;
+    for (i = 0; i < NTRK; i++) {
+        int32_t y0 = 24 + (int32_t)i * 28, amp = vs.wamp[i] * 12 / 1000, py = y0;
         char lab[2] = {(char)('1' + i), 0};
         for (x = 0; x < 240u; x += 2u) {           /* a standing wave: the string's shape x its swing */
-            uint32_t a = x * 512u / 240u, cyc = i == 3u ? 8u : vs.wn[i] ? vs.wn[i] : 2u;   /* sin(pi x / L) */
-            int32_t env = isin(a), wv = isin(x * cyc * 1024u / 240u + vs.wph * (3u + i));
+            uint32_t a = x * 512u / 240u, cyc = is_drum(&trk[i]) ? 8u : vs.wn[i] ? vs.wn[i] : 2u;   /* sin(pi x / L) */
+            int32_t env = isin(a), wv = isin(x * cyc * 1024u / 240u + vs.wph * (3u + i % 4u));
             int32_t y = y0 - (((env * wv) >> 15) * amp >> 15);
             if (x)
                 vis_thick((int32_t)x - 2, py, (int32_t)x, y, UI_COL[i]);
             py = y;
         }
-        vis_ellipse(4, y0, 4, 4, C_WHITE);
-        vis_ellipse(236, y0, 4, 4, C_WHITE);
-        cv_text(10, y0 - 22, &FONT_S, lab, UI_COL[i]);
+        vis_ellipse(3, y0, 3, 3, C_WHITE);
+        vis_ellipse(237, y0, 3, 3, C_WHITE);
+        cv_text(10, y0 - 17, &FONT_S, lab, UI_COL[i]);
     }
 }
-/* the logo (tools/gen_logo.py at 0.86, centred on 120, 112), alive: the dial is the master, the sail's four
- * bands the tracks (growing with their level, flashing on a note), the boat rocks on the master's wave */
-static void vis_sloop(void)
+/* a rounded rectangle, filled (the corners: quarter discs) */
+static void vis_rrect(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t r, uint16_t c)
 {
-    static const int16_t BAND[4][4] = {{691, 1035, 1659, 1938}, {1118, 1462, 2006, 2285}, {1544, 1888, 2353, 2632},
-                                       {1971, 2315, 2700, 2980}};   /* y0, y1, x right at y0, at y1 (1/16 px) */
-    static const uint16_t DIMC[4] = {RGB(9, 27, 56), RGB(7, 45, 25), RGB(56, 44, 5), RGB(56, 22, 6)};
-    uint32_t bq = vis_beat_q8(), i;
-    int32_t ang = (isin(bq) * 11) >> 15;            /* +-4 degrees (1024 a turn), a sway every four beats */
-    int32_t sn = isin((uint32_t)ang), cs = icos((uint32_t)ang);
-    int32_t px[4], py[4], x, sc = vs.scale > 1600 ? vs.scale : 1600, end;
-#define ROT(X, Y, I) do { int32_t dx_ = (X) - 120 * 16, dy_ = (Y) - 170 * 16;                       \
-        px[I] = 120 * 16 + ((dx_ * cs - dy_ * sn) >> 15); py[I] = 170 * 16 + ((dx_ * sn + dy_ * cs) >> 15); } while (0)
-    /* the dial: 270 degrees, lit to the master's level */
-    end = vs.vu[4] * 768 / 1000;
-    for (x = 0; x <= 768; x += 6) {
-        uint32_t a = (uint32_t)(384 + x) & 1023u;
-        vis_ellipse(120 + ((icos(a) * 99) >> 15), 112 + ((isin(a) * 99) >> 15), 5, 5, x <= end && vs.vu[4] ? C_WHITE : ui_gray(RGB(40, 40, 46)));
+    cv_rect(x0 + r, y0, x1 - x0 - 2 * r, y1 - y0, c);
+    cv_rect(x0, y0 + r, x1 - x0, y1 - y0 - 2 * r, c);
+    vis_ellipse(x0 + r, y0 + r, r, r, c);
+    vis_ellipse(x1 - r - 1, y0 + r, r, r, c);
+    vis_ellipse(x0 + r, y1 - r - 1, r, r, c);
+    vis_ellipse(x1 - r - 1, y1 - r - 1, r, r, c);
+}
+/* the logo (tools/gen_logo.py at 0.85), alive: the display's eight bars are the tracks, 1..4 on top and 5..8 below in
+ * their own colours (lit to their level, flashing on a note), the speakers boop with the master (the cones push out on
+ * a kick), the box hops on the beat, and the master's wave runs along the floor */
+static void vis_boopbox(void)
+{
+    static const int16_t SPK_X[2] = {84, 156};
+    uint32_t bq = vis_beat_q8(), ph = bq & 255u, i;
+    int32_t hop = ph < 64u ? (int32_t)(64u - ph) * 4 / 64 : 0;     /* down 4 px on the beat, back over a 16th */
+    int32_t y = 8 + hop, x, sc = vs.scale > 1600 ? vs.scale : 1600;
+    int32_t m = vs.vu[NTRK], rs = 22 + m * 5 / 1000, rc = 7 + m * 4 / 1000 + vs.kick * 4 / 255;
+    /* the handle, then the body: white, the inside black */
+    vis_rrect(72, y + 26, 168, y + 80, 18, C_WHITE);
+    vis_rrect(82, y + 36, 158, y + 80, 9, C_BLACK);
+    vis_rrect(28, y + 58, 212, y + 184, 29, C_WHITE);
+    vis_rrect(38, y + 68, 202, y + 174, 19, C_BLACK);
+    /* the display, two rows of four: each bar dim, then lit from the left to its track's level */
+    for (i = 0; i < NTRK; i++) {
+        int32_t x0 = 55 + (int32_t)(i & 3u) * 34, y0 = y + (i < 4u ? 73 : 87), lit = 6 + 22 * vs.tvu[i] / 1000;
+        uint16_t col = vs.tfl[i] ? mix565(UI_COL[i], C_WHITE, vs.tfl[i] * 13) : UI_COL[i];
+        vis_rrect(x0, y0, x0 + 28, y0 + 10, 5, UI_DIM[i]);
+        vis_rrect(x0, y0, x0 + lit, y0 + 10, 5, col);
     }
-    /* the mast */
-    ROT(1443, 627, 0); ROT(1571, 627, 1); ROT(1571, 2507, 2); ROT(1443, 2507, 3);
-    vis_poly(px, py, 4, C_WHITE);
-    /* the sail: each band dim, then lit to its track's level */
-    for (i = 0; i < 4u; i++) {
-        int32_t g = 256 * (250 + 750 * vs.vu[i] / 1000) / 1000, xr0 = 1659 + (BAND[i][2] - 1659) * g / 256,
-                xr1 = 1659 + (BAND[i][3] - 1659) * g / 256;
-        uint16_t col = vs.flash[i] ? mix565(UI_COL[i], C_WHITE, vs.flash[i] * 13) : UI_COL[i];
-        ROT(1659, BAND[i][0], 0); ROT(BAND[i][2], BAND[i][0], 1); ROT(BAND[i][3], BAND[i][1], 2); ROT(1659, BAND[i][1], 3);
-        vis_poly(px, py, 4, DIMC[i]);
-        ROT(1659, BAND[i][0], 0); ROT(xr0, BAND[i][0], 1); ROT(xr1, BAND[i][1], 2); ROT(1659, BAND[i][1], 3);
-        vis_poly(px, py, 4, col);
+    /* the speakers: the ring and the cone grow with the master */
+    for (i = 0; i < 2u; i++) {
+        vis_ellipse(SPK_X[i], y + 137, rs + 5, rs + 5, C_WHITE);
+        vis_ellipse(SPK_X[i], y + 137, rs - 5, rs - 5, C_BLACK);
+        vis_ellipse(SPK_X[i], y + 137, rc, rc, C_WHITE);
     }
-    /* the hull */
-    ROT(62 * 16, 2635, 0); ROT(178 * 16, 2635, 1); ROT(170 * 16, 2811, 2); ROT(70 * 16, 2811, 3);
-    vis_poly(px, py, 4, C_WHITE);
-#undef ROT
-    /* the sea: the master's wave */
+    /* the floor: the master's wave */
     for (x = 0; x < 240; x++) {
-        int32_t s = x ? (vis_l[x - 1] + 2 * vis_l[x] + vis_l[x + 1]) / 4 : vis_l[0];   /* (smoothed: a sea, not a hiss) */
-        int32_t y = 182 + s * 5 / sc + ((isin((uint32_t)(x * 9) + bq) * 3) >> 15);
-        cv_rect(x, y, 1, 240 - y, RGB(12, 34, 76));
-        cv_rect(x, y, 1, 2, UI_COL[0]);
+        int32_t s = x ? (vis_l[x - 1] + 2 * vis_l[x] + vis_l[x + 1]) / 4 : vis_l[0];   /* (smoothed) */
+        int32_t fy = 218 + s * 4 / sc;
+        cv_rect(x, fy, 1, 2, UI_COL[(uint32_t)x * 4u / 240u]);
     }
 }
 
@@ -644,7 +654,7 @@ static void vis_draw(void)
         case 8: if (VIS_HAS(8)) vis_bounce(); break;
         case 9: if (VIS_HAS(9)) vis_orbit(); break;
         case 10: if (VIS_HAS(10)) vis_wires(); break;
-        default: if (VIS_HAS(11)) vis_sloop(); break;
+        default: if (VIS_HAS(11)) vis_boopbox(); break;
         }
         if (!pass && (vis_name_t || ui.msg_t)) {    /* the style's name a second (or a message) */
             char n[8];

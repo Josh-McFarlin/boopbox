@@ -82,7 +82,7 @@ UI_SMALL static void draw_head(void)
         cv_icon(156, 2, ICON_TAPE, C_GRAY);
         b[0] = (char)('1' + song.sel);
         b[1] = 0;
-        cv_rect(168, 2, 12, 16, UI_COL[song.sel & 3u]);
+        cv_rect(168, 2, 12, 16, UI_COL[song.sel]);
         cv_text(170, 1, &FONT_S, b, C_BLACK);
     } else {
         b[0] = 'T';
@@ -317,7 +317,7 @@ UI_SMALL static void graph_roll(const track_t *t, uint16_t c)
                 continue;
             y = bot - ((int32_t)st->note[j] - lo + 1) * rh + 1;
             f = note_force(st, j);
-            cv_rect(xa, y, xb - xa, rh - 1, f ? c : UI_DIM[song.sel & 3u]);
+            cv_rect(xa, y, xb - xa, rh - 1, f ? c : UI_DIM[song.sel]);
             if (f == 1u && rh > 4)                      /* SOFT: hollow */
                 cv_rect(xa + 1, y + 1, xb - xa - 2, rh - 3, C_BLACK);
             if (f == 4u)                                /* ACC: a white cap */
@@ -356,11 +356,11 @@ UI_SMALL static void graph_roll(const track_t *t, uint16_t c)
         if (lock_items(t, ui.cursor, ls))
             fmt_int(ln, (int32_t)lock_items(t, ui.cursor, ls));
         if (ui.csheet)
-            comp_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel & 3u]);
+            comp_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel]);
         else if (ui.lsheet)
-            lock_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel & 3u]);
+            lock_strip_draw(H_GRAPH - 16, t, ui.cursor, UI_DIM[song.sel]);
         else
-            sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel & 3u]);
+            sheet_bar(H_GRAPH - 16, SHEET_N, val, ui.sheet - 1u, UI_DIM[song.sel]);
     }
 }
 UI_SMALL static void graph_scale(const track_t *t, uint16_t c)
@@ -752,7 +752,7 @@ UI_SMALL static void draw_graph(void)
 {
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
-    uint16_t c = UI_COL[song.sel & 3u];               /* LIVE: the curves in the track's colour */
+    uint16_t c = UI_COL[song.sel];               /* LIVE: the curves in the track's colour */
     uint32_t sig, top, drum_note = !ui.home && is_drum(t) && !page_for_drum(pg);
     if (!ui.home && pg->graph == GR_TRK) {
         draw_tracks();
@@ -901,7 +901,7 @@ UI_SMALL static void draw_foot(void)
             if (si >= (uint32_t)t->p[P_SLEN])
                 continue;
             if (step_on(st))
-                cv_rect(sx, 2, 2, 9, UI_COL[song.sel & 3u]);
+                cv_rect(sx, 2, 2, 9, UI_COL[song.sel]);
             else
                 cv_rect(sx, 10, 1, 1, C_DIM);
             if ((song.playing && si == t->seq_idx) || (song.seq_mode && si == ui.cursor))

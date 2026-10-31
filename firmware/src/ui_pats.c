@@ -61,11 +61,11 @@ UI_SMALL static void pats_screen_draw(void)
             const track_t *t = &trk[ti];
             int32_t y = (int32_t)r * 20 + 1;
             fmt_int(b, (int32_t)ti + 1);
-            cv_text(6, y + 1, &FONT_S, b, ti == sel ? C_WHITE : UI_COL[ti & 3u]);
+            cv_text(6, y + 1, &FONT_S, b, ti == sel ? C_WHITE : UI_COL[ti]);
             for (p = 0; p < NPAT; p++) {
                 int32_t x = 22 + (int32_t)p * 27;
                 uint32_t playing = p == t->pat, asked = t->pat_req && t->pat_req - 1u == p, inch = 0, c;
-                uint16_t fill = playing ? UI_COL[ti & 3u] : ((used >> p) & 1u) ? UI_DIM[ti & 3u] : UI_G1;
+                uint16_t fill = playing ? UI_COL[ti] : ((used >> p) & 1u) ? UI_DIM[ti] : UI_G1;
                 for (c = 0; c < t->pat_nchain; c++)
                     inch |= t->pat_chain[c] == p;
                 cv_rect(x, y, 25, 16, fill);
@@ -274,9 +274,9 @@ UI_SMALL static void chords_screen_draw(void)
     for (k = 0; k < NTRK; k++) {                 /* the tracks: how each follows */
         int32_t x = 2 + (int32_t)k * 30;
         uint32_t f = (uint32_t)trk[k].hfol < HF_COUNT ? (uint32_t)trk[k].hfol : 0u;
-        cv_rect(x, 104, 26, 18, k == sel ? UI_COL[k & 3u] : UI_G1);
+        cv_rect(x, 104, 26, 18, k == sel ? UI_COL[k] : UI_G1);
         fmt_int(b, (int32_t)k + 1);
-        cv_text(x + 2, 105, &FONT_S, b, k == sel ? C_BLACK : UI_COL[k & 3u]);
+        cv_text(x + 2, 105, &FONT_S, b, k == sel ? C_BLACK : UI_COL[k]);
         cv_text(x + 16, 105, &FONT_S, is_drum(&trk[k]) ? " " : FL[f], k == sel ? C_BLACK : f ? C_WHITE : UI_G3);
     }
     cv_blit(0, 42);
