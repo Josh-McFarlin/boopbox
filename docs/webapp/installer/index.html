@@ -101,7 +101,7 @@
   <p id="status"></p>
   <pre id="log"></pre>
   <a class="ed" href="../editor/" data-t="editor"></a>
-  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.1.0.html" data-t="edOffline"></a></p>
+  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.2.0.html" data-t="edOffline"></a></p>
   <p><button id="app" class="ed" hidden data-t="appInstall"></button></p>
   <hr>
   <p class="small" data-t="direct"></p>
@@ -548,7 +548,7 @@ const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textCont
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
-const meta = {"version": "1.1.0", "product": "FM-1_911", "pkg": "../../firmware/boopbox-1.1.0.fwsc", "sha256": "388b61c110a1e707cdf582885c325d55210b323043189c69c82024c279723a76"};
+const meta = {"version": "1.2.0", "product": "FM-1_912", "pkg": "../../firmware/boopbox-1.2.0.fwsc", "sha256": "79baef77d6bc84bb2965822d3b7dc15cc982ec5165abaae083def8646a888f9c"};
 
 let writing = false;
 const lockAll = (on) => {
