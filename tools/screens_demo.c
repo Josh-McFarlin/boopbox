@@ -2,7 +2,7 @@
 /* The screenshots of the README (tools/make_screens.py builds and runs this): the firmware's own UI on the host, as
  * the host tests drive it (tests/ui_pages_test.c's harness), with a demo project on the eight tracks playing. Writes
  * one 240 x 240 PPM per screen into the directory given.
- *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests tools/screens_demo.c -lm && ./a.out OUTDIR */
+ *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests tools/screens_demo.c -lm && ./a.out OUTDIR [PALETTE] */
 #define UI_PAGES_HARNESS_ONLY 1
 #include "ui_pages_test.c"
 
@@ -91,8 +91,8 @@ int main(int argc, char **argv)
     outdir = argc > 1 ? argv[1] : "/tmp";
     panel = PANEL_DEFAULT;
     layers_init();
-    settings.palette = 4;                               /* the screen's palette at power-on: MONO (panel.c) */
-    palette_set(4);
+    settings.palette = (uint8_t)(argc > 2 ? atoi(argv[2]) % (int)NPALETTES : 4);   /* MONO at power-on (panel.c) */
+    palette_set(settings.palette);
     host_tracks_init();
     demo_project();
     boopbox_splash();

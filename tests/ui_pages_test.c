@@ -855,13 +855,13 @@ int main(int argc, char **argv)
                       "printable name); a first-beta THM1 taken with an accent");
             ui.menu = 1; ui.menu_sel = MI_COLOR; ui.force = 1; frame();
             settings.palette = 4; theme_on = 0; palette_set(4);
-            encs[panel.enc[EN_K1]] = 1; frame();      /* no theme: MONO -> SYNTHWAVE (BoopBox 1.2), its own background,
+            encs[panel.enc[EN_K1]] = 1; frame();      /* no theme: MONO -> SYNTHWAVE (BoopBox 1.1.0), its own background,
                                                        * accent, tracks' colours and greys */
             ok = settings.palette == PAL_SYNTH && !theme_on && !strcmp(mi_value(MI_COLOR, &(uint16_t){0}), "SYNTHWAVE") &&
                  C_BLACK == SYNTH_BG && C_WHITE == SYNTH_HI && UI_COL[1] == SYNTH_TRK[1] && UI_G1 == SYNTH_G[0] &&
                  UI_MID[2] == rgb565_over(SYNTH_TRK[2], 2, 3) && UI_DIM[1] == rgb565_over(SYNTH_TRK[1], 2, 5) &&
                  UI_COL[5] == SYNTH_TRK2[1] && pal_neon;
-            boopbox_splash();                         /* (1.2) the neon touches: the boot screen's sun on its horizon */
+            boopbox_splash();                         /* (1.1.0) the neon touches: the boot screen's sun on its horizon */
             ok &= swap16(screen[190 * 240 + 120]) != SYNTH_BG && swap16(screen[200 * 240 + 4]) == UI_COL[1] &&
                   swap16(screen[180 * 240 + 4]) == SYNTH_BG;
             ui.force = 1; frame();
@@ -871,7 +871,7 @@ int main(int argc, char **argv)
             boopbox_splash();                         /* (not on GREEN) */
             ok &= swap16(screen[190 * 240 + 120]) == 0u && swap16(screen[200 * 240 + 4]) == 0u;
             ui.force = 1; frame();
-            check(ok, "MENU > COLOR (1.2): SYNTHWAVE after MONO (indigo, cyan accent, neon tracks, the boot sun); round to GREEN");
+            check(ok, "MENU > COLOR (1.1.0): SYNTHWAVE after MONO (indigo, cyan accent, neon tracks, the boot sun); round to GREEN");
             settings.palette = PAL_SYNTH; palette_set(PAL_SYNTH);
             theme = th; theme_valid = 1;
             encs[panel.enc[EN_K1]] = 1; frame();      /* SYNTHWAVE -> SUNSET */
@@ -2478,7 +2478,11 @@ int main(int argc, char **argv)
         ok = harm.live == 5u && harm.deg == 4u;         /* (stopped: at once) */
         for (j = 0; j < NVOICE; j++)
             ok &= !t->v[j].active;                      /* (the keys are chords here: no note) */
+        for (j = 166u * 240u; j < 202u * 240u; j++)
+            screen[j] = 0x1234u;                        /* (1.1.0) what the page before left under the tracks: */
         ui.force = 1; frame(); ppm("chords");
+        check(screen[180u * 240u + 120u] == swap16(C_BLACK) && screen[201u * 240u + 3u] == swap16(C_BLACK),
+              "CHORDS (1.1.0): the rows under the tracks cleared (a graph or SYNTHWAVE's floor no longer shows)");
         key(1); frames(2);                              /* a black key: back to the progression (I) */
         ok &= harm.live == 0u && harm.deg == 0u;
         check(ok, "CHORDS: a white key plays its degree live (G: V, no note sounds), a black key lets go");

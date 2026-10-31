@@ -680,7 +680,7 @@ UI_SMALL static void layer_title(const char *name, const char *sub, uint16_t col
         return;
     *cache = sig;
     cv_begin(240, 40, C_BLACK);
-    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
+    cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 2, &FONT_L, name, col);
     cv_text(4 + text_w(&FONT_L, name) + 10, 18, &FONT_S, ui.msg_t ? ui.msg : sub, ui.msg_t ? C_WHITE : UI_G3);
     if (locked) {                                         /* locked open (HOME): any button lets it go */

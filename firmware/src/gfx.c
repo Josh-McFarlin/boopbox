@@ -52,7 +52,7 @@ static const palette_t PALETTES[] = {
     {"SYNTHWAVE", {RGB(56, 26, 104), RGB(96, 48, 160), RGB(168, 124, 232), RGB(96, 220, 255), RGB(255, 84, 222)}},
 };
 #define NPALETTES (sizeof(PALETTES) / sizeof(PALETTES[0]))
-/* BoopBox 1.2: SYNTHWAVE (after MONO) is more than five steps: as a theme, its own background (night indigo), accent
+/* BoopBox 1.1.0: SYNTHWAVE (after MONO) is more than five steps: as a theme, its own background (night indigo), accent
  * (cyan), the tracks' colours (cyan, magenta, sunset orange, violet) and the full screens' greys (purples). An older
  * firmware reads its number as out of range and starts on MONO */
 #define PAL_SYNTH 5u
@@ -63,7 +63,7 @@ static const uint16_t SYNTH_G[4] = {RGB(36, 18, 70), RGB(70, 38, 122), RGB(150, 
 /* tracks 5..8: colours of their own (periwinkle, rose, gold, orchid), not 1..4 lightened: a pale cyan dimmed went grey */
 static const uint16_t SYNTH_TRK2[4] = {RGB(110, 140, 255), RGB(255, 112, 168), RGB(255, 214, 90), RGB(224, 128, 255)};
 #define SYNTH_SUN RGB(255, 150, 60)              /* the sunset's bottom: large values fade pink -> orange */
-static uint8_t pal_neon;                         /* (1.2) SYNTHWAVE shown: the neon touches (gradients, rules, grid, sun) */
+static uint8_t pal_neon;                         /* (1.1.0) SYNTHWAVE shown: the neon touches (gradients, rules, grid, sun) */
 static uint16_t pal[5];
 #define C_LINE pal[0]                /* 1 rules, separators */
 #define C_DIM pal[1]                 /* 2 inactive, empty steps, units */
@@ -290,7 +290,7 @@ static void cv_line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint16_t c)
     }
 }
 
-/* (1.2) a rule across: in SYNTHWAVE a neon line (magenta) with a faint glow row each side; otherwise as before */
+/* (1.1.0) a rule across: in SYNTHWAVE a neon line (magenta) with a faint glow row each side; otherwise as before */
 static void cv_rule(int32_t x, int32_t y, int32_t w, uint16_t c)
 {
     if (pal_neon) {
@@ -301,7 +301,7 @@ static void cv_rule(int32_t x, int32_t y, int32_t w, uint16_t c)
     }
     cv_rect(x, y, w, 1, c);
 }
-/* (1.2) SYNTHWAVE: rows y0 .. y1-1 of the canvas from the background to a magenta glow at the bottom (the header) */
+/* (1.1.0) SYNTHWAVE: rows y0 .. y1-1 of the canvas from the background to a magenta glow at the bottom (the header) */
 static void cv_glow(uint32_t y0, uint32_t y1)
 {
     uint32_t y;
@@ -326,7 +326,7 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
 {
     uint16_t ramp[16];
     uint32_t a;
-    /* (1.2) SYNTHWAVE: large text in a bright colour fades: the values (C_HI, hot pink) to the sunset's orange, the rest
+    /* (1.1.0) SYNTHWAVE: large text in a bright colour fades: the values (C_HI, hot pink) to the sunset's orange, the rest
      * from a white sheen at the top to its colour by half way (chrome). Labels, dim and grey text stay flat */
     int grad = pal_neon && f->h >= 32u && c != C_DIM && c != C_GRAY && c != C_LINE && c != UI_G3 && c != UI_G4 &&
                c != C_BLACK;
@@ -341,7 +341,7 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
             uint32_t sw = w >> f->sh;
             for (gy = 0; gy < f->h; gy++) {
                 uint16_t rc = ramp[15];
-                if (grad)                              /* (1.2) SYNTHWAVE, large text: a gradient top to bottom */
+                if (grad)                              /* (1.1.0) SYNTHWAVE, large text: a gradient top to bottom */
                     rc = c == C_HI ? rgb565_mix(c, SYNTH_SUN, gy, f->h)
                                    : gy < f->h / 2u ? rgb565_mix(0xFFFFu, c, gy + 2u, f->h / 2u + 2u) : c;
                 for (gx = 0; gx < w; gx++) {
