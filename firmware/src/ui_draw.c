@@ -449,7 +449,8 @@ UI_SMALL static uint32_t graph_signature(void)
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u;
     for (i = 0; i < P_COUNT; i++)
         h = (h ^ (uint32_t)t->p[i]) * 16777619u;
-    h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u;
+    h ^= (uint32_t)TSEL->preset * 7u + (uint32_t)song.g[G_SLOT] * 13u + TSEL->user * 257u + up_gen * 7919u + ui.uslot * 104729u +
+         br_kind * 65537u + (uint32_t)fav_at * 1009u;   /* (the sound browser's VIEW, a favourite's place) */
     {   /* (2.7) the favourites: the PRESETS list and its FAV column */
         uint32_t q;
         for (q = 0; q < FAV_N; q++) h = h * 31u + fav[q];
@@ -469,31 +470,46 @@ UI_SMALL static uint32_t graph_signature(void)
     }
     return h;
 }
-/* preset browser: the list by kind (ui.c BANK), the current one in white */
+/* the sound browser (ui.c br_*): the groups on the left in KNOB 1's colour, the selected group's sounds on the right
+ * in KNOB 2's, seven rows each, the selected ones on a bar in white; a scroll bar when a group has more than seven */
 UI_SMALL static void graph_browse(void)
 {
-    uint32_t total, cur = preset_pos(&total), e, k;
-    int32_t row;
-    if (!total)
+    uint16_t gs[BR_G + 1u];
+    uint8_t gid[BR_G];
+    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, n, lo, k;
+    int32_t row, first;
+    if (!total || is_drum(TSEL))
         return;
-    for (row = -3; row <= 3; row++) {
-        int32_t y = 4 + (row + 3) * 17;
-        char tag[5], nm[13];
-        int sel = row == 0;
-        uint32_t n = (cur + total * 4u + (uint32_t)row) % total;
-        e = preset_at(n, &k);
-        if (e == NENGINES) {                             /* user preset: "U07" and its name */
-            up_slot_label(tag, k);
+    ng = br_groups(gs, gid, cur, total, nf, &cg);
+    first = clamp((int32_t)cg - 3, 0, (int32_t)ng > 7 ? (int32_t)ng - 7 : 0);
+    for (row = 0; row < 7 && (uint32_t)(first + row) < ng; row++) {
+        int32_t y = 4 + row * 17, sel = (uint32_t)(first + row) == cg;
+        if (sel)
+            cv_rect(0, y - 1, 74, 17, C_LINE);
+        cv_text(4, y, &FONT_S, br_gname(gid[first + row]), sel ? C_WHITE : TE_COL[0]);
+    }
+    cv_rect(77, 3, 1, 118, C_LINE);
+    lo = gs[cg];
+    n = gs[cg + 1u] - lo;
+    first = clamp((int32_t)(cur - lo) - 3, 0, (int32_t)n > 7 ? (int32_t)n - 7 : 0);
+    for (row = 0; row < 7 && (uint32_t)(first + row) < n; row++) {
+        int32_t y = 4 + row * 17, x = 84;
+        uint32_t p = lo + (uint32_t)(first + row), e = preset_at(br_n(p, nf), &k), sel = p == cur;
+        uint16_t c = sel ? C_WHITE : TE_COL[1];
+        char nm[13];
+        if (sel)
+            cv_rect(80, y - 1, 154, 17, C_LINE);
+        if (e == NENGINES) {                             /* a user preset: "U07" and its name */
+            up_slot_label(nm, k);
+            x = cv_text(x, y, &FONT_S, nm, sel ? C_GRAY : C_DIM) + 8;
             up_name(k, nm);
-        } else {                                         /* its kind: BASS, KEYS, PAD... */
-            str_cpy(tag, preset_kind(n), sizeof tag);
+        } else {
             str_cpy(nm, ENGINES[e]->presets[k].name, sizeof nm);
         }
-        if (sel)
-            cv_rect(4, y + 6, 3, 3, C_WHITE);
-        cv_text(14, y, &FONT_S, tag, sel ? C_GRAY : C_DIM);
-        cv_text(54, y, &FONT_S, nm, sel ? C_WHITE : C_GRAY);
+        cv_text(x, y, &FONT_S, nm, c);
     }
+    if (n > 7u)                                          /* where the seven rows are in the group */
+        cv_rect(237, 3 + first * 118 / (int32_t)n, 2, 7 * 118 / (int32_t)n, C_GRAY);
 }
 
 /* user preset slots around the selected one: "U07  NAME" / EMPTY, the selected one in white */
@@ -966,15 +982,18 @@ UI_SMALL static void draw_columns(void)
         draw_column(3, "PAN", val, unit, VAL(3u), RATIO(&TP[P_PAN], t->p[P_PAN]), param_icon(&TP[P_PAN], t->p[P_PAN]));
         return;
     }
-    if (cur_page()->graph == GR_BROWSE) {
-        uint32_t total, cur = preset_pos(&total);
+    if (cur_page()->graph == GR_BROWSE) {                /* the sound browser: GROUP SOUND VIEW FAV */
+        uint16_t gs[BR_G + 1u];
+        uint8_t gid[BR_G];
+        uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0;
         char u[8];
-        fmt_int(val, (int32_t)cur + 1);
+        br_groups(gs, gid, cur, total, nf, &cg);
+        draw_column(0, br_kind ? "KIND" : "ENG", br_gname(gid[cg]), "", VAL(0u), -1, ICON_NONE);
+        fmt_int(val, (int32_t)(cur - gs[cg]) + 1);
         str_cpy(u, "/", 8);
-        fmt_int(u + 1, (int32_t)total);
-        draw_column(0, "No.", val, u, VAL(0u), -1, ICON_NONE);
-        draw_column(1, "ENG", ENGINES[TSEL->eng_req]->name, "", VAL(1u), -1, engine_icon(ENGINES[TSEL->eng_req]->name));
-        draw_column(2, "", "", "", C_HI, -1, ICON_AUTO);
+        fmt_int(u + 1, gs[cg + 1u] - gs[cg]);
+        draw_column(1, "SOUND", val, u, VAL(1u), -1, ICON_NONE);
+        draw_column(2, "VIEW", br_kind ? "KIND" : "ENG", "", VAL(2u), -1, ICON_NONE);
         draw_column(3, "FAV", fav_has(fav_key()) ? "ON" : "--", "", VAL(3u), -1, ICON_NONE);   /* (2.7) KNOB 4 */
         return;
     }

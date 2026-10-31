@@ -1867,6 +1867,67 @@ int main(int argc, char **argv)
         fav_at = -1; fav_dirty = 0;
         go_home(); frames(2);
     }
+    {   /* the sound browser: PRESETS on TRACKS opens it (the sound stays), the groups on the left, the sounds on the
+         * right; PRESETS / KNOB 2 the sound, KNOB 1 / SELECT the group, KNOB 3 VIEW; untouched, back to TRACKS */
+        uint16_t gs[BR_G + 1u];
+        uint8_t gid[BR_G];
+        uint32_t total, nf, cur, cg = 0, ng, e0, p0, i, k;
+        int ok;
+        ui.menu = 0; song.sel = 1; go_home(); frames(2);
+        br_kind = 0;
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok = !ui.home && cur_page()->graph == GR_BROWSE && trk[1].eng_req == e0 && trk[1].preset == p0;
+        check(ok, "browser: PRESETS on TRACKS opens it, the first detent keeps the sound");
+        ui.force = 1; frame(); ppm("page-browser");
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok = ng == NENGINES + 1u && gid[ng - 1u] == 255u;   /* the engines in order, then USER (no favourites) */
+        for (i = 0; i + 1u < ng; i++) ok &= gid[i] == i + 1u;
+        for (i = 0; i < total; i++) {                       /* every sound once in the view */
+            uint32_t n = br_n(i, nf), j;
+            for (j = i + 1u; j < total; j++) ok &= br_n(j, nf) != n;
+            ok &= n < total;
+        }
+        check(ok, "browser ENGINE view: the twelve engines in order then USER, every sound once");
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);        /* (the rest of the turn that opened it: no sound) */
+        check(br_pos(&total, &nf) == cur, "browser: a detent just after it opened (the same flick) moves nothing");
+        frames(10);
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok = br_pos(&total, &nf) == (cur + 1u) % total;
+        encs[panel.enc[EN_K2]] = -1; frames(2);
+        ok &= br_pos(&total, &nf) == cur;
+        check(ok, "browser: PRESETS / KNOB 2 the next / previous sound in the view");
+        encs[panel.enc[EN_K1]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ok = cur == gs[(cg + 1u) % ng] && trk[1].eng_req == gid[(cg + 1u) % ng] - 1u;
+        encs[panel.enc[EN_SELECT]] = -1; frames(2);
+        ok &= br_pos(&total, &nf) == gs[cg] && !ui.home && cur_page()->graph == GR_BROWSE;
+        check(ok, "browser: KNOB 1 / SELECT the first sound of the next / previous engine");
+        for (i = 0; i < 9u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(1); }
+        ui.force = 1; frame(); ppm("page-browser-scroll");
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_K3]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok = br_kind == 1u && trk[1].eng_req == e0 && trk[1].preset == p0 && ng == 9u && br_n(cur, nf) == cur;
+        check(ok, "browser: KNOB 3 VIEW = KIND, the eight kinds then USER, the PRESETS list's order, the sound kept");
+        ui.force = 1; frame(); ppm("page-browser-kind");
+        frames(BR_IDLE_MS / 16u - 20u);
+        ok = !ui.home && cur_page()->graph == GR_BROWSE;
+        frames(30);
+        check(ok && !ui.home && cur_page()->scope == SC_TRK && !br_back, "browser: untouched for 4 s, back to TRACKS");
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        open_family(FAM_ENV); frames(2);
+        frames(BR_IDLE_MS / 16u + 10u);
+        check(cur_page()->fam == FAM_ENV && !br_back, "browser: a button takes it elsewhere, it stays there");
+        song.sel = 3; go_home(); frames(2);                  /* the drum track: PRESETS is the kit, no browser */
+        k = trk[3].p[P_E0];
+        encs[panel.enc[EN_PRESET]] = k ? -1 : 1; frames(2);   /* (the last kit at power-on: one back) */
+        check(cur_page()->scope == SC_TRK && trk[3].p[P_E0] == (int16_t)(k ? k - 1u : 1u), "browser: not on the drum track (PRESETS: the kit)");
+        trk[3].p[P_E0] = (int16_t)k;
+        br_kind = 0; song.sel = 1; go_home(); frames(2);
+    }
     {   /* 2.7: the favourites in the settings' side record (after the theme): kept; a 2.7 beta's record (the theme
          * alone, the rest erased) or a damaged one: none */
         side_rec_t r;
