@@ -469,7 +469,7 @@ int main(int argc, char **argv)
     open_family(FAM_FX); frame();                     /* the FX page: KNOB 1 = DIST */
     encs[panel.enc[EN_K1]] = 2; frame();
     check(ui.lock_par == P_DIST && trk[0].p[P_DIST] > 0, "a sound knob turned (FX > DIST): the lock parameter");
-    open_family(FAM_SEQ); frame();                    /* PATTERN page knobs (LEN, DIV..) do not lock */
+    open_family(FAM_SEQ); frame();                    /* TIMING page knobs (LEN, DIV..) do not lock */
     open_family(FAM_SEQ); frame();
     if (cur_page()->id[1] == P_SDIV) { encs[panel.enc[EN_K2]] = 1; frame(); encs[panel.enc[EN_K2]] = -1; frame(); }
     check(ui.lock_par == P_DIST, "a pattern knob (DIV) is not a lock parameter");
@@ -902,7 +902,7 @@ int main(int argc, char **argv)
             ui.menu_sel = MI_USB; ui.force = 1; frame();      /* (back to AUDIO) */
             check(ok, "MENU > COLOR (2.7): your theme after MONO, by its name; its colours, background and the tracks'; bit 30");
         }
-        {   /* 2.7: the page counter counts the pages SELECT walks (SEQ: STEP 1/2, PATTERN 2/2; SONG not counted) */
+        {   /* 2.7: the page counter counts the pages SELECT walks (SEQ: NOTES 1/3, TIMING 2/3, PLAY 3/3; SONG not counted) */
             uint32_t n, k1, n1, k2, n2, k3 = 0, n3 = 0, menu0 = ui.menu, sel0 = ui.menu_sel;
             int ok = 1;
             ui.menu = 0; go_home(); frame();
@@ -910,7 +910,7 @@ int main(int argc, char **argv)
             while (strcmp(PAGES[ui.page].title, "NOTES")) { open_family(FAM_SEQ); frame(); }
             k1 = page_pos(&n1);
             open_family(FAM_SEQ); frame();
-            ok &= !strcmp(PAGES[ui.page].title, "PATTERN");
+            ok &= !strcmp(PAGES[ui.page].title, "TIMING");
             k2 = page_pos(&n2);
             open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
             ok &= !strcmp(PAGES[ui.page].title, "PLAY");
@@ -929,8 +929,8 @@ int main(int argc, char **argv)
             ok &= k1 == 1u && n1 == 3u && k2 == 2u && n2 == 3u && k3 == 4u && n3 == 4u && n == 10u;   /* (SONG: 4/4,
                                                        * the screen shown counts; PATTERNS, its own, not) */
             if (!ok)
-                printf("ui:   counter: STEP %u/%u PATTERN %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
-            check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, PATTERN 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
+                printf("ui:   counter: NOTES %u/%u TIMING %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k3, n3, n);
+            check(ok, "page counter (2.7): as SELECT walks them: NOTES 1/3, TIMING 2/3, PLAY 3/3 (SONG, its own screen, not counted)");
         }
         {   /* 2.7: a sound loaded under a running arp keeps it (settings and the notes it holds); arp OFF: the preset's */
             track_t *t = &trk[0];
@@ -1230,7 +1230,7 @@ int main(int argc, char **argv)
         SEL(9);
         check(!strcmp(PT(), "VOICE 2"), "SELECT on EDIT: up to VOICE 2");
         tap(B_SEQ); SEL(9);
-        check(!strcmp(PT(), "PLAY"), "SELECT on SEQ: NOTES <-> PATTERN <-> PLAY, not into the SONG screen");
+        check(!strcmp(PT(), "PLAY"), "SELECT on SEQ: NOTES <-> TIMING <-> PLAY, not into the SONG screen");
         tap(B_ENV);
         check(!strcmp(PT(), "ENV"), "the button still opens its family");
         tap(B_ENV);
