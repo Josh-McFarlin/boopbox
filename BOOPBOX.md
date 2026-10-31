@@ -25,11 +25,11 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
   changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
   chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
   See [the groovebox controls](docs/groovebox-controls.md).
-- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
+- **The visualiser,** six scenes at sunset and in neon: PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY and KEY CITY
+  (tap HOME on TRACKS).
 - **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
   repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
-- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
-  name as text) and the top recording of the BASS sample set
+- **Left out to fit the flash:** the bitmap boot logo (the boot screen shows the name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
   step components or the chord progression (backups keep them).
@@ -463,22 +463,16 @@ USB AUDIO is a setting of the FM-1: it stays as you left it. MIDI, the web edito
 
 ## The visualiser
 
-On the TRACKS screen, tap **HOME**: the whole screen becomes a visualiser of what BoopBox plays. **SELECT** steps through the styles built in: six of the twelve below, marked (the flash holds those beside the web editor; all twelve fit only without it: `FELUCCA_VIS_STYLES=0xFFF FELUCCA_EDITOR=0`). The name shows a second; the last one chosen is kept with the settings); **HOME** again, or any page button, closes it. The keys, PLAY, REC and the layers work as ever (a layer held shows its screen, then the visualiser comes back); KNOB 1–4 do nothing meanwhile, and the tempo is GLO + SELECT.
+On the TRACKS screen, tap **HOME**: the whole screen becomes a visualiser of what BoopBox plays, in six scenes at sunset and in neon. **SELECT** steps through them (the name shows a second; the last one chosen is kept with the settings); **HOME** again, or any page button, closes it. The keys, PLAY, REC and the layers work as ever (a layer held shows its screen, then the visualiser comes back); KNOB 1–4 do nothing meanwhile, and the tempo is GLO + SELECT.
 
 | # | Style | What it shows |
 | --- | --- | --- |
-| 1 | **OSCILLOSCOPE** (built in) | the mix's wave, standing still |
-| 2 | **SPECTRUM** (built in) | 32 bands, lows to highs, with caps that fall |
-| 3 | **SPECTROGRAM** | the spectrum scrolling down, black → blue → green → yellow → white |
-| 4 | **LISSAJOUS** | the stereo image: the wider the cloud, the wider the sound |
-| 5 | **VU METERS** (built in) | the eight tracks in their colours and the mix, with peak holds |
-| 6 | **CIRCLE** (built in) | the wave round a ring that swells on every kick |
-| 7 | **TAPE** | two reels turning with the song, the level on the head, the bar and the tempo |
-| 8 | **LCD** | the tempo in seven-segment digits, the bar and beat, four track meters |
-| 9 | **BOUNCE** (built in) | a ball per track, kicked up by its notes |
-| 10 | **ORBIT** | four planets turning in 1, 2, 4 and 8 beats, sized by their track, round a sun that pulses with the mix |
-| 11 | **WIRES** (built in) | a string per track, set swinging by its notes |
-| 12 | **BOOPBOX** | the logo alive: its eight bars are the tracks (lit to their level, flashing on a note), the speakers pulse with the mix, the box hops on the beat |
+| 1 | **PALMS** | the mix's wave, sample for sample, as the sea's front wave at sunset; the sun's reflection shimmers with the mix |
+| 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat, the car's lights flare on every kick; stopped, the car slows down and parks |
+| 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat tiles of the floor light up in the colours of the tracks playing |
+| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height |
+| 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top) with the peak floor held white, as VU meters; searchlights sweep with the beat |
+| 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights its key's tower in its track's colour (a chord, all its keys; a note outside the two octaves, the same note in them); the drum tracks light the street lights |
 
 It sees the mix as if **MASTER** were all the way up, so the picture does not follow the volume knob: with MASTER turned down, even to 0, it moves as at full volume. It only reads what the audio already leaves for the screen (that mix, the tracks' levels and notes, the clock): it costs the sound nothing.
 

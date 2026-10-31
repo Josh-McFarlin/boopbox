@@ -78,11 +78,11 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
   changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
   chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
   See [the groovebox controls](docs/groovebox-controls.md).
-- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
+- **The visualiser,** six scenes at sunset and in neon: PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY and KEY CITY
+  (tap HOME on TRACKS).
 - **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
   repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
-- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
-  name as text) and the top recording of the BASS sample set
+- **Left out to fit the flash:** the bitmap boot logo (the boot screen shows the name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
   step components or the chord progression (backups keep them).
@@ -695,7 +695,7 @@ The song's settings can only be edited while it is stopped (*STOP FIRST*). An em
 | Screen | How to get there | What it shows · what the knobs do |
 | --- | --- | --- |
 | **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat; each track with its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** a coloured **A–D** badge by the title shows which section is playing. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track; on a muted track: unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
-| **Visualiser** | tap **HOME** on TRACKS | full-screen visualisers, six styles built in; see [The visualiser](#19-the-visualiser) |
+| **Visualiser** | tap **HOME** on TRACKS | full-screen visualiser, six styles; see [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the layer's colour |
 | **DRUMS** (grid / kit) | tap **EDIT** or **SEQ** on TRACKS with the drum track | see [The DRUMS screen](#the-drums-screen) |
 | **REC READY / FREE TAKE / COUNT-IN** | **REC** while stopped | the tracks, then **mode · length · start · quant** on KNOB 1–4 (4-3-2-1 during a count-in); in a free take: the seconds and the loop it would make |
@@ -910,11 +910,8 @@ The texture is saved with the project, and each song section (A–D) has its own
 
 ## 19. The visualiser
 
-> **Six of the twelve styles are built in** (OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES): the flash
-> holds those beside the web editor (see `docs/groovebox-performance.md`). SELECT steps over the others. All twelve
-> fit only in a build without the web editor (`FELUCCA_VIS_STYLES=0xFFF FELUCCA_EDITOR=0`).
-
-On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of what BoopBox plays.
+On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of what BoopBox plays, in six scenes at
+sunset and in neon.
 
 | Control | Does |
 | --- | --- |
@@ -923,23 +920,16 @@ On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of wha
 | keys, PLAY, REC, layers | work as ever (a held layer shows its screen, then the visualiser comes back) |
 | KNOB 1–4 | nothing (the tempo is GLO + SELECT meanwhile) |
 
-| # | Style | Built in | Shows |
-| --- | --- | --- | --- |
-| 1 | **OSCILLOSCOPE** | yes | the mix's wave, standing still |
-| 2 | **SPECTRUM** | yes | 32 bands with falling caps |
-| 3 | **SPECTROGRAM** | — | the spectrum scrolling down, black → blue → green → yellow → white |
-| 4 | **LISSAJOUS** | — | the stereo image: the wider the cloud, the wider the sound |
-| 5 | **VU METERS** | yes | the eight tracks in their colours and the mix, with peak holds |
-| 6 | **CIRCLE** | yes | the wave round a ring that swells on every kick |
-| 7 | **TAPE** | — | two reels turning with the song, the level, the bar and the tempo |
-| 8 | **LCD** | — | the tempo in seven-segment digits, bar and beat, four meters |
-| 9 | **BOUNCE** | yes | a ball per track, kicked up by its notes |
-| 10 | **ORBIT** | — | four planets turning in 1, 2, 4 and 8 beats round a sun that pulses with the mix |
-| 11 | **WIRES** | yes | a string per track, set swinging by its notes |
-| 12 | **BOOPBOX** | — | the logo alive: its eight bars are the tracks, the speakers pulse with the mix, the box hops on the beat |
+| # | Style | What it shows |
+| --- | --- | --- |
+| 1 | **PALMS** | the mix's wave, sample for sample, as the sea's front wave at sunset; the sun's reflection shimmers with the mix |
+| 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat, the car's lights flare on every kick; stopped, the car slows down and parks |
+| 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat tiles of the floor light up in the colours of the tracks playing |
+| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height |
+| 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top) with the peak floor held white, as VU meters; searchlights sweep with the beat |
+| 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights its key's tower in its track's colour (a chord, all its keys; a note outside the two octaves, the same note in them); the drum tracks light the street lights |
 
-VU METERS, BOUNCE, WIRES and BOOPBOX show each of the eight tracks on its own; ORBIT, LCD and TAPE (not built in) show
-four, each a pair of tracks (1 + 5 .. 4 + 8).
+DENSE CITY and KEY CITY show each of the eight tracks on its own; PALMS, NIGHT DRIVE, HORIZON and FLYOVER show the mix.
 
 The visualiser sees the mix **as if MASTER were all the way up**: with MASTER turned down, even to 0, it still moves at full size. It costs the sound nothing.
 
