@@ -1,4 +1,4 @@
-# Building SLOOP
+# Building BoopBox
 
 The build makes three files in `build/`:
 
@@ -10,7 +10,7 @@ The build makes three files in `build/`:
 
 ## Windows (WSL)
 
-`INSTALL-SLOOP.bat` builds in a WSL distribution and opens the installer on
+`INSTALL-BOOPBOX.bat` builds in a WSL distribution and opens the installer on
 `http://localhost:8766/webapp/installer/`. It needs Python 3 with Pillow on Windows, a WSL
 distribution with the JieLi toolchain, and the three SDK files (below) in `build/deps/ac79`.
 Set `SLOOP_WSL_DISTRO` (default `Ubuntu`) and `SLOOP_TOOLCHAIN` (a Linux path, default
@@ -49,8 +49,9 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 0.9-beta` makes a release build: the package identity becomes
-`FM-1_909` and the version string `0.9-BETA`; the package is `build/felucca-0.9-beta.fwsc`.
+`./build.sh --release 1.0.0` makes a release build: the package identity becomes `FM-1_910` and the version
+string `BOOPBOX 1.0.0`; the package is `build/felucca-1.0.0.fwsc`. A suffix is kept: `--release 1.1.0-beta`
+gives `BOOPBOX 1.1.0-BETA`.
 
 Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 
@@ -62,12 +63,12 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
 | `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text (4.6 KB less flash than the bitmap logo, 0) |
-| `FELUCCA_VIS` | 0 | the full-screen visualiser (HOME on HOME, 9 KB) |
-| `FELUCCA_VIS_STYLES` | 0xFFF | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 OSCILLOSCOPE .. bit 11 SLOOP); SELECT skips the others |
+| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME): 4.3 KB with its six default styles; 0 leaves it out |
+| `FELUCCA_VIS_STYLES` | 0x533 | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 OSCILLOSCOPE .. bit 11 BOOPBOX); the default: OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES; SELECT skips the others |
 | `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
-The flash is full: the default build leaves about 5 KB of the app slot free. The bitmap logo fits back
-(`FELUCCA_LOGO_TEXT=0`); the visualiser only with `FELUCCA_EDITOR=0`. When the app does not fit, the build fails and
+The flash is full: the default build leaves 592 B of the app slot free. The bitmap logo fits back in place of the
+visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`); all twelve visualiser styles only with `FELUCCA_EDITOR=0`. When the app does not fit, the build fails and
 says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes.
 
 ## Samples
@@ -76,6 +77,27 @@ The CC0 instrument samples that the SAMPLE engine uses are in `assets/samples-cc
 (Versilian Studios, see `ATTRIBUTION.txt` there). `tools/fetch_cc0.py` downloads them
 again from the source repositories. Without that folder the build still works and the
 SAMPLE engine has only the generated drum kit.
+
+The generated drum one-shots (`build/genwav`, SLICE's BREAK and any GM role the CC0 kit lacks) come
+from `tools/gen_drums.py`, which the build runs.
+
+## Logo and icons
+
+The logo, the icon atlas and the web app's icons are made by code and committed; the build reads them.
+After changing the drawing code, write them again:
+
+```
+python3 tools/gen_logo.py --assets assets/logo     # boopbox-logo/icon .svg/.png, boopbox-splash.png
+python3 tools/gen_logo.py --web web                # icon-192.png, icon-512.png, icon-maskable-512.png
+python3 tools/gen_icon_art.py                      # assets/icons.png (--preview OUT.png: 8x, labelled)
+```
+
+The boot splash itself (`build/gen/boopbox_logo.h`) is made by the build from `tools/gen_logo.py`.
+
+The README's screenshots are made the same way, from the code: `python3 tools/make_screens.py` draws the FM-1's
+screens with the firmware's own drawing code (`tools/screens_demo.c`, the host tests' harness, a demo project on the
+eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` takes the web editor's pages in its
+mock mode (Playwright and Chromium). Both write into `assets/screens/`.
 
 ## Tests
 
@@ -112,13 +134,13 @@ python3 tools/build_preview.py
 tests/run_preview_tests.sh
 ```
 
-The build produces `build/preview/sloop-preview.wasm`. The tests compare all twelve engines sample by sample
+The build produces `build/preview/boopbox-preview.wasm`. The tests compare all twelve engines sample by sample
 against the same adapter compiled for the host and verify sequencing, live mixer changes, stop, and user samples.
 `web/make_site.py` includes the preview and caches it for the site app when the WASM build is present:
 
 ```sh
 # Use a release package downloaded from isod89/sloop-fm1, or your own firmware build.
-python3 web/make_site.py build/releases/sloop-2.6.fwsc 2.6 build/site
+python3 web/make_site.py build/releases/boopbox-2.6.fwsc 2.6 build/site
 python3 -m http.server 8766 --bind 127.0.0.1 --directory build/site
 ```
 
@@ -130,7 +152,7 @@ The standalone downloaded HTML editor does not include the WASM asset.
 
 ## Install
 
-On Windows, `INSTALL-SLOOP.bat` builds and opens the web installer (Chrome or Edge). The
+On Windows, `INSTALL-BOOPBOX.bat` builds and opens the web installer (Chrome or Edge). The
 `.fwsc` of each release is on the GitHub releases page.
 
 From the command line (needs `pip3 install mido python-rtmidi`):

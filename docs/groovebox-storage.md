@@ -111,7 +111,7 @@ project is saved again.
 | FUN5 | SLOOP 2.4 .. 2.5 | to format 6 by parameter id; the 2.6 parameters at their defaults; nudges, conditions and locks kept (a lock on an engine parameter moves with it) |
 | FUN4 | SLOOP 2.0 .. 2.3 | to format 6: levels, ratchets, drum lanes kept; no nudge, no lock |
 | FUN3 | SLOOP 1.x | to format 6: 8-byte steps, the drum track's notes become its lanes, swings x 0.8 |
-| FUN2, FUN1 | early SLOOP | parameters mapped by count, as user presets are; FUN1 (one instrument) loads into track 1 |
+| FUN2, FUN1 | early BoopBox | parameters mapped by count, as user presets are; FUN1 (one instrument) loads into track 1 |
 
 A format with a wrong checksum, a wrong length, or a size that belongs to another magic is refused.
 
@@ -140,9 +140,9 @@ SLIDE)"), `tests/pat_test.c`, `tests/harm_test.c` ("PAT Q not LOOP: not format 6
 
 - Settings (`OBJ_SETTINGS`): GLO > MIDI 4's CH5..CH8, the MIDI LEARN bit of tracks 5..8 (`ml_hi`) and
   MENU > SEQ > REC KNOBS are in an 8-byte tail after the 2.7 MIDI part (`MIDI_PART_8`). The tail is written only
-  when one of these is not the default; an older SLOOP reads the first `MIDI_PART` bytes and ignores the rest.
+  when one of these is not the default; an older BoopBox reads the first `MIDI_PART` bytes and ignores the rest.
 - The song (persist object): the loop region is in the arrangement's two reserved bytes (`arranger.h`). An older
-  SLOOP does not read them. The region logic is tested in `tests/pat_test.c` and `tests/song_ui_test.c`; there is no
+  BoopBox does not read them. The region logic is tested in `tests/pat_test.c` and `tests/song_ui_test.c`; there is no
   separate flash round-trip test for these two bytes (they are part of the arrangement, which is saved whole).
 - Song sections are format 7 captures, so a section keeps its patterns, components, locks and FOLLOW. A section
   applies its tracks, the TEXTURE and the harmony globals; it keeps the tempo and the master.

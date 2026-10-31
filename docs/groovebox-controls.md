@@ -1,13 +1,15 @@
-# SLOOP groovebox: controls
+# BoopBox groovebox: controls
 
 This page lists the controls added by the groovebox upgrade (eight tracks, step components, and what follows). Every
 control of SLOOP 2.8.3 described in `GUIDE.md` still works as written there; where a control changed, this page says
 so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
 
-Three things of SLOOP 2.8.3 are left out of this build to make room in the flash (`docs/groovebox-performance.md`):
+Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make room in the flash
+(`docs/groovebox-performance.md`):
 
-- **The visualiser:** tapping HOME on the TRACKS screen does nothing.
-- **The bitmap boot logo:** the boot screen shows "SLOOP" as text in the tracks' colours.
+- **Six of the visualiser's twelve styles:** tapping HOME on the TRACKS screen opens it with OSCILLOSCOPE, SPECTRUM,
+  VU METERS, CIRCLE, BOUNCE and WIRES; SELECT steps over the others.
+- **The bitmap boot logo:** the boot screen shows "BOOPBOX" as text, BOOP in the tracks' colours.
 - **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
   recording below, so they sound a little different; every note below 70 sounds as before.
 
@@ -16,7 +18,7 @@ Three things of SLOOP 2.8.3 are left out of this build to make room in the flash
 | Control | Does |
 | --- | --- |
 | **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before) |
-| **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 use the colours of tracks 1-4 |
+| **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 have a shade of the colours of tracks 1-4 (lighter; darker on a light theme), so each track has its own |
 | **GLO layer** (mute, solo, levels) | acts on the bank shown: keys 1-4 are tracks 1-4 or 5-8 |
 | **GLO > MIDI 4** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as GLO > MIDI does for tracks 1-3 and the drum channel (CH4) |
 | **GLO > DRUMS** | LVL, REV and DLY of the selected drum track; on a synth track, of the first drum track |
@@ -28,7 +30,7 @@ it takes the default kit or sound of that track number; its PAN, MUTE, FILTER, L
 while playing.
 
 The default project: tracks 1-3 and 5-7 are synth tracks, tracks 4 and 8 drum tracks. Each synth track has its own
-engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older SLOOP opens on
+engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older BoopBox opens on
 tracks 1-4 as it was; tracks 5-8 start as at power-on.
 
 Limits: the eight synth tracks share **8 sounding voices**; the drum tracks share one pool of drum voices. At most

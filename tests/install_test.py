@@ -123,9 +123,9 @@ class FakeFM1:
             if self.stall_after and self.served >= self.stall_after:
                 return
             if addr == I.FINISH_CHECK:
-                threading.Timer(0.05, self.boot, ("ota-FM-1_900", "Felucca Update")).start()
+                threading.Timer(0.05, self.boot, ("ota-FM-1_900", "BoopBox Update")).start()
             elif addr == I.FINISH_WRITE:
-                threading.Timer(0.05, self.boot, (self.after_write, "Felucca")).start()
+                threading.Timer(0.05, self.boot, (self.after_write, "BoopBox")).start()
             else:
                 self.next()
 
@@ -207,15 +207,19 @@ def installs():
     dev = FakeFM1(image)
     rc, out, err = cli([p, "--yes"], dev)
     ok(rc == 0 and dev.bad == 0 and dev.upgrades == 2 and dev.served == 11 and "done: the FM-1 runs FM-1_900" in out
-       and "100%" in out, f"install: running -> loader -> Felucca ({dev.served} reads)")
+       and "100%" in out, f"install: running -> loader -> BoopBox ({dev.served} reads)")
     dev = FakeFM1(image, identity="FM-1_901", name="Clipper")
     rc, out, err = cli([p, "--yes"], dev)
     ok(rc == 0 and dev.bad == 0 and "done: the FM-1 runs FM-1_900" in out,
-       "install: an FM-1 under CLIPPER (port 'Clipper') -> found, SLOOP installed")
+       "install: an FM-1 under CLIPPER (port 'Clipper') -> found, BoopBox installed")
 
-    dev = FakeFM1(image, identity="ota-FM-1_900", name="Felucca Update")
+    dev = FakeFM1(image, identity="ota-FM-1_900", name="BoopBox Update")
     rc, out, err = cli([p, "--yes"], dev)
     ok(rc == 0 and dev.bad == 0 and dev.upgrades == 1 and "update mode" in out, "install: device already in update mode -> finishes the write")
+    dev = FakeFM1(image, identity="FM-1_908", name="SLOOP")
+    rc, out, err = cli([p, "--yes"], dev)
+    ok(rc == 0 and dev.bad == 0 and "done: the FM-1 runs FM-1_900" in out,
+       "install: an FM-1 under SLOOP (port 'SLOOP') -> found, BoopBox installed")
 
     dev = FakeFM1(image)
     rc, out, err = cli([p], dev, answer=False)

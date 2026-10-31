@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Compile the real SLOOP DSP/clock for browser preview (requires emcc).
+"""Compile the real BoopBox DSP/clock for browser preview (requires emcc).
 
 python3 tools/build_preview.py
 Then web/make_site.py includes the generated audio assets in the local site.
@@ -36,7 +36,7 @@ def main():
                         '-w', '-I' + str(shim), '-I' + str(GEN), '-I' + str(ROOT / 'firmware/src'),
                         str(ROOT / 'firmware/host/preview.c'), str(mem), '-Wl,--no-entry', '-Wl,--export-memory',
                         '-Wl,--initial-memory=16777216', '-Wl,-z,stack-size=131072']
-                       + ['-Wl,--export=preview_' + n for n in exports] + ['-o', str(OUT / 'sloop-preview.wasm')],
+                       + ['-Wl,--export=preview_' + n for n in exports] + ['-o', str(OUT / 'boopbox-preview.wasm')],
                        cwd=ROOT, check=True)
         mem.unlink()
     else:
@@ -44,10 +44,10 @@ def main():
                     '-Wno-unused-function', '-Wno-int-to-pointer-cast', '-I' + str(GEN), '-I' + str(ROOT / 'firmware/src'),
                     '--no-entry', '-sSTANDALONE_WASM=1', '-sFILESYSTEM=0', '-sINITIAL_MEMORY=16777216',
                     '-sSTACK_SIZE=131072', '-sEXPORTED_FUNCTIONS=' + str(['_preview_' + n for n in exports]),
-                    '-o', str(OUT / 'sloop-preview.wasm')], cwd=ROOT, check=True)
+                    '-o', str(OUT / 'boopbox-preview.wasm')], cwd=ROOT, check=True)
     for name in ['preview.js', 'preview-worklet.js']:
         shutil.copy(ROOT / 'web' / name, OUT / name)
-    print('Browser audio built:', OUT / 'sloop-preview.wasm')
+    print('Browser audio built:', OUT / 'boopbox-preview.wasm')
 
 
 if __name__ == '__main__':

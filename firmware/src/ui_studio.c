@@ -98,11 +98,13 @@ UI_SMALL static void te_text_c(int32_t cx, int32_t y, const char *s, uint16_t c)
 
 /* the dial strip: KNOB 1..4, label + value under each (a dial with no label: an empty column); a
  * message replaces it */
+static uint8_t te_dials_trk;                            /* the dials' colours from this track's on (the MIX layer: the bank's
+                                                         * first track, 4 for 5..8); else 0, the four knobs' colours */
 UI_SMALL static void te_dials(int32_t y0, const char *const lab[4], const char *const val[4], const int32_t ratio[4],
                      uint32_t sig, uint32_t *cache)
 {
     uint32_t k;
-    sig = studio_hash(sig, ui.msg_t ? ui.msg : "");
+    sig = studio_hash(sig + te_dials_trk * 131u, ui.msg_t ? ui.msg : "");
     for (k = 0; k < 4u; k++) {
         sig = studio_hash(sig * 7u + (uint32_t)ratio[k] + (ui.hot_t && ui.hot_col == k) * 5003u, lab[k]);
         sig = studio_hash(sig, val[k]);
@@ -121,7 +123,7 @@ UI_SMALL static void te_dials(int32_t y0, const char *const lab[4], const char *
         int32_t cx = 30 + 60 * (int32_t)k;
         if (!lab[k][0])
             continue;
-        te_dial(cx, 12, 11, ratio[k], TE_COL[k], TE_DIM[k]);
+        te_dial(cx, 12, 11, ratio[k], TE_COL[te_dials_trk + k], TE_DIM[te_dials_trk + k]);
         te_text_c(cx, 24, lab[k], TE_G3);
     }
     cv_blit(0, (uint32_t)y0);
@@ -231,11 +233,12 @@ UI_SMALL static void swing_str(char *b, int32_t v)            /* 0 straight .. 1
     fmt_int(b, clamp(v, 0, 100));
 }
 
-/* (eight tracks) the screens that list tracks show the bank of four the selected track is in: 1..4 or 5..8, in the
- * four knobs' colours (TRK_COL: track 5 is track 1's blue, 8 track 4's orange) */
+/* (eight tracks) the screens that list tracks show the bank of four the selected track is in: 1..4 or 5..8, each
+ * track in its own colour (TRK_COL: 5..8 a shade of 1..4's, gfx.c te_shade) */
+_Static_assert(sizeof TE_COL / sizeof TE_COL[0] == NTRK, "a colour for each track (gfx.c)");
 #define TRK_BANK(i) ((uint32_t)(i) / 4u * 4u)
-#define TRK_COL(i) TE_COL[(i) & 3u]
-#define TRK_DIM(i) TE_DIM[(i) & 3u]
+#define TRK_COL(i) TE_COL[(i) % NTRK]
+#define TRK_DIM(i) TE_DIM[(i) % NTRK]
 UI_SMALL static void studio_tracks_draw(void)
 {
     static uint32_t head, rows[4], footer, bank_was = 0xFFu;
@@ -887,7 +890,7 @@ UI_SMALL static void rec_screen_draw(void)
             cv_rect(132, 6, 1, 54, TE_G1);
             if (bars) {
                 fmt_int(b, (int32_t)bars);
-                cv_text(146, 4, &FONT_L, b, TE_COL[rt & 3u]);
+                cv_text(146, 4, &FONT_L, b, TRK_COL(rt));
                 cv_text(146 + text_w(&FONT_L, b) + 6, 18, &FONT_S, bars == 1u ? "bar" : "bars", TE_G3);
                 fmt_int(b, (int32_t)bpm);
                 cv_text(146, 42, &FONT_S, b, C_WHITE);

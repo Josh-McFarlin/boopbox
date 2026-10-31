@@ -19,6 +19,9 @@
  *   DRUMS   the grid: sound / step / hit / level knobs, GRID <-> KIT
  * then 20000 frames of random use: every draw stays on the screen. */
 #define FELUCCA_ARRANGER 1
+#ifndef FELUCCA_VIS_STYLES
+#define FELUCCA_VIS_STYLES 0xFFFu                   /* every visualiser style (the build has six: tests/vis_styles_test.c) */
+#endif
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -174,7 +177,7 @@ int main(int argc, char **argv)
     host_tracks_init();
     for (i = 0; i < NPART; i++) { set_engine_of(&trk[i], TRK_DEF[i][1]); apply_preset_to(&trk[i], TRK_DEF[i][2]); trk[i].engine = trk[i].eng_req; }
     TDRUM->p[P_E0] = DRUM_DEFAULT_KIT;
-    sloop_splash(); ppm("page-splash");
+    boopbox_splash(); ppm("page-splash");
     ui.menu = 2; ui.force = 1; frame(); ppm("page-about"); ui.menu = 0;
     go_home(); ui.force = 1; frame(); ppm("page-tracks");
     open_family(FAM_ENV); ui.force = 1; ui.hot_col = 1; ui.hot_t = 30; frame(); ppm("page-env");
@@ -1469,7 +1472,7 @@ int main(int argc, char **argv)
         }
         check(vis_style == 0u, "visualiser: SELECT goes round (12 -> 1)");
         encs[panel.enc[EN_SELECT]] = -1; frames(2);
-        check(vis_style == 11u && (lights_word() >> 17 & 15u) == 11u, "visualiser: SELECT left: SLOOP (12), kept in the settings word");
+        check(vis_style == 11u && (lights_word() >> 17 & 15u) == 11u, "visualiser: SELECT left: BOOPBOX (12), kept in the settings word");
         lights_from_word(lights_word());
         check(vis_style == 11u, "visualiser: the style read back");
         { int16_t bpm = song.g[G_BPM], lv = trk[0].p[P_LEVEL];

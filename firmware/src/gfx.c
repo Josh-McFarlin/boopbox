@@ -78,13 +78,18 @@ typedef struct {
 _Static_assert(sizeof(theme_t) == 40u, "theme layout (the editor's Theme page writes these bytes)");
 static theme_t theme;                            /* the theme there is (theme_valid: project.c theme_check passed) */
 static uint8_t theme_valid, theme_on;
-/* the tracks' colours: full, two thirds, one third (the built-in ones as they always were) */
+/* the tracks' colours: full, two thirds, one third (the built-in ones as they always were). Eight tracks: 1..4 have the
+ * four colours (a theme's, or these), 5..8 a shade of 1..4 (palette_set te_shade), so each track has its own; the
+ * four knobs' colours stay TE_COL[0..3] */
 static const uint16_t TE_COL_DEF[4] = {RGB(40, 124, 255), RGB(30, 204, 112), RGB(255, 198, 24), RGB(255, 98, 26)};
 static const uint16_t TE_MID_DEF[4] = {RGB(26, 82, 170), RGB(20, 136, 76), RGB(170, 132, 16), RGB(170, 66, 18)};
 static const uint16_t TE_DIM_DEF[4] = {RGB(14, 40, 86), RGB(10, 66, 38), RGB(86, 66, 8), RGB(86, 32, 8)};
-static uint16_t TE_COL[4] = {RGB(40, 124, 255), RGB(30, 204, 112), RGB(255, 198, 24), RGB(255, 98, 26)};
-static uint16_t TE_MID[4] = {RGB(26, 82, 170), RGB(20, 136, 76), RGB(170, 132, 16), RGB(170, 66, 18)};
-static uint16_t TE_DIM[4] = {RGB(14, 40, 86), RGB(10, 66, 38), RGB(86, 66, 8), RGB(86, 32, 8)};
+static uint16_t TE_COL[8] = {RGB(40, 124, 255), RGB(30, 204, 112), RGB(255, 198, 24), RGB(255, 98, 26),
+                             RGB(137, 183, 255), RGB(131, 227, 176), RGB(255, 224, 128), RGB(255, 169, 129)};
+static uint16_t TE_MID[8] = {RGB(26, 82, 170), RGB(20, 136, 76), RGB(170, 132, 16), RGB(170, 66, 18),
+                             RGB(91, 122, 170), RGB(87, 151, 117), RGB(170, 149, 85), RGB(170, 113, 86)};
+static uint16_t TE_DIM[8] = {RGB(14, 40, 86), RGB(10, 66, 38), RGB(86, 66, 8), RGB(86, 32, 8),
+                             RGB(46, 61, 85), RGB(44, 76, 59), RGB(85, 75, 43), RGB(85, 56, 43)};
 static uint16_t rgb565_scale(uint32_t c, uint32_t num, uint32_t den)
 {
     uint32_t r = ((c >> 11) & 31u) * num / den, g = ((c >> 5) & 63u) * num / den, b = (c & 31u) * num / den;
@@ -162,6 +167,17 @@ static uint16_t te_gray(uint32_t c)
     return (uint16_t)out;
 }
 
+/* tracks 5..8's colour from 1..4's: 45 % of the way to white on a dark background, three fifths as bright on a light
+ * one (te_gray's test), so it stands apart from its pair and from the background */
+static uint16_t te_shade(uint32_t c)
+{
+    uint32_t bg = pal_bg, r, g, b;
+    if (((bg >> 11) & 31u) * 2u * 299u + ((bg >> 5) & 63u) * 587u + (bg & 31u) * 2u * 114u > 31500u)
+        return rgb565_scale(c, 3u, 5u);
+    r = (c >> 11) & 31u, g = (c >> 5) & 63u, b = c & 31u;
+    return (uint16_t)((r + (31u - r) * 9u / 20u) << 11 | (g + (63u - g) * 9u / 20u) << 5 | (b + (31u - b) * 9u / 20u));
+}
+
 static void palette_set(uint32_t i)              /* built-in palette i, or the theme when it is chosen (2.7) */
 {
     uint32_t k;
@@ -176,6 +192,9 @@ static void palette_set(uint32_t i)              /* built-in palette i, or the t
         TE_COL[k] = cu ? theme.trk[k] : TE_COL_DEF[k];
         TE_MID[k] = cu ? rgb565_scale(theme.trk[k], 2u, 3u) : TE_MID_DEF[k];
         TE_DIM[k] = cu ? rgb565_scale(theme.trk[k], 1u, 3u) : TE_DIM_DEF[k];
+        TE_COL[k + 4u] = te_shade(TE_COL[k]);           /* tracks 5..8: a shade of 1..4 */
+        TE_MID[k + 4u] = rgb565_scale(TE_COL[k + 4u], 2u, 3u);
+        TE_DIM[k + 4u] = rgb565_scale(TE_COL[k + 4u], 1u, 3u);
     }
 }
 

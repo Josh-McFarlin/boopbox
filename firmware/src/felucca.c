@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
-/* SLOOP (based on FELUCCA): one compilation unit (the HAL is header-only). Order matters. */
+/* BoopBox (based on SLOOP and FELUCCA): one compilation unit (the HAL is header-only). Order matters. */
 #include <stdint.h>
 #include "fm1_time.h"
 #include "fm1_sys.h"
@@ -71,7 +71,8 @@
 #include "icons.c"           /* parameter icons (FELUCCA_ICONS), used by ui_draw.c */
 #include "ui_draw.c"
 #ifndef FELUCCA_VIS
-#define FELUCCA_VIS 0                /* the full-screen visualiser (9 KB): off since the groovebox upgrade (the flash is full) */
+#define FELUCCA_VIS 1                /* the full-screen visualiser: on, with six of its styles (ui_vis.c FELUCCA_VIS_STYLES:
+                                      * the flash holds those beside the web editor) */
 #endif
 #if FELUCCA_VIS
 #include "ui_vis.c"           /* the full-screen visualiser (HOME on HOME, 2.4) */
@@ -215,5 +216,5 @@ static void ed_service(void) {}   /* (no web editor: ota_service takes its frame
 #if FELUCCA_OTA
 #include "recovery.c"        /* early, polled USB updater; no synth or settings */
 #endif
-#include "splash.c"          /* SLOOP boot logo (build/gen/sloop_logo.h) */
+#include "splash.c"          /* BoopBox boot logo (build/gen/boopbox_logo.h) */
 #include "main.c"
