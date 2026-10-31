@@ -233,7 +233,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEL** | SEL pages (SEL, SEL 2) | key / chord layer |
 | **EDIT** | EDIT pages (EDIT 1, EDIT 2, VOICE, VOICE 2) · on TRACKS with the drum track: the **DRUMS** screen · on DRUMS: grid ↔ kit · on the NOTES page: delete the note | erase layer |
 | **ARP** | ARP pages (ARP, ARP 2) | note-repeat layer |
-| **SEQ** | SEQ pages (STEP, PATTERN, SONG) · with the drum track: the **DRUMS** screen (2.7.1: from any page; it opened STEP from ARP's) · on DRUMS: grid ↔ kit | step layer |
+| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, then the PATTERNS and SONG screens) · with the drum track: the **DRUMS** screen in place of NOTES (2.7.1: from any page; it opened STEP from ARP's) · on DRUMS: grid ↔ kit | step layer |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select the track, on the TRACKS screen (the home screen: HOME takes you there) and the PATTERNS and CHORDS screens. On other screens it does nothing, so a stray turn does not change the track (inside a layer it waits; not during a free take) | — |
@@ -391,7 +391,7 @@ LENGTH and START apply when you record at a tempo (MODE *tempo*, or a project th
 
 - The **PLAY light flashes on every beat**: a silent metronome.
 - An audible click: **GLO → GLOBAL → CLICK** = **OFF**, **REC** (only while a track records) or **ON** (whenever it plays). It is a short tick of its own (higher on the first beat of a bar), heard with every kit, even with the drum track muted or another track soloed; its level follows GLO → DRUMS → LVL. The click is never recorded, and the count-in always clicks.
-- **Swing** goes from **0** (straight) to **100** (the strongest: a step pair played 75 / 25, as MPC swing at 75 %): **HOME, KNOB 1** or **GLO → GLOBAL → SWING** for all tracks, **SEQ + KNOB 3** (or SEQ → PATTERN → SWG) per track; a track's swing adds to the global one. Triplet divisions are never swung.
+- **Swing** goes from **0** (straight) to **100** (the strongest: a step pair played 75 / 25, as MPC swing at 75 %): **HOME, KNOB 1** or **GLO → GLOBAL → SWING** for all tracks, **SEQ + KNOB 3** (or SEQ → TIMING → SWG) per track; a track's swing adds to the global one. Triplet divisions are never swung.
 
 ### What gets recorded
 
@@ -551,7 +551,7 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while recording or 
 
 **The DRUMS grid has the same sheet** (2.7.2): on the grid, **OCT+ held** opens it for the hit of KNOB 1's sound on KNOB 2's step: **RATCHET** (x1 … x4), **NUDGE** and **FILL** (the step's: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step), **DELETE** (OCT+); OCT− closes it. OCT+ tapped still turns the page of steps.
 
-The **PATTERN** page (tap SEQ again) holds the track's **LEN**, **DIV**, **SWG** (swing) and **GATE** (how long each note lasts).
+The **TIMING** page (tap SEQ again; called PATTERN before) holds the pattern's **LEN** and the track's **DIV**, **SWG** (swing) and **GATE** (how long each note lasts). Tap SEQ again for the **PLAY** page (the play direction and the random seed), then the **PATTERNS** screen (eight patterns a track) and the **SONG** screen. On the drum track, SEQ opens the [DRUMS screen](#the-drums-screen) in place of NOTES; TIMING, PLAY, PATTERNS and SONG work the same.
 
 ### Nudge (micro timing)
 
@@ -566,7 +566,7 @@ A **lock** gives one sound parameter another value **for that step only** (Elekt
 3. Turn **PRESETS**: the first click makes the lock, one click away from the track's value; the next ones move it. The title line shows it (*lock dst 14*; *lock flt --* = no lock yet).
 4. **ALGORITHM** (step still held) steps through the other parameters, wrapping round.
 
-At the next step without a lock on that parameter, it comes back to its base value (notes still ringing follow). A knob turned on the page while a lock is in force wins: that value becomes the new base. Several locks can sit on one step (one per parameter), **24 per track**. The sound parameters of the track can be locked (and the PATTERN page's GATE); the arp, key / scale / chord, STRUM / VLEAD, voice-mode, MUTE, LEN / DIV / SWG and the global pages cannot (*NOT LOCKABLE*; *NO LOCK LEFT* when the 24 are used). A locked step shows the same dot as a nudged one; **SEQ + step + OCT−** clears both. Undo (EDIT + OCT−) is for steps and (2.7) their nudges: it does not bring locks back.
+At the next step without a lock on that parameter, it comes back to its base value (notes still ringing follow). A knob turned on the page while a lock is in force wins: that value becomes the new base. Several locks can sit on one step (one per parameter), **24 per track**. The sound parameters of the track can be locked (and the TIMING page's GATE); the arp, key / scale / chord, STRUM / VLEAD, voice-mode, MUTE, LEN / DIV / SWG and the global pages cannot (*NOT LOCKABLE*; *NO LOCK LEFT* when the 24 are used). A locked step shows the same dot as a nudged one; **SEQ + step + OCT−** clears both. Undo (EDIT + OCT−) is for steps and (2.7) their nudges: it does not bring locks back.
 
 ### Fill conditions
 
@@ -746,7 +746,7 @@ The lettering (2.6) is Terminus **Bold**, all in **capitals**: thicker strokes, 
 
 ## 16. Every page, knob by knob
 
-Tap a button to open its first page (or the last one you used); **tap it again** for its next page, or turn **SELECT** to go back and forth. The number after the title (*PATTERN 2/2*) counts the pages SELECT goes through; tapping SEQ once more also opens the SONG screen, a screen of its own (2.7: it is no longer counted, so SEQ no longer reads *2/3*). On the drum track, pages that do not apply to it show *DRUM TRACK*.
+Tap a button to open its first page (or the last one you used); **tap it again** for its next page, or turn **SELECT** to go back and forth. The number after the title (*TIMING 2/3*) counts the pages SELECT goes through; tapping SEQ more also opens the PATTERNS and SONG screens, screens of their own that SELECT does not walk into. On the drum track, pages that do not apply to it show *DRUM TRACK*.
 
 | Button | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- | --- |
@@ -771,8 +771,10 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **VOICE 2** | ALLOC: ROT (rotate) / REUSE | DTUNE (unison detune) | PAN | MUTE |
 | **ARP** | **ARP** | MODE: OFF, UP, DN, UPDN, RND, ORD, and (2.7) REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK, CHORD ([below](#arp-modes)) | RATE: 1/4 … 16T | OCT: 1–4 octaves | GATE |
 | | **ARP 2** | SWG swing (2.7: also with the sequencer stopped) | PROB probability of each note | HOLD: OFF / ON (latch; with MODE OFF, 2.7: [KBD HOLD](#kbd-hold)) | ORD: NOTE (pitch order) / PLAY (the order you played) |
-| **SEQ** | **STEP** | STEP (cursor) | NOTE | TIME: NOTE, TIE, REST · on a note: LEN (2.6) | FLAG: –, ACC, SLD, A+S |
-| | **PATTERN** | LEN 1–64 steps | DIV 1/4 … 2BAR | SWG track swing | GATE note length |
+| **SEQ** | **NOTES** | NOTE (cursor) | PITCH | LEN (steps the note lasts) | FORCE: GHOST, SOFT, NORM, HARD, ACC (see [the NOTES page](#10-the-step-sequencer-steps-nudge-locks-fills)) |
+| | **TIMING** | LEN 1–64 steps | DIV 1/4 … 2BAR | SWG track swing | GATE note length |
+| | **PLAY** | DIR: FWD, REV, PEND, RAND | SEED 0–255 | — | — |
+| | **PATTERNS** | the PATTERNS screen ([groovebox controls](docs/groovebox-controls.md#patterns)) | | | |
 | | **SONG** | the SONG screen | | | |
 | **GLO** | **GLOBAL** | BPM 40–240 | SWING (all tracks) | CLICK: OFF, REC, ON | TUNE ±50 cents |
 | | **MASTER** | DUST | DUCK | FILT (DJ filter) | ROLL (note-repeat rate) |
@@ -792,7 +794,7 @@ Notes:
 
 - **Global** pages (DLY, REV/CHO, GLOBAL, MASTER, SYSTEM, DRUMS) are the same whatever track is selected.
 - **SYNC**, **MIDI** and **IN** are settings of the FM-1, kept when you load a project.
-- On the **drum track**, the pages that work are SLICER, PATTERN (SEQ), the SONG screen and the global pages; its kit, level, reverb and pan are on the DRUMS kit page, and its filter is **FX + KNOB 4**.
+- On the **drum track**, the pages that work are SLICER, TIMING and PLAY (SEQ), the PATTERNS and SONG screens and the global pages (SEQ opens the DRUMS screen in place of NOTES); its kit, level, reverb and pan are on the DRUMS kit page, and its filter is **FX + KNOB 4**.
 - FM6 tracks ignore the ENV page and ENV DEST (each operator has its own envelope).
 - <a id="arp-modes"></a>**ARP modes** (2.7, after Felucca 1.4 / 1.5.1). With C, E and G held: **UP** C E G · **DN** G E C · **UPDN** C E G E · **DNUP** G E C E · **RND** at random · **ORD** in the order you pressed them · **REPEAT** the last note you pressed, again and again (OCT ignored) · **UP+8** C E G C' (the first note again an octave above the top) · **CONV** C G E (from the outside in) · **DIVG** E G C (from the inside out) · **PINKY** C G E G (the top note between the others) · **THUMB** C E C G (the bottom note between the others) · **WALK** one step up or down at random, from the bottom · **CHORD** the held notes together (the first four), on every step, an octave higher each step through OCT. OCT spreads the list over 1–4 octaves; ARP 2 ORD PLAY keeps the order you played for the other modes. Until 2.6, ORD played as UP unless ARP 2 ORD was PLAY: now it always follows the order you pressed.
 - <a id="kbd-hold"></a>**KBD HOLD** (2.7): ARP 2 → **HOLD ON** with ARP → **MODE OFF** holds the notes you play, without an arpeggio: let go and they go on sounding (a pad, a drone, a chord to play over with one hand). The next note you play with no key down **replaces** them (a new chord); notes played while keys are still down **join** them. The keys' MIDI note-offs wait too, so gear played from the FM-1 holds with it. **HOLD OFF** (or ARP on, another project, NEW) ends them; loading another sound ends the held notes too, but HOLD stays ON. Projects saved before 2.7 open with HOLD OFF when their arp is OFF (it did nothing then), so nothing hangs by surprise. It works for MIDI notes too. Recorded as you hear it: a held note ends where it is replaced. Up to 2.6, HOLD did nothing with the arp OFF.

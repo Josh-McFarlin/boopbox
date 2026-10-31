@@ -159,12 +159,12 @@ Format 7 keeps all 32 locks and their SLIDE.
 ## Patterns
 
 Each track has **8 patterns**. A pattern holds the track's steps with their nudges, fill conditions, locks and step
-components, its direction and seed (SEQ > PLAY) and its **length** (PATTERN > LEN). The sound, DIV, SWG and GATE are
+components, its direction and seed (SEQ > PLAY) and its **length** (TIMING > LEN). The sound, DIV, SWG and GATE are
 the track's, the same for all its patterns. A new pattern starts empty, with the length the track has.
 
 ### The PATTERNS screen (SEQ, after PLAY)
 
-Tap **SEQ** until the PATTERNS screen shows (NOTES, PATTERN, PLAY, **PATTERNS**, SONG). It shows the eight tracks as
+Tap **SEQ** until the PATTERNS screen shows (NOTES, TIMING, PLAY, **PATTERNS**, SONG; on a drum track the DRUMS screen in place of NOTES). It shows the eight tracks as
 rows and their eight patterns as columns:
 
 | Tile | Means |

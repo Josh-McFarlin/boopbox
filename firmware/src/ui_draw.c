@@ -854,7 +854,7 @@ UI_SMALL static void draw_graph(void)
 }
 
 /* the page shown: its place in its family and how many (*n), as SELECT walks them (2.7: the screens of their own, SONG
- * and DRUMS, are not counted: SEQ is STEP 1/2, PATTERN 2/2; the page shown always counts) */
+ * and DRUMS, are not counted: SEQ is NOTES 1/3, TIMING 2/3, PLAY 3/3; the page shown always counts) */
 UI_SMALL static uint32_t page_pos(uint32_t *n)
 {
     const page_t *pg = cur_page();
