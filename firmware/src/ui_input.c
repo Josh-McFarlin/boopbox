@@ -1364,7 +1364,8 @@ UI_SMALL static void ui_input(void)
             br_step(s, BR_SOUND);
     }
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on && on_home())   /* ALGORITHM: the selected track, on TRACKS (the home
-                                                     * screen) only: elsewhere a stray turn leaves the track (not in a take) */
+                                                     * screen; PATTERNS and CHORDS too, ui_pats.c) only: elsewhere a stray
+                                                     * turn leaves the track (not in a take) */
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
     if (vis_shown() && !rec_wait && !ft_on) {           /* the visualiser: SELECT its style; KNOB 1..4 (the TRACKS
                                                          * screen's, out of sight) do nothing */
