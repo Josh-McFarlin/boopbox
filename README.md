@@ -62,6 +62,9 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   values fading from pink to orange, a neon floor to the horizon where a page has an empty half, and a sun setting on
   the boot screen. An FM-1 that already has a colour set keeps it; the other palettes and your theme look as before.
   The web editor's Theme page can start from it. See [every screen](assets/screens/all/README.md).
+- **SEQ → PATTERN is now TIMING** (LEN, DIV, SWG, GATE), so it no longer reads like the PATTERNS screen next to it.
+- **FLYOVER keeps flying:** while the song plays the ground always moves, silent bars too; after STOP it moves on until
+  the last peak has gone off the back of the screen.
 - **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
   their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
   own. LIVE solos any track (protocol v13: 32 bytes of firmware).
