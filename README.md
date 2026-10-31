@@ -43,6 +43,16 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
+## Since 1.0.0 (not yet released)
+
+- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
+  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
+  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
+- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
+  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
+  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
+- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
+
 ## What's new in 1.0.0
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
@@ -66,7 +76,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them).
+  step components or the chord progression (backups keep them). *Lifted since 1.0.0: see [Since 1.0.0](#since-100-not-yet-released).*
 
 **Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
 Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
@@ -361,8 +371,9 @@ Audio preview requires the served site, rather than the downloaded single-file e
 
 - **Sound** — every parameter of the selected track, the engines and the presets; on an FM6 track the **FM6** panel: every operator, the bank, **Import / Export SysEx** (DX7 voices and banks).
 - **Sequencer** — the steps, as tiles or as a **piano roll**, and the track's length (1–64 steps); on the drum track a grid of 16 sounds × the steps, with levels and ratchets, and the kit. Click a step for its nudge, parameter locks and fill condition. **Export MIDI / Import MIDI**: the selected track as a MIDI file, and back.
-- **Tracks** — the four channel strips.
-- **Song** — the order of the sections A–D (the SONG screen): which section, how many bars, how many times, and whether the song starts again at the end.
+- **Patterns** (BoopBox) — each track's eight patterns (play one, copy, clear), its chain and FOLLOW; a pattern's step components, direction and seed; the song's chord progression. Read from the FM-1, change, **Send** (the song stopped).
+- **Tracks** — the eight channel strips.
+- **Song** — the order of the sections A–D (the SONG screen): which section, how many bars, how many times, whether the song starts again at the end, and the entries it loops.
 - **Library** — your user presets and preset files.
 - **Samples** — the three user slots, files and **CHOP**.
 - **Drum synth** (2.5) — your own synthesised kits SYN1–SYN4: every value of every drum sound, heard at once.

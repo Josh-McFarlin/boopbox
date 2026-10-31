@@ -996,8 +996,18 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   ok(js(rows) === js([{ scene: 0, bars: 4, times: 2 }, { scene: 1, bars: 8, times: 1 }, { scene: 0, bars: 4, times: 1 }]) && ARR.expand(rows).length === 4,
     "song: rows (a section n times) <-> entries");
   const enc = ARR.encode(sb, { loop: true, entries: ARR.expand(rows) });
-  ok(js(ARR.decode(enc)) === js({ loop: true, entries: ARR.expand(rows) }) && enc.subarray(0, 48).every((v, i) => v === sb[i]) && enc.subarray(84).every((v, i) => v === sb[84 + i]),
+  ok(js(ARR.decode(enc)) === js({ loop: true, entries: ARR.expand(rows), region: null }) && enc.subarray(0, 48).every((v, i) => v === sb[i]) && enc.subarray(84).every((v, i) => v === sb[84 + i]),
     "song: encode keeps the rest of the settings");
+  {   /* (BoopBox) the loop region in the two reserved bytes: arranger.h arr_loop_first / arr_loop_end */
+    const ah0 = readFileSync(join(HERE, "../firmware/src/arranger.h"), "utf8");
+    const rg = ARR.encode(sb, { loop: true, entries: ARR.expand(rows), region: { first: 1, end: 3 } });
+    const kept = ARR.encode(rg, ARR.decode(rg));                       /* (read and sent again: kept, not zeroed) */
+    const out = ARR.encode(sb, { loop: true, entries: ARR.expand(rows), region: { first: 2, end: 5 } });   /* (past the 4 entries: none) */
+    ok(rg[ARR.OFF + 2] === 1 && rg[ARR.OFF + 3] === 3 && js(ARR.decode(rg).region) === js({ first: 1, end: 3 }) && kept[ARR.OFF + 2] === 1 && kept[ARR.OFF + 3] === 3
+      && out[ARR.OFF + 2] === 0 && out[ARR.OFF + 3] === 0 && !ARR.regionOk({ first: 2, end: 2 }, 4) && ARR.regionOk({ first: 0, end: 4 }, 4)
+      && /c->reserved\[1\] && c->reserved\[0\] < c->reserved\[1\] && c->reserved\[1\] <= c->count \? c->reserved\[0\] : 0u/.test(ah0),
+      "song: the loop region (reserved[0] first, reserved[1] end) read, kept when sent again, dropped when it no longer fits (== arranger.h)");
+  }
   ok(!ARR.valid({ entries: [] }) && !ARR.valid({ entries: Array(17).fill({ scene: 0, bars: 1 }) }) && !ARR.valid({ entries: [{ scene: 4, bars: 1 }] })
     && !ARR.valid({ entries: [{ scene: 0, bars: 65 }] }) && ARR.valid({ entries: Array(16).fill({ scene: 3, bars: 64 }) }), "song: valid == arranger.h arr_valid (1..16 entries, A..D, 1..64 bars)");
   const pc = readFileSync(join(HERE, "../firmware/src/project.c"), "utf8"), ah = readFileSync(join(HERE, "../firmware/src/arranger.h"), "utf8");
@@ -1023,7 +1033,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   const rc3 = await put1(ARR.encode(cur, { loop: false, entries: [{ scene: 1, bars: 1 }] }));
   const rc4 = await put1(now);                                 /* the same order while playing: fine */
   m.sim.play(false);
-  ok(ARR.ok(cur) && rc1 === 0 && js(ARR.decode(now)) === js({ loop: true, entries: [{ scene: 2, bars: 8 }, { scene: 3, bars: 2 }] }) && rc2 === 2 && rc3 === 3 && rc4 === 0
+  ok(ARR.ok(cur) && rc1 === 0 && js(ARR.decode(now)) === js({ loop: true, entries: [{ scene: 2, bars: 8 }, { scene: 3, bars: 2 }], region: null }) && rc2 === 2 && rc3 === 3 && rc4 === 0
     && js(ARR.decode(await get1())) === js(ARR.decode(now)), "song: mock: read, send (rc 0), a bad one (rc 2), a new one while playing (rc 3)");
   done();
   /* the page */

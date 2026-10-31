@@ -1104,6 +1104,8 @@
           <p class="bad" id="songempty" data-t="songEmpty" hidden></p>
           <p class="bar"><button type="button" id="songadd" data-t="songAdd"></button> <span class="dim" id="songsum"></span></p>
           <p class="bar"><span data-t="songLoop"></span> <span class="seg" id="songloop"><button type="button" data-v="0" data-t="songLoopOff"></button><button type="button" data-v="1" data-t="songLoopOn"></button></span></p>
+          <p class="bar"><span data-t="songRegion"></span> <select id="songrf" aria-label="from"></select> – <select id="songre" aria-label="to"></select>
+            <span class="dim" id="songrhint"></span></p>
           <p class="bar"><button type="button" id="songread" data-t="songRead" data-ic="control_arrow_loop"></button>
             <button type="button" id="songsend" data-t="songSend" data-ic="symbol_upload"></button></p>
           <p class="bar"><button type="button" id="songexp" data-t="sfSave" data-ic="symbol_download"></button>
@@ -4440,12 +4442,16 @@ const ARR = {
   decode(b) {
     const count = b[ARR.OFF], loop = b[ARR.OFF + 1], entries = [];
     for (let i = 0; i < Math.min(count, ARR.STEPS); i++) entries.push({ scene: b[ARR.OFF + 4 + 2 * i], bars: b[ARR.OFF + 5 + 2 * i] });
-    return { loop: loop === 1, entries };
+    const region = { first: b[ARR.OFF + 2], end: b[ARR.OFF + 3] };
+    return { loop: loop === 1, entries, region: ARR.regionOk(region, entries.length) ? region : null };
   },
+  /* (BoopBox) the loop region: the song loops from entry `first` to entry `end` - 1 (arranger.h arr_loop_first / end:
+     the two reserved bytes; 0, 0 = the whole song). Kept only while it fits the entries */
+  regionOk: (r, count) => !!r && r.end > 0 && r.first < r.end && r.end <= count,
   /* the settings bytes with this song order (the rest kept as it was) */
   encode(b, song) {
-    const o = Uint8Array.from(b), e = song.entries;
-    o[ARR.OFF] = e.length; o[ARR.OFF + 1] = song.loop ? 1 : 0; o[ARR.OFF + 2] = o[ARR.OFF + 3] = 0;
+    const o = Uint8Array.from(b), e = song.entries, r = ARR.regionOk(song.region, e.length) ? song.region : null;
+    o[ARR.OFF] = e.length; o[ARR.OFF + 1] = song.loop ? 1 : 0; o[ARR.OFF + 2] = r ? r.first : 0; o[ARR.OFF + 3] = r ? r.end : 0;
     for (let i = 0; i < ARR.STEPS; i++) {
       o[ARR.OFF + 4 + 2 * i] = i < e.length ? e[i].scene : i % 4;
       o[ARR.OFF + 5 + 2 * i] = i < e.length ? e[i].bars : 4;
@@ -5364,6 +5370,9 @@ const TEXT = {
     songOld: "この FM-1 のファームウェアではソングを読めません（SLOOP 2.5 以降）。",
     songBad: "このソングは送れません（16 項目、1〜64 小節まで）", songRefused: "ソングを止めてから送ってください",
     songSent: "ソングを FM-1 に送りました",
+    songRegion: "ループするエントリ", songRegionAll: "すべて（ソング全体）",
+    songRegionOn: "範囲の最後まで再生し、範囲の最初に戻ります",
+    songRegionOff: "終わりを「最初に戻る」にすると使われます",
     tabPatterns: "パターン",
     patTitle: "パターン",
     patHelp: "FM-1 の作業中のプロジェクト：各トラックの 8 つのパターン、チェーン、パターンのステップ・コンポーネント、ソングのコード進行。読み込んでここで変更し、「送る」と FM-1 がすぐに読み込みます（先にソングを止めてください）。送るまで FM-1 は変わりません。",
@@ -5759,6 +5768,9 @@ const TEXT = {
     songOld: "This FM-1's firmware cannot share its song (SLOOP 2.5 or later).",
     songBad: "This song cannot be sent (16 entries, 1–64 bars each)", songRefused: "Stop the song first, then send",
     songSent: "Song sent to the FM-1",
+    songRegion: "Loop the entries", songRegionAll: "all (the whole song)",
+    songRegionOn: "the song plays to the end of the region, then from its start again",
+    songRegionOff: "used when the end is set to start again",
     tabPatterns: "Patterns",
     patTitle: "Patterns",
     patHelp: "The FM-1's working project: each track's eight patterns, its chain, a pattern's step components, and the song's chord progression. Read it, change it here, then Send: the FM-1 loads it at once (stop the song first). Nothing changes on the FM-1 until you send.",
@@ -7981,12 +7993,12 @@ async function readSong() {
   }
   if (!ARR.ok(data)) { Object.assign(SG, { rows: null, err: "songOld" }); renderSong(); return; }
   const song = ARR.decode(data);
-  Object.assign(SG, { bytes: data, rows: ARR.group(song.entries), loop: song.loop, err: "", dirty: false });
+  Object.assign(SG, { bytes: data, rows: ARR.group(song.entries), loop: song.loop, region: song.region, err: "", dirty: false });
   renderSong();
 }
 async function sendSong() {
   if (!dev || !SG.rows) return;
-  const song = { loop: SG.loop, entries: ARR.expand(SG.rows) };
+  const song = { loop: SG.loop, entries: ARR.expand(SG.rows), region: SG.region };
   if (!ARR.valid(song)) { sayK("songBad"); return; }
   const d = ARR.encode(SG.bytes, song);
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(1, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
@@ -8033,6 +8045,15 @@ function renderSong() {
   $("songsend").disabled = n > ARR.STEPS || !n;
   $("songsend").classList.toggle("pri", SG.dirty);
   for (const b of $("songloop").children) b.setAttribute("aria-pressed", (b.dataset.v === "1") === SG.loop ? "true" : "false");
+  /* (BoopBox) the loop region, in entries (a row played n times is n entries) */
+  if (SG.region && !ARR.regionOk(SG.region, n)) SG.region = null;
+  const opts = (sel, from, lab) => { sel.replaceChildren(...lab, ...Array.from({ length: n }, (_, k) => el("option", { value: k, text: String(k + 1), disabled: k < from }))); };
+  opts($("songrf"), 0, [el("option", { value: -1, text: t("songRegionAll") })]);
+  opts($("songre"), SG.region ? SG.region.first : 0, []);
+  $("songrf").value = String(SG.region ? SG.region.first : -1);
+  $("songre").value = String(SG.region ? SG.region.end - 1 : Math.max(0, n - 1));
+  $("songre").disabled = !SG.region;
+  $("songrhint").textContent = SG.region ? t(SG.loop ? "songRegionOn" : "songRegionOff") : "";
   $("songempty").hidden = !SG.rows.some((r) => dev.slotUsed[r.scene] === false);
 }
 $("songadd").addEventListener("click", () => songEdit(() => {
@@ -8044,6 +8065,12 @@ $("songsend").addEventListener("click", () => op(sendSong));
 $("songexp").addEventListener("click", () => { if (dev) songExport(); });         /* (2.7) a song as one file */
 $("songimp").addEventListener("click", () => { if (dev) $("sf-file").click(); });
 for (const b of $("songloop").children) b.addEventListener("click", () => songEdit(() => { SG.loop = b.dataset.v === "1"; }));
+$("songrf").addEventListener("change", () => songEdit(() => {
+  const f = +$("songrf").value, n = songCount();
+  SG.region = f < 0 ? null : { first: f, end: Math.max(f + 1, SG.region ? SG.region.end : n) };
+  if (SG.region && SG.region.end > n) SG.region.end = n;
+}));
+$("songre").addEventListener("change", () => songEdit(() => { if (SG.region) SG.region.end = Math.max(SG.region.first + 1, +$("songre").value + 1); }));
 
 /* ---- BoopBox: the Patterns page. The working project (backup object 0, format 7: PROJ7) read from the FM-1, its
    patterns 1..8 of each track, the chains, a pattern's step components, direction and seed, the tracks' FOLLOW and the
