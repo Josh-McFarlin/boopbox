@@ -838,21 +838,13 @@ int main(int argc, char **argv)
                 d.hi = 0;
                 d.crc = st_crc32(&d, 36u);
                 ok &= theme_check(&d);                /* dark values, a black accent on a light background: readable */
-                {   /* the first beta's THM1 (36 bytes, its CRC where hi is): taken, with a white accent (black on a
-                     * light background), as a THM2 */
+                {   /* SLOOP 2.7 first beta's THM1 (36 bytes, its CRC where hi is): not a theme */
                     theme_t o = d;
                     uint32_t c1;
-                    o.magic = THEME_MAGIC1;
+                    o.magic = 0x314D4854u;
                     c1 = st_crc32(&o, 32u);
                     o.hi = (uint16_t)c1, o.rsv = (uint16_t)(c1 >> 16), o.crc = 0xFFFFFFFFu;
-                    ok &= theme_check(&o) && o.magic == THEME_MAGIC && o.hi == 0u && o.c[4] == d.c[4];
-                    o = th;
-                    o.magic = THEME_MAGIC1;
-                    c1 = st_crc32(&o, 32u);
-                    o.hi = (uint16_t)c1, o.rsv = (uint16_t)(c1 >> 16);
-                    ok &= theme_check(&o) && o.hi == 0xFFFFu && o.rsv == 0u && theme_check(&o);
-                    o.magic = THEME_MAGIC1, o.name[1] ^= 1;
-                    ok &= !theme_check(&o);           /* (its CRC) */
+                    ok &= !theme_check(&o);
                 }
                 d = th;
                 d.name[0] = 7;

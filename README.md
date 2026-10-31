@@ -15,11 +15,11 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 ---
 
-> **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. Projects, backups, songs, themes and presets from SLOOP open in BoopBox as they are, and the installer updates an FM-1 that runs SLOOP or Felucca. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
+> **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. The installer updates an FM-1 that runs SLOOP or Felucca, but BoopBox has its own eight-track project format: projects and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples and themes carry over. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 1.0.0, the first BoopBox release, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Your projects, presets, samples and settings are kept when you update, and you can go back at any time (see [Going back](#going-back)).
+> **Status:** 1.0.0, the first BoopBox release, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
@@ -47,8 +47,9 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
   *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
-  they are.
+  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
+  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
+  bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
   tracks 5–8 (GLO → MIDI 4).
@@ -201,7 +202,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 
 ### Going back
 
-- **To an earlier BoopBox:** install the `.fwsc` of its [release](../../releases) (for example [2.3](../../releases/tag/v2.3)). Your samples, user presets and settings stay. **Projects saved by 2.4** (format FUN5: locks, nudges, fills) **do not open in 2.3 or older** — 2.3 sees them as empty, and its autosave can write over the music in progress; a 2.4 backup restores into 2.4 only. **Save a backup before you go back**, and restore it once you are on 2.4 again.
+- **To SLOOP:** install SLOOP's `.fwsc`. Your samples, user presets and settings stay, but SLOOP does not open BoopBox projects: its sections show as empty, and its autosave can write over the music in progress. **Save a backup with the BoopBox editor before you go back**, and restore it once you are on BoopBox again.
 - **To the official firmware:** on the installer page, open **Return to the official firmware (V15)**. Save a backup with the editor first, download FM-1 V15 from m-vave.com and select its `FM-1.fwsc` — only that exact file is accepted. M-VAVE's updater, M-UPGRADE, works too. To come back, install BoopBox again and restore your backup.
 
 ### Rescue

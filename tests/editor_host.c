@@ -52,6 +52,7 @@ static uint32_t scope_w;
 #include "../firmware/src/ui.c"
 #include "../firmware/src/ui_song.c"
 #include "../firmware/src/ui_studio.c"
+#include "../firmware/src/ui_pats.c"         /* PATTERNS and CHORDS (as felucca.c) */
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_draw.c"
 #include "../firmware/src/ui_vis.c"
@@ -246,11 +247,11 @@ static int params_check(char *why, size_t nw)
     for (k = 0; k < NTRK; k++) {
         const track_t *t = &trk[k];
         for (i = 0; i < P_COUNT; i++) {
-            const param_desc_t *d = k == TRK_DRUM && i == P_E0 ? &DRUM_KIT_DESC :
+            const param_desc_t *d = is_drum(t) && i == P_E0 ? &DRUM_KIT_DESC :
                                     i >= P_E0 && i <= P_E7 ? &ENGINES[t->eng_req % NENGINES]->edit[i - P_E0] : &TP[i];
-            if (k == TRK_DRUM && i > P_E0 && i <= P_E7)
-                continue;                                   /* (the drum track has no engine values) */
-            if (k != TRK_DRUM && i >= P_E0 && t->engine != t->eng_req)
+            if (is_drum(t) && i > P_E0 && i <= P_E7)
+                continue;                                   /* (a drum track has no engine values) */
+            if (!is_drum(t) && i >= P_E0 && t->engine != t->eng_req)
                 continue;                                   /* (an engine switch fading: the values are the next one's) */
             if (t->p[i] < d->min || t->p[i] > d->max) {
                 snprintf(why, nw, "trk %u p[%u] (%s) = %d outside %d..%d (eng %u)", k, i, d->label, t->p[i], d->min, d->max,
@@ -264,7 +265,7 @@ static int params_check(char *why, size_t nw)
             const param_desc_t *d;
             if (l->step == LOCK_FREE) continue;
             if (l->step >= NSTEP || l->param >= P_COUNT) { snprintf(why, nw, "trk %u lock %u step %u param %u", k, i, l->step, l->param); return 0; }
-            d = k == TRK_DRUM && l->param == P_E0 ? &DRUM_KIT_DESC :
+            d = is_drum(t) && l->param == P_E0 ? &DRUM_KIT_DESC :
                 l->param >= P_E0 && l->param <= P_E7 ? 0 : &TP[l->param];
             if (d && (l->val < d->min || l->val > d->max)) {   /* (an engine value: clamped when it plays, seq.c lock_write) */
                 snprintf(why, nw, "trk %u lock %u (step %u, %s) = %d outside %d..%d", k, i, l->step, d->label, l->val, d->min, d->max);

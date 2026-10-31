@@ -79,7 +79,7 @@ Each measured by building the final tree with that feature's entry points made e
 | Step components (engine and COMP strip) | 3,492 |
 | The CHORDS screen alone | 3,208 |
 | The PATTERNS screen | 3,104 |
-| The format 6 fallback writer | 1,104 |
+| The format 6 fallback writer (removed in 1.0.0) | 1,104 |
 | The sheet's LOCKS strip | 828 |
 | SAVE > TOOLS > KIND | 432 |
 | FX > PERF Q | 164 |
