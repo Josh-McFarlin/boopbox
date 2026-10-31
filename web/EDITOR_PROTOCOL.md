@@ -488,6 +488,12 @@ Tracks 1..8 are reached by `TRACK`, `TRACK_MIX`, `TRACK_DUMP`, `TRACK_STEP`, `TR
 TOOLS > KIND changes it), so an editor never takes the last track as *the* drum track. `TRACK` ends with the solo mask
 in two bytes (tracks 1..7, then track 8).
 
+**Patterns, chains, step components, the progression** have no command of their own: the editor's Patterns page reads
+backup object 0 (the working project, format 7: `docs/groovebox-storage.md`), changes it and writes it back whole with
+`BK_PUT` (rc 3 while the song plays; the commit loads it at once, as `project.c project_restore`). Its codec
+(`editor.html` PROJ7) writes the bytes the firmware writes: `tests/proj7_tool.c` captures and loads with the
+firmware's own code and `web/test_web.mjs` compares them.
+
 ## Notes for the editor
 
 - **One request at a time.** Wait for the reply, about 10–50 ms, before sending the next.

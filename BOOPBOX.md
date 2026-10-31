@@ -10,6 +10,16 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
 
 > **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide: every button, key combination, layer, page and editor page, with a [one-page cheat sheet](GUIDE.md#26-cheat-sheet).
 
+### Since 1.0.0 (not yet released)
+
+- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
+  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
+  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
+- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
+  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
+  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
+- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
+
 ### New in 1.0.0
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
@@ -33,7 +43,7 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them).
+  step components or the chord progression (backups keep them). *Lifted since 1.0.0: see [Since 1.0.0](#since-100-not-yet-released).*
 
 **Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
 Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
@@ -399,7 +409,8 @@ It looks like the FM-1 (its black screen, the four track colours, its own Termin
 
 - **Sound** — every parameter of the selected track, as on the device: a card per button (ENV, LFO, EDIT, VOICE, FX, SEL, ARP), its pages as rows of four knobs, one colour per knob. Drag a value up or down like a knob (Shift: fine), or use its bar (click, then the wheel or the arrow keys; double-click: the default). The engines and presets, files; on an FM6 track the **FM6** panel (the patch, the bank, SysEx import and export).
 - **Sequencer** — the pattern settings and the steps, as the device's tiles (click one; the **step list** below takes typed note names). On the **drum track**: a grid of the 16 sounds × the steps, with the **kit**. Choose a **level** (GHOST, SOFT, NORM, HARD) and a **roll** (x1–x4), then click: a hit; click it again (same level and roll): cleared; Shift+click: one level louder. Click a step (a cell of the grid, a drum column): its **nudge** and its **parameter locks** (add one, pick the parameter, set or delete it) below the grid; a step with either carries a mark.
-- **Tracks** — the four channel strips (level, pan, mute; SOLO and REC shown as on the device).
+- **Patterns** — each track's eight patterns (play, copy, clear), its chain and FOLLOW, a pattern's step components, direction and seed, and the song's chord progression: read from the FM-1, changed, sent back (the song stopped).
+- **Tracks** — the eight channel strips (level, pan, mute; SOLO and REC shown as on the device).
 - **Library**, **Samples** (with CHOP), **Drum kit** (your own kits, [above](#your-own-drum-kits-kit-usr1usr4-usr34)), **Projects**, **Settings** (GLOBAL, **MASTER**: DUST, DUCK, FILT, ROLL; DRUMS).
 - **Backup** (Projects tab): **Save a backup** writes everything on the FM-1 to one file (BoopBox-backup-DATE.json): the music you are working on, the sections A–D, the 32 user presets, the FM6 bank, the samples USR1–USR4 (your drum kits with them) and the settings (colours, calibration, the song order, the lights, SYNC, MIDI OUT). **Restore from a file** puts it all back — what is on the FM-1 is replaced. A damaged file is refused before anything is written, every object is checked as a load checks it, and each one is written as a save writes it (a cut-off restore never leaves half an object). Stop the song (PLAY) before restoring.
 

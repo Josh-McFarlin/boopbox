@@ -32,10 +32,13 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
   boot logo (the logo is text), and the top recording of the SAMPLE engine's BASS set (notes 70 and up of UP BASS and
   DEEP BASS are played from the F# recording; every note below 70 is as before). See `docs/groovebox-performance.md`.
 
-- **Web editor:** its LIVE page and track list show 4 tracks (the protocol's frame sizes are unchanged). Its song
-  page saves the song without the loop region. It was not extended for the new features: it has no editing of step
-  components, patterns 2..8 or the chord progression (the FM-1 has; the editor's backup keeps them, because it copies
-  whole project objects).
+- **Web editor:** it shows all eight tracks (the track bar, the Tracks page, the LIVE page: protocol v13 adds tracks 5..8
+  to LIVE's state and a solo of any track, 32 bytes of flash). Its **Patterns** page edits patterns 1..8, chains, FOLLOW,
+  step components, direction and seed, and the chord progression, by reading the working project (backup object 0,
+  format 7), changing it in the browser (`web/editor.html` PROJ7, checked against the firmware's own capture and load by
+  `tests/proj7_tool.c`) and sending it back whole: no new command, and only while the song is stopped (the FM-1 loads
+  it at once). The Song page keeps and edits the loop region. The Patterns page edits the working project only: a
+  section A..D is edited by loading it on the FM-1, editing, and saving it into its section again.
 - **Screens** show 4 tracks at a time: the bank (1-4 or 5-8) of the selected track.
 - **Voices:** the 8 synth tracks share 8 sounding voices; 3 big engines (GRAIN, DRAWBAR, FM6, PHYS) at once; 4
   tracks with STUT at once.
