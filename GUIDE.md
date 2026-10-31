@@ -18,7 +18,7 @@ BoopBox is a free, open-source (GPL-3.0) firmware for the M-VAVE FM-1, based on 
 | **FX + KNOB 2** | hold FX, and while it is held turn KNOB 2 |
 | **SEQ + step + KNOB 4** | hold SEQ, hold a step key, turn KNOB 4 |
 | **key 1 … key 16** | the 16 white keys, from the lowest (**F3** = key 1) to the highest (**G5** = key 16) |
-| **GO** | a value that does something (LOAD, SAVE, NEW…): turn it one click, *AGAIN: …* shows, turn it one more click within about 1.5 s to do it |
+| **GO** | a value that does something (LOAD, SAVE, NEW…): turn it one click, *TURN AGAIN: …* shows, turn it one more click within about 1.5 s to do it |
 
 The 16 white keys, numbered:
 
@@ -113,7 +113,7 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
   bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
-  tracks 5–8 (GLO → MIDI 4).
+  tracks 5–8 (MIDI 2).
 - **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
   theme), your own theme's too.
 - **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
@@ -357,7 +357,7 @@ BoopBox records live and layers every pass on top of the last (overdub). Notes g
 
 **Over held notes (2.7).** On a POLY track, a note you record while held notes of the pattern ring (a pad tied over the bar) no longer cuts them: they go on under it, and your note ends where you let it go. Up to 4 notes sound at once on a track (a fifth makes the oldest held one end there). Entering steps by hand (SEQ + key) still replaces what plays, so a long note can be cut on purpose. On SLOOP 2.6 such a pattern plays the held notes again where a note was laid over them.
 
-**With a MIDI keyboard:** REC records the **selected** track. A keyboard on channel 1, 2 or 3 always plays track 1, 2 or 3 (2.6: the channels of GLO → MIDI), whatever track is selected: set it to channel 4 (or 4–16) to play and record the selected track. From 2.6, if your keyboard plays another track than the one recording, the screen says *MIDI PLAYS TRACK n* (once a take).
+**With a MIDI keyboard:** REC records the **selected** track. A keyboard on channel 1, 2 or 3 always plays track 1, 2 or 3 (2.6: the channels of MIDI), whatever track is selected: set it to channel 4 (or 4–16) to play and record the selected track. From 2.6, if your keyboard plays another track than the one recording, the screen says *MIDI PLAYS TRACK n* (once a take).
 
 ### What REC does
 
@@ -542,7 +542,7 @@ There are three ways to enter steps:
 
 | NOTES page | Does |
 | --- | --- |
-| **keys** | the keys pressed together become the step under edit (POLY: up to 4 notes; MONO, LEG and UNI: the last one); in chord mode a key writes its whole chord, CHORD+ changes included; let go of all keys and it moves on to the next step (2.7.1: MENU → SEQ → **STEP ADVANCE OFF**: it stays, and the next keys write the same step again, for a chord tried twice) · **a MIDI keyboard** too (2.6): the notes it plays together on the selected track (the track its channel plays, GLO → MIDI) become the step, as they sound; on another track's channel, stopped, the screen says *MIDI PLAYS TRACK n* (and when you record: see REC) |
+| **keys** | the keys pressed together become the step under edit (POLY: up to 4 notes; MONO, LEG and UNI: the last one); in chord mode a key writes its whole chord, CHORD+ changes included; let go of all keys and it moves on to the next step (2.7.1: MENU → SEQ → **STEP ADVANCE OFF**: it stays, and the next keys write the same step again, for a chord tried twice) · **a MIDI keyboard** too (2.6): the notes it plays together on the selected track (the track its channel plays, MIDI) become the step, as they sound; on another track's channel, stopped, the screen says *MIDI PLAYS TRACK n* (and when you record: see REC) |
 | KNOB 1 **NOTE** | goes from note to note: a chord's notes one by one, then the next step (the empty ones too, to put a note there); the TIEs of a note are its length, not stops |
 | KNOB 2 **PITCH** | that note's pitch (a chord's others stay); an empty step gets your last note |
 | KNOB 3 **LEN** | how many steps the note lasts: longer turns the steps after it into TIEs, shorter turns its last TIEs back into RESTs. (2.8.3) On a POLY track it goes on **under the notes after it**: a long bass under a melody, each note keeping its own length (up to 4 notes a step: *STEP FULL: 4 NOTES*). It stops at the pattern's end (*END OF PATTERN*), at the same pitch played again or a step with ratchets or a slide (*NOTE AHEAD*), and on a MONO, LEGATO or UNISON sound, which plays one note at a time (*MONO: SET VOICE POLY*: VOICE page, VCE = POLY) |
@@ -691,7 +691,7 @@ A muted track fades out in a few milliseconds and plays no new notes; its patter
 
 <a id="favourites"></a>**Favourites (2.7).** On the PRESETS page, turn KNOB 4 right: the sound is added to your favourites (*FAV ADDED*), up to 16, which come first in the PRESETS list, tagged FAV, in the order you added them; the PRESETS knob reaches them in a click or two from anywhere on TRACKS or HOME. KNOB 4 left removes it. A user preset can be a favourite too. They are a setting of the FM-1, kept through power-off (not in a project, and not in an editor backup). MIDI Program Change still counts the list without them.
 
-GO: one click shows *AGAIN: SAVE* (or LOAD…), a second click within about 1.5 s does it. Presets and sections are written to flash only while the song is stopped.
+GO: one click shows *TURN AGAIN: SAVE* (or LOAD…), a second click within about 1.5 s does it. Presets and sections are written to flash only while the song is stopped.
 
 ---
 
@@ -743,7 +743,7 @@ The song's settings can only be edited while it is stopped (*STOP FIRST*). An em
 | **Pages** | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO, SAVE | four colour-coded values with a graph (ENV, LFO, ARP, SEL, FX, SLICER…), or the four values in large type placed as the knobs are (1 2 / 3 4) |
 | **Menu** | hold **HOME** | the settings of the FM-1 in four sections; see [The HOME menu](#20-the-home-menu-and-the-lights) |
 
-The **title line** of every screen also carries short messages: *KEY D*, *ERASED*, *AGAIN: SAVE*, *NEXT: B*, *chain A B B C*, *lock flt 12*…
+The **title line** of every screen also carries short messages: *KEY D*, *ERASED*, *TURN AGAIN: SAVE*, *TRACK 3: LOFI FLUTE* (ALGORITHM on a page, 1.2.0), *NEXT: B*, *chain A B B C*, *lock flt 12*…
 
 The lettering (2.6) is Terminus **Bold**, all in **capitals**: thicker strokes, easier to read on the small screen at arm's length; the layout is the same as before (same 8 × 16 cell).
 
@@ -761,10 +761,9 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **LFO 2** (2.6) | SYNC: OFF, 4BAR, 2BAR, 1BAR, 1/2, 1/4, 1/8, 8T, 1/16, 16T, 1/32 | TRIG: NOTE / FREE | POL: BI / UNI | — |
 | | **LFO DEST** | PIT: vibrato | FLT: filter wobble | SHP: shape | AMP: tremolo |
 | **FX** | **FX** (sends) | DST drive | CHO chorus send | DLY delay send | REV reverb send |
-| | **FILTER** | FILT: one-knob filter of the track — left LP, right HP, centre OFF (the drum track too; 2.7.2: its page no longer greyed) | — | — | — |
+| | **FILTER** | FILT: one-knob filter of the track — left LP, right HP, centre OFF (the drum track too; 2.7.2: its page no longer greyed) | MIX: the INSERT's dry / wet (1.2.0; INSERT 2 before) | — | — |
 | | **SLICER** | SLCR: OFF, GATE, STUT (stutter) | PAT: pattern 1–16 | RATE: 1/8, 1/16, 1/32, 8T, 16T, 32T | DEPTH |
 | | **INSERT** (2.6) | INSRT: OFF, SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR | A | B | C (what A B C are depends on the type: see [Per track](#per-track)) |
-| | **INSERT 2** (2.6) | MIX: dry / wet | — | — | — |
 | | **DLY** (global) | TIME: 1/4, 1/8, 1/16, 1/32, 8T, 16T, 1/8D, 1/16D, 1/4D (2.6; at 60 BPM and below it stops at 1.49 s) | FDBK feedback | COLR colour (tone of the repeats) | MIX |
 | | **REV/CHO** (global) | SIZE reverb size | DAMP reverb damping | CRT chorus rate | CDP chorus depth |
 | **SEL** | **SEL** | ROOT (the track's key) | SCL: the track's scale (SEL + KNOB 2 sets all three) | QNT keys: OFF, SNAP, WHITE | CHORD: OFF, TRIAD, 7TH, 9TH, SUS4, POWER |
@@ -783,13 +782,14 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **SONG** | the SONG screen | | | |
 | **GLO** | **GLOBAL** | BPM 40–240 | SWING (all tracks) | CLICK: OFF, REC, ON | TUNE ±50 cents |
 | | **MASTER** | DUST | DUCK | FILT (DJ filter) | ROLL (note-repeat rate) |
-| | **SYSTEM** | OUT (MIDI out): KEYS / SEQ (also on MIDI 2) | SYNC: INT, USB, TRS | IN: NOTES / CLOCK / CH 1–16 (also on MIDI 2) | CPU load (USB link state when no computer is connected) |
-| | **DRUMS** | CH4: the drum track's MIDI channel (OFF, 1–16, default 10; the same setting as GLO → MIDI → CH4; 2.6: a setting of the FM-1) | LVL drum level | REV drum reverb | DLY drum delay (2.5): the drums into the tempo delay (FX → DLY sets its time, feedback and tone), saved with the project |
+| | **DRUMS** | LVL drum level | REV drum reverb | DLY drum delay | — (1.2.0: its MIDI channel on MIDI → CH4 only) |
 | | **TEXTURE** (2.6) | SRC: OFF, VINYL, TAPE, RAIN, WIND, RADIO, ROOM, USR1–4 | LEVEL | TONE (LP ← OFF → HP) | MOVE |
 | | **TEXTURE 2** (2.6) | RATE: 1–16 bars | WHEN: PLAY / ALWAYS | DUCK: OFF / ON | — |
-| | **MIDI** (2.6) | CH1: track 1's MIDI channel (OFF, 1–16) | CH2: track 2's | CH3: track 3's | CH4: the drum track's (default 10) |
-| | **MIDI 2** (2.6) | IN: NOTES / CLOCK / CH 1–16 | OTHER: the channels no track has: SEL (the selected track) / OFF | OUT: KEYS / SEQ | BEND: the pitch bend's range, 1–12 semitones |
-| | **MIDI 3** (2.7) | FX CH: the punch-in effects' MIDI channel (OFF, 1–16) | DR MAP: how MIDI notes play the drums (GM / 1-16) | REMOTE: the buttons over MIDI (OFF, 1–16) | CLOCK: OUT, the MIDI clock and START / STOP out on USB (OFF / OUT) |
+| **MIDI** (1.2.0: hold HOME, SEQ, OCT+ on MIDI SETTINGS; GLO's pages before) | **MIDI** | CH1: track 1's MIDI channel (OFF, 1–16) | CH2: track 2's | CH3: track 3's | CH4: the drum track's (default 10) |
+| | **MIDI 2** | CH5: track 5's | CH6 | CH7 | CH8 |
+| | **MIDI 3** | IN: NOTES / CLOCK / CH 1–16 | OTHER: the channels no track has: SEL (the selected track) / OFF | OUT: KEYS / SEQ | BEND: the pitch bend's range, 1–12 semitones |
+| | **MIDI 4** | FX CH: the punch-in effects' MIDI channel (OFF, 1–16) | DR MAP: how MIDI notes play the drums (GM / 1-16) | REMOTE: the buttons over MIDI (OFF, 1–16) | CLOCK: OUT, the MIDI clock and START / STOP |
+| | **SYSTEM** | SYNC: INT, USB, TRS | CPU load (USB link state when no computer is connected) | — | — |
 | **SAVE** | **PRESETS** | the group (engine / kind) | the sound | VIEW: ENG / KIND | FAV |
 | | **USER** | SLOT 1–32 | LOAD (GO) | ERASE (GO) | SAVE (GO) |
 | | **PROJECT** | SLOT 1–4 | ERASE (GO) | LOAD (GO) | SAVE (GO) |
@@ -797,7 +797,8 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 
 Notes:
 
-- **Global** pages (DLY, REV/CHO, GLOBAL, MASTER, SYSTEM, DRUMS) are the same whatever track is selected.
+- **Global** pages (DLY, REV/CHO, GLOBAL, MASTER, DRUMS, TEXTURE and the MIDI pages) are the same whatever track is selected.
+- **1.2.0:** a page of values shows its four values once, large, in the corners of their knobs (KNOB 1 top left … 4 bottom right); the bottom line names the page between the one before and the one after it.
 - **SYNC**, **MIDI** and **IN** are settings of the FM-1, kept when you load a project.
 - On the **drum track**, the pages that work are SLICER, TIMING and PLAY (SEQ), the PATTERNS and SONG screens and the global pages (SEQ opens the DRUMS screen in place of NOTES); its kit, level, reverb and pan are on the DRUMS kit page, and its filter is **FX + KNOB 4**.
 - FM6 tracks ignore the ENV page and ENV DEST (each operator has its own envelope).
@@ -917,7 +918,7 @@ On FX + KNOB 1–3, or GLO → MASTER:
 
 ### Punch-in effects
 
-**FX + white key**: the effect runs on the whole mix while the key is held and lets go cleanly when you release it. Loops and the gate are locked to the tempo and start on the grid. **Fade (2.8):** hold **FX**, then **SELECT** (shown top right) sets a fade-in and out for the punch-ins, 0 (off — instant, just an anti-click) to 15 (about 0.37 s): the effects ease in and out instead of snapping on and off. **Over MIDI (2.7):** set GLO → MIDI 3 → **FX CH**, and that channel's notes F3 … G5 play the same 27 effects (see [the MIDI settings](#all-the-midi-settings-glo--midi-midi-2-26-and-midi-3-27)).
+**FX + white key**: the effect runs on the whole mix while the key is held and lets go cleanly when you release it. Loops and the gate are locked to the tempo and start on the grid. **Fade (2.8):** hold **FX**, then **SELECT** (shown top right) sets a fade-in and out for the punch-ins, 0 (off — instant, just an anti-click) to 15 (about 0.37 s): the effects ease in and out instead of snapping on and off. **Over MIDI (2.7):** set MIDI 4 → **FX CH**, and that channel's notes F3 … G5 play the same 27 effects (see [the MIDI settings](#all-the-midi-settings-glo--midi-midi-2-26-and-midi-3-27)).
 
 | Key | Effect | Key | Effect |
 | --- | --- | --- | --- |
@@ -961,7 +962,7 @@ The texture is saved with the project, and each song section (A–D) has its own
 - **FILTER** (FX → FILTER, or **FX + KNOB 4** for the selected track): one knob, left a low-pass, right a high-pass, centre off. It stays when you change the sound, can be locked on a step, and is saved with the project. Its **resonance** is set once for every track in HOME menu → AUDIO → **FILTER RESO** (0 clean … 10, 2.7.2). **(2.8) The drum track has it too:** FX → FILTER sweeps and shapes the whole kit, live.
 - **Sends** (FX page): DST drive, CHO chorus, DLY delay, REV reverb. The delay and the reverb / chorus settings are global (DLY and REV/CHO pages). The delay's TIME includes dotted 1/8 and 1/16.
 - **SLICER** (FX → SLICER): a tempo gate (GATE) or stutter (STUT), 16 patterns, 1/8 to 32T, with a depth.
-- **INSERT** (FX → INSERT and INSERT 2, 2.6, after Felucca 1.5): one effect on the track alone, right after its drive; the drum track has one too, on the whole kit and its sends. MIX sets dry / wet. A, B and C change with the type:
+- **INSERT** (FX → INSERT, and its MIX on FX → FILTER, 2.6, after Felucca 1.5): one effect on the track alone, right after its drive; the drum track has one too, on the whole kit and its sends. MIX sets dry / wet. A, B and C change with the type:
 
 | Type | A | B | C |
 | --- | --- | --- | --- |
@@ -1047,7 +1048,7 @@ If a button or knob does the wrong thing, HOME menu → SYSTEM → **HARDWARE CA
 
 Both work at once.
 
-### All the MIDI settings: GLO → MIDI, MIDI 2 (2.6) and MIDI 3 (2.7)
+### All the MIDI settings: MIDI, MIDI 2 (2.6) and MIDI 3 (2.7)
 
 Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**). They are settings of the FM-1: kept through power-off, not changed by a project, and in the web editor's backups.
 
@@ -1058,7 +1059,7 @@ Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**). They are s
 | **MIDI 3** (2.7): the punch-in effects, the drums, the buttons over MIDI, the clock out | **FX CH** | **DR MAP** | **REMOTE** | **CLOCK** |
 
 - **CH1–CH4:** OFF or 1–16. A track's channel plays it (notes, CCs, sustain, pitch bend, Program Change) and its keys and sequence go out on it. **OFF**: nothing in, nothing out for that track. Two tracks never share a channel: turn a channel onto one another track has and it goes on to the next free one, and the screen says whose it was (*CH 3 = TRACK 3*). Changing a channel ends whatever was still sounding on it, here and on the other gear. CH4 is also on GLO → DRUMS (the same setting).
-- **IN:** **NOTES** (notes, CCs and the clock: normal) · **CLOCK** (only the clock and START / CONTINUE / STOP; every note and CC ignored, except the REMOTE CCs when REMOTE is on) · **CH 1 … CH 16** (only that one channel, always on the selected track; CH1–CH4 and OTHER are set aside, the clock still followed). Opening GLO → MIDI while IN is not NOTES says so on the screen (*IN CH 5: SEL TRK ONLY*, *IN = CLOCK: NO NOTES*).
+- **IN:** **NOTES** (notes, CCs and the clock: normal) · **CLOCK** (only the clock and START / CONTINUE / STOP; every note and CC ignored, except the REMOTE CCs when REMOTE is on) · **CH 1 … CH 16** (only that one channel, always on the selected track; CH1–CH4 and OTHER are set aside, the clock still followed). Opening MIDI while IN is not NOTES says so on the screen (*IN CH 5: SEL TRK ONLY*, *IN = CLOCK: NO NOTES*).
 - **OTHER:** what a channel that no track has does: **SEL** plays the selected track (set your keyboard to channel 4 and it follows ALGORITHM) · **OFF** ignores it (a sequencer's channels for other gear on the same cable).
 - **OUT:** **KEYS** only what you play on the keys goes out · **SEQ** the sequencer, the arp and the rolls go out too.
 - **FX CH** (2.7): OFF (the default) or 1–16. On that channel the notes **F3 … G5** (MIDI 53–79) are the FM-1's 27 keys with **FX** held: a note held holds its [punch-in effect](#punch-in-effects), its release lets it go (white keys: effects 1–16, black keys: 17–27, as on the FM-1). A pad controller, a keyboard or a DAW can play and automate them. That channel only plays effects (choose one no track uses); it works with IN = NOTES or CH n, not with IN = CLOCK. A key of the FM-1 (FX + key) takes over at once.
@@ -1067,11 +1068,11 @@ Every MIDI setting is on these pages of GLO (tap GLO until **MIDI**). They are s
 - <a id="clock-out"></a>**CLOCK** (2.7): OFF (the default) or **OUT**. OUT, the FM-1 is the **clock master** on USB: it sends the MIDI clock (24 pulses a beat, at its tempo, also while stopped so the other gear knows the tempo), **START** when its sequencer starts (after a count-in, when it starts) and **STOP** when it stops. A DAW, a drum machine or another groovebox set to follow MIDI clock then plays in time with BoopBox and starts and stops with it. It works with SYNC = INT only: a FM-1 that follows a clock (SYNC USB or TRS) never sends one (no loop through a computer). The FM-1's TRS jack is an input: the clock goes out on USB. A setting of the FM-1, kept through power-off.
 - **BEND:** the pitch bend's range, 1–12 semitones (default 2).
 
-IN and OUT are also on GLO → SYSTEM, next to SYNC (the clock), where they were before 2.6.
+IN and OUT are also on SYSTEM, next to SYNC (the clock), where they were before 2.6.
 
 **Examples.** A keyboard on channel 1 plays track 1; select another track and play it from channel 4 (OTHER = SEL). An external sequencer with drums on 10, bass on 2, pad on 11, lead on 8: CH1 = 2, CH2 = 11, CH3 = 8, CH4 = 10, OTHER = OFF. A KeyStep Pro whose other channels drive other gear: IN = CH n, and that channel plays the selected track.
 
-### MIDI out, clock in (GLO → SYSTEM)
+### MIDI out, clock in (SYSTEM)
 
 | Knob | Setting | Choices |
 | --- | --- | --- |
@@ -1101,7 +1102,7 @@ The knobs of a MIDI controller set the sound (the standard CC map of Felucca 1.1
 | 74 | (2.7) the engine's own cutoff or brightness, dark to bright: ANALOG / SAMPLE CUT, TRIO CUT, PHASE DCW, LOFI / GRAIN TONE, FM6 MLVL, PHYS BRIT, NOISE FREQ. DIGITAL, VOICE, WHEEL and the drum track: the track's FILTER (64 off, lower a low-pass, higher a high-pass), as before |
 | 91 · 93 · 94 | the reverb, chorus and delay sends (on the drum channel 91 and 94 are GLO → DRUMS → REV and DLY) |
 
-**Sustain and pitch bend (2.6).** The **sustain pedal** (CC 64, on the track its channel plays): while it is down, a note you let go keeps sounding until the pedal comes up (the arp keeps it, a recording holds it as you hear it; a note played again meanwhile ends with its key). **Pitch bend** bends the track its channel plays, smoothly, by up to **BEND** semitones (GLO → MIDI 2: 1–12, default 2); the drum track ignores it. Other CCs (mod wheel…) are ignored, unless you map them with MIDI LEARN.
+**Sustain and pitch bend (2.6).** The **sustain pedal** (CC 64, on the track its channel plays): while it is down, a note you let go keeps sounding until the pedal comes up (the arp keeps it, a recording holds it as you hear it; a note played again meanwhile ends with its key). **Pitch bend** bends the track its channel plays, smoothly, by up to **BEND** semitones (MIDI 3: 1–12, default 2); the drum track ignores it. Other CCs (mod wheel…) are ignored, unless you map them with MIDI LEARN.
 
 **Program Change (2.6, after Felucca 1.5.1 and @renebohne's PR #179).** A Program Change on a track's channel loads its sound: on a synth track, number *n* is the *n*-th sound of the PRESETS list (0 the first: 808 BOOM; the 153 factory sounds by kind, then your user presets in order), on the drum channel kit *n*. A number past the end is ignored. The screen says *T2 PROG 5*. IN = CLOCK ignores it; IN = CH n sends it to the selected track. **(2.7.2) Bank Select (CC 0)** reaches the sounds past the first 128: send **CC 0** on the track's channel and it is latched for the next Program Change — bank 0 the first 128 of the PRESETS list, bank 1 the next 128, and so on (the rest of the factory sounds, then your user presets by slot). Send CC 0, then the Program Change.
 
@@ -1248,7 +1249,7 @@ with the mouse, a finger on a tablet or a phone, or the computer's keys. What it
 - **Punch-in effects**: the 27 effects in four groups (loops & time, filter & EQ, colour, movement). Hold a pad: the effect plays while
   you hold it, as FX + key. **Latch**: a tap turns it on, another tap (or another effect) off.
 - **Keys**: two octaves for tracks 1–3 (octave, velocity, the track's **arp** mode and **hold**), the 16 drum pads for the drum track
-  (GHOST, SOFT, NORM, HARD). They are real MIDI notes on the track's channel (GLO > MIDI), so they sound at once.
+  (GHOST, SOFT, NORM, HARD). They are real MIDI notes on the track's channel (MIDI), so they sound at once.
 - **Playlist**: your songs, one after the other. Export each song first (**Song & sections → Export this song**: the loop, the sections
   A–D and their order in one *.sloopsong* file), **add songs** here, and tap one (or **next song**, key **N**): the FM-1 stops, the
   song loads in a few seconds (its A–D, loop and order replace the FM-1's) and, with **play when loaded**, starts. The list stays in
@@ -1289,7 +1290,7 @@ with the mouse, a finger on a tablet or a phone, or the computer's keys. What it
 K O L P** play (the drums: the 16 pads) · **Shift** + those keys: the first 16 effects while held · **F1–F8** scenes (**Shift**: store) · **Esc** all off.
 
 The mixer and the keys also work with an FM-1 on SLOOP 2.6; the transport, sections, fills and effects need 2.7. If the keys stay silent,
-the page says why: GLO > SYSTEM > IN = CLOCK (no notes), or a track with no channel while OTHER is OFF.
+the page says why: MIDI 3 > IN = CLOCK (no notes), or a track with no channel while OTHER is OFF.
 
 <a id="your-theme"></a>**Your theme (2.7).** The editor's **Theme** page makes the FM-1's screen your own, with or without the FM-1 connected:
 
@@ -1356,7 +1357,7 @@ If the official firmware comes up with odd settings or a scrambled display, it i
 | The black keys are silent on a synth track | it plays chords or the scale: SEL → CHORD OFF and KEYS OFF (with a chord on, the black keys change the chord: CHORD+) |
 | Recorded notes move | BoopBox quantises to the track's DIV: REC screen [QUANT off](#quant-off) (2.7) keeps your timing; or use 1/32, or nudge the step (SEQ + step + KNOB 4) |
 | Notes fade out on a dense part | the processor is at its limit; BoopBox fades one voice at a time (never the bass or lead) rather than glitching. Fewer held notes or a lighter engine help |
-| Nothing from the MIDI IN jack | try the other adapter type (A / B); check the channel (GLO → MIDI: CH1–CH4; MIDI 2: OTHER) and that GLO → MIDI 2 → IN is NOTES |
+| Nothing from the MIDI IN jack | try the other adapter type (A / B); check the channel (MIDI: CH1–CH4; MIDI 2: OTHER) and that MIDI 3 → IN is NOTES |
 | The USB audio input does not show | replug the FM-1; on a Mac (2.6) keep USB SERIAL OFF and restart the FM-1; in Audacity: Transport → Rescan Audio Devices |
 | The USB recording is quiet | HOME menu → USB AUDIO = FULL, or MASTER up |
 | The USB recording is distorted or noisy on a phone (clean on a computer) | HOME menu → AUDIO → [USB RATE](#usb-rate) = 44.1 KHZ, then turn the FM-1 off and on |
@@ -1419,7 +1420,7 @@ If the official firmware comes up with odd settings or a scrambled display, it i
 | OCT− + OCT+ held at power-on | hardware calibration |
 | OCT− + OCT+ held 5 s, stopped | update mode (UBOOT) |
 | EDIT + OCT− / OCT+ | undo / redo |
-| GO values (LOAD, SAVE, ERASE, NEW, CLRSQ, INIT) | one click arms (*AGAIN: …*), a second within ~1.5 s acts |
+| GO values (LOAD, SAVE, ERASE, NEW, CLRSQ, INIT) | one click arms (*TURN AGAIN: …*), a second within ~1.5 s acts |
 | SAVE + key 5–8 on a used section | press again within 3 s |
 | SONG screen: REC on a used section · OCT+ | press again within 3 s |
 
@@ -1440,12 +1441,12 @@ If the official firmware comes up with odd settings or a scrambled display, it i
 | STRUM, VLEAD | SEL 2 |
 | your projects | SAVE + keys 1–4 (play) / 5–8 (save) · SAVE → PROJECT (LOAD, SAVE, ERASE) |
 | your sounds | SAVE → USER · PRESETS (after the factory sounds) |
-| MIDI out / clock / clock only | GLO → SYSTEM: MIDI · SYNC · IN |
-| each track's MIDI channel | GLO → MIDI (CH1 CH2 CH3 CH4) |
-| MIDI in / out, the other channels, the bend | GLO → MIDI 2 (IN OTHER OUT BEND) |
+| MIDI out / clock / clock only | SYSTEM: MIDI · SYNC · IN |
+| each track's MIDI channel | MIDI (CH1 CH2 CH3 CH4) |
+| MIDI in / out, the other channels, the bend | MIDI 3 (IN OTHER OUT BEND) |
 | a vinyl / tape / rain bed under the mix | GLO → TEXTURE (2.6) |
 | MIDI LEARN | GLO + F#3 · forget: hold HOME → SYSTEM → MIDI LEARN CLEAR |
-| a track's effect (INSERT) | FX → INSERT, INSERT 2 |
+| a track's effect (INSERT) | FX → INSERT (its MIX on FX → FILTER) |
 | tempo-synced envelope / LFO | ENV DEST → ESYNC · LFO → LFO 2 → SYNC |
 | ANALOG band-pass / high-pass | EDIT → FILTER → TYPE |
 | a note's length in steps | SEQ → NOTES page, KNOB 3 on the note (LEN) |

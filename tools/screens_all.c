@@ -18,7 +18,7 @@ static void put(const char *group, const char *name, const char *title, const ch
 }
 
 static const char *const FAM_NAME[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
-                                                "TRK"};
+                                                "TRK", "MIDI"};
 
 static void show_page(uint32_t j)                   /* page j of PAGES, as the buttons open it */
 {
@@ -196,6 +196,14 @@ int main(int argc, char **argv)
     press(B_OCTUP); frames(30); release(B_OCTUP); frames(2);
     put("pages", "seq-notes-sheet", "SEQ > NOTES: a note's sheet", "OCT+ held");
     ui.sheet = 0;
+
+    /* (1.2) ALGORITHM turned on a page: the track changes there, the header names it */
+    song.sel = 0; go_home(); frames(2);
+    open_page(FAM_ENV, "ENV"); frames(4);
+    encs[panel.enc[EN_ALGO]] = 2; frame(); frames(3);
+    ui.force = 1; frame(); ppm("env-algorithm");          /* (not shot(): the header's message stays) */
+    fprintf(idx, "pages\tenv-algorithm\tENV, ALGORITHM turned\tthe track changes on the page, the header names it\n");
+    song.sel = 0; ui.msg_t = 0; go_home(); frames(4);
 
     /* the menu (HOME held): its five sections and ABOUT */
     go_home(); frames(2);

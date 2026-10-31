@@ -54,7 +54,7 @@ Install it at your own risk, keep a backup, and please [report](../../issues) wh
   bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
-  tracks 5–8 (GLO → MIDI 4).
+  tracks 5–8 (MIDI 2).
 - **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
   theme), your own theme's too.
 - **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
@@ -158,7 +158,7 @@ Other controls:
 | hold **REC** | clear the selected track (a ring fills: keep holding ~2 s; let go before and nothing happens) |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
 | **EDIT + OCT− / OCT+** | undo / redo |
-| **ALGORITHM** | select the track (on the TRACKS, PATTERNS and CHORDS screens) |
+| **ALGORITHM** | select the track, on every page (1.2.0; TRACKS, PATTERNS and CHORDS only before): the header names it |
 | **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends) · on the DRUMS screen: grid / kit |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
@@ -451,19 +451,19 @@ BoopBox takes MIDI from two places at once:
 
 | MIDI channel | Plays |
 | --- | --- |
-| 1, 2, 3 | synth tracks 1, 2, 3 (2.6: GLO → MIDI → CH1, CH2, CH3 set any channel for each) |
-| 10 | the drum track (the nearest of its 16 sounds; GLO → MIDI → CH4 changes the channel) |
-| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (2.6: GLO → MIDI → OTHER = OFF ignores them) |
+| 1, 2, 3 | synth tracks 1, 2, 3 (2.6: MIDI → CH1, CH2, CH3 set any channel for each) |
+| 10 | the drum track (the nearest of its 16 sounds; MIDI → CH4 changes the channel) |
+| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (2.6: MIDI → OTHER = OFF ignores them) |
 
 **Your own channels (2.6).** For an external sequencer with its own channels (drums 10, bass 2, pad 11, lead 8…): GLO → **MIDI** sets each track's channel (CH1, CH2, CH3, CH4 the drums: OFF or 1–16, in and out; two tracks never share one) and GLO → **MIDI 2** the rest: **IN**, **OTHER** (SEL: the channels no track has play the selected track; OFF: ignored), **OUT**, **BEND**. Notes, CCs and MIDI out follow. Settings of the FM-1, kept through power-off.
 
-Your sequencer uses the other channels for other gear? GLO → MIDI 2 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
+Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
-**MIDI clock in:** GLO → SYSTEM → **SYNC** = **USB** or **TRS** (INT: BoopBox's own tempo). START plays from the top, CONTINUE carries on where it stopped, STOP stops; the tempo (BPM) follows the master, and the steps follow its 24 pulses a beat, so BoopBox cannot drift away from it. When the clock stops for half a second, PLAY on the FM-1 plays at its own tempo again. SYNC is a setting of the FM-1: it stays when you load a project.
+**MIDI clock in:** SYSTEM → **SYNC** = **USB** or **TRS** (INT: BoopBox's own tempo). START plays from the top, CONTINUE carries on where it stopped, STOP stops; the tempo (BPM) follows the master, and the steps follow its 24 pulses a beat, so BoopBox cannot drift away from it. When the clock stops for half a second, PLAY on the FM-1 plays at its own tempo again. SYNC is a setting of the FM-1: it stays when you load a project.
 
-**MIDI out:** what you play on the keys always goes out on USB MIDI (each track on its channel: 1–3 the synths, 10 the drums). GLO → MIDI 2 (or SYSTEM) → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too — every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back (no MIDI loop). Set a DAW track to record the FM-1's MIDI and you get the pattern as notes; or let BoopBox drive another synth. Like SYNC, MIDI is a setting of the FM-1. The SYSTEM page reads, on KNOB 1 to 4: **OUT** (KEYS / SEQ), **SYNC**, **IN** and **CPU** (while no computer is connected: the **USB** link's state instead).
+**MIDI out:** what you play on the keys always goes out on USB MIDI (each track on its channel: 1–3 the synths, 10 the drums). MIDI 3 → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too — every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back (no MIDI loop). Set a DAW track to record the FM-1's MIDI and you get the pattern as notes; or let BoopBox drive another synth. Like SYNC, MIDI is a setting of the FM-1. The SYSTEM page reads, on KNOB 1 to 4: **OUT** (KEYS / SEQ), **SYNC**, **IN** and **CPU** (while no computer is connected: the **USB** link's state instead).
 
-**MIDI CCs (2.5, the standard map of Felucca 1.1.5):** the knobs of a MIDI controller set the sound of the track the channel plays (as the notes), 0–127 over the parameter's range, as a knob would. Other CCs (mod wheel…) are ignored. **Sustain** (CC 64) and **pitch bend** work from 2.6: the pedal holds the notes you let go until it is up (recorded as heard); the bend's range is GLO → MIDI 2 → BEND (1–12 semitones, default 2).
+**MIDI CCs (2.5, the standard map of Felucca 1.1.5):** the knobs of a MIDI controller set the sound of the track the channel plays (as the notes), 0–127 over the parameter's range, as a knob would. Other CCs (mod wheel…) are ignored. **Sustain** (CC 64) and **pitch bend** work from 2.6: the pedal holds the notes you let go until it is up (recorded as heard); the bend's range is MIDI 3 → BEND (1–12 semitones, default 2).
 
 | CC | Sets |
 | --- | --- |
@@ -477,7 +477,7 @@ Your sequencer uses the other channels for other gear? GLO → MIDI 2 → **IN =
 
 **MIDI LEARN (2.6, after Felucca 1.5):** any knob of your controller onto any parameter of a track. **GLO + F#3** (the top line shows *LEARN*), turn the knob of BoopBox you want (*T1 CUT: SEND A CC*), move the controller's knob (*CC 21 = T1 CUT*); more knobs if you like; **GLO + F#3** again to finish. A learned CC sets that track's parameter on any channel and no longer does what the map above gave it; up to 16. Bank select, mod wheel, data entry, expression, sustain and the channel-mode CCs are never learned. Kept through power-off and projects, and in the web editor's backups; HOME menu → SYSTEM → **MIDI LEARN CLEAR** (OCT+) forgets them all.
 
-**Clock only:** GLO → MIDI 2 → **IN** = **CLOCK** makes BoopBox take only the clock and START / CONTINUE / STOP from MIDI, and ignore every incoming note (and CC) — for a DAW or a sequencer that sends notes to other gear on the same cable. **NOTES** (the default): notes and clock, as before. A note-off still gets through, so nothing held when you switch is left hanging. A setting of the FM-1, as SYNC.
+**Clock only:** MIDI 3 → **IN** = **CLOCK** makes BoopBox take only the clock and START / CONTINUE / STOP from MIDI, and ignore every incoming note (and CC) — for a DAW or a sequencer that sends notes to other gear on the same cable. **NOTES** (the default): notes and clock, as before. A note-off still gets through, so nothing held when you switch is left hanging. A setting of the FM-1, as SYNC.
 
 Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio on.
 
@@ -533,7 +533,7 @@ The glow is a short pulse on every scan of the panel (about 900 times a second):
 | Recording | live, quantised as heard (latency-compensated), overdub; records at once while playing; free take sets loop length and tempo, or the tempo set, from the first note or a one-bar count-in |
 | Memory | undo / redo, 4 projects, 32 user presets, 27 FM6 patches, autosave of the working project, song of 4 sections × 16 steps × 1–64 bars |
 | Audio | 44.1 kHz, fixed-point DSP; USB audio input (the master output, 16-bit stereo at 44.1 or 48 kHz, class compliant) |
-| MIDI | USB class-compliant in / out; TRS MIDI IN (3.5 mm jack); channels 1–3 the synths, 10 the drums, 4–16 the selected track (2.6: each track's channel in GLO → MIDI); MIDI clock in (USB or TRS), with or without the notes (IN = CLOCK); the sequencer to MIDI out (GLO → MIDI 2 → OUT = SEQ) |
+| MIDI | USB class-compliant in / out; TRS MIDI IN (3.5 mm jack); channels 1–3 the synths, 10 the drums, 4–16 the selected track (2.6: each track's channel in MIDI); MIDI clock in (USB or TRS), with or without the notes (IN = CLOCK); the sequencer to MIDI out (MIDI 3 → OUT = SEQ) |
 | Update | over USB from the browser (package SHA-256 and CRC checked) |
 
 ## Rescue, going back, credits

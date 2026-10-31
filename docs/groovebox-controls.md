@@ -17,13 +17,13 @@ Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make roo
 
 | Control | Does |
 | --- | --- |
-| **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before), on the TRACKS, PATTERNS and CHORDS screens only |
+| **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before), on every page (1.2.0; on the TRACKS, PATTERNS and CHORDS screens only before); on a page the header names the track a moment |
 | **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 have a shade of the colours of tracks 1-4 (lighter; darker on a light theme), so each track has its own |
 | **GLO layer** (mute, solo, levels) | acts on the bank shown: keys 1-4 are tracks 1-4 or 5-8 |
-| **GLO > MIDI 4** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as GLO > MIDI does for tracks 1-3 and the drum channel (CH4) |
+| **MIDI 2** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as MIDI does for tracks 1-3 and the drum channel (CH4) |
 | **GLO > DRUMS** | LVL, REV and DLY of the selected drum track; on a synth track, of the first drum track |
 
-**SAVE > TOOLS > KIND** (KNOB 3, a GO button as CLRSQ and NEW: one detent arms, *AGAIN: KIND*, a second acts) turns
+**SAVE > TOOLS > KIND** (KNOB 3, a GO button as CLRSQ and NEW: one detent arms, *TURN AGAIN: KIND*, a second acts) turns
 the selected track from a synth track into a drum track or back (*NOW A DRUM TRACK*, *NOW A SYNTH TRACK*). Its
 pattern is cleared (a synth step and a drum step hold different things; undo cannot bring it back), its notes end;
 it takes the default kit or sound of that track number; its PAN, MUTE, FILTER, LEN, DIV and SWING stay. It works
@@ -184,8 +184,8 @@ rows and their eight patterns as columns:
 | **OCT−** | asks for the cursor's pattern on **every** track |
 | **KNOB 2 QUANT** | when an asked change happens (PAT Q): **LOOP** (at the end of the track's own loop, each track on its own length), **1 BAR**, **2 BAR**, **4 BAR** (on the first step of the track at or after the next such bar line: tracks asked together change together) |
 | **KNOB 3 CHAIN** | the selected track's chain: **OFF**, or the cursor's pattern and the ones after it (2 … 8 patterns); each plays one loop, then the next, round |
-| **KNOB 4** right, twice | **COPY** the pattern playing into the cursor's pattern (*AGAIN: COPY* first) |
-| **KNOB 4** left, twice | **CLEAR** the cursor's pattern (*AGAIN: CLEAR* first) |
+| **KNOB 4** right, twice | **COPY** the pattern playing into the cursor's pattern (*TURN AGAIN: COPY* first) |
+| **KNOB 4** left, twice | **CLEAR** the cursor's pattern (*TURN AGAIN: CLEAR* first) |
 | **PLAY**, the keys | as everywhere; **ENV**, **LFO** and the layer buttons open their pages; **HOME** goes home |
 
 Stopped, a change is made at once. Playing, it waits for its moment, then the new pattern starts from its step 1 (a
@@ -285,7 +285,7 @@ Harmony). Everything there still works as written; the **PERF** page (FX family,
 | Knob | Does |
 | --- | --- |
 | **KNOB 1 TARGET** | what the effects act on: **MASTER** (the whole mix, as before), **SEL** (the selected track), **DRUMS** (the drum tracks), **SYNTHS** (the synth tracks). With a target, only those tracks' dry sound goes through the effect; the other tracks, the reverb, delay and chorus returns and the TEXTURE pass it by. A target taken while an effect plays waits until that effect ends |
-| **KNOB 2 LATCH** | **OFF** (as before: an effect lasts while its key is held) or **ON**: FX + a key turns its effect on and it stays when you let go (also FX); the same key again turns it off; another key changes to its effect. The MIDI FX channel (GLO > MIDI 3 > FX CH) does the same with its notes |
+| **KNOB 2 LATCH** | **OFF** (as before: an effect lasts while its key is held) or **ON**: FX + a key turns its effect on and it stays when you let go (also FX); the same key again turns it off; another key changes to its effect. The MIDI FX channel (MIDI 4 > FX CH) does the same with its notes |
 | **KNOB 3 Q** | when an effect starts: **OFF** (at once, as before) or on the next **1/16**, **1/8**, **1/4** or **BAR** line of the playing transport. Its end is always at once; stopped, it starts at once |
 
 TARGET, LATCH and Q are saved with the project. The loops replay what the target played (with a

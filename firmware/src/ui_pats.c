@@ -180,7 +180,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             if (pats_arm != 2u) {
                 pats_arm = 2;
                 pats_deadline = fm1_ms + 3000u;
-                ui_message("AGAIN: CLEAR");
+                ui_message("TURN AGAIN: CLEAR");
             } else {
                 pats_arm = 0;
                 fm1_irq_off();
@@ -197,7 +197,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             if (pats_arm != 1u) {
                 pats_arm = 1;
                 pats_deadline = fm1_ms + 3000u;
-                ui_message("AGAIN: COPY");
+                ui_message("TURN AGAIN: COPY");
             } else {
                 int ok = 1;
                 pats_arm = 0;
