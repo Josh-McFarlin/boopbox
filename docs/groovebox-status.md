@@ -6,7 +6,7 @@ in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-perform
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
 for the PC, with the FM-1's inputs simulated), and the default build (`./build.sh`, the JieLi toolchain) makes an
-image that fits the flash with 5,400 B to spare (1.1.0), the web editor and the visualiser's six styles included. **Nothing
+image that fits the flash with 3,908 B to spare (1.1.0), the web editor and the visualiser's six styles included. **Nothing
 was run on an FM-1** (section 4). To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
 three tables in RAM at power-on (section 2).
 
