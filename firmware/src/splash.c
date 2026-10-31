@@ -18,7 +18,7 @@ UI_SMALL static void boopbox_logo_draw(uint32_t y0)
     cv_begin(240, h * k, C_BLACK);
     for (i = 0; i < 7u; i++) {                          /* small, at the top left: B O O P the tracks' colours, B O X white */
         c[0] = L[i];
-        px = cv_text(px, 0, &FONT_L, c, i < 4u ? TE_COL_DEF[i] : C_WHITE);
+        px = cv_text(px, 0, &FONT_L, c, i < 4u ? (pal_neon ? TE_COL[i] : TE_COL_DEF[i]) : C_WHITE);
     }
     off = (240u - w * k) / 2u;
     for (y = h * k; y-- > 0;)                           /* then k times as big, in place (from the end: nothing read is
@@ -51,12 +51,33 @@ UI_SMALL static void boopbox_logo_draw(uint32_t y0)
 }
 #endif
 
+/* (1.1.0) SYNTHWAVE: a sun setting on a neon horizon under the logo (rows 168..201), yellow to pink, cut by bands that
+ * widen toward the horizon */
+UI_SMALL static void boopbox_sun(void)
+{
+    int32_t y, dy, hw;
+    cv_begin(240, 34, C_BLACK);
+    for (y = 0; y < 32; y++) {
+        dy = 32 - y;                                    /* above the horizon */
+        if (dy < 18 && dy % 6 < (18 - dy) / 6 + 1)
+            continue;                                   /* a band */
+        for (hw = 0; (hw + 1) * (hw + 1) + dy * dy <= 30 * 30;)
+            hw++;
+        if (hw > 2)                                     /* (not a lone pixel on top) */
+            cv_rect(120 - hw, y, 2 * hw + 1, 1, rgb565_mix(RGB(255, 222, 90), RGB(255, 46, 150), (uint32_t)y, 32u));
+    }
+    cv_rule(0, 32, 240, C_LINE);
+    cv_blit(0, 168);
+}
+
 /* the boot screen: the logo, the version, where it comes from */
 UI_SMALL static void boopbox_splash(void)
 {
     const char *v = FELUCCA_VERSION, *p;
     lcd_fill(0, 0, 240, 240, C_BLACK);
     boopbox_logo_draw(10);
+    if (pal_neon)
+        boopbox_sun();
     for (p = v; *p && *p != ' '; p++)
         ;
     if (*p && p - v == 7 && v[0] == 'B' && v[3] == 'P' && v[6] == 'X')

@@ -4878,7 +4878,10 @@ const THEME = {
     ["AMBER", [[60, 26, 0], [110, 50, 0], [170, 82, 0], [225, 120, 8], [255, 166, 40]]],
     ["CYAN", [[0, 30, 50], [0, 62, 96], [16, 112, 160], [56, 172, 222], [140, 222, 255]]],
     ["RED", [[52, 8, 8], [100, 18, 14], [170, 36, 26], [226, 64, 48], [255, 112, 92]]],
-    ["MONO", [[40, 40, 40], [80, 80, 80], [130, 130, 130], [186, 186, 186], [226, 226, 226]]]],
+    ["MONO", [[40, 40, 40], [80, 80, 80], [130, 130, 130], [186, 186, 186], [226, 226, 226]]],
+    /* (BoopBox 1.1.0) with its own tracks, background and accent (gfx.c SYNTH_*) */
+    ["SYNTHWAVE", [[56, 26, 104], [96, 48, 160], [168, 124, 232], [96, 220, 255], [255, 84, 222]],
+      { trk: [[0, 228, 255], [255, 44, 212], [255, 140, 56], [160, 96, 255]], bg: [16, 4, 40], hi: [128, 252, 255] }]],
   TRACKS: [[40, 124, 255], [30, 204, 112], [255, 198, 24], [255, 98, 26]],
   to565: ([r, g, b]) => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3),
   from565: (v) => [Math.round((((v >> 11) & 31) * 255) / 31), Math.round((((v >> 5) & 63) * 255) / 63), Math.round(((v & 31) * 255) / 31)],
@@ -4948,7 +4951,11 @@ const THEME = {
     if (!m) return null;
     try { return THEME.decode(b64dec(m[1])); } catch (e) { return null; }
   },
-  builtin: (i) => ({ name: THEME.BUILTIN[i][0], c: THEME.BUILTIN[i][1].map((x) => x.slice()), trk: THEME.TRACKS.map((x) => x.slice()), bg: [0, 0, 0], hi: [255, 255, 255] }),
+  builtin: (i) => {
+    const [name, c, o] = THEME.BUILTIN[i];
+    return { name: THEME.cleanName(name), c: c.map((x) => x.slice()), trk: ((o && o.trk) || THEME.TRACKS).map((x) => x.slice()),
+             bg: ((o && o.bg) || [0, 0, 0]).slice(), hi: ((o && o.hi) || [255, 255, 255]).slice() };
+  },
   /* five steps from one colour, as the FM-1's palettes go: dark to the colour, the last lighter toward white; on a light
      background (bg given) the other way: faint (light) to strong (dark) */
   ramp(rgb, bg) {

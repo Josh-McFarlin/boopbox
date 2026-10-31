@@ -1419,7 +1419,14 @@ async function editorTheme() {
   const rgb = (s) => [...s.matchAll(/RGB\((\d+), (\d+), (\d+)\)/g)].map((m) => [+m[1], +m[2], +m[3]]);
   const pals = [...gfx.matchAll(/\{"(\w+)", \{(RGB[^}]*)\}\}/g)].map((m) => [m[1], rgb(m[2])]);
   const tdef = rgb((/TE_COL_DEF\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
-  ok(js(pals) === js(T.BUILTIN) && js(tdef) === js(T.TRACKS), "theme: the built-in palettes and track colours == gfx.c (PALETTES, TE_COL_DEF)");
+  ok(js(pals) === js(T.BUILTIN.map(([n, c]) => [n, c])) && js(tdef) === js(T.TRACKS), "theme: the built-in palettes and track colours == gfx.c (PALETTES, TE_COL_DEF)");
+  {   /* (BoopBox 1.1.0) SYNTHWAVE's own tracks, background and accent == gfx.c SYNTH_TRK, SYNTH_BG, SYNTH_HI */
+    const sw = T.builtin(T.BUILTIN.findIndex(([n]) => n === "SYNTHWAVE"));
+    const strk = rgb((/SYNTH_TRK\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
+    const sbg = rgb((/#define SYNTH_BG (RGB\([^)]*\))/.exec(gfx) || [])[1] || ""), shi = rgb((/#define SYNTH_HI (RGB\([^)]*\))/.exec(gfx) || [])[1] || "");
+    ok(js(sw.trk) === js(strk) && js([sw.bg]) === js(sbg) && js([sw.hi]) === js(shi) && sw.name === "SYNTHWAV" && T.readable(sw),
+      "theme: SYNTHWAVE as a start: its tracks, background and accent == gfx.c (SYNTH_*), readable");
+  }
   ok(/#define THEME_MAGIC 0x324D4854u/.test(gfx)
     && /char name\[8\];[^]*uint16_t c\[5\];[^]*uint16_t trk\[4\];[^]*uint16_t bg;[^]*uint16_t hi;[^]*uint16_t rsv;[^]*uint32_t crc;/.test(gfx)
     && /sizeof\(theme_t\) == 40u/.test(gfx) && T.SIZE === 40 && T.MAGIC === 0x324D4854 && T.MAGIC1 === 0x314D4854,
