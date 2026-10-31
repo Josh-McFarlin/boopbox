@@ -4,9 +4,9 @@
 // https, so Web MIDI asks as usual (a downloaded file on Android opens as content://, where Chrome refuses MIDI).
 // Online the network always wins (the page as published, never an old one); the copy is only the fallback.
 // A new site (any file changed) is a new sw.js: the new copy replaces the old one.
-const STAMP = "2.8.3-ab5e64e912da";                          // version + a hash of the files
-const CACHE = "sloop-site-" + STAMP;
-const FILES = ["../firmware/sloop-2.8.3.fwsc", "editor/", "editor/FUKIAI-LICENSE.txt", "editor/fukiai.ttf", "editor/preview-worklet.js", "editor/preview.js", "editor/sloop-preview.wasm", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "installer/", "sloop.webmanifest"];                          // relative to this file
+const STAMP = "1.0.0-c451c05594d2";                          // version + a hash of the files
+const CACHE = "boopbox-site-" + STAMP;
+const FILES = ["../firmware/boopbox-1.0.0.fwsc", "boopbox.webmanifest", "editor/", "editor/FUKIAI-LICENSE.txt", "editor/boopbox-preview.wasm", "editor/fukiai.ttf", "editor/preview-worklet.js", "editor/preview.js", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "installer/"];                          // relative to this file
 const KEEP = new Set(FILES.map((f) => new URL(f, self.location).href));
 
 const key = (url) => {                              // the copy's name of a request: no query, index.html = the folder
@@ -28,7 +28,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     for (const k of await caches.keys())
-      if (k.startsWith("sloop-site-") && k !== CACHE) await caches.delete(k);
+      if ((k.startsWith("boopbox-site-") || k.startsWith("sloop-site-")) && k !== CACHE) await caches.delete(k);
     await self.clients.claim();
   })());
 });

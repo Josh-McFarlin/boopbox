@@ -18,7 +18,7 @@ export class LocalPreview {
       this.context = new Audio({ sampleRate: 44100, latencyHint: 'interactive' });
       if (this.context.sampleRate !== 44100) {
         await this.context.close(); this.context = null;
-        throw new Error('SLOOP preview requires audio at 44.1 kHz.');
+        throw new Error('BoopBox preview requires audio at 44.1 kHz.');
       }
     }
     // Resume immediately inside the click/key gesture, before the network awaits.
@@ -31,11 +31,11 @@ export class LocalPreview {
   }
   async load() {
     try {
-      const response = await fetch(new URL('./sloop-preview.wasm', import.meta.url));
+      const response = await fetch(new URL('./boopbox-preview.wasm', import.meta.url));
       if (!response.ok) throw new Error('Build the audio preview first: python3 tools/build_preview.py');
       const module = await WebAssembly.compile(await response.arrayBuffer());
       await this.context.audioWorklet.addModule(new URL('./preview-worklet.js', import.meta.url));
-      this.node = new AudioWorkletNode(this.context, 'sloop-preview', {
+      this.node = new AudioWorkletNode(this.context, 'boopbox-preview', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { module },
       });
       this.node.port.onmessage = ({ data }) => {
