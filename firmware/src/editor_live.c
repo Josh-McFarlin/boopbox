@@ -15,16 +15,31 @@
  *  10 THROW (as FX + OCT- / OCT+): bit 0 the reverb, bit 1 the echo, while set (0: let go)
  *  11 the master level: 0..126, 127: back to the MASTER knob (turning the knob also takes it back)
  *  12 a drum sound's TUNE and DECAY (the DRUMS screen's SOUND page): lane, TUNE + 8 (0..15), DECAY + 4 (0..7)
+ *  13 (BoopBox, v13) solo: track 0..7 (any track, not the bank of the selected one as GLO + key 5..8)
  * The notes themselves go as plain MIDI notes (the tracks' channels): no SysEx between a key and its sound.
  * State: flags (playing, PLAY asked, song mode, song plays, fill now, fill next bar, SONG REC), flags 2 (REC armed
  * and waiting, undo / redo there, a free take running), BPM v14, the section playing + 1, the one asked for + 1, the chain (entries, the
  * one playing), mutes, solos, REC tracks, the selected track, the punch-in effect + 1, CPU %, the song (entry,
  * entries, its bar, its bars), the sections stored (bit per section), then per track: its step, its length, its meter (8 log2 |peak|, 0 = silent);
- * then (2.7, ops 6..12) the master (0: the knob, else the page's level + 1), the THROWs (bits), the 16 drum sounds' TUNE + 8 | DECAY + 4 << 4 */
+ * then (2.7, ops 6..12) the master (0: the knob, else the page's level + 1), the THROWs (bits), the 16 drum sounds' TUNE + 8 | DECAY + 4 << 4;
+ * then (BoopBox, v13) tracks 5..8: the mutes, solos and REC tracks >> 4, and each one's step, length, meter (65 bytes) */
 #define ED_LIVE 77u
+UI_SMALL static void lv_trk(uint32_t i)                 /* a track's step, its length, its meter */
+{
+    int32_t pk = trk[i].peak, lg = 0;
+    uint32_t s = 0;
+    ed_b(trk[i].seq_idx);
+    ed_b(trk_len(&trk[i]));
+    if (pk >= 64) {
+        while ((pk >> lg) > 1)
+            lg++;
+        s = (uint32_t)(lg * 8 + (((pk << 3) >> lg) & 7));   /* 48 (-54 dB) .. 128 (+6 dB), as the TRACKS meters */
+    }
+    ed_b(s > 127u ? 127u : s);
+}
 UI_SMALL static void ed_live(const uint8_t *a, uint32_t na)
 {
-    uint32_t i, m = 0, s = 0, play;
+    uint32_t i, m = 0, play;
     if (na >= 2u) {
         switch (a[0]) {
         case 1:
@@ -136,6 +151,10 @@ UI_SMALL static void ed_live(const uint8_t *a, uint32_t na)
             ed_master_k = 0xFFFFu;
             ed_master = (uint8_t)(a[1] >= 127u ? 0u : a[1] + 1u);
             break;
+        case 13:
+            if (a[1] < NTRK)
+                song.solo ^= (uint8_t)(1u << a[1]);
+            break;
         case 12:
             if (na >= 4u) {
                 drum_tune[dfi()][a[1] & 15u] = (int8_t)clamp((int32_t)a[2] - 8, DRUM_TUNE_MIN, DRUM_TUNE_MAX);
@@ -170,21 +189,15 @@ UI_SMALL static void ed_live(const uint8_t *a, uint32_t na)
     ed_b(arrangement_clock.bar);
     ed_b(arrangement.entry[arrangement_clock.index % ARR_STEPS].bars);
     ed_b(arrangement_ready() & 15u);
-    for (i = 0; i < 4u; i++) {                         /* (the four tracks the page shows: 1..4, the protocol's 50 bytes) */
-        int32_t pk = trk[i].peak, lg = 0;
-        ed_b(trk[i].seq_idx);
-        ed_b(trk_len(&trk[i]));
-        if (pk >= 64) {
-            while ((pk >> lg) > 1)
-                lg++;
-            s = (uint32_t)(lg * 8 + (((pk << 3) >> lg) & 7));   /* 48 (-54 dB) .. 128 (+6 dB), as the TRACKS meters */
-        } else {
-            s = 0;
-        }
-        ed_b(s > 127u ? 127u : s);
-    }
+    for (i = 0; i < 4u; i++)                            /* (tracks 1..4: the 2.7 page's 50 bytes) */
+        lv_trk(i);
     ed_b(ed_master);
     ed_b(thr_ed | thr_req);
     for (i = 0; i < DRUM_LANES; i++)
         ed_b((uint32_t)(drum_tune[dfi()][i] + 8) | (uint32_t)(drum_dec[dfi()][i] + 4) << 4);
+    ed_b(m >> 4);                                       /* v13: tracks 5..8 */
+    ed_b(song.solo >> 4);
+    ed_b(song.rec >> 4);
+    for (i = 4; i < NTRK; i++)
+        lv_trk(i);
 }
