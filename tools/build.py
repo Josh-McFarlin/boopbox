@@ -346,7 +346,7 @@ def main():
     except SystemExit:
         if "overflow" in LAST_ERR:
             print("build: the flash is full: the image does not fit. By hand: FELUCCA_VIS=0 leaves the visualiser out "
-                  "(about 4.3 KB less), FELUCCA_EDITOR=0 the web editor's SysEx (about 14 KB less; updates and recovery "
+                  "(about 10.8 KB less), FELUCCA_EDITOR=0 the web editor's SysEx (about 14 KB less; updates and recovery "
                   "stay); see docs/groovebox-performance.md")
         raise
     errors, notes = check(img, syms, dis, rt)

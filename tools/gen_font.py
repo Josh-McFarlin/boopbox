@@ -18,6 +18,9 @@ glyph from a whole byte, and marked bits = 1; an anti-aliased one (TTF) stays at
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lz4blk  # noqa: E402
+
 from PIL import Image, ImageDraw, ImageFont
 
 FONTS = Path(__file__).resolve().parents[1] / "assets" / "fonts"
@@ -164,10 +167,37 @@ def main(out):
                 for x in range(0, bw, 2):
                     data.append((row[x] << 4) | row[x + 1])
         assert len(data) < 65536
-        lines.append(f"static const uint8_t FONT_{name}_DATA[{len(data)}] = {{")
-        for i in range(0, len(data), 24):
-            lines.append("    " + ", ".join(f"0x{b:02x}" for b in data[i:i + 24]) + ",")
+        # the bitmaps LZ4-packed in flash, unpacked into RAM at power-on (font_fill: 3 KB of flash saved; the FM-1:
+        # main.c fm1_cstart calls it before anything draws; the host tests: a constructor)
+        packed = lz4blk.compress(bytes(data))
+        assert lz4blk.decompress(packed) == bytes(data), "the packed font must unpack to its bitmaps"
+        lines.append(f"static uint8_t FONT_{name}_DATA[{len(data)}];")
+        lines.append(f"static const uint8_t FONT_{name}_LZ4[{len(packed)}] = {{")
+        for i in range(0, len(packed), 24):
+            lines.append("    " + ", ".join(f"0x{b:02x}" for b in packed[i:i + 24]) + ",")
         lines.append("};")
+        lines += ["#ifndef __PI32V2__", "__attribute((constructor))", "#endif",
+                  "static void font_fill(void)            /* an LZ4 block (tools/lz4blk.py) into the RAM copy */",
+                  "{",
+                  f"    const uint8_t *s = FONT_{name}_LZ4, *e = s + sizeof FONT_{name}_LZ4;",
+                  f"    uint8_t *d = FONT_{name}_DATA;",
+                  "    while (s < e) {",
+                  "        uint32_t t = *s++, n = t >> 4, m;",
+                  "        if (n == 15u)",
+                  "            do n += *s; while (*s++ == 255u);",
+                  "        while (n--)",
+                  "            *d++ = *s++;",
+                  "        if (s >= e)",
+                  "            break;",
+                  "        m = (uint32_t)s[0] | (uint32_t)s[1] << 8;",
+                  "        s += 2;",
+                  "        n = t & 15u;",
+                  "        if (n == 15u)",
+                  "            do n += *s; while (*s++ == 255u);",
+                  "        for (n += 4u; n--; d++)",
+                  "            *d = *(d - m);",
+                  "    }",
+                  "}"]
         lines.append(f"static const uint16_t FONT_{name}_OFF[{len(offs)}] = {{" + ", ".join(map(str, offs)) + "};")
         lines.append(f"static const uint8_t FONT_{name}_ADV[{len(glyphs)}] = {{" +
                      ", ".join(str(a) for a, _, _ in glyphs) + "};")

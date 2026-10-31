@@ -6,8 +6,9 @@ in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-perform
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
 for the PC, with the FM-1's inputs simulated), and the default build (`./build.sh`, the JieLi toolchain) makes an
-image that fits the flash with 592 B to spare, the web editor and six visualiser styles included. **Nothing was run on an FM-1** (section 4).
-To fit, the build leaves out six of the visualiser's twelve styles, the bitmap boot logo and one bass recording (section 2).
+image that fits the flash with 5,400 B to spare (1.1.0), the web editor and the visualiser's six styles included. **Nothing
+was run on an FM-1** (section 4). To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
+three tables in RAM at power-on (section 2).
 
 ## 1. Implemented
 
@@ -20,17 +21,17 @@ To fit, the build leaves out six of the visualiser's twelve styles, the bitmap b
 | Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
 | Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
 | Storage | project format 7 (eight tracks, all the above), the only format: SLOOP's formats 1..6 are not read nor written; damage detected, never cut (refused whole) | `project_test` and the feature tests' store checks |
-| Flash budget | the text boot logo and six visualiser styles (of twelve) are the defaults; the BASS set has three recordings; `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,212 B of 581,564 |
+| Flash budget | the text boot logo is the default; the BASS set has three recordings; FM6's exponent, the sine and the font built in RAM at power-on (1.1.0); `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,164 B of 581,564 (1.1.0) |
 
 The existing BoopBox features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
 input, the M-UPGRADE update entry and the USB rescue are untouched (their host tests pass).
 
 ## 2. Limits and what is not implemented
 
-- **Left out for flash room** (from SLOOP 2.8.3): six of the visualiser's twelve styles (SPECTROGRAM, LISSAJOUS, TAPE,
-  LCD, ORBIT and the logo style; the six built in are OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES), the bitmap
-  boot logo (the logo is text), and the top recording of the SAMPLE engine's BASS set (notes 70 and up of UP BASS and
-  DEEP BASS are played from the F# recording; every note below 70 is as before). See `docs/groovebox-performance.md`.
+- **Left out for flash room** (from SLOOP 2.8.3): the bitmap boot logo (the logo is text) and the top recording of the SAMPLE engine's BASS set (notes 70 and up of UP BASS and
+  DEEP BASS are played from the F# recording; every note below 70 is as before). 1.1.0's visualiser (six new styles in
+  place of the twelve) fits beside the web editor because FM6's exponent table, the sine table and the screen font are
+  built in RAM at power-on (8.7 KB of flash for 11.5 KB of RAM). See `docs/groovebox-performance.md`.
 
 - **Web editor:** it shows all eight tracks (the track bar, the Tracks page, the LIVE page: protocol v13 adds tracks 5..8
   to LIVE's state and a solo of any track, 32 bytes of flash). Its **Patterns** page edits patterns 1..8, chains, FOLLOW,
@@ -87,9 +88,8 @@ git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
 ./build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
 ```
 
-The default build fits (`app ... 580972 B`). The bitmap boot logo can be built back in place of the visualiser with
-`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 ./build.sh`; all twelve visualiser styles only without the web editor
-(`FELUCCA_VIS_STYLES=0xFFF FELUCCA_EDITOR=0 ./build.sh`). When an image does not fit, `tools/build.py` fails and says so; it
+The default build fits (`app ... 576164 B`, 1.1.0). The bitmap boot logo can be built back in place of the visualiser
+with `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 ./build.sh`. When an image does not fit, `tools/build.py` fails and says so; it
 leaves nothing out by itself. With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB
 rescue, USB-MIDI and USB audio still work.
 

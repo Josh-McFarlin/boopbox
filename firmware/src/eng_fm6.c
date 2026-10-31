@@ -151,6 +151,7 @@ static int (*fm6_bank_read)(uint32_t k, uint8_t *pk);
 static void fm6_set_patch(uint32_t tr, const uint8_t *v)
 {
     uint8_t s[FP_SIZE + 1u];
+    fm6_x2_fill();                                  /* (power-on fills it: fm6_init; the host tests may come here first) */
     if (tr >= NTRK)
         return;
     memcpy(s, v, FP_SIZE);
@@ -202,6 +203,7 @@ static void fm6_init(void)
 {
     uint8_t v[FP_SIZE + 1u];
     uint32_t tr;
+    fm6_x2_fill();                                  /* the exp2 table, in RAM (fm6_core.c) */
     fm6_unpack(FM6_INIT, v);
     for (tr = 0; tr < NTRK; tr++) {
         fm6_set_patch(tr, v);
@@ -290,6 +292,7 @@ static void fm6_note_on(track_t *t, voice_t *v)
     fm6_note_t *n = fm6_note_of(t, v);
     uint32_t tr = (uint32_t)(t - trk);
     const uint8_t *p;
+    fm6_x2_fill();                                  /* (a flag: filled at power-on already) */
     if (!n)
         return;
     fm6_sync(t);

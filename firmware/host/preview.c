@@ -44,6 +44,7 @@ static float output[CTL * 2];
 void preview_init(void)
 {
     uint32_t i, k;
+    sine_fill();                    /* SINE is built at power-on (felucca_tables.h): no constructors run in the wasm */
     memset(user_flash, 0xFF, sizeof user_flash);
     for (i = 0; i < G_COUNT; i++) song.g[i] = GP[i].def;
     song.g[G_SYNC] = 0;

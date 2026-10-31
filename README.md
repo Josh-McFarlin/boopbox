@@ -19,11 +19,11 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 1.0.0, the first BoopBox release, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
+> **Status:** 1.1.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
-1. [What's new in 1.0.0](#whats-new-in-100)
+1. [What's new in 1.1.0](#whats-new-in-110)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -43,8 +43,20 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## Since 1.0.0 (not yet released)
+## What's new in 1.1.0
 
+- **A sound browser.** On TRACKS, PRESETS on a synth track opens the engines (or the kinds of sound) on the left
+  and their sounds on the right: PRESETS or KNOB 2 moves through the sounds (each one loads as
+  you land on it), SELECT or KNOB 1 jumps to the next group, KNOB 3 shows them by ENGINE or by KIND, KNOB 4 marks a
+  favourite. It closes by itself after 4 s; it replaces the SAVE > PRESETS page. The drum track's PRESETS is still the
+  kit.
+- **A new visualiser.** Six scenes at sunset and in neon replace the twelve styles, all built in beside the web
+  editor: PALMS (the mix's wave as the sea's front wave), NIGHT DRIVE (the spectrum as a city, a car on a road that
+  runs with the beat, its lights flaring on the kick; stopped, it slows down and parks), HORIZON (the spectrum as a
+  neon range over a floor that lights up on the beat in the tracks' colours), FLYOVER (the spectrum over time as a
+  terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
+  key, lit in the colour of the track that plays it; a chord lights all its keys). See
+  [the visualiser](BOOPBOX.md#the-visualiser).
 - **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
   their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
   own. LIVE solos any track (protocol v13: 32 bytes of firmware).
@@ -52,6 +64,19 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
   project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
 - **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
+- **SLOOP 2.8.4's fixes.** Clean fades (no distortion at the end of notes on the 3.5 mm output and USB), UNISON no
+  longer stacks its voices in phase, PHYS strings in tune, NOISE's NZ ARCADE, SAMPLE and GRAIN follow the top keys,
+  a firm press on a layer button opens its pages, on REC READY a knob changes only its own value, and more
+  ([SLOOP's releases](https://github.com/isod89/sloop-fm1)).
+- **Room in the flash.** Three tables (FM6's exponent, the sine, the screen font) are built in RAM when the FM-1
+  starts instead of stored in the flash: byte for byte the same, so the sound and the screens do not change, and the
+  build fits again with the fixes and the visualiser
+  ([docs/groovebox-performance.md](docs/groovebox-performance.md)).
+- Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
+  settings opens as one of the new six.
+
+**Not yet tested on an FM-1:** 1.1.0 is tested in the host simulator only (the firmware's own code on a computer).
+Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
 ## What's new in 1.0.0
 
@@ -76,10 +101,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them). *Lifted since 1.0.0: see [Since 1.0.0](#since-100-not-yet-released).*
-
-**Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
-Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
+  step components or the chord progression (backups keep them). *Lifted in 1.1.0: see [What's new in 1.1.0](#whats-new-in-110).*
 
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
 is in [its repository](https://github.com/isod89/sloop-fm1).
@@ -88,7 +110,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 <p align="center"><img src="assets/screens/boopbox-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
 
-<p align="center"><sub>The FM-1's screen in 1.0.0, eight tracks playing: both banks of tracks, the patterns, the drum grid, the piano roll, a chord progression, the punch-in effects, the mix layer of tracks 5–8 and the song. Drawn by the firmware's own code (<code>tools/make_screens.py</code>).</sub></p>
+<p align="center"><sub>The FM-1's screen in 1.1.0, eight tracks playing: both banks of tracks, the patterns, the drum grid, the piano roll, a chord progression, the punch-in effects, the mix layer of tracks 5–8 and the song. Drawn by the firmware's own code (<code>tools/make_screens.py</code>).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page with INSERT, ENV SYNC and LFO 2" width="760"></p>
 
@@ -100,7 +122,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 <p align="center"><img src="assets/screens/boopbox-visualiser.png" alt="BoopBox boot screen, ENV page, menu and visualiser styles" width="760"></p>
 
-<p align="center"><sub>The boot screen, a sound page (ENV), the menu, and the six visualiser styles (tap HOME on the TRACKS screen).</sub></p>
+<p align="center"><sub>The boot screen, a sound page (ENV), the menu, and the visualiser's six styles (tap HOME on the TRACKS screen).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-drumsynth.png" alt="BoopBox web editor: the Drum synth page" width="760"></p>
 
