@@ -34,7 +34,7 @@ const E = vm.runInNewContext(proto + `
    CHOP, chopNovelty, chopHits, chopSnap, chopGrid, chopEqual, chopList, chopPick, chopFit, chopZones, wavFile, zipStore, crc32,
    UP, bank, capturePatch, auditionPatch, startWatch, libraryFile, readLibraryFile, paramKeys, patternFromSteps, stepsFromPattern, upName,
    mixer, GM_DRUM, drumName, parseNotes, fmtValue, F, DRUM_LANES, LV_NAMES, emptyDrum, lockable, MICRO, FC, fillGet, fillSet, pack7, unpack7,
-   loudDb, matchGains, withGain, LEVEL_MIN, backupCapture, backupRestore, backupObjects, b64enc, b64dec, FM6, KIT, kitPad, kitZones, kitLen, kitBytes, kitFit, kitSplit, kitLaneOf, kitPlace, zipRead, ROLL, SMF, ARR, mockSettings, fm6CartWrite, fm6CartPreset, fm6CartSlots, fm6CartPresets, DSYN, DSYN_MOCK_NAMES, DSYN_MOCK_KITS, SetGate, bkProjFormat, bkDevFormat, bkSloopInto, bkFwAtLeast, THEME, FM1_PORT_ED: FM1_PORT, fm1Ports, LOOP, LIVE, LVX, SONGF, songCapture, songLoad, songObjects })`,
+   loudDb, matchGains, withGain, LEVEL_MIN, backupCapture, backupRestore, backupObjects, b64enc, b64dec, FM6, KIT, kitPad, kitZones, kitLen, kitBytes, kitFit, kitSplit, kitLaneOf, kitPlace, zipRead, ROLL, SMF, ARR, mockSettings, fm6CartWrite, fm6CartPreset, fm6CartSlots, fm6CartPresets, DSYN, DSYN_MOCK_NAMES, DSYN_MOCK_KITS, SetGate, bkProjFormat, bkDevFormat, bkSloopInto, bkFwAtLeast, THEME, FM1_PORT_ED: FM1_PORT, fm1Ports, LOOP, LIVE, LVX, SONGF, songCapture, songLoad, songObjects, PROJ7, bkReadObj, bkWriteObj })`,
 { setTimeout, clearTimeout, setInterval, clearInterval, console, TextEncoder, TextDecoder, Blob, Response, DecompressionStream });
 
 async function editorMock() {
@@ -1491,7 +1491,7 @@ function editorTabs() {
   const tabs = [...html.matchAll(/<button role="tab" data-tab="(\w+)"/g)].map((x) => x[1]);
   const panels = [...html.matchAll(/<section class="panel" id="p-(\w+)" data-tab="(\w+)"/g)].map((x) => [x[1], x[2]]);
   const TABS = JSON.parse((/const TABS = (\[[^\]]*\]);/.exec(html) || [])[1] || "[]");
-  ok(tabs.length === 12 && js(tabs) === js(TABS) && js(panels.map((x) => x[1])) === js(TABS) && panels.every(([a, b]) => a === b),
+  ok(tabs.length === 13 && js(tabs) === js(TABS) && js(panels.map((x) => x[1])) === js(TABS) && panels.every(([a, b]) => a === b),
     `editor: ${tabs.length} tabs, one panel each (${tabs.join(" ")})`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(html) && /try \{ localStorage/.test(html) && /history\.replaceState\([^)]*"#" \+ name\)/.test(html)
     && /addEventListener\("hashchange"/.test(html), "editor: last tab in localStorage (try/catch) and in the URL hash");
@@ -1812,6 +1812,81 @@ async function updater() {
   ok(e6 && /official FM-1 V15/.test(e6.message), "fm1pkg.js: only the exact official V15 is accepted (SHA-256)");
 }
 
+/* ---------------------------------- BoopBox: the Patterns page's round trip with the (eight-track) mock --- */
+async function editorProj7Mock() {
+  const C = E.CMD, P = E.PROJ7, ctx = { len: 29, def: (id) => (id === 29 ? 16 : 0) };
+  const { m, rq, done } = attachMock({});
+  const read = async () => { const L = E.parse[C.BK_LIST](await rq(E.req.bkList())); return P.decode(await E.bkReadObj(rq, L.items.find((x) => x.id === 0))); };
+  const A = await read();
+  ok(!!A && A.tracks.length === 8 && A.tracks[3].kind === P.DRUM && A.tracks[7].kind === P.DRUM && A.tracks[0].pat.steps.some((x) => x.n),
+    "patterns (mock): object 0 is a format 7 project of eight tracks (drums on 4 and 8), track 1's pattern in it");
+  const t0 = P.track(A, 0), before = JSON.stringify(t0.pat.steps);
+  P.play(A, 0, 1, ctx);                                     /* pattern 2 (empty) plays, pattern 1 into the bank */
+  P.track(A, 0).pat.steps[0] = { notes: [64, 0, 0, 0], n: 1, time: 0, flags: 0, vel: 100, lvl: 0, rat: 0 };
+  P.track(A, 0).pat.comps.push({ step: 0, type: 14, a: 30, b: 0 });
+  P.setChain(A, 0, [1, 0]);
+  A.harm = [{ deg: 0, bars: 2 }, { deg: 4, bars: 2 }];
+  await E.bkWriteObj(rq, 0, P.encode(A));
+  const B = await read(), tb = P.track(B, 0);
+  ok(m.state.tracks[0].step[0].notes[0] === 64 && m.state.tracks[0].step[1].n === 0 && tb.cur === 1 && tb.chain.join() === "1,0"
+    && JSON.stringify(P.patOf(B, 0, 0).steps) === before && tb.pat.comps.length === 1 && B.harm.length === 2,
+    "patterns (mock): sent, the FM-1 plays pattern 2 (a note, a TRIG), pattern 1 kept, the chain 2 1, the progression I V");
+  m.sim.play(true);
+  const err = await E.bkWriteObj(rq, 0, P.encode(B)).then(() => null, (e) => e.code);
+  m.sim.play(false);
+  ok(err === "bkStop", "patterns (mock): refused while the song plays (rc 3: stop it first)");
+  done();
+}
+
+/* ---------------------------------- BoopBox: a project (format 7) read and written as the firmware does --- */
+function editorProj7() {
+  const P = E.PROJ7, LEN = 29, ctx = { len: LEN, def: (id) => (id === LEN ? 16 : 0) };
+  const pc = readFileSync(join(HERE, "../firmware/src/project.c"), "utf8"), pt = readFileSync(join(HERE, "../firmware/src/patcodec.c"), "utf8");
+  const cp = readFileSync(join(HERE, "../firmware/src/comp.c"), "utf8"), pb = readFileSync(join(HERE, "../firmware/src/patbank.c"), "utf8");
+  const ranges = [...((/CP_RANGE\[CP_COUNT\]\[6\] = \{([\s\S]*?)\n\};/.exec(cp) || [])[1] || "").matchAll(/\[CP_(\w+)\] = \{([^}]*)\}/g)]
+    .filter((m) => m[1] !== "NONE").map((m) => m[2].replace("NSTEP", "64").replace("P_E7", "70").replace("P_ED_FLT", "5").split(",").map((x) => +x.trim()));
+  const names = [...((/CP_NAME\[CP_COUNT\] = \{([^}]*)\}/.exec(cp) || [])[1] || "").matchAll(/"([^"]*)"/g)].map((m) => m[1]).slice(1);
+  ok(/#define PB_SIZE 3072u/.test(pb) && /'G'/.test(pc) && /'H'/.test(pc) && /'P'/.test(pc) && /if \(sz < sizeof t->step\)/.test(pt)
+    && js(ranges) === js(P.CP.slice(1).map((c) => c.slice(1))) && js(names) === js(P.CP.slice(1).map((c) => c[0])),
+    "project 7: the editor's codec has the firmware's chunks, bank size, component names and ranges (comp.c)");
+  const tool = join(HERE, "../build/host/proj7_tool");
+  if (!existsSync(tool)) { console.log("project 7: SKIPPED the firmware cross-checks (build/host/proj7_tool: tests/run_tests.sh builds it)"); return; }
+  const dir = mkdtempSync(join(tmpdir(), "proj7-")), f = (n) => join(dir, n);
+  execFileSync(tool, ["gen", f("a.bin")]);
+  const a = readFileSync(f("a.bin")), A = P.decode(a);
+  ok(!!A && eq(P.encode(A), a) && A.tracks.length === 8 && A.bank.length === 3 && A.harm.length === 3 && A.sel === 2
+    && P.patBytes(A.tracks[1].pat, false)[0] === 1 && A.tracks[0].pat.comps.length === 3 && A.tracks[0].chain.join() === "0,2,0",
+    "project 7: the firmware's capture decoded and encoded again: the same bytes (sparse and whole patterns, bank, progression)");
+  const load = (bytes) => { writeFileSync(f("in.bin"), bytes); const o = execFileSync(tool, ["load", f("in.bin"), f("out.bin")]).toString(); return { o, b: readFileSync(f("out.bin")) }; };
+  /* edits as the Patterns page makes them */
+  const B = P.decode(a);
+  P.play(B, 0, 2, ctx);                                    /* track 1 plays pattern 3 (LEN 8): pattern 1 into the bank */
+  P.setChain(B, 0, [2, 0, 4]);
+  const t0 = P.track(B, 0);
+  t0.pat.comps.push({ step: 1, type: 11, a: 5, b: 2 });   /* JUMP to 5 every 2nd time */
+  t0.pat.dir = 3; t0.pat.seed = 42;
+  const p5 = P.patOf(B, 5, 4);                              /* track 6's pattern 5 copied into its pattern 8, LEN 12 */
+  P.setPat(B, 5, 7, p5, P.lenOf(B, 5, 4, ctx), ctx);
+  P.setPat(B, 3, 1, null, 0, ctx);                          /* track 4's pattern 2 cleared */
+  B.harm = [{ deg: 5, bars: 1 }, { deg: 3, bars: 3 }];
+  const b = P.encode(B), r = load(b);
+  const line = (k) => (r.o.split("\n").find((x) => x.startsWith(`T${k} `)) || "");
+  ok(P.fits(B) && eq(r.b, b), "project 7: the editor's edits loaded by the firmware and captured again: the same bytes");
+  ok(/^T0 kind 0 pat 2 chain 2 0 4 bank 1 comps 1 dir 3 seed 42 len 8 /.test(line(0)) && / c1:11:5:2/.test(line(0)) && / n0 40$/.test(line(0)),
+    "project 7: pattern 3 plays (its LEN 8, its notes; pattern 1 and its components in the bank), the chain 3 1 5, a JUMP, RAND, seed 42");
+  ok(/ bank 144 /.test(line(5)) && / bank 0 /.test(line(3)) && /^H 2 5:1 3:3$/m.test(r.o),
+    "project 7: track 6's pattern 5 copied to 8; track 4's pattern 2 cleared; the progression VI IV");
+  const C = P.decode(a);
+  C.harm = [{ deg: 0, bars: 4 }];
+  const c = P.encode(C), rc = load(c);
+  ok(!/'H'/.test(String.fromCharCode(...c)) && eq(rc.b, c) && /^H 1 0:4$/m.test(rc.o), "project 7: one chord of I for 4 bars: no 'H' chunk, as the firmware writes it");
+  const bad = Uint8Array.from(a); bad[40] ^= 1;
+  ok(P.decode(bad) === null && P.decode(a.subarray(0, 100)) === null, "project 7: a damaged or cut project is not read (the check word, the size)");
+  const D = P.decode(a);                                    /* a bank over 3,072 bytes does not fit */
+  for (let k = 1; k < 8; k++) P.setPat(D, 1, k, D.tracks[1].pat, 64, ctx);
+  ok(!P.fits(D) && P.bankBytes(D) > P.PB_SIZE, "project 7: seven dense patterns more do not fit (the bank's 3,072 bytes): refused before anything is sent");
+}
+
 await editorMock();
 await editorLibrarian();
 await editorLive();
@@ -1831,6 +1906,8 @@ await editorTheme();
 await editorLivePage();
 editorLivePro();
 await editorSongFile();
+editorProj7();
+await editorProj7Mock();
 editorTabs();
 editorIcons();
 samplesMatch();
