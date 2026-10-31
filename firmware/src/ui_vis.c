@@ -25,6 +25,7 @@ static const char *const VIS_NAME[VIS_N] = {"PALMS", "NIGHT DRIVE", "HORIZON", "
 /* vis_on, vis_shown_last, vis_name_t: ui_draw.c; vis_style: panel.c (kept with the settings, taken modulo VIS_N) */
 #define VIS_FFT 512u
 #define VIS_FLY 16u                                 /* FLYOVER: the spectrum's last 16 rows */
+#define VIS_FLY_QUIET 64                            /* FLYOVER: the mix's peak under this (of 32767): silent, it stops */
 static int16_t vis_re[VIS_FFT] __attribute__((section(".pool"))), vis_im[VIS_FFT] __attribute__((section(".pool")));
 #include "scratch.h"                                /* sloop-lab: this frame's scope snapshot, in the shared scratch */
 #define vis_l (main_scratch.vis[0])
@@ -373,7 +374,8 @@ UI_SMALL static void vis_update(void)
                 vs.cap[i] = (int16_t)(vs.cap[i] > vs.capv[i] ? vs.cap[i] - vs.capv[i] : 0);
             }
         }
-        if (st == 3u && (vs.flyh ^= 1u) == 0u) {   /* FLYOVER: a row every other frame, the newest in front */
+        if (st == 3u && mpk >= VIS_FLY_QUIET && (vs.flyh ^= 1u) == 0u) {   /* FLYOVER: a row every other frame, the
+                                                     * newest in front; silent (no note sounding), it holds still */
             vs.fly0 = (uint8_t)((vs.fly0 + VIS_FLY - 1u) % VIS_FLY);
             for (i = 0; i < 32u; i++)
                 vis_fly[vs.fly0][i] = (uint8_t)(vs.bar[i] * 255 / 1000);
@@ -468,11 +470,12 @@ UI_SMALL static void vis_car(int32_t cx, int32_t by, int kick)
         cv_rect(cx - 24 - i * 6 / 7, by - 44 + i, 49 + i * 12 / 7, 1, vis_mix(RGB(255, 190, 80), RGB(200, 40, 150), i * 20));
     vis_shapes(VIS_CAR + 11, 5u, cx, by, VIS_CARPAL);
 }
-/* NIGHT DRIVE: the city is the spectrum (a cap light on each roof), the road runs with the beat; stopped, it slows and
- * the car parks */
+/* NIGHT DRIVE: the city is the spectrum (a cap light on each roof), the road runs with the beat (three lane stripes and
+ * one pair of posts a beat: the car at speed); stopped, it slows and the car parks */
+#define VIS_DRIVE_SPD 3u
 UI_SMALL static void vis_drive(void)
 {
-    uint32_t ph = vs.drv & 255u, ph2 = (vs.drv >> 1) & 255u;
+    uint32_t ph = (vs.drv * VIS_DRIVE_SPD) & 255u, ph2 = (vs.drv * VIS_DRIVE_SPD / 2u) & 255u;
     int32_t i, j;
     vis_sky(0, 120, RGB(5, 0, 25), RGB(70, 10, 70));
     vis_stars(40u, 80u, 2u);
@@ -490,7 +493,7 @@ UI_SMALL static void vis_drive(void)
     vis_quad(VQ(110), VQ(120), VQ(130), VQ(120), VQ(239), VQ(239), VQ(0), VQ(239), RGB(25, 15, 40));
     vis_wline(110, 120, 0, 239, 2, V_PINK);
     vis_wline(130, 120, 239, 239, 2, V_PINK);
-    for (i = -1; i < 6; i++) {                      /* the lane stripes, one passing a beat */
+    for (i = -1; i < 6; i++) {                      /* the lane stripes */
         int32_t s0 = (i * 256 + (int32_t)ph) / 6, s1 = s0 + 21, y0, y1;
         if (s1 <= 0 || s0 >= 256)
             continue;
@@ -499,7 +502,7 @@ UI_SMALL static void vis_drive(void)
         vis_quad(VQ(120) - 16 - s0 / 4, VQ(y0), VQ(120) + 16 + s0 / 4, VQ(y0), VQ(120) + 16 + s1 / 4, VQ(y1),
                  VQ(120) - 16 - s1 / 4, VQ(y1), V_GOLD);
     }
-    for (i = -1; i < 4; i++) {                      /* the posts along the road, half as many: they sweep past */
+    for (i = -1; i < 4; i++) {                      /* the posts along the road, at half the stripes' pace */
         int32_t s = (i * 256 + (int32_t)ph2) / 4, y, sp, h, r;
         if (s <= 0 || s >= 256)
             continue;
