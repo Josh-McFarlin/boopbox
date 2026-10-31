@@ -139,8 +139,8 @@ UI_SMALL static void draw_menu(void)
             {
                 int32_t x = cv_text(4, 4, &FONT_L, "BOOPBOX", C_WHITE) + 8;
                 uint32_t k;
-                for (k = 0; k < 4u; k++)            /* the logo's display: four bars, the tracks' colours */
-                    cv_rect(x + (int32_t)k * 14, 16, 10, 6, UI_COL[k]);
+                for (k = 0; k < 8u; k++)            /* the logo's display: eight bars, the tracks' colours */
+                    cv_rect(x + (int32_t)(k & 3u) * 14, k < 4u ? 12 : 21, 10, 6, UI_COL[k]);
             }
             cv_text(4, 36, &FONT_S, "BASED ON SLOOP & FELUCCA", C_AMB);
             cv_text(4, 54, &FONT_S, FELUCCA_VERSION, C_HI);

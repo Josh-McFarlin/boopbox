@@ -32,6 +32,8 @@ static struct {
     int16_t bar[32], cap[32], capv[32];             /* spectrum: bars, caps and their fall speed (0..1000) */
     int16_t vu[5], pk[5], pkt[5];                   /* VU: tracks + master, peak holds */
     int16_t lvl[5];                                 /* the tracks' levels (0..1000) this frame, the master */
+    int16_t tlv[NTRK], tvu[NTRK];                   /* BOOPBOX: each track's own level, and as shown (falling) */
+    uint8_t tfl[NTRK];                              /* BOOPBOX: frames since each track's note started */
     int16_t bh[4], bv[4];                           /* BOUNCE: height and speed (1/256 units) */
     uint8_t flash[4], kick;                         /* frames since a note started (0 = none) / a kick, fading */
     int16_t wamp[4];                                /* WIRES: each string's swing (0..1000) */
@@ -226,7 +228,7 @@ static void vis_bands(int16_t *out)
 static void vis_update(void)
 {
     uint32_t i, w, hit, now = fm1_ms;
-    int32_t pk[4], mpk = 0;
+    int32_t pk[4], p8[NTRK], mpk = 0;
     /* the scope: the last 512 frames (left, right) */
     w = scope_w;
     for (i = 0; i < VIS_FFT; i++) {
@@ -237,10 +239,12 @@ static void vis_update(void)
     }
     /* the tracks' peaks since the last look (as the TRACKS meters take them) and the notes that started */
     fm1_irq_off();
-    for (i = 0; i < 4u; i++) {                      /* (eight tracks: two in each of the four colours, 1 + 5 .. 4 + 8) */
-        pk[i] = trk[i].peak > trk[i + 4u].peak ? trk[i].peak : trk[i + 4u].peak;
-        trk[i].peak = trk[i + 4u].peak = 0;
+    for (i = 0; i < NTRK; i++) {                    /* (each track's own, for BOOPBOX) */
+        p8[i] = trk[i].peak;
+        trk[i].peak = 0;
     }
+    for (i = 0; i < 4u; i++)                        /* (eight tracks: two in each of the four colours, 1 + 5 .. 4 + 8) */
+        pk[i] = p8[i] > p8[i + 4u] ? p8[i] : p8[i + 4u];
     hit = vis_hit;
     vis_hit = 0;
     if (vis_kick_hit) {
@@ -248,6 +252,10 @@ static void vis_update(void)
         vs.kick = 255;
     }
     fm1_irq_on();
+    for (i = 0; i < NTRK; i++) {
+        vs.tlv[i] = (int16_t)(trk_level(i) && !trk[i].p[P_MUTE] ? vis_lvl(p8[i]) : 0);
+        vs.tfl[i] = (uint8_t)((hit >> i) & 1u ? 8u : vs.tfl[i] ? vs.tfl[i] - 1u : 0u);
+    }
     for (i = 0; i < 4u; i++) {
         int32_t v = (trk_level(i) && !trk[i].p[P_MUTE]) || (trk_level(i + 4u) && !trk[i + 4u].p[P_MUTE]) ? vis_lvl(pk[i]) : 0;
         vs.lvl[i] = (int16_t)v;                     /* (as the TRACKS meters) */
@@ -348,8 +356,10 @@ static void vis_update(void)
         }
         break;
     case 11:                                        /* BOOPBOX: the bars and the speakers fall slowly */
-        for (i = 0; i < 5u && VIS_HAS(11); i++)
-            vs.vu[i] = (int16_t)(vs.lvl[i] > vs.vu[i] - 30 ? vs.lvl[i] : vs.vu[i] - 30);
+        for (i = 0; i < NTRK && VIS_HAS(11); i++)
+            vs.tvu[i] = (int16_t)(vs.tlv[i] > vs.tvu[i] - 30 ? vs.tlv[i] : vs.tvu[i] - 30);
+        if (VIS_HAS(11))
+            vs.vu[4] = (int16_t)(vs.lvl[4] > vs.vu[4] - 30 ? vs.lvl[4] : vs.vu[4] - 30);
         break;
     default:
         break;
@@ -583,34 +593,33 @@ static void vis_rrect(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t r,
     vis_ellipse(x0 + r, y1 - r - 1, r, r, c);
     vis_ellipse(x1 - r - 1, y1 - r - 1, r, r, c);
 }
-/* the logo (tools/gen_logo.py at 0.85), alive: the display's four bars are the tracks (lit to their level,
- * flashing on a note), the speakers boop with the master (the cones push out on a kick), the box hops on the
- * beat, and the master's wave runs along the floor */
+/* the logo (tools/gen_logo.py at 0.85), alive: the display's eight bars are the tracks, 1..4 on top and 5..8 below in
+ * their own colours (lit to their level, flashing on a note), the speakers boop with the master (the cones push out on
+ * a kick), the box hops on the beat, and the master's wave runs along the floor */
 static void vis_boopbox(void)
 {
-    static const uint16_t DIMC[4] = {RGB(9, 27, 56), RGB(7, 45, 25), RGB(56, 44, 5), RGB(56, 22, 6)};
     static const int16_t SPK_X[2] = {84, 156};
     uint32_t bq = vis_beat_q8(), ph = bq & 255u, i;
     int32_t hop = ph < 64u ? (int32_t)(64u - ph) * 4 / 64 : 0;     /* down 4 px on the beat, back over a 16th */
     int32_t y = 8 + hop, x, sc = vs.scale > 1600 ? vs.scale : 1600;
-    int32_t m = vs.vu[4], rs = 24 + m * 5 / 1000, rc = 7 + m * 4 / 1000 + vs.kick * 4 / 255;
+    int32_t m = vs.vu[4], rs = 22 + m * 5 / 1000, rc = 7 + m * 4 / 1000 + vs.kick * 4 / 255;
     /* the handle, then the body: white, the inside black */
     vis_rrect(72, y + 26, 168, y + 80, 18, C_WHITE);
     vis_rrect(82, y + 36, 158, y + 80, 9, C_BLACK);
     vis_rrect(28, y + 58, 212, y + 184, 29, C_WHITE);
     vis_rrect(38, y + 68, 202, y + 174, 19, C_BLACK);
-    /* the display: each bar dim, then lit from the left to its track's level */
-    for (i = 0; i < 4u; i++) {
-        int32_t x0 = 55 + (int32_t)i * 34, lit = 6 + 22 * vs.vu[i] / 1000;
-        uint16_t col = vs.flash[i] ? mix565(UI_COL[i], C_WHITE, vs.flash[i] * 13) : UI_COL[i];
-        vis_rrect(x0, y + 77, x0 + 28, y + 91, 7, DIMC[i]);
-        vis_rrect(x0, y + 77, x0 + lit, y + 91, 7, col);
+    /* the display, two rows of four: each bar dim, then lit from the left to its track's level */
+    for (i = 0; i < NTRK; i++) {
+        int32_t x0 = 55 + (int32_t)(i & 3u) * 34, y0 = y + (i < 4u ? 73 : 87), lit = 6 + 22 * vs.tvu[i] / 1000;
+        uint16_t col = vs.tfl[i] ? mix565(UI_COL[i], C_WHITE, vs.tfl[i] * 13) : UI_COL[i];
+        vis_rrect(x0, y0, x0 + 28, y0 + 10, 5, UI_DIM[i]);
+        vis_rrect(x0, y0, x0 + lit, y0 + 10, 5, col);
     }
     /* the speakers: the ring and the cone grow with the master */
     for (i = 0; i < 2u; i++) {
-        vis_ellipse(SPK_X[i], y + 133, rs + 5, rs + 5, C_WHITE);
-        vis_ellipse(SPK_X[i], y + 133, rs - 5, rs - 5, C_BLACK);
-        vis_ellipse(SPK_X[i], y + 133, rc, rc, C_WHITE);
+        vis_ellipse(SPK_X[i], y + 137, rs + 5, rs + 5, C_WHITE);
+        vis_ellipse(SPK_X[i], y + 137, rs - 5, rs - 5, C_BLACK);
+        vis_ellipse(SPK_X[i], y + 137, rc, rc, C_WHITE);
     }
     /* the floor: the master's wave */
     for (x = 0; x < 240; x++) {
