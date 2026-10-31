@@ -1518,6 +1518,31 @@ int main(int argc, char **argv)
         tap(B_HOME); frames(2);
         tap(B_LFO); frames(2);
         check(!vis_shown() && !vis_on && !strcmp(PAGES[ui.page].title, "LFO"), "visualiser: a page button closes it and opens its page");
+        {   /* FLYOVER: playing, the ground always moves (silent bars too); stopped, it moves on until the peaks are off
+             * the back of the screen, then holds still */
+            uint8_t f0;
+            uint32_t r, c, top = 0;
+            int ok, moved;
+            go_home(); frames(4); tap(B_HOME); frames(2);
+            vis_style = 3; ui.force = 1; frames(60);
+            f0 = vs.fly0; frames(8);
+            ok = vis_shown() && song.playing && vs.fly0 != f0;
+            transport_req = 2; frames(2);
+            f0 = vs.fly0; frames(8);
+            moved = vs.fly0 != f0;                  /* (just stopped: the peaks still on the screen) */
+            frames(240);                            /* (the reverb's tail, then the rows off the back) */
+            f0 = vs.fly0; frames(20);
+            for (r = 0; r < VIS_FLY; r++)
+                for (c = 0; c < 32u; c++)
+                    top = vis_fly[r][c] > top ? vis_fly[r][c] : top;
+            ok &= moved && !song.playing && vs.fly0 == f0 && top == 0u;
+            for (j = 0; j < NTRK; j++) steps_clear(&trk[j]);
+            transport_req = 1; frames(60);          /* playing, nothing sounding */
+            f0 = vs.fly0; frames(8);
+            ok &= song.playing && vs.peak < VIS_FLY_QUIET && vs.fly0 != f0;
+            check(ok, "visualiser: FLYOVER moves while playing (silent too), drains after STOP, then holds still");
+            tap(B_HOME); frames(2);
+        }
         transport_req = 2; frames(4);
         for (j = 0; j < NTRK; j++) steps_clear(&trk[j]);
         vis_style = 0; song.sel = 0; go_home(); frames(20);
