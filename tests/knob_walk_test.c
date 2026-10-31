@@ -11,7 +11,7 @@
 typedef struct {
     int16_t g[G_COUNT], p[NTRK][P_COUNT];
     step_t step[NTRK][NSTEP];
-    uint8_t eng[NTRK], preset[NTRK];
+    uint8_t eng[NTRK], preset[NTRK], kind[NTRK];
     int32_t x[12];
 } snap_t;
 static snap_t s0, s1;
@@ -22,7 +22,7 @@ static void snap(snap_t *s)
     for (k = 0; k < NTRK; k++) {
         memcpy(s->p[k], trk[k].p, sizeof s->p[k]);
         memcpy(s->step[k], trk[k].step, sizeof s->step[k]);
-        s->eng[k] = trk[k].eng_req, s->preset[k] = trk[k].preset;
+        s->eng[k] = trk[k].eng_req, s->preset[k] = trk[k].preset, s->kind[k] = trk[k].kind;
     }
     s->x[0] = rec_tempo, s->x[1] = rec_count, s->x[2] = rec_quant_off, s->x[3] = song.sel, s->x[4] = ui.page;
     s->x[5] = ui.home, s->x[6] = ui.step_page, s->x[7] = ui.cursor, s->x[8] = drum_page, s->x[9] = drum_cursor;
@@ -40,6 +40,11 @@ static uint32_t changed(char *what, size_t n)
         if (s0.g[i] != s1.g[i])
             NOTE(" g%u", i);
     for (k = 0; k < NTRK; k++) {
+        if (s0.kind[k] != s1.kind[k]) {           /* (the sound browser's TYPE: synth <-> drum, its sound and pattern
+                                                   * with it: one move) */
+            NOTE(" t%u kind", k);
+            continue;
+        }
         if (s0.eng[k] != s1.eng[k] || s0.preset[k] != s1.preset[k]) {
             NOTE(" t%u sound", k);
             continue;

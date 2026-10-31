@@ -151,7 +151,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             return;
         }
     }
-    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* (ALGORITHM picks the track here too, as on TRACKS) */
         track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
     for (k = 0; k < 4u; k++) {
         if ((s = panel_enc(EN_K1 + k)) == 0)
@@ -340,7 +340,7 @@ UI_SMALL static void chords_screen_input(uint32_t pressed, uint32_t home)
             return;
         }
     }
-    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* (ALGORITHM picks the track here too, as on TRACKS) */
         track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
     if ((s = panel_enc(EN_PRESET)) != 0)
         song.g[G_HKEY] = (int16_t)(((int32_t)song.g[G_HKEY] + s % 12 + 24) % 12);
