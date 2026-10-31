@@ -848,6 +848,8 @@ UI_SMALL static void page_fix(void)
     page_entered();
 }
 
+/* the home screen: TRACKS (HOME takes you there), or HOME without the arranger. ALGORITHM selects a track here only */
+UI_SMALL static int on_home(void) { return ui.home || cur_page()->scope == SC_TRK; }
 UI_SMALL static void go_home(void)
 {
 #if FELUCCA_ARRANGER
@@ -1054,6 +1056,22 @@ UI_SMALL static void track_power_on(uint32_t i)
         apply_preset_to(t, TRK_DEF[i % NTRK][2]);   /* with its sends */
     }
     track_defaults_steps(t);                          /* the sequencers start empty */
+}
+/* the selected track SYNTH <-> DRUM (TOOLS > KIND, the sound browser's DRUMS group): its pattern cleared. e: an engine
+ * the synth track will take next (its room checked too). 0: refused, nothing changed (no engine arena free) */
+UI_SMALL static int track_kind_switch(uint32_t to, uint32_t e)
+{
+    uint32_t i = song.sel % NTRK;
+    if (TSEL->kind == to)
+        return 1;
+    if (to == TK_SYNTH && (!eng_room(TSEL, trk_def_kind(i) == TK_SYNTH ? TRK_DEF[i][1] : 0u) || !eng_room(TSEL, e))) {
+        ui_message("ENGINE BUSY: NO CHANGE");
+        return 0;
+    }
+    if (undo.valid && undo.trk == i)
+        undo.valid = 0;                                 /* (the undo was the other kind's pattern) */
+    track_set_kind(TSEL, to);
+    return 1;
 }
 
 /* switch engine (its defaults + first preset) and say so */
@@ -1374,47 +1392,75 @@ UI_SMALL static void preset_go(uint32_t n)                    /* load list index
     ui.force = 1;
 }
 
-/* The sound browser (the PRESETS page; PRESETS turned on TRACKS opens it): the groups on the
- * left, the sounds of the selected one on the right, all of them in sight. VIEW (KNOB 3) groups them by ENGINE (the
- * engines in order, each with its sounds) or by KIND (the PRESETS list's own order: basses, keys, organs...). The
- * favourites come first and the user presets last in both. A position in the view -> a PRESETS list index (preset_go);
- * Program Change and the favourites keep the list as it was */
-#define BR_G 16u                                     /* groups: FAV, 12 engines (or 8 kinds), USER */
+/* The sound browser (the PRESETS page; PRESETS turned on TRACKS opens it), in three levels:
+ * KNOB 1 the TYPE (SYNTH or DRUMS), KNOB 2 its ENGINE (the left column), KNOB 3 the SOUND (the right column).
+ * SYNTH: the favourites, then the engines in order, each with its sounds (VIEW ENGINE), or the PRESETS list's kinds
+ * (VIEW KIND: basses, keys, organs...), then the user presets. DRUMS has no engines: its kits by kind (the GM kit and
+ * its treatments, the synthesised kits, the user sample kits, your synth kits). A synth track taken to DRUMS becomes a
+ * drum track, a drum track taken to SYNTH a synth track. Each level stops at its ends (a sound never scrolls into the
+ * next engine, an engine never into the other TYPE). SELECT: VIEW; KNOB 4: FAV. A position in the view -> a PRESETS
+ * list index (preset_go), or after the list a kit (BR_KIT); Program Change and the favourites keep the list as it was */
+#define BR_G 18u                                     /* groups: FAV, 12 engines (or 8 kinds), USER, 4 kinds of kit */
+#define BR_ND DRUM_KITS                              /* DRUMS: every kit */
+#define BR_KIT 0x8000u                               /* br_n: a drum kit, | its number */
+#define BR_GDRUM 200u                                /* br_gid: DRUMS' first kind of kit (200 .. 203) */
+#define BR_ARM 0xEAu                                 /* ui.arm: a change of the track's kind, waiting for a second detent */
 #define BR_IDLE_MS 4000u                             /* opened from TRACKS: back to it after this long untouched */
+static const char *const BR_KITG[4] = {"GM KIT", "MACHINE", "USR SMP", "USR SYN"};
 static uint8_t br_kind;                              /* VIEW: 0 ENGINE, 1 KIND (not kept: ENGINE at power-on) */
 static uint8_t br_back, br_home, br_page;            /* opened by PRESETS on TRACKS: the screen it goes back to */
 #define BR_OPEN_MS 150u                              /* the turn that opened it moves no sound */
 static uint32_t br_t0;                               /* when it opened (ms) */
-UI_SMALL static uint32_t br_n(uint32_t p, uint32_t nf)        /* view position -> PRESETS list index */
+static uint16_t br_arm_p;                            /* (BR_ARM) the position the second detent goes to */
+UI_SMALL static uint32_t br_kitg(uint32_t k)         /* a kit's kind: 0 the GM kit, 1 synthesised, 2 user samples, 3 SYN */
 {
+    return k < DRUM_SAMPLED ? 0u : k < DRUM_USR ? 1u : k < DRUM_SYN ? 2u : 3u;
+}
+UI_SMALL static int br_gdrum(uint32_t g) { return g >= BR_GDRUM && g < BR_GDRUM + 4u; }
+/* view position -> PRESETS list index, or BR_KIT | a kit (the kits after the list: total - BR_ND ..) */
+UI_SMALL static uint32_t br_n(uint32_t p, uint32_t nf)
+{
+    uint32_t total = nf + NBANK + up_count();
+    if (p >= total)
+        return BR_KIT | ((p - total) % BR_ND);
     if (br_kind || p < nf || p - nf >= NBANK)
         return p;
     if (!bank_ready)
         bank_resolve();
     return nf + br_ord[p - nf];
 }
-UI_SMALL static uint32_t br_pos(uint32_t *total, uint32_t *nf)   /* the selected track's sound in the view */
+UI_SMALL static uint32_t br_pos(uint32_t *total, uint32_t *nf)   /* the selected track's sound (or kit) in the view */
 {
     uint32_t b[FAV_N], n = preset_pos(total), p;
     *nf = fav_list(b);
+    if (is_drum(TSEL)) {
+        p = *total + drum_kit(TSEL);
+        *total += BR_ND;
+        return p;
+    }
+    p = *total;
+    *total += BR_ND;
     if (!br_kind && n >= *nf)
         for (p = *nf; p < *nf + NBANK; p++)
             if (br_n(p, *nf) == n)
                 return p;
     return n;
 }
-UI_SMALL static uint32_t br_gid(uint32_t p, uint32_t nf)      /* the group of a position: 0 FAV, 255 USER, else 1 + */
-{                                                              /* its engine (ENGINE) or its kind (KIND) */
-    uint32_t n = br_n(p, nf) - nf;
+UI_SMALL static uint32_t br_gid(uint32_t p, uint32_t nf)      /* the group of a position: 0 FAV, 255 USER, BR_GDRUM + a */
+{                                                              /* kind of kit, else 1 + its engine (ENGINE) or kind (KIND) */
+    uint32_t n = br_n(p, nf);
+    if (n & BR_KIT)
+        return BR_GDRUM + br_kitg(n & ~BR_KIT);
     if (p < nf)
         return 0;
+    n -= nf;
     if (n >= NBANK)
         return 255;
     return 1u + (br_kind ? BANK[n].kind : BANK[n].e % NENGINES);
 }
 UI_SMALL static const char *br_gname(uint32_t g)
 {
-    return !g ? "FAV" : g == 255u ? "USER" : br_kind ? BANK_KIND[g - 1u] : ENGINES[g - 1u]->name;
+    return !g ? "FAV" : g == 255u ? "USER" : br_gdrum(g) ? BR_KITG[g - BR_GDRUM] : br_kind ? BANK_KIND[g - 1u] : ENGINES[g - 1u]->name;
 }
 /* the view's groups: gs[i] the first position of group i (gs[ng] = total), gid[i] its id; *cg the group of cur */
 UI_SMALL static uint32_t br_groups(uint16_t *gs, uint8_t *gid, uint32_t cur, uint32_t total, uint32_t nf, uint32_t *cg)
@@ -1431,22 +1477,77 @@ UI_SMALL static uint32_t br_groups(uint16_t *gs, uint8_t *gid, uint32_t cur, uin
     gs[ng] = (uint16_t)total;
     return ng;
 }
-/* move the selected track's sound: by = the sounds (PRESETS, KNOB 2), else (KNOB 1, SELECT) the first sound of the
- * next / previous group; both wrap round */
-UI_SMALL static void br_step(int32_t s, int groups)
+/* the groups of a TYPE: [*g0, *g1) of the view's ng groups (SYNTH first, DRUMS after: its kinds of kit) */
+UI_SMALL static void br_side(const uint8_t *gid, uint32_t ng, int drums, uint32_t *g0, uint32_t *g1)
+{
+    uint32_t d = 0;
+    while (d < ng && !br_gdrum(gid[d]))
+        d++;
+    *g0 = drums ? d : 0u;
+    *g1 = drums ? ng : d;
+}
+/* the view's position p into the selected track. Across the TYPE (a kit on a synth track, a synth sound on a drum
+ * track) the track changes kind, which clears its pattern: with a pattern, a first detent arms (AGAIN), a second
+ * within ~1.5 s goes */
+UI_SMALL static void br_go(uint32_t p, uint32_t nf)
+{
+    uint32_t n = br_n(p, nf), kit = n & BR_KIT, e = 0, k;
+    if (!kit)
+        e = preset_at(n, &k);
+    if (!kit != !is_drum(TSEL)) {
+        if (!pat_empty(TSEL) && (ui.arm != BR_ARM || br_arm_p != p)) {
+            ui.arm = BR_ARM;
+            ui.arm_t = 90;
+            br_arm_p = (uint16_t)p;
+            ui_say("AGAIN: ", kit ? "DRUMS, PAT CLR" : "SYNTH, PAT CLR");
+            return;
+        }
+        ui.arm = 0;
+        if (!track_kind_switch(kit ? TK_DRUM : TK_SYNTH, e == NENGINES ? 0u : e))
+            return;
+        ui_message(kit ? "NOW A DRUM TRACK" : "NOW A SYNTH TRACK");
+    }
+    if (kit) {
+        TSEL->p[P_E0] = (int16_t)(n & ~BR_KIT);
+        sync_reload = 1;
+        ui.force = 1;
+        return;
+    }
+    preset_go(n);
+}
+/* move the selected track's sound, one level: BR_SOUND (PRESETS, KNOB 3) the sounds of its engine, BR_ENG (KNOB 2) the
+ * first sound of the next / previous engine of its TYPE, BR_TYPE (KNOB 1) right DRUMS, left SYNTH (its first engine
+ * with a sound: past the favourites). Each stops at its ends */
+enum { BR_SOUND, BR_ENG, BR_TYPE };
+UI_SMALL static void br_step(int32_t s, int level)
 {
     uint16_t gs[BR_G + 1u];
     uint8_t gid[BR_G];
-    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, p;
-    if (!total || is_drum(TSEL))
+    uint32_t total, nf, cur = br_pos(&total, &nf), cg = 0, ng, p, g0, g1;
+    int drums;
+    if (!total || !s)
         return;
-    if (groups) {
-        ng = br_groups(gs, gid, cur, total, nf, &cg);
-        p = gs[(cg + (s > 0 ? 1u : ng - 1u)) % ng];
-    } else {
-        p = (uint32_t)(((int32_t)cur + s % (int32_t)total + (int32_t)total) % (int32_t)total);
+    ng = br_groups(gs, gid, cur, total, nf, &cg);
+    drums = br_gdrum(gid[cg]);
+    if (level == BR_TYPE) {
+        if ((s > 0) == drums)
+            return;                                  /* (already there) */
+        br_side(gid, ng, s > 0, &g0, &g1);
+        if (g0 >= g1)
+            return;
+        if (s < 0 && gid[g0] == 0u && g0 + 1u < g1)
+            g0++;                                    /* (SYNTH: its first engine, not a favourite) */
+        p = gs[g0];
+    } else if (level == BR_ENG) {
+        br_side(gid, ng, drums, &g0, &g1);
+        p = (uint32_t)clamp((int32_t)cg + (s > 0 ? 1 : -1), (int32_t)g0, (int32_t)g1 - 1);
+        if (p == cg)
+            return;
+        p = gs[p];
+    } else if ((p = (uint32_t)clamp((int32_t)cur + s, gs[cg], (int32_t)gs[cg + 1u] - 1)) == cur) {
+        return;                                      /* (the end of the engine: no further) */
     }
-    preset_go(br_n(p, nf));
+    br_go(p, nf);
 }
 UI_SMALL static void br_open(void)                   /* PRESETS on TRACKS: the browser, until left untouched */
 {
@@ -1467,7 +1568,7 @@ UI_SMALL static void br_poll(void)                   /* once a pass: opened from
         return;
     if (ui.home || cur_page()->graph != GR_BROWSE)   /* (a button took it elsewhere: it stays there) */
         br_back = 0;
-    else if (is_drum(TSEL) || fm1_ms - ui_input_ms > BR_IDLE_MS) {
+    else if (fm1_ms - ui_input_ms > BR_IDLE_MS) {
         ui.home = br_home;
         ui.page = br_page;
         br_back = 0;

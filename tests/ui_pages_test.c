@@ -1409,7 +1409,9 @@ int main(int argc, char **argv)
         for (j = 0; j < NPAGES; j++) if (!strcmp(PAGES[j].title, "NOTES")) break;
         open_family(FAM_SEQ); ui.page = (uint8_t)j; ui.fam_last[FAM_SEQ] = (uint8_t)j; page_entered(); ui.force = 1; frames(2);
         b0 = ui.page;
-        for (j = 0; j < 3u; j++) { encs[panel.enc[EN_ALGO]] = 1; frames(2); }
+        encs[panel.enc[EN_ALGO]] = 1; frames(2);
+        check(song.sel == 0u && ui.page == b0, "ALGORITHM off the home screen (NOTES): no track change");
+        track_select(TRK_DRUM); frames(2);                 /* (another way there: the editor, a MIDI channel) */
         check(song.sel == TRK_DRUM && ui.page == b0 && !page_for_drum(cur_page()) && !strcmp(PAGES[ui.page].title, "NOTES"),
               "STEP on the drum track: not a page for the drums (DRUM TRACK shown, no piano roll of the drum steps)");
         for (j = 0; j < NSTEP; j++) memset(&TDRUM->dstep[j], 0, sizeof(dstep_t));
@@ -1689,7 +1691,7 @@ int main(int argc, char **argv)
         ui.force = 1; frame(); ppm("page-filter");
         {   /* on EDIT > FILTER, ALGORITHM to a track that is not ANALOG: not left on a page it does not have */
             int16_t bpm0 = song.g[G_BPM];
-            encs[panel.enc[EN_ALGO]] = 1; frames(2);
+            track_select(1); page_fix(); frames(2);
             check(song.sel == 1u && trk[1].eng_req != 0u && PAGES[ui.page].fam == FAM_EDIT &&
                   strcmp(PAGES[ui.page].title, "FILTER") && page_shown(cur_page()),
                   "EDIT > FILTER, then a track that is not ANALOG: the page before (EDIT 2), not FILTER");
@@ -1833,7 +1835,8 @@ int main(int argc, char **argv)
         encs[panel.enc[EN_K4]] = 1; frames(2);
         ok &= !strcmp(ui.msg, "FAV: ALREADY");
         ui.force = 1; frame(); ppm("page-presets-fav");
-        encs[panel.enc[EN_K1]] = 1; frames(4);       /* to another sound, added too: the favourites in their order */
+        encs[panel.enc[EN_K2]] = 1; frames(4);       /* to another sound (the next engine), added too: the favourites
+                                                       * in their order */
         encs[panel.enc[EN_K4]] = 1; frames(2);
         preset_pos(&total1);
         ok &= total1 == total0 + 2u && fav[0] != FAV_NONE && fav[1] != FAV_NONE;
@@ -1882,36 +1885,60 @@ int main(int argc, char **argv)
         ui.force = 1; frame(); ppm("page-browser");
         cur = br_pos(&total, &nf);
         ng = br_groups(gs, gid, cur, total, nf, &cg);
-        ok = ng == NENGINES + 1u && gid[ng - 1u] == 255u;   /* the engines in order, then USER (no favourites) */
-        for (i = 0; i + 1u < ng; i++) ok &= gid[i] == i + 1u;
-        for (i = 0; i < total; i++) {                       /* every sound once in the view */
+        ok = ng == NENGINES + 5u && gid[NENGINES] == 255u;   /* the engines in order, USER (no favourites), then
+                                                            * DRUMS' four kinds of kit */
+        for (i = 0; i < NENGINES; i++) ok &= gid[i] == i + 1u;
+        for (i = 0; i < 4u; i++) ok &= gid[NENGINES + 1u + i] == BR_GDRUM + i;
+        ok &= total - gs[NENGINES + 1u] == BR_ND;
+        for (i = 0; i < total; i++) {                       /* every sound and kit once in the view */
             uint32_t n = br_n(i, nf), j;
             for (j = i + 1u; j < total; j++) ok &= br_n(j, nf) != n;
-            ok &= n < total;
+            ok &= (n & BR_KIT) ? (n & ~BR_KIT) == i - (total - BR_ND) : n < total - BR_ND;
         }
-        check(ok, "browser ENGINE view: the twelve engines in order then USER, every sound once");
+        check(ok, "browser ENGINE view: SYNTH (the twelve engines in order, USER), DRUMS (its kits by kind), every sound once");
         encs[panel.enc[EN_PRESET]] = 1; frames(2);        /* (the rest of the turn that opened it: no sound) */
         check(br_pos(&total, &nf) == cur, "browser: a detent just after it opened (the same flick) moves nothing");
         frames(10);
+        k = (uint32_t)gs[cg + 1u] - 1u;                     /* (the engine's last sound) */
         encs[panel.enc[EN_PRESET]] = 1; frames(2);
-        ok = br_pos(&total, &nf) == (cur + 1u) % total;
-        encs[panel.enc[EN_K2]] = -1; frames(2);
+        ok = br_pos(&total, &nf) == (cur < k ? cur + 1u : cur);
+        if (cur < k) { encs[panel.enc[EN_K3]] = -1; frames(2); }
         ok &= br_pos(&total, &nf) == cur;
-        check(ok, "browser: PRESETS / KNOB 2 the next / previous sound in the view");
-        encs[panel.enc[EN_K1]] = 1; frames(2);
+        check(ok, "browser: PRESETS / KNOB 3 the next / previous sound of the engine");
+        e0 = trk[1].eng_req;
+        br_step(100, BR_SOUND); frames(2);
+        ok = br_pos(&total, &nf) == k && trk[1].eng_req == e0;
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok &= br_pos(&total, &nf) == k && trk[1].eng_req == e0 && !is_drum(&trk[1]);
+        br_step(-100, BR_SOUND); frames(2);
+        ok &= br_pos(&total, &nf) == gs[cg] && trk[1].eng_req == e0;
+        encs[panel.enc[EN_K3]] = -1; frames(2);
+        ok &= br_pos(&total, &nf) == gs[cg] && trk[1].eng_req == e0;
+        check(ok, "browser: the sounds stop at the ends of the engine (no scrolling into the next one)");
+        br_step((int32_t)cur - (int32_t)gs[cg], BR_SOUND); frames(2);
+        encs[panel.enc[EN_K2]] = 1; frames(2);
         cur = br_pos(&total, &nf);
-        ok = cur == gs[(cg + 1u) % ng] && trk[1].eng_req == gid[(cg + 1u) % ng] - 1u;
-        encs[panel.enc[EN_SELECT]] = -1; frames(2);
+        ok = cur == gs[cg + 1u] && trk[1].eng_req == gid[cg + 1u] - 1u;
+        encs[panel.enc[EN_K2]] = -1; frames(2);
         ok &= br_pos(&total, &nf) == gs[cg] && !ui.home && cur_page()->graph == GR_BROWSE;
-        check(ok, "browser: KNOB 1 / SELECT the first sound of the next / previous engine");
+        for (i = 0; i < 20u; i++) { encs[panel.enc[EN_K2]] = -1; frames(2); }
+        ok &= br_pos(&total, &nf) == 0u && trk[1].eng_req == 0u;
+        for (i = 0; i < 20u; i++) { encs[panel.enc[EN_K2]] = 1; frames(2); }
+        cur = br_pos(&total, &nf);
+        ok &= cur >= gs[NENGINES - 1u] && cur < total - BR_ND && !is_drum(&trk[1]);   /* (the end of SYNTH: never into
+                                                                                    * DRUMS) */
+        check(ok, "browser: KNOB 2 the first sound of the next / previous engine, stopping at the ends of SYNTH");
+        br_step(-1, BR_ENG); frames(2);
+        set_engine_of(&trk[1], e0); apply_preset_to(&trk[1], p0); frames(2);
         for (i = 0; i < 9u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(1); }
         ui.force = 1; frame(); ppm("page-browser-scroll");
         e0 = trk[1].eng_req; p0 = trk[1].preset;
-        encs[panel.enc[EN_K3]] = 1; frames(2);
+        encs[panel.enc[EN_SELECT]] = 1; frames(2);
         cur = br_pos(&total, &nf);
         ng = br_groups(gs, gid, cur, total, nf, &cg);
-        ok = br_kind == 1u && trk[1].eng_req == e0 && trk[1].preset == p0 && ng == 9u && br_n(cur, nf) == cur;
-        check(ok, "browser: KNOB 3 VIEW = KIND, the eight kinds then USER, the PRESETS list's order, the sound kept");
+        ok = br_kind == 1u && trk[1].eng_req == e0 && trk[1].preset == p0 && ng == 13u && gid[8] == 255u &&
+             gid[9] == BR_GDRUM && br_n(cur, nf) == cur;
+        check(ok, "browser: SELECT the VIEW = KIND, the eight kinds then USER, the PRESETS list's order, the sound kept");
         ui.force = 1; frame(); ppm("page-browser-kind");
         frames(BR_IDLE_MS / 16u - 20u);
         ok = !ui.home && cur_page()->graph == GR_BROWSE;
@@ -1921,11 +1948,54 @@ int main(int argc, char **argv)
         open_family(FAM_ENV); frames(2);
         frames(BR_IDLE_MS / 16u + 10u);
         check(cur_page()->fam == FAM_ENV && !br_back, "browser: a button takes it elsewhere, it stays there");
-        song.sel = 3; go_home(); frames(2);                  /* the drum track: PRESETS is the kit, no browser */
+        br_kind = 0;
+        song.sel = 3; go_home(); frames(2);                  /* the drum track: PRESETS opens the browser on its kit */
         k = trk[3].p[P_E0];
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok = cur_page()->graph == GR_BROWSE && trk[3].p[P_E0] == (int16_t)k && cur == total - BR_ND + k &&
+             gid[cg] == BR_GDRUM + br_kitg(k) && page_for_drum(cur_page());
+        ui.force = 1; frame(); ppm("page-browser-drums");
+        frames(10);
         encs[panel.enc[EN_PRESET]] = k ? -1 : 1; frames(2);   /* (the last kit at power-on: one back) */
-        check(cur_page()->scope == SC_TRK && trk[3].p[P_E0] == (int16_t)(k ? k - 1u : 1u), "browser: not on the drum track (PRESETS: the kit)");
+        ok &= trk[3].p[P_E0] == (int16_t)(k ? k - 1u : 1u) && is_drum(&trk[3]);
+        br_step(100, BR_SOUND); frames(2);
+        ok &= trk[3].p[P_E0] == DRUM_KITS - 1 && is_drum(&trk[3]);
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        ok &= trk[3].p[P_E0] == DRUM_KITS - 1;              /* (the last kit: no further) */
+        for (i = 0; i < 10u; i++) { encs[panel.enc[EN_K2]] = -1; frames(2); }
+        ok &= trk[3].p[P_E0] == 0 && is_drum(&trk[3]);       /* (the GM kit: the first kind; never into SYNTH) */
+        encs[panel.enc[EN_PRESET]] = -1; frames(2);
+        ok &= trk[3].p[P_E0] == 0 && is_drum(&trk[3]);
+        encs[panel.enc[EN_K2]] = 1; frames(2);
+        ok &= trk[3].p[P_E0] == DRUM_SAMPLED;
+        check(ok, "browser on the drum track: KNOB 2 the kinds of kit, PRESETS / KNOB 3 the kits, stopping at the ends");
+        memset(trk[3].dstep, 0, sizeof trk[3].dstep);
+        dstep_set(&trk[3].dstep[0], 0, LV_NORM, 0);          /* a pattern: a change of kind asks twice */
+        encs[panel.enc[EN_K1]] = -1; frames(2);
+        ok = is_drum(&trk[3]) && ui.arm == BR_ARM && dstep_mask(&trk[3].dstep[0]);
+        encs[panel.enc[EN_K1]] = -1; frames(2);
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok &= !is_drum(&trk[3]) && gid[cg] == 1u && cur == gs[cg] && track_empty(&trk[3]) && cur_page()->graph == GR_BROWSE;
+        check(ok, "browser: KNOB 1 left, the drum track to SYNTH (its first engine): a synth track; a pattern: AGAIN first");
+        encs[panel.enc[EN_K1]] = -1; frames(2);
+        ok = !is_drum(&trk[3]) && br_pos(&total, &nf) == cur;
+        encs[panel.enc[EN_K1]] = 1; frames(2);                /* (an empty pattern: at once) */
+        cur = br_pos(&total, &nf);
+        ok &= is_drum(&trk[3]) && cur == total - BR_ND && trk[3].p[P_E0] == 0;
+        check(ok, "browser: KNOB 1 right, back to DRUMS (its first kit), at once with an empty pattern");
         trk[3].p[P_E0] = (int16_t)k;
+        song.sel = 1; go_home(); frames(2);                   /* a synth track to DRUMS and back (KNOB 1) */
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_PRESET]] = 1; frames(12);
+        encs[panel.enc[EN_K1]] = 1; frames(2);
+        ok = is_drum(&trk[1]) && trk[1].p[P_E0] == 0 && cur_page()->graph == GR_BROWSE;
+        encs[panel.enc[EN_K1]] = -1; frames(2);
+        ok &= !is_drum(&trk[1]) && trk[1].eng_req == 0u;
+        check(ok, "browser: KNOB 1 right, a synth track to DRUMS; left, back to SYNTH");
+        set_engine_of(&trk[1], e0); apply_preset_to(&trk[1], p0);
         br_kind = 0; song.sel = 1; go_home(); frames(2);
     }
     {   /* 2.7: the favourites in the settings' side record (after the theme): kept; a 2.7 beta's record (the theme
