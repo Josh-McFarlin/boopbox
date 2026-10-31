@@ -39,7 +39,7 @@ UI_SMALL static int32_t batt_shown(void)
     return batt_level();
 }
 
-/* (1.2) a rule across the screen: in SYNTHWAVE a neon line with a glow row each side (gfx.c cv_rule) */
+/* (1.1.0) a rule across the screen: in SYNTHWAVE a neon line with a glow row each side (gfx.c cv_rule) */
 UI_SMALL static void lcd_rule(uint32_t y, uint16_t c)
 {
     if (pal_neon) {
@@ -50,7 +50,7 @@ UI_SMALL static void lcd_rule(uint32_t y, uint16_t c)
     }
     lcd_fill(0, y, 240, 1, c);
 }
-/* (1.2) SYNTHWAVE: a floor of neon lines from the horizon y0 down to y1, toward the middle (the big pages' empty half) */
+/* (1.1.0) SYNTHWAVE: a floor of neon lines from the horizon y0 down to y1, toward the middle (the big pages' empty half) */
 UI_SMALL static void neon_floor(int32_t y0, int32_t y1)
 {
     int32_t i, d = y1 - y0;
@@ -74,7 +74,7 @@ UI_SMALL static void draw_head(void)
         return;
     ui.head_sig = sig;
     cv_begin(240, H_HEAD, C_BLACK);
-    cv_glow(6, H_HEAD);                               /* (1.2) SYNTHWAVE: a glow rising from the rule under it */
+    cv_glow(6, H_HEAD);                               /* (1.1.0) SYNTHWAVE: a glow rising from the rule under it */
     if (ui.msg_t) {
         cv_text(4, 1, &FONT_S, ui.msg, C_HI);
         cv_blit(0, Y_HEAD);
@@ -775,7 +775,7 @@ UI_SMALL static void graph_big(void)
         n += ui.big_l[c][0] != 0;
     if (n > 1u) {
         cv_rect(119, 6, 1, low || !pal_neon ? 112 : 56, C_LINE);
-        if (pal_neon && !low)                           /* (1.2) SYNTHWAVE: the empty half a floor to the horizon */
+        if (pal_neon && !low)                           /* (1.1.0) SYNTHWAVE: the empty half a floor to the horizon */
             neon_floor(62, 120);
         cv_rule(6, 62, 228, C_LINE);
     } else if (pal_neon) {                              /* (one value: under it) */

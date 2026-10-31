@@ -1420,7 +1420,7 @@ async function editorTheme() {
   const pals = [...gfx.matchAll(/\{"(\w+)", \{(RGB[^}]*)\}\}/g)].map((m) => [m[1], rgb(m[2])]);
   const tdef = rgb((/TE_COL_DEF\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
   ok(js(pals) === js(T.BUILTIN.map(([n, c]) => [n, c])) && js(tdef) === js(T.TRACKS), "theme: the built-in palettes and track colours == gfx.c (PALETTES, TE_COL_DEF)");
-  {   /* (BoopBox 1.2) SYNTHWAVE's own tracks, background and accent == gfx.c SYNTH_TRK, SYNTH_BG, SYNTH_HI */
+  {   /* (BoopBox 1.1.0) SYNTHWAVE's own tracks, background and accent == gfx.c SYNTH_TRK, SYNTH_BG, SYNTH_HI */
     const sw = T.builtin(T.BUILTIN.findIndex(([n]) => n === "SYNTHWAVE"));
     const strk = rgb((/SYNTH_TRK\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
     const sbg = rgb((/#define SYNTH_BG (RGB\([^)]*\))/.exec(gfx) || [])[1] || ""), shi = rgb((/#define SYNTH_HI (RGB\([^)]*\))/.exec(gfx) || [])[1] || "");

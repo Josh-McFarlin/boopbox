@@ -67,10 +67,13 @@ Real build, JieLi toolchain 2026-07-30 (the 1.0.0 tree builds within 16 B of the
 | --- | ---: | ---: |
 | the tree after SLOOP 2.8.4, the old six styles, web editor | 1,424 B over | — |
 | the six scenes, web editor (before the sound browser and the end of SLOOP's old formats) | 580,840 | 724 |
-| the default now (1.1.0): the six scenes, the sound browser, web editor | 576,164 | 5,400 |
-| no visualiser (`FELUCCA_VIS=0`, 1.1.0) | 565,412 | 16,152 |
+| 1.1.0 as first published: the six scenes, the sound browser, web editor | 576,164 | 5,400 |
+| with the browser's TYPE / engine / sound (main, before SYNTHWAVE) | 576,544 | 5,020 |
+| the default now (1.1.0): with the SYNTHWAVE palette and its neon touches | 577,656 | 3,908 |
+| no visualiser (`FELUCCA_VIS=0`, 1.1.0 as first published) | 565,412 | 16,152 |
 
-The visualiser is 10,752 B: its frame (the update, the FFT, the name) 2,640 and the six scenes. RAM .data + .bss is
+SYNTHWAVE (MENU → SCREEN → COLOR: the palette, the neon rules and glows, the gradient text, the floor, the boot sun) and
+the CHORDS screen's cleared rows are 1,112 B. The visualiser is 10,752 B: its frame (the update, the FFT, the name) 2,640 and the six scenes. RAM .data + .bss is
 85,484 B of 98,304 in 1.1.0 (the pool unchanged).
 
 ### Growth per milestone (real build, default flags of each tree)

@@ -9,6 +9,7 @@ the generated headers in build/gen: ./build.sh, or HOST_ONLY=1 tests/run_tests.s
 with a title and a line under each:
   boopbox-screens.png      the main screens
   boopbox-visualiser.png   the boot screen, a sound page, the menu and the visualiser's six styles
+  boopbox-synthwave.png    the main screens again in the SYNTHWAVE palette (MENU > SCREEN > COLOR)
 """
 import subprocess
 import sys
@@ -42,6 +43,18 @@ MORE = [
     ("vis-key-city", "KEY CITY", "a tower a key, lit in its track's colour"),
 ]
 
+SYNTH = [
+    ("boot", "BOOT", "a sun setting on a neon horizon"),
+    ("tracks-1-4", "TRACKS 1–4", "the tracks in cyan, magenta, orange, violet"),
+    ("patterns", "PATTERNS", "neon rules, a glow under the title"),
+    ("page-env", "ENV", "a sound page: the curve in the track's colour"),
+    ("chords", "CHORDS", "a progression the tracks follow"),
+    ("layer-mix-5-8", "GLO held: MIX", "tracks 5–8 in colours of their own"),
+    ("drums", "DRUMS", "16 sounds × 16 steps"),
+    ("notes", "SEQ → NOTES", "the piano roll"),
+    ("menu", "MENU (HOME held)", "large values from pink to orange"),
+]
+
 BG, BEZEL, TITLE, SUB = (28, 28, 32), (10, 10, 12), (236, 236, 240), (150, 150, 158)
 S, PAD, BZ, R = 480, 30, 8, 14            # a screen at 2x, the gap, the bezel, its corner
 
@@ -56,7 +69,7 @@ def font(bold, size):
     return ImageFont.load_default()
 
 
-def sheet(items, cols, out):
+def sheet(items, cols, out, work=WORK):
     ft, fs = font(True, 21), font(False, 16)
     rows = (len(items) + cols - 1) // cols
     cw, ch = S + 2 * BZ, S + 2 * BZ + 70
@@ -65,7 +78,7 @@ def sheet(items, cols, out):
     for k, (name, title, line) in enumerate(items):
         x, y = PAD + (k % cols) * (cw + PAD), PAD + (k // cols) * (ch + PAD // 2)
         d.rounded_rectangle([x, y, x + cw - 1, y + cw - 1], R, fill=BEZEL)
-        im.paste(Image.open(WORK / f"{name}.ppm").convert("RGB").resize((S, S), Image.NEAREST), (x + BZ, y + BZ))
+        im.paste(Image.open(work / f"{name}.ppm").convert("RGB").resize((S, S), Image.NEAREST), (x + BZ, y + BZ))
         d.text((x, y + cw + 14), title, font=ft, fill=TITLE)
         d.text((x, y + cw + 42), line, font=fs, fill=SUB)
     im.save(out, optimize=True)
@@ -82,9 +95,13 @@ def main():
                     f"-I{ROOT / 'firmware' / 'hal'}", f"-I{ROOT / 'tests'}", "-o", str(exe),
                     str(ROOT / "tools" / "screens_demo.c"), "-lm"], check=True)
     subprocess.run([str(exe), str(WORK)], check=True, stdout=subprocess.DEVNULL)
+    synth = WORK / "synthwave"
+    synth.mkdir(exist_ok=True)
+    subprocess.run([str(exe), str(synth), "5"], check=True, stdout=subprocess.DEVNULL)   # (gfx.c PAL_SYNTH)
     out.mkdir(parents=True, exist_ok=True)
     sheet(MAIN, 3, out / "boopbox-screens.png")
     sheet(MORE, 3, out / "boopbox-visualiser.png")
+    sheet(SYNTH, 3, out / "boopbox-synthwave.png", synth)
 
 
 if __name__ == "__main__":

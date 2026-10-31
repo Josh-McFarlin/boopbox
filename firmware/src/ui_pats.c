@@ -44,7 +44,7 @@ UI_SMALL static void pats_screen_draw(void)
         return;
     previous = ui.msg_t ? ~sig : sig;
     cv_begin(240, 40, C_BLACK);                  /* the head */
-    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
+    cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "PATTERNS", C_WHITE);
     str_cpy(b, "q ", 3);
     str_cpy(b + 2, QN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
@@ -241,7 +241,7 @@ UI_SMALL static void chords_screen_draw(void)
         return;
     previous = ui.msg_t ? ~sig : sig;
     cv_begin(240, 40, C_BLACK);                  /* the head: the key and scale asked for, when */
-    cv_glow(20, 38);                             /* (1.2) SYNTHWAVE: a glow over the rule */
+    cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "CHORDS", C_WHITE);
     str_cpy(b, N_HKEY[(uint32_t)clamp(song.g[G_HKEY], 0, 11)], 4);
     str_cpy(b + str_len(b), " ", 2);
@@ -282,6 +282,8 @@ UI_SMALL static void chords_screen_draw(void)
         cv_text(x + 16, 105, &FONT_S, is_drum(&trk[k]) ? " " : FL[f], k == sel ? C_BLACK : f ? C_WHITE : TE_G3);
     }
     cv_blit(0, 42);
+    lcd_fill(0, 166, 240, 36, C_BLACK);          /* (1.1.0) the rows under the tracks: what the page before drew there
+                                                  * (a graph, SYNTHWAVE's floor on FOLLOW) went on showing */
     cv_begin(240, 38, C_BLACK);                  /* the knobs, or a message */
     if (ui.msg_t) {
         cv_rect(0, 4, 240, 30, C_WHITE);

@@ -51,7 +51,7 @@ UI_SMALL static void boopbox_logo_draw(uint32_t y0)
 }
 #endif
 
-/* (1.2) SYNTHWAVE: a sun setting on a neon horizon under the logo (rows 168..201), yellow to pink, cut by bands that
+/* (1.1.0) SYNTHWAVE: a sun setting on a neon horizon under the logo (rows 168..201), yellow to pink, cut by bands that
  * widen toward the horizon */
 UI_SMALL static void boopbox_sun(void)
 {
