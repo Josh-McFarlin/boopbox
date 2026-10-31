@@ -480,6 +480,16 @@ static void formats(void)
     fm6_pack(v, pk);
     ok &= !memcmp(pk, FM6_INIT, FM6_PACKED);
     check("pack(unpack(x)) == x: the factory patches and the init voice (generator and C agree)", ok);
+    {                                               /* the exp2 table, built in RAM: the table gen_tables.py wrote */
+        uint32_t same = 1;
+        fm6_x2_fill();
+        for (i = 0; i <= 1024u; i++)
+            same &= FM6_EXP2[i] == (uint32_t)llround((double)(1u << 30) * (pow(2.0, i / 1024.0) - 1.0));
+        check("exp2 table built at power-on (fm6_x2_fill): all 1025 points as round(2^30 (2^(i/1024) - 1))", same);
+        for (i = 0, same = 1; i <= 1024u; i++)      /* SINE, built at power-on too (felucca_tables.h sine_fill) */
+            same &= SINE[i] == (int16_t)lround(32767.0 * sin(2.0 * 3.14159265358979323846 * i / 1024.0));
+        check("SINE built at power-on (sine_fill): all 1025 points as round(32767 sin(2 pi i / 1024))", same);
+    }
     for (k = 0; k < 2000u; k++) {
         for (i = 0; i < FM6_PACKED; i++) {
             seed = seed * 1103515245u + 12345u;

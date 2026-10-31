@@ -45,6 +45,26 @@ enum {
 };
 
 /* ---------------------------------------------------------------- math --- */
+/* 2^(i / 1024) - 1, Q30, i = 0..1024: built at the first FM6 note or patch (fm6_x2_fill) from FM6_X2C, 2^(2^k / 1024)
+ * in Q62 (tools/gen_tables.py): the product of i's bits, rounded, is exactly the table gen_tables.py used to write
+ * (tests/fm6_test.c checks every point); 4 KB of RAM in place of 4 KB of flash */
+static uint32_t FM6_EXP2[1025];
+static uint8_t fm6_x2_ok;
+static void fm6_x2_fill(void)
+{
+    uint32_t i, k;
+    if (fm6_x2_ok)
+        return;
+    for (i = 0; i < 1024u; i++) {
+        uint64_t acc = 1ull << 62;
+        for (k = 0; k < 10u; k++)
+            if ((i >> k) & 1u)
+                acc = q62_mul(acc, FM6_X2C[k]);
+        FM6_EXP2[i] = (uint32_t)((acc - (1ull << 62) + (1ull << 31)) >> 32);
+    }
+    FM6_EXP2[1024] = 1u << 30;
+    fm6_x2_ok = 1;
+}
 /* 2^(x / 2^24), Q24 (msfa Exp2::lookup): the Q30 mantissa from FM6_EXP2, shifted by the integer part */
 static inline uint32_t fm6_mant(int32_t x)
 {
