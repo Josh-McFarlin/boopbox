@@ -103,23 +103,24 @@ static int repro_vel(void)
     uint32_t n, pos = 0, crc, i, k, bad = 0;
     int32_t pk0 = 0, pk1 = 0;
     for (k = 0; k < 2; k++) {
-        /* track 1: a note on every step, its velocity 127 (k 0) or 255 (k 1), accent off; the rest silent */
-        proj_capture(&p);
+        /* track 1: a note on every step, its velocity 127 (k 0) or 255 (k 1), accent off; the rest silent. Captured
+         * as a project (its pattern codec keeps the byte as it is), the working tracks cleared, then restored */
+        for (i = 0; i < NTRK; i++) steps_clear(&trk[i]);
         for (i = 0; i < NSTEP; i++) {
-            step_t *s = &p.t[0].step[i];
+            step_t *s = &trk[0].step[i];
             memset(s, 0, sizeof *s);
             s->n = 1; s->note[0] = 48; s->time = ST_NOTE; s->vel = k ? 255 : 127;
         }
-        for (i = 1; i < NTRK; i++) memset(p.t[i].step, 0, sizeof p.t[i].step);
-        p.t[0].p[P_LEVEL] = 100;
-        p.sum = proj_sum(&p);
-        crc = st_crc32(&p, sizeof p);
+        trk[0].p[P_LEVEL] = 100;
+        proj_capture(&p);
+        steps_clear(&trk[0]);
+        crc = st_crc32(&p, p.size);
         n = 0; a[n++] = 0; a[n++] = 0;
-        for (i = 0; i < 5; i++) a[n++] = ((uint32_t)sizeof p >> (7 * i)) & 127;
+        for (i = 0; i < 5; i++) a[n++] = (p.size >> (7 * i)) & 127;
         for (i = 0; i < 5; i++) a[n++] = (crc >> (7 * i)) & 127;
         ed(ED_BK_PUT, a, n);
-        for (pos = 0; pos < sizeof p; pos += 256) {
-            uint32_t c = sizeof p - pos > 256 ? 256 : (uint32_t)sizeof p - pos;
+        for (pos = 0; pos < p.size; pos += 256) {
+            uint32_t c = p.size - pos > 256 ? 256 : p.size - pos;
             n = 0; a[n++] = 1; a[n++] = 0;
             for (i = 0; i < 5; i++) a[n++] = (pos >> (7 * i)) & 127;
             n += pack7(a + n, (const uint8_t *)&p + pos, c);

@@ -19,7 +19,7 @@ To fit, the build leaves out six of the visualiser's twelve styles, the bitmap b
 | Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of 2..8; COPY, CLEAR; the PATTERNS screen; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |
 | Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
 | Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
-| Storage | project format 7 (eight tracks, all the above), formats 1..6 read and converted, damage detected, never cut (refused whole), format 6 kept as a fallback | `project_test` and the feature tests' store checks |
+| Storage | project format 7 (eight tracks, all the above), the only format: SLOOP's formats 1..6 are not read nor written; damage detected, never cut (refused whole) | `project_test` and the feature tests' store checks |
 | Flash budget | the text boot logo and six visualiser styles (of twelve) are the defaults; the BASS set has three recordings; `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,212 B of 581,564 |
 
 The existing BoopBox features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
@@ -50,8 +50,8 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
   what came before.
 - **Step component semantics** are this firmware's own definitions (listed in `docs/groovebox-controls.md`); they
   are not copied from another instrument.
-- **Going back to SLOOP 2.8.3:** it does not read format 7, so projects saved by this firmware show as empty there
-  (see `docs/groovebox-storage.md`, section 7). Back up first.
+- **SLOOP's projects:** BoopBox does not read SLOOP's four-track formats, and SLOOP does not read BoopBox's: going
+  either way, the sections show as empty (see `docs/groovebox-storage.md`, sections 4 and 7). Back up first.
 
 ## 3. Test results
 
@@ -116,5 +116,5 @@ If something goes wrong:
 - an install was cut off: the FM-1 stays in update mode; install again;
 - the FM-1 does not start at all: [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
-To go back, install the `.fwsc` of a BoopBox release (for example `docs/firmware/boopbox-2.8.3.fwsc`) and restore your
-backup there. Projects saved by this firmware do not open in 2.8.3.
+To go back to SLOOP, install its `.fwsc` and restore a backup made with SLOOP. Projects saved by BoopBox do not open
+in SLOOP.

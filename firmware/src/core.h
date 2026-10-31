@@ -11,7 +11,6 @@
 #define NTRK 8                   /* tracks */
 enum { TK_SYNTH, TK_DRUM };      /* track_t.kind */
 #define NARENA 3                 /* engine arenas (engines.c): tracks playing GRAIN, DRAWBAR, FM6 or PHYS at once */
-#define TRK_DRUM_V6 3u           /* the drum track of projects of formats 1..6 (four tracks, drums on 4) */
 enum { V_POLY, V_MONO, V_LEGATO, V_UNISON };   /* P_VOICE */
 #define NSTEP 64
 #define HALF_FRAMES 256          /* I2S half buffer: 5.8 ms at 44.1 kHz */
@@ -66,7 +65,7 @@ enum {                          /* per-track parameters */
     P_TFLT,                                    /* SLOOP 2.4: the track's filter, < 0 low-pass, > 0 high-pass (fx.c) */
     P_STRUM,                                   /* SLOOP 2.4: a chord's notes one after the other, ms each (> 0 down, < 0 up) */
     P_VLEAD,                                   /* SLOOP 2.4: chord mode, each chord voiced nearest the last (seq.c) */
-    /* SLOOP 2.6, after Felucca 1.5 / 1.4 (Leo Kuroshita). Projects (format 6) keep them in a byte each: 0..127 */
+    /* SLOOP 2.6, after Felucca 1.5 / 1.4 (Leo Kuroshita) */
     P_ITYPE, P_IA, P_IB, P_IC, P_IMIX,         /* the track's INSERT after DIST: TYPE, its three values, dry / wet (fx.c) */
     P_FTYPE,                                   /* ANALOG's filter TYPE: LP (as before) / BP / HP (eng_analog.c) */
     P_ESYNC,                                   /* ENV SYNC: ATK DEC REL as note values of the tempo (voice.c) */
@@ -233,7 +232,6 @@ _Static_assert(sizeof(step_t) == 10 && sizeof(dstep_t) == 10, "a step is 10 byte
 #define MICRO_MIN (-32)          /* a step's nudge in 1/64 of its length: half a step early .. */
 #define MICRO_MAX 31             /* .. just under half a step late (0 = on the grid) */
 #define NLOCK 32                 /* parameter locks per track (several may share a step: other params) */
-#define NLOCK_V6 24u             /* .. in a project of format 5 or 6 (SLOOP 2.4 .. 2.8.3) */
 typedef struct {                 /* a lock: on step `step` the track's p[param & LOCK_PID] is `val` (4 bytes) */
     uint8_t step;                /* 0xFF = a free slot */
     uint8_t param;               /* P_* (a lockable one: p_lockable) | LOCK_SLIDE */
