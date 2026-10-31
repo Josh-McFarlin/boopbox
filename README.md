@@ -58,11 +58,11 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
   changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
   chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
   See [the groovebox controls](docs/groovebox-controls.md).
-- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
+- **The visualiser,** six scenes at sunset and in neon: PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY and KEY CITY
+  (tap HOME on TRACKS).
 - **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
   repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
-- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
-  name as text) and the top recording of the BASS sample set
+- **Left out to fit the flash:** the bitmap boot logo (the boot screen shows the name as text) and the top recording of the BASS sample set
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
   step components or the chord progression (backups keep them).
@@ -89,7 +89,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 <p align="center"><img src="assets/screens/boopbox-visualiser.png" alt="BoopBox boot screen, ENV page, menu and visualiser styles" width="760"></p>
 
-<p align="center"><sub>The boot screen, a sound page (ENV), the menu, and the six visualiser styles (tap HOME on the TRACKS screen).</sub></p>
+<p align="center"><sub>The boot screen, a sound page (ENV), the menu, and the visualiser's six styles (tap HOME on the TRACKS screen).</sub></p>
 
 <p align="center"><img src="assets/screens/editor-drumsynth.png" alt="BoopBox web editor: the Drum synth page" width="760"></p>
 

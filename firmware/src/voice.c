@@ -452,6 +452,8 @@ static void mono_remove(track_t *t, uint32_t note)
 static volatile uint32_t note_hits[NTRK][4];
 /* the visualiser (ui_vis.c): the tracks a note started on (bit per track), each one's last note, a kick */
 static volatile uint8_t vis_hit, vis_kick_hit, vis_note[NTRK];
+static volatile uint32_t vis_keys;                  /* KEY CITY: the keys a note started on, two octaves (note % 24), */
+static volatile uint8_t vis_keyt[24];               /* each one's track (a chord lights all its keys) */
 
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
@@ -466,6 +468,8 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
         drum_on(t, note, vel);
         return;
     }
+    vis_keys |= 1u << (note % 24u);
+    vis_keyt[note % 24u] = (uint8_t)((uint32_t)(t - trk) % NTRK);
     if ((uint32_t)(t - trk) < NTRK && note < 128u)
         note_hits[t - trk][note >> 5] |= 1u << (note & 31u);
     if (t->xf_on || t->eng_req != t->engine || t->pold) {   /* engine switch / preset under way: after the fade */

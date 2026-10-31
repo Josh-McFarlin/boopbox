@@ -34,12 +34,12 @@ MORE = [
     ("boot", "BOOT", "the name as text, the version"),
     ("page-env", "ENV", "a sound page: the curve and four knobs"),
     ("menu", "MENU (HOME held)", "screen, lights, audio, sequencer, system"),
-    ("vis-scope", "OSCILLOSCOPE", "the visualiser: tap HOME on TRACKS"),
-    ("vis-spectrum", "SPECTRUM", "32 bands with falling caps"),
-    ("vis-vu", "VU METERS", "the eight tracks and the mix"),
-    ("vis-circle", "CIRCLE", "a ring that swells on every kick"),
-    ("vis-bounce", "BOUNCE", "a ball a track, kicked up by its notes"),
-    ("vis-wires", "WIRES", "a string a track, set swinging by its notes"),
+    ("vis-palms", "PALMS", "the visualiser: tap HOME on TRACKS"),
+    ("vis-night-drive", "NIGHT DRIVE", "the city is the spectrum, the road the beat"),
+    ("vis-horizon", "HORIZON", "the spectrum; tiles light up on the beat"),
+    ("vis-flyover", "FLYOVER", "the spectrum over time, bass in the middle"),
+    ("vis-dense-city", "DENSE CITY", "the eight tracks and the mix, peaks held"),
+    ("vis-key-city", "KEY CITY", "a tower a key, lit in its track's colour"),
 ]
 
 BG, BEZEL, TITLE, SUB = (28, 28, 32), (10, 10, 12), (236, 236, 240), (150, 150, 158)

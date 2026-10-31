@@ -4,7 +4,6 @@
  * one 240 x 240 PPM per screen into the directory given.
  *   cc -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -Itests tools/screens_demo.c -lm && ./a.out OUTDIR */
 #define UI_PAGES_HARNESS_ONLY 1
-#define FELUCCA_VIS_STYLES 0x533u                   /* the build's six styles (ui_vis.c), not the test's twelve */
 #include "ui_pages_test.c"
 
 static void open_page(uint32_t fam, const char *title)     /* the button tapped until its page of that title shows */
@@ -85,7 +84,8 @@ static void demo_project(void)
 int main(int argc, char **argv)
 {
     static const struct { uint8_t style; const char *name; } VIS[6] = {
-        {0, "vis-scope"}, {1, "vis-spectrum"}, {4, "vis-vu"}, {5, "vis-circle"}, {8, "vis-bounce"}, {10, "vis-wires"}};
+        {0, "vis-palms"}, {1, "vis-night-drive"}, {2, "vis-horizon"}, {3, "vis-flyover"}, {4, "vis-dense-city"},
+        {5, "vis-key-city"}};
     uint32_t i;
     outdir = argc > 1 ? argv[1] : "/tmp";
     panel = PANEL_DEFAULT;
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     press(B_HOME); frames(60); release(B_HOME); frames(30); ppm("menu");   /* (the menu draws a row a frame) */
     press(B_HOME); frames(60); release(B_HOME); frames(2);
 
-    /* the visualiser: the six styles built in */
+    /* the visualiser: its six styles */
     song.sel = 0; go_home(); frames(4);
     for (i = 0; i < 6u; i++) {
         vis_style = VIS[i].style;
