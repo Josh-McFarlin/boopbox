@@ -110,9 +110,8 @@ over MIDI.
 
 ### Saved
 
-Components, the direction and the seed are saved in the project (format 7) and in song sections. A project that has
-any of them is never saved in the older format 6 (which cannot hold them): when it does not fit format 7, the save is
-refused (*PROJECT FULL: NOT SAVED*) and nothing is cut.
+Components, the direction and the seed are saved in the project (format 7) and in song sections. When a project does not
+fit, the save is refused (*PROJECT FULL: NOT SAVED*) and nothing is cut.
 
 ## Parameter locks
 
@@ -155,8 +154,7 @@ kept with the FM-1's settings.
 
 ### Saved
 
-Format 7 keeps all 32 locks and their SLIDE. A project whose locks format 6 could not hold whole (more than 24 on a
-track, or a SLIDE) is never saved as format 6.
+Format 7 keeps all 32 locks and their SLIDE.
 
 ## Patterns
 
@@ -205,7 +203,7 @@ pattern you do not need, or shorten one.
 ### Saved
 
 The patterns, the chains and the pattern each track plays are saved in the project (format 7) and in each song
-section. A project with more than one pattern on a track is never saved in format 6. A project larger than a store
+section. A project larger than a store
 object is refused whole (*PROJECT FULL: NOT SAVED*).
 
 ## Song: the loop region
@@ -274,9 +272,7 @@ the progression (or the live one) is in force.
 
 ### Saved
 
-The progression is saved in the project (format 7) and in song sections; FOLLOW with each track. A project with a
-harmony (a follow, a progression, a key or scale other than C major, Q other than BAR, PROG on) is never saved in
-format 6, which has no room for it.
+The progression is saved in the project (format 7) and in song sections; FOLLOW with each track.
 
 ## Performance effects
 
@@ -292,6 +288,6 @@ Harmony). Everything there still works as written; the **PERF** page (FX family,
 | **KNOB 2 LATCH** | **OFF** (as before: an effect lasts while its key is held) or **ON**: FX + a key turns its effect on and it stays when you let go (also FX); the same key again turns it off; another key changes to its effect. The MIDI FX channel (GLO > MIDI 3 > FX CH) does the same with its notes |
 | **KNOB 3 Q** | when an effect starts: **OFF** (at once, as before) or on the next **1/16**, **1/8**, **1/4** or **BAR** line of the playing transport. Its end is always at once; stopped, it starts at once |
 
-TARGET, LATCH and Q are saved with the project (not in format 6). The loops replay what the target played (with a
+TARGET, LATCH and Q are saved with the project. The loops replay what the target played (with a
 target the loops' memory holds only those tracks; just after the target changed, it still holds what came before,
 for up to 0.74 s).

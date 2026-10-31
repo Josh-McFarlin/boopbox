@@ -67,8 +67,9 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
   *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
-  they are.
+  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
+  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
+  bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
   tracks 5–8 (GLO → MIDI 4).
@@ -1275,7 +1276,7 @@ Editor → **Projects** → **Backup**:
 - **Save a backup** writes everything on the FM-1 to one file (`BoopBox-backup-DATE.json`): the music you are working on, the sections A–D, the 32 user presets, the FM6 bank, the SYN drum kits, the samples **USR1–USR4** (your drum kits with them) and the settings (colours, calibration, song order, lights, SYNC, MIDI OUT).
 - **Restore from a file** puts it all back: what is on the FM-1 is replaced. Stop the song (PLAY) first. A damaged file is refused before anything is written, and each object is written as a save writes it (a cut-off restore never leaves half an object).
 
-A 2.4 backup restores into 2.4 (or later) only. **Save a backup before every update and before going back.**
+A backup from SLOOP does not restore into BoopBox (the editor refuses it before anything is written), and SLOOP does not open BoopBox's projects. **Save a backup before every update and before going back.**
 
 ### Rescue and special modes
 

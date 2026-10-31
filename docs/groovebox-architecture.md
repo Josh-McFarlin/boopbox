@@ -31,7 +31,7 @@ change of the firmware and is updated as the work goes on (the last section).
 | NOINIT | 15,696 B | 15,464 B | The four section snapshots `proj_slot[4]` (4 x 3,816 B). |
 | `.lowram` | 29,488 B | 19,700 B | Reverb lines, core 1's stacks, the split's scratch. |
 | Flash data | 0x97000..0xFFFFF | allocated | Projects: 4 sections x A/B sectors (0x97000..0x9EFFF), autosave A 0x9F000 / B 0xFE000, user samples 0xA0000..0xDBFFF and 0xE7000..0xFAFFF, user presets 0xDC000..0xDFFFF, update staging 0xE0000..0xE4FFF, FM6 bank 0xE5000/0xE6000, settings 0xFC000/0xFD000. Only 0xFB000 is free. |
-| One stored object | 3,840 B payload (+192 B "side") | project format 6 = 3,816 B | A/B copies, header written last, CRC-32 (`storage.c`). |
+| One stored object | 3,840 B payload (+192 B "side") | a project (format 7): 12 .. 3,840 B | A/B copies, header written last, CRC-32 (`storage.c`). |
 | CPU | audio ISR every 5.8 ms half (256 frames) | see `tests/cpu_baseline.txt` | Overload sheds voices (`voice.c shed_voice`); core 1 can render some units (`fx.c units_split`). |
 
 ## 3. Hard-coded assumptions found
@@ -61,7 +61,8 @@ change of the firmware and is updated as the work goes on (the last section).
   (`project_t`, fixed 3,816 B) in NOINIT and flash; the song is up to 16 (section, bars) entries; live
   sections, quick chain and SONG REC switch on the bar. `proj_apply` / `proj_capture` run inside the audio ISR
   for a song's section change and the song backup.
-- **Project format 6** (`project.c`): fixed layout, 4 tracks, read-only converters from formats 1..5.
+- **Project format 6** (`project.c`, SLOOP): fixed layout, 4 tracks, read-only converters from formats 1..5. BoopBox
+  1.0.0 removed formats 1..6: it reads and writes format 7 only.
 - **UI**: the TRACKS screen draws 4 columns of 60 px; the four track colours `TE_COL[4]` (indexed `& 3`);
   GLO keys 1..4 mute, 5..8 solo, knobs 1..4 the track levels; SAVE keys 1..4 / 5..8 play / store sections;
   ALGORITHM selects the track (clamped to 0..3 on the drum screen).
@@ -91,8 +92,8 @@ block at most, nudges, ratchets) and changes what is per track:
    A pattern change is quantized and done by the audio ISR on the boundary (a bounded encode + decode).
 7. **Projects become variable-length** (format 7): a compact encoding of the eight tracks, their pattern banks, the
    step components, the parameter locks and the harmony state, inside the same 3,840-byte objects, slots and
-   flash sectors as before. A save that does not fit is refused and named; nothing is truncated; old formats 1..6
-   are converted on load (they always fit).
+   flash sectors as before. A save that does not fit is refused and named; nothing is truncated. SLOOP's formats
+   1..6 are not read (BoopBox 1.0.0).
 8. **The flash**: the new code must find room. `tools/build.py` already falls back to the text logo; a further,
    explicit fallback can alias the largest built-in sample sets onto others when the image still does not fit
    (reported by the build, never silent). This can only be checked with the JieLi toolchain.
@@ -128,8 +129,8 @@ New modules (all host-testable, no allocation, bounded loops):
   - Screens that list tracks (TRACKS, REC, the track meters, the GLO layer, the visualiser) show the bank of four the
     selected track is in; tracks 5-8 take the colours of 1-4.
   - Project format 7 (`project.c proj7_*`): typical eight-track projects take ~1.1 KB of the 3,840; four dense
-    tracks 3.4 KB; eight dense tracks (6.4 KB) are refused whole (PROJECT FULL). Format 6 is still read and is the
-    fallback when tracks 5..8 are as at power-on.
+    tracks 3.4 KB; eight dense tracks (6.4 KB) are refused whole (PROJECT FULL). Format 7 is the only format: the
+    format 6 reader and fallback writer were removed in BoopBox 1.0.0.
   - The golden renders: bit for bit the same when only tracks 1..4 render; with all eight, the three idle synth tracks
     5..7 tick their LFOs and an LFO wrap draws from the shared `rng()`, which shifts the random seeds of the PHYS
     string models: those 8 renders were re-recorded (`tests/golden.txt`), no other sound changed.
@@ -158,17 +159,14 @@ New modules (all host-testable, no allocation, bounded loops):
     semitone (`cp_bend`, added in `voice.c` with the MIDI bend), 0 at the next step and at STOP.
   - Bounded work: at most `NCOMP` components looked at per step that fires, `NCPAR` (4) extra parameter values; no
     allocation; everything on core 0 in `events_block`.
-  - Stored in format 7 at the end of each pattern (direction, seed, count, 4 bytes each). Format 6 has no room for
-    them: the fallback is refused when any track has a component or a direction (`proj6_fits`), so nothing is lost
-    silently. Damaged entries (unknown type, step past 64, value out of range, a second of a type) are dropped.
+  - Stored in format 7 at the end of each pattern (direction, seed, count, 4 bytes each). Damaged entries (unknown type, step past 64, value out of range, a second of a type) are dropped.
   - Tests: `tests/comp_test.c` (each type played, directions, seeds, drums, a 5-step track beside, a random edited
     session with stops: nothing left on, the stores and damage); the soak test now adds components at random.
   - Proxy sizes against Milestone B: code 277,588 -> 281,598 B (+4.0 KB), constants +138 B, RAM 71,448 -> 72,376 B.
 - Milestone C, the UI: the step sheet's COMP row and strip (`ui.c comp_strip_*`), SEQ > PLAY (`SC_PATT`: DIR and
   SEED live in `track_t` beside `p[]`, so they are not sound parameters: no lock, no MIDI learn, not in user presets).
 - Milestone D (parameter locks):
-  - `NLOCK` 24 -> 32 a track; formats 5 and 6 keep their 24 (`NLOCK_V6`): format 6 capture packs the slots, and the
-    fallback is refused when a track has more than 24 or a SLIDE (`proj6_fits`).
+  - `NLOCK` 24 -> 32 a track, all of them stored in format 7.
   - SLIDE: bit 7 of `plock_t.param` (`LOCK_SLIDE`; the parameter id is `& LOCK_PID`). The step's slides (at most
     `NSLIDE` = 4) are listed in `track_t.sl_*` and moved once a block on core 0 (`seq.c lock_slide_tick`, after the
     ratchets); a new step first puts the last step's slides at their values. Format 7 stores SLIDE in bit 7 of the
@@ -221,8 +219,7 @@ New modules (all host-testable, no allocation, bounded loops):
     note-on, so the ratchets and the note-offs use the mapped notes (`seq_notes`). Bounded: a note is moved with at
     most 96 scale lookups. A track with FOLLOW OFF takes the same path as before (the golden renders unchanged).
   - Storage: the globals in 'G' (they also apply with a section: `g_of_section`), the progression in an 'H' chunk
-    (written only when not the default), FOLLOW at the end of each 'T' chunk; format 6 is refused when any of them
-    (or PAT Q) is not the default (format 6 has no byte for them).
+    (written only when not the default), FOLLOW at the end of each 'T' chunk.
   - UI: SCL > HARMONY (a global page), SCL > FOLLOW (`SC_PATT`, `PS_HFOL`), the CHORDS screen (`ui_pats.c`, `SC_HARM`).
   - Tests: `tests/harm_test.c` (the mapping alone, played, BEAT / BAR, a progression, a live chord, a note held across
     a change, ratchets and component notes, the keys untouched, the stores), UI cases in `tests/ui_pages_test.c`.
@@ -254,7 +251,7 @@ New modules (all host-testable, no allocation, bounded loops):
     when none is left; `FELUCCA_EDITOR=0` (the web editor's SysEx, about 19 KB) only by hand.
   - `tests/groove_cost.c`: the host cost of the sequencer path and of a block, with and without every feature.
   - Documents: `docs/groovebox-performance.md` (sizes, RAM, CPU, how to measure), `docs/groovebox-storage.md`
-    (format 7, migration, validation, the format 6 fallback, going back to 2.8.3), `docs/groovebox-status.md`
+    (format 7, validation, SLOOP's formats not read, going back to SLOOP), `docs/groovebox-status.md`
     (implemented, limits, blockers, build and install), `BUILDING.md` (the new build options, `HOST_ONLY`).
 - The real build (after the merge): with the JieLi toolchain and the SDK files, every milestone commit was built.
   The upgrade adds 29,144 B to the app (`docs/groovebox-performance.md`); the default build was 17,756 B over the

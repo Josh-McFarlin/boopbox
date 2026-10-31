@@ -14,8 +14,9 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
   *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
-  they are.
+  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
+  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
+  bank and themes carry over.
 - **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
   (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
   tracks 5–8 (GLO → MIDI 4).

@@ -1,10 +1,10 @@
-# Storage: project format 7 and migration
+# Storage: the project format
 
-This page describes how the groovebox firmware stores a project, how it reads the older formats, and what it does
-when data is damaged or does not fit. The source is `firmware/src/project.c` (the project), `firmware/src/patcodec.c`
+This page describes how BoopBox stores a project, and what it does when data is damaged or does not fit. BoopBox
+1.0.0 has one project format ("FUN7"); it does not read SLOOP's four-track formats, and SLOOP does not read it. The source is `firmware/src/project.c` (the project), `firmware/src/patcodec.c`
 (a pattern as bytes), `firmware/src/patbank.c` (the other patterns) and `firmware/src/storage.c` (flash objects).
 Sections 2 to 5 are tested on the host; the tests are named at the end of each section. Section 6 says where a
-test is missing. Section 7 comes from reading SLOOP 2.8.3's source, not from a test.
+test is missing. Section 7 comes from reading SLOOP's source, not from a test.
 
 ## 1. Where a project lives
 
@@ -23,9 +23,9 @@ power loss leaves the previous copy in use.
 The flash map did not change either: no new sector is used. All new data (patterns, components, locks 25..32,
 harmony, the new globals) is inside the same 3,840-byte project object.
 
-## 2. Format 7 ("FUN7")
+## 2. The format ("FUN7")
 
-A format 7 project has a variable length:
+A project has a variable length:
 
 | Offset | Size | Field |
 | --- | --- | --- |
@@ -85,78 +85,60 @@ pattern 16 dropped), `tests/harm_test.c` and `tests/lock_test.c` (their data sav
 
 ## 3. Nothing is cut
 
-A project object is at most 3,840 bytes. A save (`proj_capture`) first measures the format 7 size without writing.
+A project object is at most 3,840 bytes. A save (`proj_capture`) first measures the size without writing.
 
-1. If format 7 fits, it is written.
-2. If it does not fit, but format 6 holds the whole project (`proj6_fits`, see section 5), format 6 is written.
-3. If neither holds the whole project, nothing is written. The slot keeps what it had and the UI says
-   `PROJECT FULL: NOT SAVED` (the autosave says `TOO BIG TO AUTOSAVE`). The firmware never stores a part of a project.
+1. If it fits, it is written.
+2. If it does not fit, nothing is written. The slot keeps what it had and the UI says `PROJECT FULL: NOT SAVED`
+   (the autosave says `TOO BIG TO AUTOSAVE`). The firmware never stores a part of a project.
 
 Typical sizes: an eight-track project with ordinary patterns takes about 1.1 KB; four dense tracks take about
 3.4 KB; eight dense tracks (about 6.4 KB) are refused whole. The pattern bank holds at most 3,072 bytes, which is
 about what one project object can keep next to eight tracks' sounds and the patterns that play. A pattern change
 or a copy that would overflow the bank is refused (`PATTERNS FULL: KEPT`, `PATTERNS FULL: NO COPY`); nothing is lost.
 
-Tests: `tests/project_test.c` ("eight dense tracks fit no format: refused, the slot unchanged"), `tests/pat_test.c`
-("a full bank: the project saves whole (format 7) or is refused, never cut").
+Tests: `tests/project_test.c` ("eight dense tracks do not fit: refused, the slot unchanged", "four dense tracks:
+saved whole, or refused untouched"), `tests/pat_test.c` ("a full bank: the project saves whole (format 7) or is
+refused, never cut").
 
-## 4. Migration from older formats
+## 4. SLOOP's projects are not read
 
-All older formats are read. They are converted in RAM when they are loaded; the flash copy is not changed until the
-project is saved again.
+SLOOP (and Felucca before it) stored four-track projects as "FUN1" .. "FUN6". BoopBox 1.0.0 reads none of them: a
+section or an autosave in one of those formats reads as empty (`EMPTY SECTION`; at power-on, the default project),
+and a backup object in one of them is refused (restore rc 2). BoopBox never writes them, so SLOOP cannot load a
+BoopBox project either.
 
-| Format | Firmware | Conversion |
-| --- | --- | --- |
-| FUN6 | SLOOP 2.6 .. 2.8.3 | read as it is (3,816 B). Tracks 1..4 as saved (synths 1..3, drums on 4); tracks 5..8 at power-on; one pattern a track; no components; FOLLOW OFF; the new globals at their defaults. Saved again: format 7. |
-| FUN5 | SLOOP 2.4 .. 2.5 | to format 6 by parameter id; the 2.6 parameters at their defaults; nudges, conditions and locks kept (a lock on an engine parameter moves with it) |
-| FUN4 | SLOOP 2.0 .. 2.3 | to format 6: levels, ratchets, drum lanes kept; no nudge, no lock |
-| FUN3 | SLOOP 1.x | to format 6: 8-byte steps, the drum track's notes become its lanes, swings x 0.8 |
-| FUN2, FUN1 | early BoopBox | parameters mapped by count, as user presets are; FUN1 (one instrument) loads into track 1 |
+Tests: `tests/project_test.c` ("SLOOP's four-track projects (FUN1 .. FUN6): not a project, the slot unchanged"),
+`tests/boot_sound_test.c` (a SLOOP working project in the flash: the default sounds at power-on),
+`tests/editor_fuzz.c` (SLOOP images restored and found in the flash).
 
-A format with a wrong checksum, a wrong length, or a size that belongs to another magic is refused.
+## 5. Versions of this format
 
-Tests: `tests/project_test.c` (each "FUNn -> FUN6" check, the refusals, "format 6 -> 7: tracks 1..4 as saved, 5..8
-at power-on; captured again as format 7, the same").
-
-## 5. The format 6 fallback
-
-Format 6 has fixed fields for four tracks. It is used only when format 7 does not fit and format 6 keeps the whole
-project. `proj6_fits` refuses format 6 when any of these is true:
-
-- tracks 1..4 are not three synths and a drum track on 4, or a track 5..8 is not as at power-on;
-- a track has a step component, a play direction other than FWD, a random seed, a pattern other than 1, a chain or
-  FOLLOW on;
-- a track has more than 24 locks (`NLOCK_V6`), or a lock with SLIDE;
-- the pattern bank holds a pattern, or the progression or live chord is not the default;
-- a global added by this firmware (`G_PATQ` .. `G_KIND`: PAT Q, the harmony, the performance FX) is not at its
-  default.
-
-When format 6 is used, the locks of each track are packed into its 24 slots.
-
-Tests: `tests/project_test.c` ("format 6 fallback: ..."), `tests/lock_test.c` ("format 6 refused for them (24, no
-SLIDE)"), `tests/pat_test.c`, `tests/harm_test.c` ("PAT Q not LOOP: not format 6 either").
+Globals and track parameters are stored by index with their count, so a later BoopBox can add new ones at the end
+of their group (the common parameters just before `P_E0`) and an older BoopBox reads past them. Chunks it does not
+know are skipped. The fields at the end of a `T` chunk are read only when there are bytes left.
 
 ## 6. Other stored data
 
-- Settings (`OBJ_SETTINGS`): GLO > MIDI 4's CH5..CH8, the MIDI LEARN bit of tracks 5..8 (`ml_hi`) and
-  MENU > SEQ > REC KNOBS are in an 8-byte tail after the 2.7 MIDI part (`MIDI_PART_8`). The tail is written only
-  when one of these is not the default; an older BoopBox reads the first `MIDI_PART` bytes and ignores the rest.
+- Settings (`OBJ_SETTINGS`): `persist_t` (magic "PER3"), the SYN kits, then the MIDI part (`MIDI_PART_8` bytes:
+  the MIDI LEARN map, GLO > MIDI's channels and switches, CH5..CH8, the MIDI LEARN bit of tracks 5..8 (`ml_hi`),
+  MENU > SEQ > REC KNOBS), always all three. An object of another length (an older SLOOP's) keeps only its
+  `persist_t` part (the panel calibration, palette, song order, lights); the SYN kits and the MIDI settings start at
+  their defaults. Your theme (THM2) is in the side record; SLOOP 2.7's first-beta THM1 is not read.
 - The song (persist object): the loop region is in the arrangement's two reserved bytes (`arranger.h`). An older
-  BoopBox does not read them. The region logic is tested in `tests/pat_test.c` and `tests/song_ui_test.c`; there is no
+  firmware does not read them. The region logic is tested in `tests/pat_test.c` and `tests/song_ui_test.c`; there is no
   separate flash round-trip test for these two bytes (they are part of the arrangement, which is saved whole).
 - Song sections are format 7 captures, so a section keeps its patterns, components, locks and FOLLOW. A section
   applies its tracks, the TEXTURE and the harmony globals; it keeps the tempo and the master.
 - User presets: the format did not change. A save stores the track's own values (`trk_base`), not a lock that
   plays at that moment.
 
-## 7. Going back to SLOOP 2.8.3
+## 7. Going back to SLOOP
 
-SLOOP 2.8.3 reads formats 1..6 only. On 2.8.3:
+SLOOP reads formats 1..6 only. On SLOOP:
 
-- a section saved as format 7 shows as `EMPTY SECTION`. Its flash object stays as it is until a project is saved
-  into that slot. If you install this firmware again before that, the section is there again;
-- the working project (autosave) in format 7 is not loaded at power-on, and the next autosave of 2.8.3 replaces it.
+- a section saved by BoopBox shows as `EMPTY SECTION`. Its flash object stays as it is until a project is saved
+  into that slot. If you install BoopBox again before that, the section is there again;
+- the working project (autosave) saved by BoopBox is not loaded at power-on, and the next autosave of SLOOP
+  replaces it.
 
-Before you install 2.8.3 again, save the projects you need with the web editor's backup, or save them on a firmware
-that you can go back to. A project that format 6 holds whole (section 5) is written as format 7 by this firmware
-too, so it is not readable by 2.8.3 either.
+The same holds the other way: projects saved by SLOOP are not read by BoopBox (section 4).

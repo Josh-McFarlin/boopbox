@@ -454,7 +454,7 @@ const TEXT = {
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
     brick: "万一インストールに失敗して起動しなくなった場合は、復旧に Transporter が必要です:",
     beta: "これはベータ版で、不安定な場合があります。このカスタムファームウェアを使ったことで FM-1 が壊れたり不具合が起きたりしても、作者は一切の責任を負いません。自己責任でお使いください。",
-    back: "公式ファームウェアに戻すには、M-VAVE 公式のアップデーター M-UPGRADE（Downloads → PC Software → M-UPGRADE）と公式ファームウェア（PC Firmware → FM-1 V15）が必要です。",
+    back: "公式ファームウェアに戻すには、M-VAVE 公式のアップデーター M-UPGRADE（Downloads → PC Software → M-UPGRADE）と公式ファームウェア（PC Firmware → FM-1、V16）が必要です。",
     nomidi: "このブラウザでは使えません。Chrome か Edge で開いてください。", loadfail: "読み込めませんでした: ",
     start: "開始します", verify: "確認中", loader: "書き込みモードに切り替え中", write: "書き込み中",
     reboot: "再起動中", done: "完了しました", stopped: "途中で止まりました。USB を挿し直してもう一度押してください。",
@@ -490,7 +490,7 @@ const TEXT = {
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
     brick: "If an install fails and the FM-1 no longer starts, recovering it needs a Transporter:",
     beta: "This is a beta and may be unstable. The author accepts no responsibility if your FM-1 is damaged or misbehaves because of this custom firmware. Use it at your own risk.",
-    back: "To go back to the official firmware you need M-VAVE's official updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE), and the official firmware (PC Firmware → FM-1 V15).",
+    back: "To go back to the official firmware you need M-VAVE's official updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE), and the official firmware (PC Firmware → FM-1, V16).",
     nomidi: "This browser cannot do it. Open the page in Chrome or Edge.", loadfail: "Could not load: ",
     start: "Starting", verify: "Verifying", loader: "Switching to update mode", write: "Writing",
     reboot: "Restarting", done: "Done", stopped: "Stopped. Replug the USB cable and press Install again.",
@@ -514,7 +514,7 @@ const TEXT = {
     stockValid: "Official V15 verified", stockBad: "Not the official V15: ",
     stockConfirm: "Install the official V15 on the FM-1? The official firmware cannot open BoopBox's music. Did you save a backup?",
     stockFinish: "The FM-1 is in BoopBox's update mode. Press Install to finish the BoopBox update first, then return to the official V15.",
-    back: "To return to the official firmware, use M-VAVE's own updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE), with the official firmware from M-VAVE. If it does not find the FM-1, close every other app and browser tab that uses MIDI.",
+    back: "To return to the official firmware, use M-VAVE's own updater, M-UPGRADE (Downloads → PC Software → M-UPGRADE), with the official firmware from M-VAVE (PC Firmware → FM-1, V16). If it does not find the FM-1, close every other app and browser tab that uses MIDI.",
   },
 };
 let lang = (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
@@ -548,7 +548,7 @@ const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textCont
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
-const meta = {"version": "1.0.0", "product": "FM-1_910", "pkg": "../../firmware/boopbox-1.0.0.fwsc", "sha256": "0af6716a5a1c1d069afe312683c9aee25f1cae8d52aa242bdb7b6c96cea86335"};
+const meta = {"version": "1.0.0", "product": "FM-1_910", "pkg": "../../firmware/boopbox-1.0.0.fwsc", "sha256": "fa785e1eb5e030b99d7c3448cf1e7926bfdf6fcacb9cfba7c5121ea3f0929896"};
 
 let writing = false;
 const lockAll = (on) => {

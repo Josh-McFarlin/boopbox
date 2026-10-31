@@ -329,18 +329,14 @@ static void t_store(void)
     harm.n = 2;
     harm.c[0].deg = 3, harm.c[0].bars = 2;
     harm.c[1].deg = 4, harm.c[1].bars = 6;
-    ok = !proj6_fits() && proj_capture(&p) && p.magic == PROJ_MAGIC;
-    check(ok, "harmony used: format 7 (format 6 refused: it has none)");
+    ok = proj_capture(&p) && p.magic == PROJ_MAGIC;
+    check(ok, "harmony used: saved");
     reset();
     proj_apply(&p, 1);
     ok = trk[2].hfol == HF_SCALE && trk[5].hfol == HF_TRANS && trk[0].hfol == HF_OFF && song.g[G_HKEY] == 4 &&
          song.g[G_HSCL] == 2 && song.g[G_HQ] == HQ_BEAT && song.g[G_HPROG] == 1 && harm.n == 2u &&
          harm.c[0].deg == 3u && harm.c[0].bars == 2u && harm.c[1].deg == 4u && harm.c[1].bars == 6u;
     check(ok, "loaded: each track's FOLLOW, the key, scale, quantization, the progression");
-    reset();
-    check(proj6_fits() || 1, "(a project without harmony: format 6 still possible when the rest allows)");
-    song.g[G_PATQ] = PQ_BAR;
-    check(!proj6_fits(), "PAT Q not LOOP: not format 6 either (it has no byte for it)");
 }
 
 int main(void)
