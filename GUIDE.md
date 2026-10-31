@@ -78,6 +78,11 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
   terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
   key, lit in the colour of the track that plays it; a chord lights all its keys). See
   [the visualiser](BOOPBOX.md#the-visualiser).
+- **SYNTHWAVE is the default look** of a fresh FM-1 (an FM-1 that already has a colour set keeps it; MENU → SCREEN →
+  COLOR picks another).
+- **SEQ → PATTERN is now TIMING** (LEN, DIV, SWG, GATE), so it no longer reads like the PATTERNS screen next to it.
+- **FLYOVER keeps flying:** while the song plays the ground always moves, silent bars too; after STOP it moves on until
+  the last peak has gone off the back of the screen.
 - **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
   their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
   own. LIVE solos any track (protocol v13: 32 bytes of firmware).
@@ -985,7 +990,7 @@ sunset and in neon.
 | 1 | **PALMS** | the mix's wave, sample for sample, as the sea's front wave at sunset; the sun's reflection shimmers with the mix |
 | 2 | **NIGHT DRIVE** | a car on the road at night: the city's buildings are the spectrum, the road runs with the beat (three lane stripes go past each beat), the car's lights flare on every kick; stopped, the car slows down and parks |
 | 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat tiles of the floor light up in the colours of the tracks playing |
-| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height. When nothing sounds, it stops moving |
+| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height. While the song plays, the ground always moves (flat in silent bars); stopped, it moves on until the last peak has gone off the back, then holds still |
 | 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top) with the peak floor held white, as VU meters; searchlights sweep with the beat |
 | 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights its key's tower in its track's colour (a chord, all its keys; a note outside the two octaves, the same note in them); the drum tracks light the street lights |
 
