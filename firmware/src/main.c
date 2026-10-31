@@ -396,6 +396,8 @@ UI_SMALL void fm1_cstart(void)
         *d = *s;                                /* flash driver code that must run from RAM */
     for (s = _c1_load, d = _c1_start; d < _c1_end; s++, d++)
         *d = *s;                                /* the second core's waiting loop (fm1_cpu1.h) */
+    sine_fill();                                /* SINE, into RAM (build/gen/felucca_tables.h): before anything reads it */
+    font_fill();                                /* the font's bitmaps, unpacked into RAM (build/gen/felucca_font.h) */
     fm1_mailbox_clear();
     fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
     fm1_boot.p3_rst = (uint8_t)p3;
