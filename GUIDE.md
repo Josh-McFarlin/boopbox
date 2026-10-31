@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
 
-# SLOOP 2.8.3 — The Complete Guide
+# BoopBox 1.0.0 — The Complete Guide
 
 Everything BoopBox does, every button, every combination, every page, in one place. This guide is written to be read from the top the first time, then used as a reference: the [cheat sheet](#26-cheat-sheet) at the end has every combination on one page.
 
@@ -32,7 +32,7 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 
 ## Contents
 
-- [What's new in 2.8](#whats-new-in-28)
+- [What's new in 1.0.0](#whats-new-in-100)
 
 1. [Install and update](#1-install-and-update)
 2. [The panel](#2-the-panel)
@@ -63,23 +63,35 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 
 ---
 
-## What's new in 2.8
+## What's new in 1.0.0
 
-3,000 of you now follow SLOOP — thank you. 2.8 is a deeper way to write and shape your music, and most of it comes from your comments and reports. Each item points to its full write-up below.
+- **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
+  *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
+  SLOOP or Felucca, and the editor still finds one. Projects, backups, songs, themes and presets from SLOOP open as
+  they are.
+- **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
+  (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
+  tracks 5–8 (GLO → MIDI 4).
+- **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
+  theme), your own theme's too.
+- **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
+  changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
+  chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
+  See [the groovebox controls](docs/groovebox-controls.md).
+- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
+- **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
+  repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
+- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
+  name as text) and the top recording of the BASS sample set
+  ([docs/groovebox-status.md](docs/groovebox-status.md)).
+- **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
+  step components or the chord progression (backups keep them).
 
-- **A NOTES editor: a piano roll for the synth tracks.** Tap **SEQ** on a synth track for the pattern as a piano roll, and write and edit notes step by step: KNOB 1 the notes (a chord's one by one), KNOB 2 the pitch, KNOB 3 the length, KNOB 4 the force; PRESETS zooms, EDIT deletes. Hold **OCT+** on a step for its **sheet** — SLIDE, NUDGE, FILL, MOVE, COPY, DELETE. See [The step sequencer](#10-the-step-sequencer-steps-nudge-locks-fills).
-- **The same per-step sheet on the DRUMS grid.** Hold **OCT+** on a drum step for RATCHET, NUDGE, FILL, MOVE, COPY, DELETE — the groove, shaped step by step. See [The step sequencer](#10-the-step-sequencer-steps-nudge-locks-fills).
-- **The playing section on the main screen.** The TRACKS screen shows which section — **A to D** — is playing, in its own colour. See [The screens](#15-the-screens).
-- **Filter resonance.** The per-track filter gains a **resonance**, 0 (clean, as before) to 10: HOME menu → AUDIO → **FILTER RESO**. See [Per track](#per-track).
-- **The FX filter on the drum track too.** FX → FILTER now works on drums: sweep and shape the whole kit, live. See [Per track](#per-track).
-- **Drum TUNE on the noise sounds.** On the DRUMS Sound page, **TUNE** now also shapes the brightness of the tone-less sounds (closed hats, shakers, claps). See [The drum track](#drum-sound).
-- **A smoother punch-in.** A settable fade-in and out for the 27 punch-in effects: hold **FX**, then **SELECT**, 0 (instant) to 15 (~0.37 s). See [Punch-in effects](#punch-in-effects).
-- **Steadier external MIDI clock.** The incoming tempo is read from the average of the last beats, so a steady 140 no longer wavers 139 / 140 / 141; a real tempo change is taken at once. See [MIDI out, clock in](#midi-out-clock-in-glo--system).
-- **MIDI Bank Select (CC 0).** Reach every preset past the 128 Program Change range — the rest of the factory sounds, then your own user presets by slot. See [MIDI CCs](#midi-ccs-25).
-- **USB RESCUE, fixed.** Holding **OCT−** at power-on now reliably opens USB rescue mode. See [Rescue and special modes](#rescue-and-special-modes).
-- **Going back to stock changed.** The in-browser return-to-stock was removed (it was not reliable on every system); use M-VAVE's own updater **M-UPGRADE**. See [Going back](#going-back-to-the-official-firmware).
+**Not yet tested on an FM-1:** 1.0.0 is tested in the host simulator only (the firmware's own code on a computer).
+Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
-Everything from 2.7 is unchanged and still here. Projects, autosaves and backups from 2.7 load as they are, and a project saved in 2.8 opens in 2.7 too.
+Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
+is in [its repository](https://github.com/isod89/sloop-fm1).
 
 ---
 
@@ -683,7 +695,7 @@ The song's settings can only be edited while it is stopped (*STOP FIRST*). An em
 | Screen | How to get there | What it shows · what the knobs do |
 | --- | --- | --- |
 | **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat; each track with its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** a coloured **A–D** badge by the title shows which section is playing. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track; on a muted track: unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
-| **Visualiser** | tap **HOME** on TRACKS | twelve full-screen visualisers (not in the groovebox build by default); see [The visualiser](#19-the-visualiser) |
+| **Visualiser** | tap **HOME** on TRACKS | full-screen visualisers, six styles built in; see [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the layer's colour |
 | **DRUMS** (grid / kit) | tap **EDIT** or **SEQ** on TRACKS with the drum track | see [The DRUMS screen](#the-drums-screen) |
 | **REC READY / FREE TAKE / COUNT-IN** | **REC** while stopped | the tracks, then **mode · length · start · quant** on KNOB 1–4 (4-3-2-1 during a count-in); in a free take: the seconds and the loop it would make |
@@ -898,9 +910,9 @@ The texture is saved with the project, and each song section (A–D) has its own
 
 ## 19. The visualiser
 
-> **Groovebox build:** the visualiser is left out by default, because the flash is full (see
-> `docs/groovebox-performance.md`): tapping HOME on the TRACKS screen does nothing. A build with
-> `FELUCCA_VIS=1 FELUCCA_EDITOR=0` brings it back, without the web editor.
+> **Six of the twelve styles are built in** (OSCILLOSCOPE, SPECTRUM, VU METERS, CIRCLE, BOUNCE, WIRES): the flash
+> holds those beside the web editor (see `docs/groovebox-performance.md`). SELECT steps over the others. All twelve
+> fit only in a build without the web editor (`FELUCCA_VIS_STYLES=0xFFF FELUCCA_EDITOR=0`).
 
 On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of what BoopBox plays.
 
@@ -911,20 +923,23 @@ On the TRACKS screen, **tap HOME**: the whole screen becomes a visualiser of wha
 | keys, PLAY, REC, layers | work as ever (a held layer shows its screen, then the visualiser comes back) |
 | KNOB 1–4 | nothing (the tempo is GLO + SELECT meanwhile) |
 
-| # | Style | Shows |
-| --- | --- | --- |
-| 1 | **OSCILLOSCOPE** | the mix's wave, standing still |
-| 2 | **SPECTRUM** | 32 bands with falling caps |
-| 3 | **SPECTROGRAM** | the spectrum scrolling down, black → blue → green → yellow → white |
-| 4 | **LISSAJOUS** | the stereo image: the wider the cloud, the wider the sound |
-| 5 | **VU METERS** | tracks 1–4 in their colours and the mix, with peak holds |
-| 6 | **CIRCLE** | the wave round a ring that swells on every kick |
-| 7 | **TAPE** | two reels turning with the song, the level, the bar and the tempo |
-| 8 | **LCD** | the tempo in seven-segment digits, bar and beat, four track meters |
-| 9 | **BOUNCE** | a ball per track, kicked up by its notes |
-| 10 | **ORBIT** | four planets turning in 1, 2, 4 and 8 beats round a sun that pulses with the mix |
-| 11 | **WIRES** | a string per track, set swinging by its notes |
-| 12 | **BoopBox** | the logo alive: the sail's four bands are the tracks, the boat rocks on its wave |
+| # | Style | Built in | Shows |
+| --- | --- | --- | --- |
+| 1 | **OSCILLOSCOPE** | yes | the mix's wave, standing still |
+| 2 | **SPECTRUM** | yes | 32 bands with falling caps |
+| 3 | **SPECTROGRAM** | — | the spectrum scrolling down, black → blue → green → yellow → white |
+| 4 | **LISSAJOUS** | — | the stereo image: the wider the cloud, the wider the sound |
+| 5 | **VU METERS** | yes | four meters and the mix, with peak holds |
+| 6 | **CIRCLE** | yes | the wave round a ring that swells on every kick |
+| 7 | **TAPE** | — | two reels turning with the song, the level, the bar and the tempo |
+| 8 | **LCD** | — | the tempo in seven-segment digits, bar and beat, four meters |
+| 9 | **BOUNCE** | yes | four balls, kicked up by their tracks' notes |
+| 10 | **ORBIT** | — | four planets turning in 1, 2, 4 and 8 beats round a sun that pulses with the mix |
+| 11 | **WIRES** | yes | four strings, set swinging by their tracks' notes |
+| 12 | **BOOPBOX** | — | the logo alive: its eight bars are the tracks, the speakers pulse with the mix, the box hops on the beat |
+
+The meters, balls, planets and strings are four (eight tracks: each one is a pair, 1 + 5, 2 + 6, 3 + 7, 4 + 8, in the pair's colour); BOOPBOX
+shows each of the eight on its own.
 
 The visualiser sees the mix **as if MASTER were all the way up**: with MASTER turned down, even to 0, it still moves at full size. It costs the sound nothing.
 
