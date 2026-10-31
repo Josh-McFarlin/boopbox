@@ -1288,7 +1288,7 @@ A 2.4 backup restores into 2.4 (or later) only. **Save a backup before every upd
 
 ### Going back to the official firmware
 
-**(2.8)** The in-browser return-to-stock was removed, because it was not reliable on every system. To go back to the official firmware, use **M-VAVE's own updater, M-UPGRADE** (m-vave.com → Downloads → PC Software → M-UPGRADE) with the official **FM-1 V15** firmware (PC Firmware → FM-1 V15); close every other app that uses MIDI first. Save a backup with the editor before you go. To come back, install BoopBox again and restore your backup.
+**(2.8)** The in-browser return-to-stock was removed, because it was not reliable on every system. To go back to the official firmware, use **M-VAVE's own updater, M-UPGRADE** (m-vave.com → Downloads → PC Software → M-UPGRADE) with the official **FM-1** firmware (PC Firmware → FM-1, **V16**, `FM-1.fwsc`); close every other app that uses MIDI first. Save a backup with the editor before you go. To come back, install BoopBox again and restore your backup.
 
 If the official firmware comes up with odd settings or a scrambled display, it is reading the settings BoopBox left in the FM-1's memory — nothing is damaged. A factory reset in M-VAVE's own firmware, or M-UPGRADE's full restore, clears it; and installing BoopBox again brings your work back exactly as it was.
 

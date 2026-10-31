@@ -705,6 +705,7 @@ UI_SMALL static __attribute__((noinline)) void proj6_apply(const project_v6_t *p
                     st->n = 4;
                 if (st->time > ST_REST)
                     st->time = ST_REST;
+                st->vel &= 127u;                    /* (after 2.8.3: past 127 from a file, up to twice as loud) */
                 for (j = 0; j < 4u; j++)
                     st->note[j] &= 127u;
             }
@@ -1111,6 +1112,25 @@ UI_SMALL static void project_erase(uint32_t slot)
     ui_say("ERASED SECTION ", SEC_NAME[slot]);
 }
 
+/* (2.8.4) a part whose sound is on an engine this firmware does not have (a project Clipper wrote: HYBRID,
+ * FMX, VECTOR...; left in the flash when SLOOP is installed after Clipper): proj_apply wrapped the engine number round
+ * onto another engine with the other one's values (Clipper's HYBRID played as 808 BOOM without its TRN -24: two
+ * octaves high, until another sound was chosen). The part's default sound instead; its pattern and mix stay */
+UI_SMALL static void proj_foreign_parts(const project_t *p)
+{
+    uint32_t k;
+    if (p->magic != PROJ_MAGIC_V6)                      /* (format 7: BoopBox's own, its engines) */
+        return;
+    for (k = 0; k < 4u; k++) {
+        const proj_trk_v6_t *s = &((const project_v6_t *)p)->t[k];
+        if (k != TRK_DRUM_V6 && s->preset != 0xFFu && s->engine >= NENGINES && trk_def_kind(k) == TK_SYNTH) {
+            trk[k].eng_req = (uint8_t)trk_def_engine(k);
+            apply_preset_to(&trk[k], TRK_DEF[k][2]);
+            fm6_track_loaded(&trk[k]);
+        }
+    }
+}
+
 /* a project into the working one: the transport stops, everything sounding is released */
 UI_SMALL static void project_apply(const project_t *p)
 {
@@ -1131,6 +1151,7 @@ UI_SMALL static void project_apply(const project_t *p)
                 apply_preset_to(&trk[k], TRK_DEF[k][2]);
                 steps_clear(&trk[k]);
             }
+    proj_foreign_parts(p);
     sync_reload = 1;
     ui.force = 1;
 }
@@ -1223,6 +1244,7 @@ UI_SMALL static void autosave_resume(void)              /* power-on: the project
     drch_seed = 0;
     proj_apply(q, 1);
     song.sel = (uint8_t)proj_sel(q);
+    proj_foreign_parts(q);                         /* (2.8.4) Clipper's working project: its own sounds, default */
     for (n = 0; n < NTRK; n++)
         trk[n].engine = trk[n].eng_req;        /* (nothing sounds yet: no fade) */
 #endif
