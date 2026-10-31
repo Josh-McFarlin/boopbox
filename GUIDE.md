@@ -126,7 +126,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 | **GLO** | button | mix layer (hold), global pages (tap) |
 | **OCT− / OCT+** | buttons | octave, ghost / hard hits, undo / redo, pages |
 | **ALGORITHM** | knob | selects the track (1–4) |
-| **PRESETS** | knob | the selected track's sound, or the drum kit |
+| **PRESETS** | knob | the selected track's sound (opens the [sound browser](#the-sound-browser)), or the drum kit |
 | **SELECT** | knob | tempo, or the previous / next page |
 | **KNOB 1–4** | knobs | what the four dials at the bottom of the screen show |
 | **MASTER** | knob | output volume (headphones / line out) |
@@ -204,7 +204,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select track 1–4, on every screen (inside a layer it waits; not during a free take, on the SONG screen or in the menu) | — |
-| **PRESETS** | on TRACKS, HOME and the PRESETS page: the selected track's **sound** (your favourites first (2.7), then all factory sounds by kind, then your user presets) · drum track: the **kit** · on the DRUMS screen: the kit | — |
+| **PRESETS** | on TRACKS and HOME, a synth track: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it · drum track: the **kit** · on the DRUMS screen: the kit | — |
 | **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends) · DRUMS screen: grid ↔ kit · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
 | **MASTER** | output volume (the visualiser ignores it) | — |
@@ -646,7 +646,7 @@ A muted track fades out in a few milliseconds and plays no new notes; its patter
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
-| **PRESETS** | the sound (your favourites, then factory by kind, then user presets) | the engine (next / previous) | — | **FAV** (2.7): right adds the sound to your favourites, left removes it |
+| **PRESETS** | the [sound browser](#the-sound-browser): **ENG** / **KIND**, the group (the first sound of the next / previous one) | **SOUND** in the group | **VIEW**: ENG / KIND | **FAV** (2.7): right adds the sound to your favourites, left removes it |
 | **USER** | **SLOT** 1–32 | **LOAD** (GO) | **ERASE** (GO) | **SAVE** (GO) |
 | **SECTION** | **SECT** A–D | **ERASE** (GO, 2.6) | **LOAD** (GO) | **SAVE** (GO) |
 | **TOOLS** | **CLRSQ** (GO) | **INIT** (GO) | — | **NEW** (GO) |
@@ -750,7 +750,7 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **MIDI** (2.6) | CH1: track 1's MIDI channel (OFF, 1–16) | CH2: track 2's | CH3: track 3's | CH4: the drum track's (default 10) |
 | | **MIDI 2** (2.6) | IN: NOTES / CLOCK / CH 1–16 | OTHER: the channels no track has: SEL (the selected track) / OFF | OUT: KEYS / SEQ | BEND: the pitch bend's range, 1–12 semitones |
 | | **MIDI 3** (2.7) | FX CH: the punch-in effects' MIDI channel (OFF, 1–16) | DR MAP: how MIDI notes play the drums (GM / 1-16) | REMOTE: the buttons over MIDI (OFF, 1–16) | CLOCK: OUT, the MIDI clock and START / STOP out on USB (OFF / OUT) |
-| **SAVE** | **PRESETS** | the sound | the engine | — | — |
+| **SAVE** | **PRESETS** | the group (engine / kind) | the sound | VIEW: ENG / KIND | FAV |
 | | **USER** | SLOT 1–32 | LOAD (GO) | ERASE (GO) | SAVE (GO) |
 | | **PROJECT** | SLOT 1–4 | ERASE (GO) | LOAD (GO) | SAVE (GO) |
 | | **TOOLS** | CLRSQ: clear the pattern (GO) | INIT: reset the sound (GO) | — | NEW project (GO) |
@@ -790,7 +790,25 @@ Notes:
 | **Stab** | MIN STAB, MIN7 STAB, RAVE STAB, DUB CHORD (TRIO: one key plays the chord) · SYN BRASS (ANALOG) · CZ BRASS (PHASE) · BRASS SECT (FM6) · 80S POLY (TRIO) · HORN STAB, STRING STB (SAMPLE) · CHIP CHORD (LOFI) · POWER STAB (TRIO) |
 | **FX** | SCRATCH (scratch, backspin, rewind across the keys) · GM KIT (SAMPLE) · HAND DRUM, MEMB TOMS, TABLA, CONGA, TIMPANI (PHYS) · RAIN, NZ METAL, VINYL, HISS, RISER, NZ SNARE, BITCRUSH, RADIO (NOISE) · CHIP NOISE (LOFI) |
 
-To pick an engine directly: SAVE → PRESETS → **KNOB 2**. To start from the engine's defaults: SAVE → TOOLS → **INIT**.
+<a id="the-sound-browser"></a>**The sound browser.** On TRACKS (or HOME), with a synth track selected, turn **PRESETS**: the browser opens
+with the sound you have unchanged. On the left the **groups**, on the right every **sound** of the
+selected group, the one playing on a bar in white; a scroll bar shows where you are in a long group. Each sound loads as
+you land on it, so play the keys to hear it.
+
+| Control | In the browser |
+| --- | --- |
+| **PRESETS** · **KNOB 2** | the next / previous sound (on from one group into the next) |
+| **SELECT** · **KNOB 1** | the next / previous group: its first sound |
+| **KNOB 3 VIEW** | **ENG**: the twelve engines in order, each with its sounds · **KIND**: basses, keys, organs, pads, leads, plucks and bells, stabs, FX (the order of the list before) |
+| **KNOB 4 FAV** | right adds the sound to your favourites, left removes it |
+| **ALGORITHM** | another track: the browser shows its sound |
+
+Your favourites are the first group (**FAV**) and your user presets the last (**USER**), in both views. Opened from
+TRACKS, the browser goes back there by itself after 4 s without a knob, key or button; a button goes where it always
+does. It is also the SAVE → **PRESETS** page (it stays open there). The drum track's PRESETS is still the kit. MIDI
+Program Change counts the list in the KIND order, as before.
+
+To start from the engine's defaults: SAVE → TOOLS → **INIT**.
 
 ### The twelve engines
 
