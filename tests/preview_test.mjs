@@ -31,7 +31,7 @@ for (let engine = 0; engine < 12; engine++) {
   state.tracks[0].p[17] = 0; // direct note, no arp in this comparison
   const dsp = new FirmwareAudio(module); dsp.sync(state);
   const t = state.tracks[0], frames = 8192;
-  const cfg = Int32Array.from([engine, t.preset, 60, frames, ...t.p, ...state.g]);
+  const cfg = Int32Array.from([engine, t.preset, 60, frames, state.g.length, ...t.p, ...state.g]);
   const raw = execFileSync('build/host/preview_native', { input: Buffer.concat([Buffer.from(cfg.buffer), Buffer.from(t.fm6)]) });
   const native = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
   dsp.w.preview_note(0, 60, 1);
