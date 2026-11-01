@@ -197,6 +197,7 @@ A release is published on GitHub when a PR that adds a new firmware binary is me
    *Changelog check*, which also shows the notes it will publish on the run's summary page.
    To see them locally: `python3 tools/changelog_section.py X.Y.Z`.
 4. Merge the PR. The release is tagged `vX.Y.Z` on the merge commit. It carries the `.fwsc`, the offline
-   editor (`boopbox-editor-X.Y.Z.html`) and `SHA256SUMS.txt`, and the notes give the package's SHA-256.
+   editor (`boopbox-editor-X.Y.Z.html`) and `SHA256SUMS.txt`, and the notes give the package's SHA-256 and how to install
+   (edit that part in `.github/release-install.md`).
    A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing,
    and neither does a version that has a release already.
