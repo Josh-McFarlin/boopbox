@@ -188,7 +188,10 @@ A release is published on GitHub when a PR that adds a new firmware binary is me
 1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`) and build with
    `./build.sh --release X.Y.Z`.
 2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This writes
-   `docs/firmware/boopbox-X.Y.Z.fwsc` (and removes the old package).
+   `docs/firmware/boopbox-X.Y.Z.fwsc` (and removes the old package), and the installer and offline cache that
+   install it. The website is these committed files, so do not copy a binary into `docs/firmware/` by hand:
+   the *Changelog check* fails a PR whose site is not built for its new binary (`python3 tools/check_site.py
+   docs/firmware/boopbox-X.Y.Z.fwsc`).
 3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md), written for the people who install it.
    It becomes the release notes. A PR that adds a binary without a section fails the
    *Changelog check*, which also shows the notes it will publish on the run's summary page.

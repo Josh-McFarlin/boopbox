@@ -2,6 +2,8 @@
 # must also have a "## X.Y.Z" section in CHANGELOG.md: merging it publishes the
 # release with that section as its notes (release-on-merge.yml).
 # Shows on the PR the release notes it would publish.
+# Also checks that the website in docs/ was rebuilt for the binary (tools/check_site.py):
+# the site is committed, and its installer installs the package it was built with.
 name: Changelog check
 
 on:
@@ -47,6 +49,10 @@ jobs:
               echo "CHANGELOG.md has a section for $ver."
             else
               echo "::error file=CHANGELOG.md::$file is added but CHANGELOG.md has no '## $ver' section: add one (it becomes the release notes)"
+              fail=1
+            fi
+            if ! python3 tools/check_site.py "$file" --site docs; then
+              echo "::error file=$file::the website in docs/ is not built for $ver: run web/make_site.py (BUILDING.md, Release step 2)"
               fail=1
             fi
             src=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c | tr 'A-Z' 'a-z')
