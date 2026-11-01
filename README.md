@@ -20,7 +20,7 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
-> **Status:** 1.2.0, tested in the host simulator but **not yet on an FM-1**. Install it at your own risk, and please [report](../../issues) what you find. Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
+> Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
@@ -72,9 +72,6 @@ A cleaner screen and quicker controls, after a review of every screen
   sets it.
 - Settings that act on a second detent say *TURN AGAIN*.
 - Projects, songs, presets and settings from 1.1.0 open as they are.
-
-**Not yet tested on an FM-1:** 1.2.0 is tested in the host simulator only. Install it at your own risk, keep a
-backup, and please [report](../../issues) what you find.
 
 ## What's new in 1.1.0
 

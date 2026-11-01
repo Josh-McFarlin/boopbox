@@ -42,9 +42,6 @@ A cleaner screen and quicker controls, after a review of every screen
 - Settings that act on a second detent say *TURN AGAIN*.
 - Projects, songs, presets and settings from 1.1.0 open as they are.
 
-**Not yet tested on an FM-1:** 1.2.0 is tested in the host simulator only. Install it at your own risk, keep a
-backup, and please [report](../../issues) what you find.
-
 ## 1.1.0
 
 - **A sound browser.** On TRACKS, PRESETS on a synth track opens the engines (or the kinds of sound) on the left

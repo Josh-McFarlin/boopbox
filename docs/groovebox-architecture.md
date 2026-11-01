@@ -18,7 +18,7 @@ change of the firmware and is updated as the work goes on (the last section).
   itself and runs every test that does not read the firmware package (4 are skipped and named).
 - **A size estimate without the toolchain**: `tools/proxy_size.py` compiles `felucca.c` for RV32IMC with the
   host clang (the HAL's pi32v2 inline assembly emptied). Its RAM and pool figures match the real build closely
-  (pool 333,900 B: identical to `RAM.md`; RAM 59,094 B against 58,220 B on the target); its code size does not
+  (pool 333,900 B: identical to the target; RAM 59,094 B against 58,220 B on the target); its code size does not
   (another instruction set), but the *difference* between two trees is a fair measure of a change's cost.
 
 ## 2. Hard limits (measured on the baseline)

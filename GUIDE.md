@@ -101,9 +101,6 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 - Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
   settings opens as one of the new six.
 
-**Not yet tested on an FM-1:** 1.1.0 is tested in the host simulator only (the firmware's own code on a computer).
-Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
-
 ## What's new in 1.0.0
 
 - **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
