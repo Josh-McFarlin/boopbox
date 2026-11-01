@@ -179,3 +179,21 @@ cd /tmp/felucca-site && python3 -m http.server 8000
 
 Installing firmware is at your own risk. If an install fails and the FM-1 no longer
 starts, recovery needs [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
+
+## Release
+
+A release is published on GitHub when a PR that adds a new firmware binary is merged into `main`
+(`.github/workflows/release-on-merge.yml`):
+
+1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`) and build with
+   `./build.sh --release X.Y.Z`.
+2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This writes
+   `docs/firmware/boopbox-X.Y.Z.fwsc` (and removes the old package).
+3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md), written for the people who install it.
+   It becomes the release notes. A PR that adds a binary without a section fails the
+   *Changelog check*, which also shows the notes it will publish on the run's summary page.
+   To see them locally: `python3 tools/changelog_section.py X.Y.Z`.
+4. Merge the PR. The release is tagged `vX.Y.Z` on the merge commit. It carries the `.fwsc`, the offline
+   editor (`boopbox-editor-X.Y.Z.html`) and `SHA256SUMS.txt`, and the notes give the package's SHA-256.
+   A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing,
+   and neither does a version that has a release already.
