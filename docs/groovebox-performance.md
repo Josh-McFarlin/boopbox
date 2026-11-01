@@ -70,7 +70,8 @@ Real build, JieLi toolchain 2026-07-30 (the 1.0.0 tree builds within 16 B of the
 | 1.1.0 as first published: the six scenes, the sound browser, web editor | 576,164 | 5,400 |
 | with the browser's TYPE / engine / sound (main, before SYNTHWAVE) | 576,544 | 5,020 |
 | 1.1.0 as rebuilt: with the SYNTHWAVE palette, TIMING, FLYOVER | 577,760 | 3,804 |
-| the default now (1.2.0): the UX review's changes (value pages, page tabs, the MIDI pages, the GLO faders) | 579,752 | 1,812 |
+| 1.2.0: the UX review's changes (value pages, page tabs, the MIDI pages, the GLO faders) | 579,752 | 1,812 |
+| the default now (1.3.0): presets levelled below the master limiter, LEVEL + trim past 127 | 580,024 | 1,540 |
 | no visualiser (`FELUCCA_VIS=0`, 1.1.0 as first published) | 565,412 | 16,152 |
 
 SYNTHWAVE (MENU → SCREEN → COLOR: the palette, the neon rules and glows, the gradient text, the floor, the boot sun) and

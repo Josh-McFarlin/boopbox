@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.2.0](#whats-new-in-120)
+1. [What's new in 1.3.0](#whats-new-in-130)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,18 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.2.0
+## What's new in 1.3.0
+
+Even loudness between the factory sounds, and a drum LEVEL that turns ([all changes](CHANGELOG.md)):
+
+- **The drum track's LEVEL works on TRACKS:** KNOB 2 on a drum track sets its level (it changed nothing before).
+- **The factory sounds are as loud as each other** at the MASTER you play at. They were levelled with MASTER all the
+  way up, where the limiter flattened them, so punchy sounds came out the loudest; many sounds you know (RHODES,
+  ACID 303, the stabs) are quieter than in 1.2.0.
+- **LEVEL turns every sound up:** on 39 presets, LEVEL above its default did nothing; it now has its whole range.
+- Projects, songs, presets and settings from 1.2.0 open as they are, and a saved project sounds as it did.
+
+### 1.2.0
 
 A cleaner screen and quicker controls, after a review of every screen
 ([the review](docs/ux-review/README.md), [every screen before and after](docs/ux-review/before-after-all.png)):

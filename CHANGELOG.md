@@ -13,6 +13,26 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.3.0
+
+Even loudness between the factory sounds, and a drum LEVEL that turns:
+
+- **The drum track's LEVEL works on TRACKS.** KNOB 2 on a drum track changed nothing you could hear or see (the level
+  stayed at 100). It now sets the drum track's level, as GLO → DRUMS and the mix layer already did.
+- **The factory sounds are as loud as each other** at a normal MASTER. Each preset's level trim was measured with
+  MASTER all the way up, where the master limiter held almost every sound at the same peak. Punchy sounds read quiet
+  there, took a big trim, and came out the loudest at the MASTER you play at: 32 presets were more than 3 dB off,
+  PHYS HARP 7.5 dB too loud. They are measured below the limiter now: 98 presets moved (90 quieter, 8 louder), and at
+  the power-on MASTER 5 are more than 3 dB off and none is more than 0.3 dB too loud. Many sounds you know, such as
+  RHODES, ACID 303 and the stabs, are quieter than in 1.2.0.
+- **LEVEL turns every sound up.** On 39 presets, turning LEVEL above its default did nothing: their trim had used up
+  the top of the range. A trim may now go past it, so LEVEL keeps its whole range on every sound.
+- Still quiet, because their peaks reach the master limiter first: CHIP NOISE, REGGAE ORG, NZ SNARE, BANJO and
+  MUTED GTR.
+- The editor's sound preview plays the new levels.
+- Projects, songs, presets and settings from 1.2.0 open as they are. A saved project keeps the trims it was saved
+  with, so it sounds as it did; a factory preset chosen again takes its new trim.
+
 ## 1.2.0
 
 A cleaner screen and quicker controls, after a review of every screen
