@@ -691,7 +691,9 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
         return;
     }
     {
-        int32_t lvl = expr_gain(LEVEL_Q12[t->p[P_LEVEL] ? clamp(t->p[P_LEVEL] + t->p[P_ED_FX], 1, 127) : 0], (uint32_t)(t - trk)), pan = t->p[P_PAN];   /* (+ the sound's trim: 1/2 dB steps, as LEVEL's) */
+        int32_t lv_i = t->p[P_LEVEL] ? clamp(t->p[P_LEVEL] + t->p[P_ED_FX], 1, 127 + (int32_t)NELEM(LEVEL_HI_Q12)) : 0;
+        int32_t lvl = expr_gain(lv_i <= 127 ? LEVEL_Q12[lv_i] : (int32_t)LEVEL_HI_Q12[lv_i - 128], (uint32_t)(t - trk)), pan = t->p[P_PAN];   /* (+ the sound's trim: 1/2 dB steps, as LEVEL's; above 127, a
+                                                         * quiet preset's trim: LEVEL_HI_Q12, up to +31.5 dB) */
         int32_t gl = 4096 - (pan > 0 ? pan * 64 : 0), gr = 4096 + (pan < 0 ? pan * 64 : 0);
         int32_t c = t->p[P_CHOR] * 258, d = send_thr(t->p[P_DLY] * 258, thr_dly), r = send_thr(t->p[P_REV] * 258, thr_rev);
         int32_t pk = t->peak;
@@ -720,9 +722,18 @@ static void mix_part_run(track_t *t, uint32_t n, mixacc_t *mx, int32_t *b)
         dl = (t->lvl - lvl0) >> CTL_LOG2, dgl = t->gpl - gl0, dgr = t->gpr - gr0;
         int32_t *ol = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pl : mx->l;   /* (the punch-in FX's bus, or the mix) */
         int32_t *orr = ((pfx_bus >> (uint32_t)(t - trk)) & 1u) ? mx->pr : mx->r;
+        int32_t hi = lvl0 > LEVEL_Q12[127] || t->lvl > LEVEL_Q12[127];   /* (a gain above LEVEL 127: 64 bits) */
         for (i = 0; i < n; i++) {
-            int32_t lv = lvl0 + dl * (int32_t)i, bi = b[i], x = MULQ12R(bi, lv, 2), a;   /* (#4) rounded, all of b: 8 loud
-                                                         * voices in 32 bits as ((b >> 2) * lv) >> 10 was */
+            int32_t lv = lvl0 + dl * (int32_t)i, bi = b[i], a;
+            int32_t x;
+            if (hi) {
+                int64_t y = ((int64_t)bi * lv + 2048) >> 12;
+                x = y > (1 << 23) ? (1 << 23) : y < -(1 << 23) ? -(1 << 23) : (int32_t)y;   /* (PAN's x * 256 below:
+                                                         * in 32 bits) */
+            } else {
+                x = MULQ12R(bi, lv, 2);                 /* (#4) rounded, all of b: 8 loud voices in 32 bits as
+                                                         * ((b >> 2) * lv) >> 10 was */
+            }
             int32_t xs, g = ga + (((gb - ga) * (int32_t)i) >> CTL_LOG2);
             if (g < 32767) {                            /* (always, at rest: mulq15(32767, 32767) is 32766) */
                 g >>= 3;                                /* (Q12: no 32-bit overflow) */
