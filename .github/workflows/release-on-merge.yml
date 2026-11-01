@@ -1,0 +1,117 @@
+# Publish a GitHub release when a pull request is merged into main.
+#
+# The version comes from FELUCCA_VERSION in firmware/src/ui.c ("BOOPBOX X.Y.Z").
+# The release is tagged vX.Y.Z on the merge commit, its notes are the PR's title
+# and description, and it carries the committed package docs/firmware/boopbox-X.Y.Z.fwsc
+# and the offline editor (docs/webapp/editor/boopbox-editor.html) as boopbox-editor-X.Y.Z.html.
+# A version with a suffix (1.3.0-beta) is published as a pre-release.
+# If a release for that version exists already (the PR did not bump the version),
+# nothing is published.
+name: Release on merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the merge commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Read the version
+        id: version
+        run: |
+          ver=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c)
+          if [ -z "$ver" ]; then
+            echo "::error file=firmware/src/ui.c::no FELUCCA_VERSION \"BOOPBOX X.Y.Z\" found"
+            exit 1
+          fi
+          ver=$(echo "$ver" | tr 'A-Z' 'a-z')      # BOOPBOX 1.2.0-BETA -> 1.2.0-beta
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "tag=v$ver" >> "$GITHUB_OUTPUT"
+          echo "Version: $ver"
+
+      - name: Skip if this version is released already
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG exists already: bump FELUCCA_VERSION in firmware/src/ui.c for a new release"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write the release notes
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          {
+            echo "## $PR_TITLE"
+            echo
+            if [ -n "$PR_BODY" ]; then
+              printf '%s\n' "$PR_BODY"
+              echo
+            fi
+            echo "---"
+            echo "From #$PR_NUMBER by @$PR_AUTHOR: $PR_URL"
+          } > "$RUNNER_TEMP/notes.md"
+
+      - name: Collect the assets
+        if: steps.exists.outputs.skip == 'false'
+        id: assets
+        env:
+          VER: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/assets"
+          fwsc="docs/firmware/boopbox-$VER.fwsc"
+          if [ -f "$fwsc" ]; then
+            cp "$fwsc" "$RUNNER_TEMP/assets/"
+          else
+            echo "::warning::$fwsc is not in the repository: the release has no firmware package"
+          fi
+          editor="docs/webapp/editor/boopbox-editor.html"
+          if [ -f "$editor" ]; then
+            cp "$editor" "$RUNNER_TEMP/assets/boopbox-editor-$VER.html"
+          fi
+          ls -l "$RUNNER_TEMP/assets"
+
+      - name: Create the release
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          shopt -s nullglob
+          assets=("$RUNNER_TEMP"/assets/*)
+          flags=""
+          case "$VER" in *-*) flags="--prerelease" ;; esac
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "BoopBox $VER" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            $flags \
+            "${assets[@]}"
