@@ -1,0 +1,57 @@
+# A PR into main that adds a firmware binary (docs/firmware/boopbox-X.Y.Z.fwsc)
+# must also have a "## X.Y.Z" section in CHANGELOG.md: merging it publishes the
+# release with that section as its notes (release-on-merge.yml).
+# Shows on the PR the release notes it would publish.
+name: Changelog check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/firmware/*.fwsc'
+      - 'CHANGELOG.md'
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check the changelog for each new binary
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          added=$(git diff --name-only --diff-filter=AR "$BASE...$HEAD" -- 'docs/firmware/*.fwsc' \
+            | grep -E '^docs/firmware/boopbox-[0-9][^/]*\.fwsc$' || true)
+          if [ -z "$added" ]; then
+            echo "No new firmware binary: no release, nothing to check."
+            exit 0
+          fi
+          fail=0
+          for file in $added; do
+            ver=$(basename "$file" .fwsc); ver=${ver#boopbox-}
+            if notes=$(python3 tools/changelog_section.py "$ver" --repo "$GITHUB_REPOSITORY" --ref "$HEAD"); then
+              {
+                echo "### Release notes for $ver (from CHANGELOG.md)"
+                echo
+                printf '%s\n' "$notes"
+                echo
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "CHANGELOG.md has a section for $ver."
+            else
+              echo "::error file=CHANGELOG.md::$file is added but CHANGELOG.md has no '## $ver' section: add one (it becomes the release notes)"
+              fail=1
+            fi
+            src=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c | tr 'A-Z' 'a-z')
+            if [ "$src" != "$ver" ]; then
+              echo "::warning file=firmware/src/ui.c::FELUCCA_VERSION is '$src' but the binary is $ver"
+            fi
+          done
+          exit $fail

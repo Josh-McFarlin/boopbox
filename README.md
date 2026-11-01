@@ -10,6 +10,7 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 <a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/editor/">Web editor</a> ·
 <a href="../../releases">Releases</a> ·
+<a href="CHANGELOG.md">Changelog</a> ·
 <a href="../../issues">Report a bug</a>
 </p>
 
@@ -141,6 +142,8 @@ backup, and please [report](../../issues) what you find.
   ([docs/groovebox-status.md](docs/groovebox-status.md)).
 - **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
   step components or the chord progression (backups keep them). *Lifted in 1.1.0: see [What's new in 1.1.0](#whats-new-in-110).*
+
+Every release's notes are in the [changelog](CHANGELOG.md).
 
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
 is in [its repository](https://github.com/isod89/sloop-fm1).
