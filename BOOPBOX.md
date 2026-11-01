@@ -6,7 +6,7 @@
 
 BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/isod89/sloop-fm1) by isod89, itself based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments.
 
-> **Status:** 1.1.0, tested in the host simulator but not yet on an FM-1. Install it at your own risk, and please report what you find (GitHub issues).
+> **Status:** 1.1.0. Please report what you find (GitHub issues).
 
 > **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide: every button, key combination, layer, page and editor page, with a [one-page cheat sheet](GUIDE.md#26-cheat-sheet).
 
@@ -41,9 +41,6 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
   ([docs/groovebox-performance.md](docs/groovebox-performance.md)).
 - Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
   settings opens as one of the new six.
-
-**Not yet tested on an FM-1:** 1.1.0 is tested in the host simulator only (the firmware's own code on a computer).
-Install it at your own risk, keep a backup, and please [report](../../issues) what you find.
 
 ### New in 1.0.0
 

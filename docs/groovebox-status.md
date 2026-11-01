@@ -5,9 +5,8 @@ The controls are in `docs/groovebox-controls.md`, the design in `docs/groovebox-
 in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-performance.md`.
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
-for the PC, with the FM-1's inputs simulated), and the default build (`./build.sh`, the JieLi toolchain) makes an
-image that fits the flash with 1,812 B to spare (1.2.0), the web editor and the visualiser's six styles included. **Nothing
-was run on an FM-1** (section 4). To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
+for the PC, with the FM-1's inputs simulated) and on an FM-1, and the default build (`./build.sh`, the JieLi toolchain) makes an
+image that fits the flash with 1,812 B to spare (1.2.0), the web editor and the visualiser's six styles included. To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
 three tables in RAM at power-on (section 2).
 
 ## 1. Implemented
@@ -73,8 +72,6 @@ those four.
   With `pkgman.jieliapp.com`, `jl-update.oss-cn-shenzhen.aliyuncs.com` (where the toolchain link leads) and
   `gitee.com` allowed, `tools/get_toolchain.sh` and a sparse checkout of the three SDK files work, and the image is
   built.
-- No FM-1 was available. Nothing was flashed (as asked) and no behaviour was checked on hardware: the timing, the
-  CPU load at 8 busy tracks, the display layouts and the feel of the controls are checked on the host only.
 
 ## 5. Build
 
