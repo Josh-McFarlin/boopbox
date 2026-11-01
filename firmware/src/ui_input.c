@@ -291,7 +291,7 @@ UI_SMALL static int32_t accel(uint32_t role, int32_t s, int32_t range)
 }
 
 /* TRACKS page: KNOB 1 SWING (the groove of every track, MPC 50..75 %), 2 LEVEL (0 = mute; the drum
- * track: GLO > DRUMS LEVEL), 3 LEN of its pattern, 4 PAN. A track muted with MUTE (GLO + key, the
+ * track: its drum LEVEL, as GLO > DRUMS shows it), 3 LEN of its pattern, 4 PAN. A track muted with MUTE (GLO + key, the
  * editor): the first turn of KNOB 2 unmutes it */
 UI_SMALL static void tracks_edit(uint32_t slot, int32_t steps)
 {
@@ -308,8 +308,8 @@ UI_SMALL static void tracks_edit(uint32_t slot, int32_t steps)
             t->p[P_MUTE] = 0;
             return;
         }
-        vp = is_drum(t) ? &song.g[G_DRLVL] : &t->p[P_LEVEL];
-        d = is_drum(t) ? &GP[G_DRLVL] : &TP[P_LEVEL];
+        vp = &t->p[P_LEVEL];                            /* (a drum track's own LEVEL too: the one its mix plays */
+        d = track_desc(t, P_LEVEL);                     /* and the strip shows; song.g[G_DRLVL] is read by nothing) */
         break;
     case 2:
         vp = &t->p[P_SLEN];
