@@ -69,7 +69,8 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 
 The flash is full: the default build leaves 1,540 B of the app slot free (1.3.0) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
 visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the build fails and
-says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes.
+says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes, and
+`docs/memory-savings-analysis.md` for where the flash and the RAM go and what can still be saved (measured, ranked).
 
 ## Samples
 

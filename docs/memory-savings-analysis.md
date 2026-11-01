@@ -1,6 +1,8 @@
 # BoopBox firmware: where the flash and RAM go, and what can be saved
 
-Analysis of the 1.3.0 tree (`main`, e546d30), 2026-11-01. Not committed; nothing in the firmware was changed.
+Analysis of the 1.3.0 tree (`main`, e546d30), 2026-11-01. A reference for the next time the flash or the RAM is
+full: nothing in the firmware was changed by it. The figures are those of that tree; re-measure before relying on
+one (section 7). Items are numbered F1..F10 (flash) and R1..R13 (RAM) so they can be referred to.
 
 **How it was measured.** The JieLi pi32v2 toolchain is not available here, so every code figure comes from the
 proxy build (`tools/proxy_size.py`: the whole firmware for RV32IMC at `-Os` with the host clang), compared function
@@ -341,15 +343,32 @@ buffers or arenas (-8 KB each: one fewer track in STUT or on a big engine at onc
 Every step: `./build.sh` (the real sizes), `sh tests/run_tests.sh` (golden renders, budgets), and for the UI steps the
 screenshot gallery. Each proxy figure should be re-measured on the pi32v2 build before it is counted on.
 
-## 7. Scripts and experiments left behind
+## 7. How to measure again
 
-`/tmp/claude-0/-home-user-boopbox/6cd1f671-d51e-5e8e-a18f-e20a0a1286b1/scratchpad/`: `flagtest.py` (the flag
-variants), `mark.py` + `pbuild.py` (the `minsize` marking and proxy build), `fontexp.py`, `e2_pdesc.py` (the
-`param_desc_t` rewrite), `e8_lock.py`, `exp10/` (the combined UI tree), `app130.bin` (the decoded real image),
-`tests_final.log` (the host suite on the engines agent's stacked tree), and
-`engine-changes-F8-F9-F10-R11.patch`: F8, F9, F10 and R11 applied together as one `git diff` against e546d30
-(26 files, the generator included; `git apply` it on a branch to pick the work up; the scratchpad is this session's
-and does not outlive it, so copy the patch out if it is wanted).
+Everything above can be reproduced without the JieLi toolchain:
+
+```sh
+HOST_ONLY=1 sh tests/run_tests.sh                       # generates build/gen, runs the host suite
+python3 tools/proxy_size.py --obj build/base.o          # the baseline proxy object
+# ... make a change ...
+python3 tools/proxy_size.py --obj build/new.o && python3 tools/proxy_diff.py build/base.o build/new.o 60
+llvm-readelf -S -W build/new.o                          # per-function / per-object section sizes
+```
+
+- A whole-firmware flag variant: preprocess `firmware/src/felucca.c` as `proxy_size.py` does (the HAL's inline
+  assembly emptied), then compile the `.i` with the flag under test and compare `.text*` sizes.
+- The `minsize` experiment of 3.1: add `__attribute__((minsize))` to the `static` function definitions of the files
+  named (a regex over lines that start with `static`, skip `inline` and existing attributes), proxy-build, and
+  check with `llvm-nm -S` that the functions of `tests/target_budget.py`'s `FUNCS` list did not change size.
+- The real figures: `./build.sh` prints `image ... B; RAM .data+.bss ... B of 98304; lowram ...; pool ...`, and
+  `sh tests/run_tests.sh` without `HOST_ONLY` runs `tests/target_budget.py` on `build/felucca.dis`.
+- The real 1.3.0 app image can be decoded from `docs/firmware/boopbox-1.3.0.fwsc` with the ciphers in
+  `tools/fm1pkg_make.py` (undo the `.fwsc` marker bytes, take `flash.bin`, `sfc()` the area from 0x4000 with
+  `KEY`, the app is at 0x120 of it): 580,024 B, `SMP_DATA` at offset 250,096.
+
+The changes marked "measured" were made in scratch copies during the analysis and not kept; the text gives each
+one's files, lines and the tests that covered it, which is enough to redo any of them in an hour or two. F8, F9, F10
+and R11 were made together and passed the 182 golden renders as one tree.
 
 One thing seen in passing, not caused by any of this: on the unmodified tree, `tests/phys_tune_test.c` reports
 `TANPURA 100: +64.5 cents FAIL` under `HOST_ONLY=1 sh tests/run_tests.sh` on this machine (x86-64, clang 18). It
