@@ -1,18 +1,20 @@
-# Publish a GitHub release when a pull request is merged into main.
+# Publish a GitHub release when a pull request that adds a new firmware binary
+# (docs/firmware/boopbox-X.Y.Z.fwsc) is merged into main.
 #
-# The version comes from FELUCCA_VERSION in firmware/src/ui.c ("BOOPBOX X.Y.Z").
-# The release is tagged vX.Y.Z on the merge commit, its notes are the PR's title
-# and description, and it carries the committed package docs/firmware/boopbox-X.Y.Z.fwsc
-# and the offline editor (docs/webapp/editor/boopbox-editor.html) as boopbox-editor-X.Y.Z.html.
-# A version with a suffix (1.3.0-beta) is published as a pre-release.
-# If a release for that version exists already (the PR did not bump the version),
-# nothing is published.
+# The version comes from the binary's filename. The release is tagged vX.Y.Z on
+# the merge commit, its notes are the PR's title and description, and it carries
+# the binary and the offline editor (docs/webapp/editor/boopbox-editor.html) as
+# boopbox-editor-X.Y.Z.html. A version with a suffix (1.3.0-beta) is published
+# as a pre-release. A PR without a new binary publishes nothing, and neither does
+# a binary whose version has a release already.
 name: Release on merge
 
 on:
   pull_request:
     types: [closed]
     branches: [main]
+    paths:
+      - 'docs/firmware/*.fwsc'
 
 permissions:
   contents: write
@@ -31,27 +33,47 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Read the version
-        id: version
+      - name: Find the new firmware binary
+        id: fw
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          ver=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c)
-          if [ -z "$ver" ]; then
-            echo "::error file=firmware/src/ui.c::no FELUCCA_VERSION \"BOOPBOX X.Y.Z\" found"
-            exit 1
+          # Binaries the PR added (not modified or removed)
+          added=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" \
+            --jq '.[] | select(.status == "added" or .status == "renamed") | .filename' \
+            | grep -E '^docs/firmware/boopbox-[0-9][^/]*\.fwsc$' || true)
+          if [ -z "$added" ]; then
+            echo "::notice::No new docs/firmware/boopbox-X.Y.Z.fwsc in this PR: no release"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          ver=$(echo "$ver" | tr 'A-Z' 'a-z')      # BOOPBOX 1.2.0-BETA -> 1.2.0-beta
+          if [ "$(echo "$added" | wc -l)" -gt 1 ]; then
+            echo "::warning::This PR adds several binaries; releasing the highest version"
+          fi
+          file=$(echo "$added" | sort -V | tail -n 1)
+          ver=$(basename "$file" .fwsc); ver=${ver#boopbox-}
+          echo "file=$file" >> "$GITHUB_OUTPUT"
           echo "version=$ver" >> "$GITHUB_OUTPUT"
           echo "tag=v$ver" >> "$GITHUB_OUTPUT"
-          echo "Version: $ver"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Binary: $file (version $ver)"
+
+          # The firmware's own version string should match the filename
+          src=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c | tr 'A-Z' 'a-z')
+          if [ "$src" != "$ver" ]; then
+            echo "::warning file=firmware/src/ui.c::FELUCCA_VERSION is '$src' but the binary is $ver"
+          fi
 
       - name: Skip if this version is released already
         id: exists
+        if: steps.fw.outputs.skip == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.fw.outputs.tag }}
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::notice::Release $TAG exists already: bump FELUCCA_VERSION in firmware/src/ui.c for a new release"
+            echo "::notice::Release $TAG exists already: nothing published"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -77,41 +99,27 @@ jobs:
             echo "From #$PR_NUMBER by @$PR_AUTHOR: $PR_URL"
           } > "$RUNNER_TEMP/notes.md"
 
-      - name: Collect the assets
-        if: steps.exists.outputs.skip == 'false'
-        id: assets
-        env:
-          VER: ${{ steps.version.outputs.version }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/assets"
-          fwsc="docs/firmware/boopbox-$VER.fwsc"
-          if [ -f "$fwsc" ]; then
-            cp "$fwsc" "$RUNNER_TEMP/assets/"
-          else
-            echo "::warning::$fwsc is not in the repository: the release has no firmware package"
-          fi
-          editor="docs/webapp/editor/boopbox-editor.html"
-          if [ -f "$editor" ]; then
-            cp "$editor" "$RUNNER_TEMP/assets/boopbox-editor-$VER.html"
-          fi
-          ls -l "$RUNNER_TEMP/assets"
-
       - name: Create the release
         if: steps.exists.outputs.skip == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-          VER: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
+          FILE: ${{ steps.fw.outputs.file }}
+          VER: ${{ steps.fw.outputs.version }}
+          TAG: ${{ steps.fw.outputs.tag }}
           SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
-          shopt -s nullglob
-          assets=("$RUNNER_TEMP"/assets/*)
-          flags=""
-          case "$VER" in *-*) flags="--prerelease" ;; esac
+          assets=("$FILE")
+          editor="docs/webapp/editor/boopbox-editor.html"
+          if [ -f "$editor" ]; then
+            cp "$editor" "$RUNNER_TEMP/boopbox-editor-$VER.html"
+            assets+=("$RUNNER_TEMP/boopbox-editor-$VER.html")
+          fi
+          flags=()
+          case "$VER" in *-*) flags+=(--prerelease) ;; esac
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$SHA" \
             --title "BoopBox $VER" \
             --notes-file "$RUNNER_TEMP/notes.md" \
-            $flags \
+            "${flags[@]}" \
             "${assets[@]}"
