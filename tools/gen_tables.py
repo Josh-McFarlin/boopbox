@@ -102,6 +102,9 @@ def main(path):
     db = [None] + [(v - 112) / 2 for v in range(1, 128)]
     L += arr("LEVEL_Q12", "uint16_t", [0] + [int(round(4096 * 10 ** (d / 20))) for d in db[1:]])
     L += arr("LEVEL_DB_X10", "int16_t", [-999] + [int(round(d * 10)) for d in db[1:]])
+    # the same steps above 127, for LEVEL + a preset's trim only (fx.c mix_part_run): 128 .. 175 = +8 .. +31.5 dB, so a
+    # quiet preset's trim is not cut at 127 and LEVEL still turns it up to its own top
+    L += arr("LEVEL_HI_Q12", "uint32_t", [int(round(4096 * 10 ** ((v - 112) / 2 / 20))) for v in range(128, 176)])
     # per-sample exponential decay for drum voices: 5 ms .. 4 s to -60 dB, Q16
     dms = [5.0 * (800 ** (v / 127)) for v in range(128)]
     L += arr("DECAY_K", "uint16_t", [min(65535, int(65536 * math.exp(-6.9 / (m / 1000 * FS)))) for m in dms])

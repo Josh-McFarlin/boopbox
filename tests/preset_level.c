@@ -1,11 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Every factory preset plays a phrase that fits it (a bass line, held chords, comping or a melody),
- * 4.75 s each, through the whole mix (sends, master), for tools/level_presets.py.
+ * 4.75 s each, through the whole mix (sends, master; MASTER at -24 dB, PL_MASTER_Q12), for tools/level_presets.py.
  *   argv[1]: a WAV of them all, argv[2]: the list (engine preset role name), argv[3]: mono int32 raw
  *   cc -O2 -Ibuild/gen -Ifirmware/src -Ifirmware/hal tests/preset_level.c -lm -o build/host/preset_level */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
+/* measured with MASTER at -24 dB, where no preset reaches the master limiter (fx.c LIM_T): at MASTER all the way up
+ * the limiter held nearly every preset at one peak, so a punchy sound read quiet and took a trim that made it the
+ * loudest at a normal MASTER (tools/level_presets.py: TARGET at full MASTER, less these 24 dB) */
+#define PL_MASTER_Q12 256
 
 enum { R_BASS, R_HELD, R_COMP, R_MELODY, R_ONE };
 static int has(const char *n, const char *w) { return strstr(n, w) != 0; }
@@ -57,6 +61,7 @@ int main(int argc, char **argv)
             const char *name = ENGINES[e]->presets[pi].name;
             int role = role_of(name);
             host_tracks_init();
+            song.master_q12 = PL_MASTER_Q12;            /* (MASTER -24 dB: the master limiter left out of it) */
             song.g[G_BPM] = 100;
             host_preset(&trk[0], e, pi);
             song.sel = 0;
