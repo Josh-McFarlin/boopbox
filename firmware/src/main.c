@@ -247,7 +247,7 @@ UI_SMALL static void fm1_main(void)
         settings_save();
     }
     fm1_delay_ms(900);                                  /* (the logo stays a moment) */
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
 
     healthy_since = fm1_ms;
     for (;;) {
@@ -301,7 +301,7 @@ UI_SMALL static void fm1_main(void)
 #if FELUCCA_ARRANGER
                 persist_flush_now();                    /* (live sections, song, project: RAM-only so far) */
 #endif
-                lcd_fill(0, 0, 240, 240, C_BLACK);
+                lcd_clear();
                 draw_text_box(0, 110, 240, &FONT_S, "UBOOT", RGB(80, 120, 255), 1);
                 usb_detach();
                 fm1_delay_ms(30);
@@ -320,7 +320,7 @@ UI_SMALL static void fm1_main(void)
 #endif
             if (flash_ok)
                 ota_session();                          /* returns only if nothing was committed */
-            lcd_fill(0, 0, 240, 240, C_BLACK);
+            lcd_clear();
             ui.force = 1;
         }
 #endif
@@ -329,7 +329,7 @@ UI_SMALL static void fm1_main(void)
 #if FELUCCA_ARRANGER
             persist_flush_now();                    /* (live sections, song, project: RAM-only so far) */
 #endif
-            lcd_fill(0, 0, 240, 240, C_BLACK);
+            lcd_clear();
             draw_text_box(0, 110, 240, &FONT_S, "UBOOT (USB)", C_WHITE, 1);
             fm1_delay_ms(20);
             usb_detach();

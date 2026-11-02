@@ -4,6 +4,19 @@ Analysis of the 1.3.0 tree (`main`, e546d30), 2026-11-01. A reference for the ne
 full: nothing in the firmware was changed by it. The figures are those of that tree; re-measure before relying on
 one (section 7). Items are numbered F1..F10 (flash) and R1..R13 (RAM) so they can be referred to.
 
+**Status.** The conservative part of the short list has since been applied to the tree: F10, F2 (`drums`, `lim_dac`,
+`lim_usb` and `tx`; `punch` stays in `.data`, as `punch.req` and `punch.cur` must start at -1 in every boot path and
+test harness), F7 (`lk_slot`, `ota_show`, `cpu1_supplies`; the USB counters and `stack_paint` are kept as
+diagnostics), F1 (`CTL_SMALL` in `core.h`, on `seq.c`, `comp.c`, `patbank.c`, `patcodec.c`, `harmony.c`, `voice.c`,
+`engines.c` and the engines' note-on and `*_desc` / `*_coef` helpers) and the `lcd_clear` / `ui_text_r` / `ui_text_mid`
+/ `knob_strip` / lazy-ramp parts of F6. Proxy result: code -7,318 B, constants -246 B, `.data` initialisers -2,632 B (about -8.5 KB
+real at the 0.77x rule). The real build (JieLi toolchain, 1.3.1) measured less: the image went from 580,024 to
+**575,316 B (-4,708 B)** and RAM `.data` + `.bss` from 85,516 to 85,468 B (-48 B). The exact parts (constants and
+`.data`, about -2.9 KB) came out as predicted, so the code saved only about **1.8 KB**, not the 5.6 KB the proxy
+suggested: `minsize` (F1) buys much less on the pi32v2 compiler than on the host clang, and the "-4..-6 KB" for it in
+the table is too high. The 182 golden renders and all 191 test screen renders are unchanged. F3, F4, F5, F8, F9, the other RAM items
+and the rest of F6 (`BANK` / `ICON_MAP` packing, uppercase literals) are not applied.
+
 **How it was measured.** The JieLi pi32v2 toolchain is not available here, so every code figure comes from the
 proxy build (`tools/proxy_size.py`: the whole firmware for RV32IMC at `-Os` with the host clang), compared function
 by function with `tools/proxy_diff.py` after a change. Constant tables, structs and RAM are exact in the proxy;
@@ -370,6 +383,11 @@ The changes marked "measured" were made in scratch copies during the analysis an
 one's files, lines and the tests that covered it, which is enough to redo any of them in an hour or two. F8, F9, F10
 and R11 were made together and passed the 182 golden renders as one tree.
 
-One thing seen in passing, not caused by any of this: on the unmodified tree, `tests/phys_tune_test.c` reports
-`TANPURA 100: +64.5 cents FAIL` under `HOST_ONLY=1 sh tests/run_tests.sh` on this machine (x86-64, clang 18). It
-reproduces identically with the engine changes applied, so it is a pre-existing host result worth a look of its own.
+One thing seen in passing, not caused by any of this: on the unmodified tree, `tests/phys_tune_test.c` reported
+`TANPURA 100: +64.5 cents FAIL` under `HOST_ONLY=1 sh tests/run_tests.sh` on this machine (x86-64, clang 18). It was
+an engine bug, not a host quirk: the SYMP model's sympathetic strings could be tuned above 4.4 kHz (the octave and
+two-octave partners of the top notes), where their loop gain is clamped at 0.9999 and they rang several times louder
+than the main string, into the soft knee. The note came out up to 60 cents off, at random: about 5 % of the random
+plucks at E7 and C7, and which ones depended on what had played before (the global `rng()`). Fixed by leaving out
+partners whose period is under 5 half-rate steps (`PX_YMIN_P` in `phys_symp.c`): worst case over 60 plucks at E7 is
+10.8 cents, golden renders unchanged.

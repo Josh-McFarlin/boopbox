@@ -175,7 +175,7 @@ static uint32_t px_isqrt64(uint64_t v)                    /* floor(sqrt(v)) */
 typedef struct { int32_t g, rpg, gh; } px_svf_t;         /* Q28, Q28, Q30 */
 
 /* f: cycles / sample Q32 (< 0.5), q: Q8 (> 0) */
-static void px_svf_coef(px_svf_t *c, uint32_t f, uint32_t q8)
+CTL_SMALL static void px_svf_coef(px_svf_t *c, uint32_t f, uint32_t q8)
 {
     int32_t g = px_fasttan(f);
     uint32_t r = (uint32_t)((((uint64_t)1 << 36) + q8 - 1u) / q8);       /* 1 / q, rounded up */
@@ -192,7 +192,7 @@ typedef struct { int32_t freq, damp, drive; } px_csvf_t; /* Q30, Q28, Q30 */
 typedef struct { int32_t low, band; } px_csvf_st_t;
 
 /* Svf::SetFreq(f * sr) + SetRes(res) + the drive: f cycles / sample Q32, res Q16 (0..1), drive Q16 */
-static void px_csvf_coef(px_csvf_t *c, uint32_t f, int32_t res, int32_t pre_drive)
+CTL_SMALL static void px_csvf_coef(px_csvf_t *c, uint32_t f, int32_t res, int32_t pre_drive)
 {
     uint32_t fc = f > 0x55555555u ? 0x55555555u : f;     /* fc_max = sr / 3 */
     uint32_t a = fc >> 1 > 0x40000000u ? 0x40000000u : fc >> 1;   /* min(0.25, fc / (2 sr)) */

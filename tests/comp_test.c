@@ -30,7 +30,7 @@ static void reset(uint32_t bpm)
     memset(eng_arena_own, 0, sizeof eng_arena_own);
     memset(sl_buf_trk, 0, sizeof sl_buf_trk);
     memset(&drums, 0, sizeof drums);
-    drums.set = -2;
+    drums.set = 0;
     host_tracks_init();
     for (i = 0; i < NTRK; i++) {
         if (!is_drum(&trk[i]))

@@ -35,7 +35,7 @@ static void reset(uint32_t ti, int voice)
     host_tracks_init();
     for (i = 0; i < NTRK; i++) { steps_clear(&trk[i]); trk_all_off(&trk[i]); }
     memset(&drums, 0, sizeof drums);
-    drums.set = -2;
+    drums.set = 0;
     song.g[G_BPM] = 120;
     host_preset(&trk[ti], ti == 0 ? 0 : 1, 0);
     if (voice >= 0) trk[ti].p[P_VOICE] = (int16_t)voice;

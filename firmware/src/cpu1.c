@@ -74,9 +74,9 @@ static const char *cpu1_label(void)                      /* ABOUT: the hardware'
 static void cpu1_supplies(char *b)
 {
     uint32_t s = 930u + 30u * fm1_sysvdd(), v = 1250u + 50u * fm1_vdc14();
-    b[0] = (char)('0' + s / 1000u), b[1] = '.', b[2] = (char)('0' + s / 100u % 10u), b[3] = (char)('0' + s / 10u % 10u);
+    fmt_fix(b, (int32_t)(s / 10u), 2);                  /* 1.38 */
     b[4] = 'V', b[5] = ' ';
-    b[6] = (char)('0' + v / 1000u), b[7] = '.', b[8] = (char)('0' + v / 100u % 10u), b[9] = (char)('0' + v / 10u % 10u);
+    fmt_fix(b + 6, (int32_t)(v / 10u), 2);
     b[10] = 'V', b[11] = 0;
 }
 

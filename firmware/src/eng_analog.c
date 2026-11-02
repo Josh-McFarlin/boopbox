@@ -4,7 +4,7 @@
  * noise, drive and a trapezoidal state-variable filter: low-pass, or (2.6, TYPE) band-pass / high-pass. */
 static const char *const N_ANALOG_WAVE[] = {"SAW", "SQR", "TRI", "SIN", "PWM"};
 
-static void analog_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void analog_note_on(track_t *t, voice_t *v)
 {
     (void)t;
     if (!v->env && !v->env_out)

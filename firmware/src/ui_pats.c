@@ -11,6 +11,17 @@
 static uint8_t pats_cursor;
 static uint8_t pats_arm;                         /* 1: COPY armed, 2: CLEAR armed (until pats_deadline) */
 static uint32_t pats_deadline;
+/* the four knobs' strip on a 38-px band: a colour bar, the label and the value of each (the hot one white) */
+UI_SMALL static void knob_strip(const char *const *L, char (*v)[8])
+{
+    uint32_t k;
+    for (k = 0; k < 4u; k++) {
+        cv_rect((int32_t)k * 60 + 4, 2, 52, 3, UI_COL[k]);
+        cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, L[k]) / 2, 6, &FONT_S, L[k], UI_G3);
+        cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, v[k]) / 2, 21, &FONT_S, v[k],
+                ui.hot_t && ui.hot_col == k ? C_WHITE : UI_G4);
+    }
+}
 UI_SMALL static int on_pats_page(void) { return !ui.home && cur_page()->scope == SC_PATS; }
 UI_SMALL static uint32_t pats_used(uint32_t k)   /* the patterns of track k that hold something, a bit each */
 {
@@ -48,10 +59,10 @@ UI_SMALL static void pats_screen_draw(void)
     cv_text(4, 4, &FONT_L, "PATTERNS", C_WHITE);
     str_cpy(b, "q ", 3);
     str_cpy(b + 2, QN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
-    cv_text(236 - text_w(&FONT_S, b), 4, &FONT_S, b, UI_COL[2]);
+    ui_text_r(4, b, UI_COL[2]);
     fmt_int(b, (int32_t)(pb_n * 100u / PB_SIZE));
     str_cpy(b + str_len(b), "% full", 8);
-    cv_text(236 - text_w(&FONT_S, b), 20, &FONT_S, b, pb_n * 10u > PB_SIZE * 9u ? UI_RED : UI_G3);
+    ui_text_r(20, b, pb_n * 10u > PB_SIZE * 9u ? UI_RED : UI_G3);
     cv_rule(0, 39, 240, UI_G1);
     cv_blit(0, 0);
     for (k = 0; k < NTRK; k += 4u) {             /* the grid, four tracks a band (the canvas: 124 rows at most) */
@@ -87,7 +98,7 @@ UI_SMALL static void pats_screen_draw(void)
     cv_begin(240, 38, C_BLACK);                  /* the knobs, or a message */
     if (ui.msg_t) {
         cv_rect(0, 4, 240, 30, C_WHITE);
-        cv_text((240 - text_w(&FONT_S, ui.msg)) / 2, 11, &FONT_S, ui.msg, C_BLACK);
+        ui_text_mid(11, ui.msg, C_BLACK);
     } else {
         static const char *const L[4] = {"pattern", "quant", "chain", "copy/clr"};
         static char v[4][8];
@@ -101,12 +112,7 @@ UI_SMALL static void pats_screen_draw(void)
         str_cpy(v[3], pats_arm ? "again" : "to ", 6);
         if (!pats_arm)
             fmt_int(v[3] + 3, (int32_t)pats_cursor + 1);
-        for (k = 0; k < 4u; k++) {
-            cv_rect((int32_t)k * 60 + 4, 2, 52, 3, UI_COL[k]);
-            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, L[k]) / 2, 6, &FONT_S, L[k], UI_G3);
-            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, v[k]) / 2, 21, &FONT_S, v[k],
-                    ui.hot_t && ui.hot_col == k ? C_WHITE : UI_G4);
-        }
+        knob_strip(L, v);
     }
     cv_blit(0, 202);
 }
@@ -246,10 +252,10 @@ UI_SMALL static void chords_screen_draw(void)
     str_cpy(b, N_HKEY[(uint32_t)clamp(song.g[G_HKEY], 0, 11)], 4);
     str_cpy(b + str_len(b), " ", 2);
     str_cpy(b + str_len(b), N_SCALE[(uint32_t)clamp(song.g[G_HSCL], 0, NSCALES - 1)], 6);
-    cv_text(236 - text_w(&FONT_S, b), 4, &FONT_S, b, UI_COL[2]);
+    ui_text_r(4, b, UI_COL[2]);
     str_cpy(b, "q ", 3);
     str_cpy(b + 2, QN[(uint32_t)clamp(song.g[G_HQ], 0, 2)], 6);
-    cv_text(236 - text_w(&FONT_S, b), 20, &FONT_S, b, UI_G3);
+    ui_text_r(20, b, UI_G3);
     cv_rule(0, 39, 240, UI_G1);
     cv_blit(0, 0);
     cv_begin(240, 124, C_BLACK);                 /* the chord now, the progression, the tracks */
@@ -287,7 +293,7 @@ UI_SMALL static void chords_screen_draw(void)
     cv_begin(240, 38, C_BLACK);                  /* the knobs, or a message */
     if (ui.msg_t) {
         cv_rect(0, 4, 240, 30, C_WHITE);
-        cv_text((240 - text_w(&FONT_S, ui.msg)) / 2, 11, &FONT_S, ui.msg, C_BLACK);
+        ui_text_mid(11, ui.msg, C_BLACK);
     } else {
         static const char *const L[4] = {"chord", "degree", "bars", "count"};
         static char v[4][8];
@@ -295,12 +301,7 @@ UI_SMALL static void chords_screen_draw(void)
         str_cpy(v[1], H_ROMAN[harm.c[chords_cursor % NHPROG].deg % 7u], 4);
         fmt_int(v[2], harm.c[chords_cursor % NHPROG].bars);
         fmt_int(v[3], (int32_t)n);
-        for (k = 0; k < 4u; k++) {
-            cv_rect((int32_t)k * 60 + 4, 2, 52, 3, UI_COL[k]);
-            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, L[k]) / 2, 6, &FONT_S, L[k], UI_G3);
-            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, v[k]) / 2, 21, &FONT_S, v[k],
-                    ui.hot_t && ui.hot_col == k ? C_WHITE : UI_G4);
-        }
+        knob_strip(L, v);
     }
     cv_blit(0, 202);
 }

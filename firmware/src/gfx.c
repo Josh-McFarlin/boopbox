@@ -325,13 +325,11 @@ static uint32_t glyph(const felucca_font_t *f, uint32_t ch)
 static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char *s, uint16_t c)
 {
     uint16_t ramp[16];
-    uint32_t a;
+    uint32_t a, ramped = 0;
     /* (1.1.0) SYNTHWAVE: large text in a bright colour fades: the values (C_HI, hot pink) to the sunset's orange, the rest
      * from a white sheen at the top to its colour by half way (chrome). Labels, dim and grey text stay flat */
     int grad = pal_neon && f->h >= 32u && c != C_DIM && c != C_GRAY && c != C_LINE && c != UI_G3 && c != UI_G4 &&
                c != C_BLACK;
-    for (a = 0; a < 16u; a++)
-        ramp[a] = rgb565_over(c, a, 15u);              /* (on black: c * a / 15, as before) */
     for (; *s; s++) {
         uint32_t gi = glyph(f, (uint8_t)*s), gx, gy, w, bpr;
         const uint8_t *gd;
@@ -340,7 +338,7 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
         if (f->bits == 1u) {                           /* on / off pixels: full colour where a bit is set */
             uint32_t sw = w >> f->sh;
             for (gy = 0; gy < f->h; gy++) {
-                uint16_t rc = ramp[15];
+                uint16_t rc = c;                       /* (the ramp's top step: c itself) */
                 if (grad)                              /* (1.1.0) SYNTHWAVE, large text: a gradient top to bottom */
                     rc = c == C_HI ? rgb565_mix(c, SYNTH_SUN, gy, f->h)
                                    : gy < f->h / 2u ? rgb565_mix(0xFFFFu, c, gy + 2u, f->h / 2u + 2u) : c;
@@ -352,6 +350,11 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
             }
             x += f->adv[gi];
             continue;
+        }
+        if (!ramped) {                                 /* (4 bits a pixel: the ramp from the background to c; no font uses it now) */
+            for (a = 0; a < 16u; a++)
+                ramp[a] = rgb565_over(c, a, 15u);      /* (on black: c * a / 15, as before) */
+            ramped = 1;
         }
         bpr = ((w >> f->sh) + 1u) / 2u;
         for (gy = 0; gy < f->h; gy++)
@@ -366,6 +369,9 @@ static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char
     return x;
 }
 
+static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c);   /* (lcd.c, or a test's double) */
+UI_SMALL static void lcd_clear(void) { lcd_fill(0, 0, 240, 240, C_BLACK); }
+
 static int32_t text_w(const felucca_font_t *f, const char *s)
 {
     int32_t w = 0;
@@ -373,6 +379,10 @@ static int32_t text_w(const felucca_font_t *f, const char *s)
         w += f->adv[glyph(f, (uint8_t)*s)];
     return w;
 }
+
+/* FONT_S text ending at the right margin (x = 236), and centred on the 240-px screen */
+UI_SMALL static void ui_text_r(int32_t y, const char *s, uint16_t c) { cv_text(236 - text_w(&FONT_S, s), y, &FONT_S, s, c); }
+UI_SMALL static void ui_text_mid(int32_t y, const char *s, uint16_t c) { cv_text((240 - text_w(&FONT_S, s)) / 2, y, &FONT_S, s, c); }
 
 /* one-shot: text in a box, cleared to black, blitted */
 static void draw_text_box(uint32_t x, uint32_t y, uint32_t w, const felucca_font_t *f, const char *s,

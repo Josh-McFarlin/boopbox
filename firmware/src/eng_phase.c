@@ -114,7 +114,7 @@ static int32_t pd_wave(const pd_t *b, uint32_t ph)
     return pd_cos(pd);
 }
 
-static void phase_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void phase_note_on(track_t *t, voice_t *v)
 {
     (void)t;
     v->ph[1] = 0;

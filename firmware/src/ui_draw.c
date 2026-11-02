@@ -867,8 +867,8 @@ UI_SMALL static void draw_graph(void)
         graph_scope(c);
     } else if (drum_note) {                          /* a page the drum track has no use for */
         static const char *const L[2] = {"DRUM TRACK", "SEQ  TRACKS  GLO DRUMS"};
-        cv_text((240 - text_w(&FONT_S, L[0])) / 2, 26, &FONT_S, L[0], C_HI);
-        cv_text((240 - text_w(&FONT_S, L[1])) / 2, 52, &FONT_S, L[1], C_DIM);
+        ui_text_mid(26, L[0], C_HI);
+        ui_text_mid(52, L[1], C_DIM);
     } else {
         switch (pg->graph) {
         case GR_ADSR:
@@ -1023,7 +1023,7 @@ UI_SMALL static void draw_foot(void)
         if (pv >= 0)
             cv_text(4, 20, &FONT_S, page_name((uint32_t)pv), UI_G3);
         if (nx >= 0)
-            cv_text(236 - text_w(&FONT_S, page_name((uint32_t)nx)), 20, &FONT_S, page_name((uint32_t)nx), UI_G3);
+            ui_text_r(20, page_name((uint32_t)nx), UI_G3);
         for (i = 0; n > 1u && i < (int32_t)n; i++)
             cv_rect(120 - (int32_t)n * 3 + i * 6 + 1, 36, 3, 2, i + 1 == (int32_t)k ? C_WHITE : C_DIM);
     }
@@ -1206,7 +1206,7 @@ UI_SMALL static void ui_draw(void)
     }
     if (layer_shown) {                                  /* back to the page */
         layer_shown = 0;
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         ui.force = 1;
     }
     if ((rec_wait || ft_on) && !ui.menu && !on_song_page()) {   /* armed / free take */
@@ -1217,7 +1217,7 @@ UI_SMALL static void ui_draw(void)
     }
     if (rec_shown) {                                    /* back to the page */
         rec_shown = 0;
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         ui.force = 1;
     }
 #if FELUCCA_ARRANGER
@@ -1255,7 +1255,7 @@ UI_SMALL static void ui_draw(void)
     if (vis_shown_last) {                               /* back from it */
         vis_shown_last = 0;
         vis_on = 0;
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         ui.force = 1;
     }
     if (!ui.home && cur_page()->scope == SC_TRK) {

@@ -251,7 +251,7 @@ static uint32_t trio_inc(int32_t pitch16, int32_t semi, int32_t ct, int32_t fine
     return inc + (uint32_t)((int32_t)(inc >> 12) * (rem * 2367 / 16000 + fine));
 }
 
-static void trio_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void trio_note_on(track_t *t, voice_t *v)
 {
     (void)t;
     v->ph[0] = 0;

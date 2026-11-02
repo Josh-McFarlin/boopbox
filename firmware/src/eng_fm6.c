@@ -227,7 +227,7 @@ static void fm6_poll(void)
 
 /* -------------------------------------------------------------- macros --- */
 /* the patch through E0..E6 (audio ISR; cheap when nothing changed) */
-static void fm6_sync(const track_t *t)
+CTL_SMALL static void fm6_sync(const track_t *t)
 {
     uint32_t tr = (uint32_t)(t - trk), k, j, car, n = 0;
     const int16_t *e = &t->p[P_E0];
@@ -287,7 +287,7 @@ static fm6_note_t *fm6_note_of(track_t *t, voice_t *v)
     return i < FM6_POLY ? &P->note[i] : 0;
 }
 
-static void fm6_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void fm6_note_on(track_t *t, voice_t *v)
 {
     fm6_note_t *n = fm6_note_of(t, v);
     uint32_t tr = (uint32_t)(t - trk);

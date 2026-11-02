@@ -24,7 +24,7 @@ static inline int32_t soft_knee(int32_t y, int32_t k)   /* linear up to k, then 
 /* (pitch_inc: felucca_tables.h, SLOOP 2.5: from the top octave) */
 /* (after Clipper 1.2) UNISON's start-phase spread (voice.c unison_spread): r (Q32: a turn of the note at pitch p16,
  * 1/16 semitone) in turns of an oscillator d16 (1/16 semitone) above it, the share of the same time; per note */
-static uint32_t uni_turns(uint32_t r, int32_t p16, int32_t d16)
+CTL_SMALL static uint32_t uni_turns(uint32_t r, int32_t p16, int32_t d16)
 {
     uint32_t b = pitch_inc((uint32_t)clamp(p16, 0, 2047));
     return b ? (uint32_t)(((uint64_t)r * pitch_inc((uint32_t)clamp(p16 + d16, 0, 2047))) / b) : r;
@@ -55,18 +55,18 @@ static uint8_t eng_arena_trk[NARENA];           /* the track + 1 it is lent to, 
 #ifdef ARENA_STATS
 static uint32_t eng_arena_claims, eng_arena_bad;   /* host tests: claims, accesses by an engine the part does not play */
 #endif
-static int eng_big(uint32_t eng)                /* the engines that keep their state in an arena */
+CTL_SMALL static int eng_big(uint32_t eng)                /* the engines that keep their state in an arena */
 {
     return eng == ENGI_GRAIN || eng == ENGI_DRAWBAR || eng == ENGI_FM6 || eng == ENGI_PHYS;
 }
 /* arena i is lent: to a track that still holds it (both ways: a track cleared or set up by hand gives it back) */
-static int eng_arena_lent(uint32_t i)
+CTL_SMALL static int eng_arena_lent(uint32_t i)
 {
     uint32_t k = eng_arena_trk[i];
     return k && k <= NTRK && trk[k - 1u].arena == i + 1u;
 }
 /* track t holds an arena (or takes a free one): 1, or 0 when all NARENA are lent to other tracks */
-static int eng_arena_take(track_t *t)
+CTL_SMALL static int eng_arena_take(track_t *t)
 {
     uint32_t i, k = (uint32_t)(t - trk);
     if (t->arena && eng_arena_trk[(t->arena - 1u) % NARENA] == k + 1u)
@@ -82,14 +82,14 @@ static int eng_arena_take(track_t *t)
     t->arena = 0;
     return 0;
 }
-static void eng_arena_drop(track_t *t)          /* t no longer plays a big engine: its arena is free again */
+CTL_SMALL static void eng_arena_drop(track_t *t)          /* t no longer plays a big engine: its arena is free again */
 {
     if (t->arena && eng_arena_trk[(t->arena - 1u) % NARENA] == (uint32_t)(t - trk) + 1u)
         eng_arena_trk[(t->arena - 1u) % NARENA] = 0;
     t->arena = 0;
 }
 /* the arenas lent, to tracks other than t: the UI refuses a big engine on t when this is NARENA */
-static uint32_t eng_arenas_busy(const track_t *t)
+CTL_SMALL static uint32_t eng_arenas_busy(const track_t *t)
 {
     uint32_t i, n = 0;
     for (i = 0; i < NARENA; i++)
@@ -99,13 +99,13 @@ static uint32_t eng_arenas_busy(const track_t *t)
 /* engine e can play on track t now: not a big one, or t holds an arena, or one is free (the UI refuses the change
  * else, and says so: eng_refused) */
 static volatile uint8_t eng_refused;
-static int eng_room(const track_t *t, uint32_t e)
+CTL_SMALL static int eng_room(const track_t *t, uint32_t e)
 {
     return !eng_big(e % NENGINES) || t->arena || eng_arenas_busy(t) < NARENA;
 }
 /* once a block on core 0, before the render (seq.c events_block): a track playing a big engine without an arena takes
  * one (an engine set straight, as at power-on or by a test), one that no longer does gives its back; in track order */
-static void eng_arena_lend(void)
+CTL_SMALL static void eng_arena_lend(void)
 {
     uint32_t k;
     for (k = 0; k < NTRK; k++) {
@@ -117,7 +117,7 @@ static void eng_arena_lend(void)
             eng_arena_drop(t);
     }
 }
-static void *eng_arena_of(const track_t *t, uint32_t eng)
+CTL_SMALL static void *eng_arena_of(const track_t *t, uint32_t eng)
 {
     uint32_t p;
     if (t < &trk[0] || t >= &trk[NTRK] || (!t->arena && !eng_arena_take((track_t *)t)))
@@ -142,7 +142,7 @@ static void *eng_arena_of(const track_t *t, uint32_t eng)
 /* fx.c units_split: rendering t this block would draw rng() (libc.c), so t stays on core 0, where the draws
  * keep their order: a sounding voice's slot is not on the part's MODEL (phys_render resets it with a draw).
  * When the arena or the layout is not PHYS's yet, every slot starts over (phys_slot_of): taken as a draw */
-static int phys_render_draws(const track_t *t, int32_t model)   /* model: the MODEL this block renders with (fx.c) */
+CTL_SMALL static int phys_render_draws(const track_t *t, int32_t model)   /* model: the MODEL this block renders with (fx.c) */
 {
     uint32_t p = (uint32_t)(t - trk), md = (uint32_t)model % PM_COUNT, big = md == PM_SYMP, i, a_i;
     uint32_t sz = big ? PHYS_SLOT_BIG : PHYS_SLOT_SMALL;
@@ -179,7 +179,7 @@ _Static_assert(ENGI_GRAIN == 8u && ENGI_PHYS == 10u && ENGI_NOISE == 11u && ENGI
 /* every factory sound as loud as the others: a level trim per preset, 1/2 dB, measured on a phrase
  * that fits the sound (tools/level_presets.py writes preset_trim.h); a track keeps it in P_ED_FX */
 #include "preset_trim.h"
-static int16_t preset_trim(uint32_t e, uint32_t pi)
+CTL_SMALL static int16_t preset_trim(uint32_t e, uint32_t pi)
 {
-    return e < PT_ENGINES && pi < PT_MAX ? PRESET_TRIM[e][pi] : 0;
+    return e < PT_ENGINES && pi < (uint32_t)(PT_OFF[e + 1] - PT_OFF[e]) ? PRESET_TRIM[PT_OFF[e] + pi] : 0;
 }

@@ -129,7 +129,7 @@ UI_SMALL static void draw_menu(void)
         fmt_int(t + str_len(t), (int32_t)sec + 1);
         str_cpy(t + str_len(t), "/", 2);
         fmt_int(t + str_len(t), MS_COUNT);
-        cv_text(236 - text_w(&FONT_S, t), 1, &FONT_S, t, C_GRAY);
+        ui_text_r(1, t, C_GRAY);
     }
     cv_blit(0, Y_HEAD);
     lcd_rule(H_HEAD, C_LINE);
@@ -145,7 +145,7 @@ UI_SMALL static void draw_menu(void)
             }
             cv_text(4, 36, &FONT_S, "BASED ON SLOOP & FELUCCA", C_AMB);
             cv_text(4, 54, &FONT_S, FELUCCA_VERSION, C_HI);
-            cv_text(236 - text_w(&FONT_S, __DATE__), 54, &FONT_S, __DATE__, C_GRAY);   /* build date */
+            ui_text_r(54, __DATE__, C_GRAY);   /* build date */
             cv_text(cv_text(4, 72, &FONT_S, "LEO KUROSHITA", C_HI) + 8, 72, &FONT_S, "@KUROGEDELIC", C_AMB);
             cv_text(4, 88, &FONT_S, "H\xDCGELTON INSTRUMENTS", C_HI);   /* Latin-1 U-umlaut */
             cv_text(4, 104, &FONT_S, "HUGELTON.COM", C_AMB);
@@ -153,12 +153,12 @@ UI_SMALL static void draw_menu(void)
             {
                 char sv[12];
                 cpu1_supplies(sv);                  /* (2.7) SYSVDD, VDC14 now: 1.38V 1.60V (fm1_sys.h) */
-                cv_text(236 - text_w(&FONT_S, sv), 104, &FONT_S, sv, C_GRAY);
+                ui_text_r(104, sv, C_GRAY);
             }
 #endif
             cv_text(4, 119, &FONT_S, "GPL-3.0, NO WARRANTY", C_HI);
 #if FELUCCA_CPU1                                    /* (the host tests include this file without cpu1.c) */
-            cv_text(236 - text_w(&FONT_S, cpu1_label()), 119, &FONT_S, cpu1_label(), C_AMB);   /* 2 CORES / 1 CORE (cpu1.c) */
+            ui_text_r(119, cpu1_label(), C_AMB);   /* 2 CORES / 1 CORE (cpu1.c) */
 #endif
             cv_text(4, 132, &FONT_S, "GITHUB: JOSH-MCFARLIN/BOOPBOX", C_AMB);   /* (the source of this firmware) */
             cv_text(4, 146, &FONT_S, "FONT: TERMINUS (OFL)", C_DIM);
