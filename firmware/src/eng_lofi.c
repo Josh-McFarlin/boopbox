@@ -47,7 +47,7 @@ static const char *const N_DCY[] = {"CONST", "D0", "D1", "D2", "D3", "D4", "D5",
 static const param_desc_t LOFI_WAVNUM = {"WAV#", F_INT, 0, 127, 64, N_WRAM, 0};   /* = edit[2] but the names */
 static const param_desc_t LOFI_DCY = {"DCY", F_INT, 0, 127, 0, N_DCY, 0};        /* = edit[3] but the names */
 
-static const param_desc_t *lofi_desc(const track_t *t, uint32_t k)
+CTL_SMALL static const param_desc_t *lofi_desc(const track_t *t, uint32_t k)
 {
     if (k == 2u && t->p[P_E1] == RW_WRAM)
         return &LOFI_WAVNUM;
@@ -62,7 +62,7 @@ static const param_desc_t *lofi_desc(const track_t *t, uint32_t k)
 #define FRAME_Q16 ((240u * CTL * 65536u) / FS)       /* frames per control tick, Q16 */
 static int32_t step_period(int32_t b) { return b <= 16 ? b - 1 : b - 16; }
 
-static void lofi_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void lofi_note_on(track_t *t, voice_t *v)
 {
     v->s[0] = 0;                 /* held sample */
     v->s[1] = 0;                 /* hold counter */

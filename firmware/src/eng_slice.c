@@ -230,7 +230,7 @@ static int16_t *slc_rb(track_t *t, voice_t *v)
     return p < NTRK && i < NVOICE ? slc_rbuf[p][i] : 0;
 }
 
-static void slice_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void slice_note_on(track_t *t, voice_t *v)
 {
     const int16_t *p = t->p;
     uint32_t src = (uint32_t)p[P_E0] & 3u, div = (uint32_t)clamp(p[P_E1], 0, SLC_DIV_AUTO), rev = p[P_E5] != 0;

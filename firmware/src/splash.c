@@ -74,7 +74,7 @@ UI_SMALL static void boopbox_sun(void)
 UI_SMALL static void boopbox_splash(void)
 {
     const char *v = FELUCCA_VERSION, *p;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
     boopbox_logo_draw(10);
     if (pal_neon)
         boopbox_sun();

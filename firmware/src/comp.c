@@ -36,7 +36,7 @@ static const char *const CP_NAME[CP_COUNT] = {"-", "PULSE", "HOLD", "MULT", "VEL
                                               "PORTA", "BEND", "TONE", "JUMP", "PARAM", "COND", "TRIG"};
 
 /* a component that can be: its type known, a in range (COND: not 0; PARAM: a lockable parameter) */
-static int comp_valid(uint32_t type, int32_t a, int32_t b)
+CTL_SMALL static int comp_valid(uint32_t type, int32_t a, int32_t b)
 {
     if (type == CP_NONE || type >= CP_COUNT || a < CP_RANGE[type][0] || a > CP_RANGE[type][1] ||
         b < CP_RANGE[type][2] || b > CP_RANGE[type][3])
@@ -47,14 +47,14 @@ static int comp_valid(uint32_t type, int32_t a, int32_t b)
         return 0;
     return 1;
 }
-static int32_t comp_clamp(uint32_t type, uint32_t which, int32_t v)   /* which 0: a, 1: b */
+CTL_SMALL static int32_t comp_clamp(uint32_t type, uint32_t which, int32_t v)   /* which 0: a, 1: b */
 {
     type %= CP_COUNT;
     return clamp(v, CP_RANGE[type][2u * (which & 1u)], CP_RANGE[type][2u * (which & 1u) + 1u]);
 }
 
 /* ---- the list (the UI and the stores; callers that change it hold the IRQ off). A slot of type CP_NONE is free */
-static int comp_find(const track_t *t, uint32_t step, uint32_t type)   /* its slot, -1: none */
+CTL_SMALL static int comp_find(const track_t *t, uint32_t step, uint32_t type)   /* its slot, -1: none */
 {
     uint32_t k;
     for (k = 0; k < NCOMP; k++)
@@ -62,7 +62,7 @@ static int comp_find(const track_t *t, uint32_t step, uint32_t type)   /* its sl
             return (int)k;
     return -1;
 }
-static int comp_free(const track_t *t)          /* a free slot, -1: none */
+CTL_SMALL static int comp_free(const track_t *t)          /* a free slot, -1: none */
 {
     uint32_t k;
     for (k = 0; k < NCOMP; k++)
@@ -71,7 +71,7 @@ static int comp_free(const track_t *t)          /* a free slot, -1: none */
     return -1;
 }
 /* set (or add) step's component of this type; 0: not valid, or no slot left */
-static int comp_set(track_t *t, uint32_t step, uint32_t type, int32_t a, int32_t b)
+CTL_SMALL static int comp_set(track_t *t, uint32_t step, uint32_t type, int32_t a, int32_t b)
 {
     int k;
     if (step >= NSTEP || !comp_valid(type, a, b))
@@ -87,7 +87,7 @@ static int comp_set(track_t *t, uint32_t step, uint32_t type, int32_t a, int32_t
     t->comp[k].b = (int8_t)b;
     return 1;
 }
-static void comp_del(track_t *t, uint32_t step, uint32_t type)   /* type CP_NONE: every one of the step */
+CTL_SMALL static void comp_del(track_t *t, uint32_t step, uint32_t type)   /* type CP_NONE: every one of the step */
 {
     uint32_t k;
     for (k = 0; k < NCOMP; k++)
@@ -97,7 +97,7 @@ static void comp_del(track_t *t, uint32_t step, uint32_t type)   /* type CP_NONE
             t->comp[k].a = t->comp[k].b = 0;
         }
 }
-static void comp_clear(track_t *t)             /* no component, the direction FWD (an empty pattern) */
+CTL_SMALL static void comp_clear(track_t *t)             /* no component, the direction FWD (an empty pattern) */
 {
     uint32_t k;
     for (k = 0; k < NCOMP; k++) {
@@ -108,7 +108,7 @@ static void comp_clear(track_t *t)             /* no component, the direction FW
     t->cp_dir = DIR_FWD;
     t->cp_seed = 0;
 }
-static uint32_t comp_count(const track_t *t, uint32_t step)   /* step's components (NSTEP: the track's) */
+CTL_SMALL static uint32_t comp_count(const track_t *t, uint32_t step)   /* step's components (NSTEP: the track's) */
 {
     uint32_t k, n = 0;
     for (k = 0; k < NCOMP; k++)
@@ -117,7 +117,7 @@ static uint32_t comp_count(const track_t *t, uint32_t step)   /* step's componen
 }
 
 /* ---- the runtime ---- */
-static uint32_t comp_rnd(track_t *t, uint32_t n)  /* 0..n-1 (n >= 1), the track's own numbers */
+CTL_SMALL static uint32_t comp_rnd(track_t *t, uint32_t n)  /* 0..n-1 (n >= 1), the track's own numbers */
 {
     uint32_t x = t->cp_rng ? t->cp_rng : 0x6D2B79F5u;
     x ^= x << 13;
@@ -126,7 +126,7 @@ static uint32_t comp_rnd(track_t *t, uint32_t n)  /* 0..n-1 (n >= 1), the track'
     t->cp_rng = x;
     return (x >> 8) % n;
 }
-static void comp_reset(track_t *t)             /* PLAY (seq_reset_tracks): from the start, the seed's numbers again */
+CTL_SMALL static void comp_reset(track_t *t)             /* PLAY (seq_reset_tracks): from the start, the seed's numbers again */
 {
     t->cp_rng = ((uint32_t)t->cp_seed + 1u) * 0x9E3779B1u ^ (trk_index(t) + 1u) * 0x85EBCA77u;
     t->cp_adv = 0;
@@ -139,14 +139,14 @@ static void comp_reset(track_t *t)             /* PLAY (seq_reset_tracks): from 
     t->cp_bend = 0;
     memset(t->cp_ctr, 0, sizeof t->cp_ctr);
 }
-static void comp_stop(track_t *t)              /* STOP: nothing of a component stays on the track's sound */
+CTL_SMALL static void comp_stop(track_t *t)              /* STOP: nothing of a component stays on the track's sound */
 {
     t->cp_bend_a = 0;
     t->cp_bend = 0;
     t->cp_on = t->cp_held = t->cp_hits = t->cp_vel = 0;
 }
 /* the playhead leaves the grid: a direction other than FWD, a PULSE / HOLD / JUMP anywhere, or one still running */
-static int comp_flow(const track_t *t)
+CTL_SMALL static int comp_flow(const track_t *t)
 {
     uint32_t k;
     if (t->cp_dir != DIR_FWD || t->cp_rep || t->cp_jump >= 0)
@@ -158,7 +158,7 @@ static int comp_flow(const track_t *t)
 }
 /* the step the playhead goes to now (comp_flow), from the one playing (seq_idx); *again: the same step once more
  * (a PULSE / HOLD repeat). first: PLAY (from the start: step 1, or the last one going back) */
-static uint32_t comp_next(track_t *t, uint32_t len, int first, uint32_t *again)
+CTL_SMALL static uint32_t comp_next(track_t *t, uint32_t len, int first, uint32_t *again)
 {
     uint32_t i = t->seq_idx % len;
     *again = 0;
@@ -219,10 +219,10 @@ typedef struct {                                 /* what a step does this time (
     uint8_t pid[NCPAR];
     int16_t pv[NCPAR];
 } cp_ev_t;
-static uint32_t comp_loop(const track_t *t, uint32_t len) { return 1u + t->cp_adv / (len ? len : 1u); }
+CTL_SMALL static uint32_t comp_loop(const track_t *t, uint32_t len) { return 1u + t->cp_adv / (len ? len : 1u); }
 /* step idx's components, this time (again: a PULSE repeat: the conditions as the step had them, no PULSE / HOLD /
  * JUMP again; the melodic and random ones go on) */
-static void comp_eval(track_t *t, uint32_t idx, uint32_t again, uint32_t len, cp_ev_t *ev)
+CTL_SMALL static void comp_eval(track_t *t, uint32_t idx, uint32_t again, uint32_t len, cp_ev_t *ev)
 {
     uint32_t k;
     memset(ev, 0, sizeof *ev);
@@ -311,9 +311,9 @@ static void comp_eval(track_t *t, uint32_t idx, uint32_t again, uint32_t len, cp
     }
 }
 /* the scale the melodic components walk: the track's ROOT and SCALE (CHR: semitones) */
-static uint32_t cp_mask(const track_t *t) { return scale_mask(t); }
-static int32_t cp_root(const track_t *t) { return t->p[P_ROOT]; }
-static uint32_t comp_note(const track_t *t, uint32_t note, const cp_ev_t *ev)   /* a note as the components play it */
+CTL_SMALL static uint32_t cp_mask(const track_t *t) { return scale_mask(t); }
+CTL_SMALL static int32_t cp_root(const track_t *t) { return t->p[P_ROOT]; }
+CTL_SMALL static uint32_t comp_note(const track_t *t, uint32_t note, const cp_ev_t *ev)   /* a note as the components play it */
 {
     int32_t n = (int32_t)note + ev->semi, d = ev->deg, guard = 160;
     uint32_t mask = cp_mask(t) & 0xFFFu;
@@ -333,7 +333,7 @@ static uint32_t comp_note(const track_t *t, uint32_t note, const cp_ev_t *ev)   
     return (uint32_t)clamp(n, 0, 127);
 }
 /* synth step s as it plays this time (into the track's copy cp_step): its notes moved, its velocity */
-static void comp_apply(track_t *t, step_t *s, const cp_ev_t *ev)
+CTL_SMALL static void comp_apply(track_t *t, step_t *s, const cp_ev_t *ev)
 {
     uint32_t i;
     if (s->time == ST_NOTE && (ev->semi || ev->deg))
@@ -348,7 +348,7 @@ static void comp_apply(track_t *t, step_t *s, const cp_ev_t *ev)
         s->rat = 0;                                 /* (MULT is the step's ratchet: cp_hits) */
 }
 /* BEND over the step playing, rel units into it of slen: 0 .. a semitones (b 0), or a .. 0 (b 1) */
-static void comp_bend_tick(track_t *t, uint32_t rel, uint32_t slen)
+CTL_SMALL static void comp_bend_tick(track_t *t, uint32_t rel, uint32_t slen)
 {
     uint32_t q = slen >> 8, f;
     if (!t->cp_bend_a) {
@@ -364,7 +364,7 @@ static void comp_bend_tick(track_t *t, uint32_t rel, uint32_t slen)
 }
 /* the step after the one playing, as far as it is known now (seq_step: does the next one tie, the notes held to it):
  * on the grid the next one; a RAND direction's is not known (the same step: not a tie after a note) */
-static uint32_t comp_peek(const track_t *t)
+CTL_SMALL static uint32_t comp_peek(const track_t *t)
 {
     uint32_t len = trk_len(t), i = t->seq_idx % len;
     if (!comp_flow(t))

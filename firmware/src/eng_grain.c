@@ -356,7 +356,7 @@ static int gr_run(gr_part_t *P, gr_grain_t *g, int32_t *acc, uint32_t n)
     return g->left != 0;
 }
 
-static void grain_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void grain_note_on(track_t *t, voice_t *v)
 {
     gr_part_t *P = (gr_part_t *)eng_arena_of(t, ENGI_GRAIN);
     uint32_t vi = (uint32_t)(v - t->v) % NVOICE, i;

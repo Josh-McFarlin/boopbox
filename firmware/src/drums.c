@@ -40,7 +40,7 @@ static uint32_t drum_kit(const track_t *t) { return (uint32_t)clamp(t->p[P_E0], 
 static struct {
     voice_t v[NDRUM];
     uint32_t age;
-    int16_t set;                 /* SMP_SETS index of "PERC" (GM map), -1 = none */
+    int16_t set;                 /* SMP_SETS index + 2 of "PERC" (GM map): 0 = not looked up yet, 1 = none (so the zeroed .bss is right) */
     int32_t tail[NTRK];          /* declick per drum track: the last output of its cut voices, decaying */
     uint8_t own[NDRUM];          /* the track that hit the voice */
     uint8_t kit[NDRUM];
@@ -50,7 +50,7 @@ static struct {
     dsv_t ds[NDRUM];
     volatile uint16_t hits[NTRK];   /* per drum track, bit per lane hit since the UI last looked (pads, key LEDs) */
     volatile uint8_t kick;       /* a kick was hit (fx.c DUCK) */
-} drums = {.set = -2};
+} drums;
 /* (the LEVEL / PAN glide and the meter of a drum track: its track_t's lvl, gpl, gpr, mix_on and peak, as a synth's) */
 
 
@@ -66,13 +66,13 @@ static int32_t mix_glide(int32_t from, int32_t to)
 static int32_t drum_set(void)
 {
     uint32_t i;
-    if (drums.set == -2) {
-        drums.set = -1;
+    if (drums.set == 0) {
+        drums.set = 1;
         for (i = 0; i < SMP_NSETS; i++)
             if (str_eq(SMP_SETS[i].name, "PERC"))
-                drums.set = (int16_t)i;
+                drums.set = (int16_t)(i + 2);
     }
-    return drums.set;
+    return drums.set - 2;
 }
 
 /* ------------------------------------------------------------ lanes --- */
@@ -269,7 +269,7 @@ static voice_t *drum_take(uint32_t k, uint32_t note)   /* the voice for a hit of
     drums.own[i] = (uint8_t)k;
     return v;
 }
-static void __attribute__((noinline)) drum_synth_on(uint32_t k, uint32_t note, uint32_t vel, uint32_t kit, const dsnd_t *snd,
+CTL_SMALL static void __attribute__((noinline)) drum_synth_on(uint32_t k, uint32_t note, uint32_t vel, uint32_t kit, const dsnd_t *snd,
                                                     uint32_t crush, int tweak)
 {
     voice_t *v;

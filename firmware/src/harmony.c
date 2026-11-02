@@ -37,7 +37,7 @@ static void harm_defaults(void)                 /* one chord, I for 4 bars; C ma
     harm.live = 0;
     harm.idx = 0;
 }
-static int harm_default(void)                   /* the progression and the live chord as harm_defaults leaves them */
+CTL_SMALL static int harm_default(void)                   /* the progression and the live chord as harm_defaults leaves them */
 {
     uint32_t i;
     if (harm.n != 1u || harm.live)
@@ -47,17 +47,17 @@ static int harm_default(void)                   /* the progression and the live 
             return 0;
     return 1;
 }
-static uint32_t harm_mask(uint32_t scl)         /* the scale's notes, a bit a semitone from the root (CHR: all) */
+CTL_SMALL static uint32_t harm_mask(uint32_t scl)         /* the scale's notes, a bit a semitone from the root (CHR: all) */
 {
     uint32_t m = SCALE_MASK[scl < NSCALES ? scl : 1u] & 0xFFFu;
     return m ? m : 0xFFFu;
 }
-static int harm_in(uint32_t mask, int32_t key, int32_t n)   /* note n is in the scale of that key */
+CTL_SMALL static int harm_in(uint32_t mask, int32_t key, int32_t n)   /* note n is in the scale of that key */
 {
     return (int)((mask >> (uint32_t)((n - key + 1200) % 12)) & 1u);
 }
 /* the semitones from the key's root to the root of degree deg (0..6) of the scale (a scale of fewer notes: round) */
-static int32_t harm_deg_semis(uint32_t scl, uint32_t deg)
+CTL_SMALL static int32_t harm_deg_semis(uint32_t scl, uint32_t deg)
 {
     uint32_t mask = harm_mask(scl), s, d = 0;
     if (!deg)
@@ -71,7 +71,7 @@ static int32_t harm_deg_semis(uint32_t scl, uint32_t deg)
     return 0;
 }
 /* the chord the song wants now: live, else the progression's at bar `bar` (while playing, PROG on), else I */
-static uint32_t harm_want(uint32_t bar, int playing)
+CTL_SMALL static uint32_t harm_want(uint32_t bar, int playing)
 {
     uint32_t i, tot = 0, pos;
     if (harm.live)
@@ -95,7 +95,7 @@ static uint32_t harm_want(uint32_t bar, int playing)
     return harm.c[i].deg % 7u;
 }
 /* once a block, before the tracks' steps (events_block): the key, the scale and the chord on their boundary */
-static void harm_block(void)
+CTL_SMALL static void harm_block(void)
 {
     uint32_t q = (uint32_t)clamp(song.g[G_HQ], HQ_NOW, HQ_BAR), due;
     int playing = song.playing != 0;
@@ -115,7 +115,7 @@ static void harm_block(void)
     }
 }
 /* note as track t plays it in the harmony now (t->hfol) */
-static uint32_t harm_note(const track_t *t, uint32_t note)
+CTL_SMALL static uint32_t harm_note(const track_t *t, uint32_t note)
 {
     int32_t n = (int32_t)note, kd, key = harm.key;
     uint32_t mode = (uint32_t)t->hfol, mask, guard;
@@ -141,7 +141,7 @@ static uint32_t harm_note(const track_t *t, uint32_t note)
     return (uint32_t)clamp(n, 0, 127);
 }
 /* synth step s as track t plays it in the harmony (seq.c seq_fire: the step's copy cp_step) */
-static void harm_apply(const track_t *t, step_t *s)
+CTL_SMALL static void harm_apply(const track_t *t, step_t *s)
 {
     uint32_t i;
     if (s->time != ST_NOTE)
@@ -151,7 +151,7 @@ static void harm_apply(const track_t *t, step_t *s)
 }
 /* (the CHORDS screen shown, no layer: seq.c key_down) key k plays a chord live: a white key its degree (C I, D II ..
  * B VII, every octave), a black key none (the progression again, or I) */
-static void harm_key(uint32_t k)
+CTL_SMALL static void harm_key(uint32_t k)
 {
     static const int8_t DEG[12] = {0, -1, 1, -1, 2, 3, -1, 4, -1, 5, -1, 6};
     int32_t d = DEG[(53u + k) % 12u];

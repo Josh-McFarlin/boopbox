@@ -73,12 +73,15 @@ typedef struct {
  * (a sawtooth at the bass's pitch with a corner at every block: tones around 1.4 kHz and up) */
 #define LIM_HOLD 48u
 #define LIM_REL 11                      /* the release after the hold: ~46 ms (12 before the hold: ~93 ms; the same loudness) */
-static lim_t lim_dac = {.env = LIM_T, .g = 32768}, lim_usb = {.env = LIM_T, .g = 32768};
+static lim_t lim_dac, lim_usb;          /* (.bss: all zero is "not started", lim_block sets env = LIM_T, g = 1 on its first block) */
 /* l, r: n (<= CTL) samples in; out: the n samples of CTL before, limited (before the knee) */
 static void lim_block(lim_t *s, int32_t *l, int32_t *r, uint32_t n)
 {
     uint32_t i, w = s->w;
-    int32_t pk = 0, a, g0 = s->g, g1, dg, e = s->env;
+    int32_t pk = 0, a, g0, g1, dg, e;
+    if (!s->env)                                        /* (env is never below LIM_T once it runs: 0 = a fresh or cleared state) */
+        s->env = LIM_T, s->g = 32768;
+    g0 = s->g, e = s->env;
     for (i = 0; i < CTL; i++) {                         /* the samples going out now and the ones after them (the
                                                          * rest of the delay, then this block): CTL ahead */
         a = s->dl[i] < 0 ? -s->dl[i] : s->dl[i], pk = a > pk ? a : pk;
@@ -977,7 +980,7 @@ static struct {
                                                          * (a sample that does not end where it starts: no click) */
     uint8_t uwrap;                                      /* USR: tx_usr_next went round */
     djf_t f;                                            /* TONE */
-} tx = {.rnd = 0x2545F491};
+} tx;                                                   /* (.bss; texture_reset seeds rnd, before any source runs) */
 static inline int32_t tx_n16(void) { return (int32_t)(noise32(&tx.rnd) >> 16) - 32768; }   /* -32768 .. 32767 */
 static void texture_reset(uint32_t src)
 {
@@ -1291,8 +1294,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)
             out[2u * i + 1u] = knee(orr[i]);
         }
         if (usb_full_now && !usb_was) {                 /* (a new recording: no old block in its delay) */
-            memset(&lim_usb, 0, sizeof lim_usb);
-            lim_usb.env = LIM_T, lim_usb.g = 32768, lim_usb.hold = 0;
+            memset(&lim_usb, 0, sizeof lim_usb);       /* (lim_block starts it again from rest) */
         }
         usb_was = usb_full_now;
         if (usb_full_now) {

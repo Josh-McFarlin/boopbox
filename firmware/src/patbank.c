@@ -16,7 +16,7 @@ static uint32_t pb_n;                            /* bytes used */
 static volatile uint8_t pb_full;                 /* a change was refused: the pattern playing did not fit (the UI says so) */
 enum { PQ_LOOP, PQ_BAR, PQ_2BAR, PQ_4BAR };      /* G_PATQ */
 
-static int pb_find(uint32_t k, uint32_t pat)     /* track k's pattern pat: its entry's offset, -1: none (empty) */
+CTL_SMALL static int pb_find(uint32_t k, uint32_t pat)     /* track k's pattern pat: its entry's offset, -1: none (empty) */
 {
     uint32_t o = 0;
     while (o + 4u <= pb_n) {
@@ -27,8 +27,8 @@ static int pb_find(uint32_t k, uint32_t pat)     /* track k's pattern pat: its e
     }
     return -1;
 }
-static uint32_t pb_entry(uint32_t o) { return 4u + ((uint32_t)pb_buf[o + 1u] | (uint32_t)pb_buf[o + 2u] << 8); }
-static void pb_drop(uint32_t k, uint32_t pat)    /* its entry out (the bank closes up) */
+CTL_SMALL static uint32_t pb_entry(uint32_t o) { return 4u + ((uint32_t)pb_buf[o + 1u] | (uint32_t)pb_buf[o + 2u] << 8); }
+CTL_SMALL static void pb_drop(uint32_t k, uint32_t pat)    /* its entry out (the bank closes up) */
 {
     int o = pb_find(k, pat);
     uint32_t sz;
@@ -42,13 +42,13 @@ static void pb_drop(uint32_t k, uint32_t pat)    /* its entry out (the bank clos
     }
     pb_n -= sz;
 }
-static void pb_drop_track(uint32_t k)            /* every pattern of track k out */
+CTL_SMALL static void pb_drop_track(uint32_t k)            /* every pattern of track k out */
 {
     uint32_t p;
     for (p = 0; p < NPAT; p++)
         pb_drop(k, p);
 }
-static uint32_t pb_used(uint32_t k)              /* the patterns of track k the bank holds, a bit each */
+CTL_SMALL static uint32_t pb_used(uint32_t k)              /* the patterns of track k the bank holds, a bit each */
 {
     uint32_t o = 0, m = 0;
     while (o + 4u <= pb_n) {
@@ -58,7 +58,7 @@ static uint32_t pb_used(uint32_t k)              /* the patterns of track k the 
     }
     return m;
 }
-static int pat_empty(const track_t *t)           /* the pattern playing holds nothing (as steps_clear leaves it) */
+CTL_SMALL static int pat_empty(const track_t *t)           /* the pattern playing holds nothing (as steps_clear leaves it) */
 {
     uint32_t k;
     if (!track_empty(t) || comp_count(t, NSTEP) || t->cp_dir || t->cp_seed)
@@ -75,7 +75,7 @@ static int pat_empty(const track_t *t)           /* the pattern playing holds no
     return 1;
 }
 /* the pattern playing on track k into the bank as pattern pat (empty: no entry); 0: it does not fit (the bank as it was) */
-static int pb_store(uint32_t k, uint32_t pat)
+CTL_SMALL static int pb_store(uint32_t k, uint32_t pat)
 {
     track_t *t = &trk[k % NTRK];
     pw_t w = {0, 0, 0};
@@ -101,7 +101,7 @@ static int pb_store(uint32_t k, uint32_t pat)
     return 1;
 }
 /* track k's pattern pat out of the bank into the track (none: an empty pattern, of the LEN it has now); the entry stays */
-static void pb_load(uint32_t k, uint32_t pat)
+CTL_SMALL static void pb_load(uint32_t k, uint32_t pat)
 {
     track_t *t = &trk[k % NTRK];
     int o = pb_find(k, pat);
@@ -118,7 +118,7 @@ static void pb_load(uint32_t k, uint32_t pat)
 static void seq_release(track_t *t);
 /* track k plays pattern pat from now (the ISR on a step, or the UI with the IRQ off, stopped): the one playing kept in
  * the bank, pat taken out of it. 0: refused (the one playing does not fit: pb_full; nothing changed) */
-static int pat_swap(uint32_t k, uint32_t pat)
+CTL_SMALL static int pat_swap(uint32_t k, uint32_t pat)
 {
     track_t *t = &trk[k % NTRK];
     pat %= NPAT;
@@ -143,7 +143,7 @@ static int pat_swap(uint32_t k, uint32_t pat)
     return 1;
 }
 /* the chain of track k: n patterns (0 or 1: none). The UI, with the IRQ off */
-static void pat_chain_set(track_t *t, const uint8_t *p, uint32_t n)
+CTL_SMALL static void pat_chain_set(track_t *t, const uint8_t *p, uint32_t n)
 {
     uint32_t i;
     n = n > NPAT ? NPAT : n;
@@ -158,7 +158,7 @@ static void pat_chain_set(track_t *t, const uint8_t *p, uint32_t n)
         }
 }
 /* the grid step of track t at or after the next n-bar line (a bar: 4 beats from PLAY) */
-static uint32_t pat_bar_step(const track_t *t, uint32_t bars)
+CTL_SMALL static uint32_t pat_bar_step(const track_t *t, uint32_t bars)
 {
     uint32_t span = 4u * bars, b = (clk_beat / span + 1u) * span, su = div_units(trk_div(t));
     if (su <= BEAT_U)
@@ -166,7 +166,7 @@ static uint32_t pat_bar_step(const track_t *t, uint32_t bars)
     return (b + su / BEAT_U - 1u) / (su / BEAT_U);
 }
 /* once a block, before the tracks' steps (events_block): a change asked for is seen (its boundary), stopped it is made */
-static void pat_block(void)
+CTL_SMALL static void pat_block(void)
 {
     uint32_t i, q = (uint32_t)clamp(song.g[G_PATQ], PQ_LOOP, PQ_4BAR);
     static const uint8_t QB[4] = {0, 1, 2, 4};
@@ -193,7 +193,7 @@ static void pat_block(void)
     }
 }
 /* the step track t fires now (grid step nabs, LEN len) starts its pattern's loop */
-static int pat_loop_start(const track_t *t, uint32_t nabs, uint32_t len)
+CTL_SMALL static int pat_loop_start(const track_t *t, uint32_t nabs, uint32_t len)
 {
     if (comp_flow(t))
         return !t->cp_rep && (t->cp_adv + 1u) % len == 0u;
@@ -201,7 +201,7 @@ static int pat_loop_start(const track_t *t, uint32_t nabs, uint32_t len)
 }
 /* (seq_tick, on a step about to fire) a pattern change due on it: made; 1 if the track now plays another pattern from
  * its step 1 (seq_org is this step) */
-static int pat_due(track_t *t, uint32_t nabs, uint32_t len, uint32_t start)
+CTL_SMALL static int pat_due(track_t *t, uint32_t nabs, uint32_t len, uint32_t start)
 {
     uint32_t k = trk_index(t), want = NPAT;
     if (t->pat_arm && t->pat_req == t->pat_arm &&
@@ -229,7 +229,7 @@ static int pat_due(track_t *t, uint32_t nabs, uint32_t len, uint32_t start)
     return 1;
 }
 /* no pattern but each track's playing one (pattern 1), no chain, the bank empty: a NEW project, a load (before its own) */
-static void pat_reset_all(void)
+CTL_SMALL static void pat_reset_all(void)
 {
     uint32_t i;
     pb_n = 0;
@@ -243,7 +243,7 @@ static void pat_reset_all(void)
 }
 /* an entry read from a project (format 7 'P'): track k's pattern pat, LEN len, n bytes. 0: not taken (no room, or
  * not one of this firmware's) */
-static int pb_add_raw(uint32_t k, uint32_t pat, uint32_t len, const uint8_t *b, uint32_t n)
+CTL_SMALL static int pb_add_raw(uint32_t k, uint32_t pat, uint32_t len, const uint8_t *b, uint32_t n)
 {
     if (k >= NTRK || pat >= NPAT || n > 0xFFFFu || pb_find(k, pat) >= 0 || pb_n + 4u + n > PB_SIZE)
         return 0;

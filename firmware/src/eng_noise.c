@@ -42,7 +42,7 @@ static const struct { uint32_t w[4]; uint8_t len; int16_t hi, lo; } NOISE_SEQ[8]
     {{0x0000001Du, 0x00000000u, 0x00000000u, 0x00000000u}, 7, 12288, -16384},
 };
 
-static const param_desc_t *noise_desc(const track_t *t, uint32_t k)
+CTL_SMALL static const param_desc_t *noise_desc(const track_t *t, uint32_t k)
 {
     int32_t mode = t->p[P_E0];
     if (k == 5u && mode >= NZ_LFSR)
@@ -95,7 +95,7 @@ static uint32_t isqrt32(uint32_t x)
     return r;
 }
 
-static void noise_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void noise_note_on(track_t *t, voice_t *v)
 {
     uint32_t seed = (v->note + 1u) * 0x9E3779B9u ^ (uint32_t)v->fine * 0x85EBCA6Bu;   /* UNISON: each its own */
     (void)t;

@@ -22,7 +22,7 @@ static void reset(void)
     uint32_t i;
     memset(trk, 0, sizeof trk);
     memset(&drums, 0, sizeof drums);
-    drums.set = -2;
+    drums.set = 0;
     host_tracks_init();
     pat_reset_all();
     harm_defaults();

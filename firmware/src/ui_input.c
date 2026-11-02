@@ -1430,7 +1430,7 @@ UI_SMALL static void panel_setup(void)
 {
     uint32_t i, used = 0, t0 = fm1_ms;
     const panel_t old = panel;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
     draw_text_box(0, 10, 240, &FONT_S, "HARDWARE CALIBRATION", C_WHITE, 1);
     draw_text_box(0, 30, 240, &FONT_S, "TEACH EACH BUTTON AND KNOB", C_GRAY, 1);
     while (fm1_in.buttons) {                             /* wait for OCT-/OCT+ release */
@@ -1482,13 +1482,13 @@ UI_SMALL static void panel_setup(void)
         fm1_enc_take(e);
     }
     panel.magic = PANEL_MAGIC;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
     layers_init();
     ui.force = 1;
     return;
 timeout:
     panel = old;
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
     ui.force = 1;
     ui_message("SETUP CANCELLED");
 }

@@ -94,7 +94,7 @@ static int32_t ring_q16(uint32_t p)                 /* read at Q16 position, lin
     return (a + (((b - a) * (int32_t)((p >> 1) & 0x7FFFu)) >> 15)) << 3;
 }
 
-static void punch_start(int32_t fx)
+CTL_SMALL static void punch_start(int32_t fx)
 {
     uint32_t beat = beat_samples(), len, ph = clk_samples();
     static const uint8_t DIV[8] = {1, 2, 4, 8, 6, 1, 1, 2};   /* loops: beat / DIV */

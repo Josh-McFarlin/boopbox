@@ -6,6 +6,16 @@
  * special: the default project has synths on 1..3 and 5..7, drums on 4 and 8. The synth tracks share one budget
  * of NVOICE sounding voices (voice.c), the drum tracks one pool of NDRUM voices (drums.c). */
 #include <stdint.h>
+/* CTL_SMALL: control-rate code (the sequencer, voice allocation, note-on set-up, parameter helpers: it runs a block or an
+ * event at a time, never a sample at a time) is compiled for size, clang minsize as -Oz, like gfx.c UI_SMALL for the
+ * screens. The per-sample loops of the engines, the mix and the ISR are not marked (tests/target_budget.py FUNCS). */
+#ifndef CTL_SMALL
+#if defined(__clang__)
+#define CTL_SMALL __attribute__((minsize))
+#else
+#define CTL_SMALL
+#endif
+#endif
 #define NVOICE 8                 /* voices per synth track, and the budget shared by all of them */
 #define NPOLY 8
 #define NTRK 8                   /* tracks */

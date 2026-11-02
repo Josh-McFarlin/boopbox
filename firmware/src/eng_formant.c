@@ -68,7 +68,7 @@ typedef struct { int32_t a, b, c; } fres_t;
 static int32_t formant_nz = 0x2545F491;                 /* breath noise, one xorshift for all voices */
 
 /* Klatt resonator coefficients (Q30) for F, BW in Hz * 16 */
-static void fres_coef(fres_t *r, uint32_t f16, uint32_t bw16)
+CTL_SMALL static void fres_coef(fres_t *r, uint32_t f16, uint32_t bw16)
 {
     int32_t s = sine_i(f16 * 3044u);                    /* sin(pi F / FS), Q15 (2^32 / (2 FS) / 16) */
     int32_t x = (int32_t)(bw16 * 4781u);                /* pi BW / FS, Q30 (<= 0.2) */
@@ -82,7 +82,7 @@ static void fres_coef(fres_t *r, uint32_t f16, uint32_t bw16)
     r->a = (1 << 30) - r->b - r->c;
 }
 
-static void formant_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void formant_note_on(track_t *t, voice_t *v)
 {
     (void)t;
     formant_nz ^= formant_nz << 13;                     /* a random vowel for this note (RAND) */

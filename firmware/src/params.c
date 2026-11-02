@@ -245,7 +245,7 @@ static const param_desc_t INS_DESC[3][3] = {
     {PU("RATE", F_LFOHZ, 64, 0, 0), PU("DEPTH", F_PCT, 96, 0, 0), PU("FDBK", F_PCT, 96, 0, 0)},
 };
 #undef PU
-static const param_desc_t *ins_desc(int32_t type, uint32_t k)
+CTL_SMALL static const param_desc_t *ins_desc(int32_t type, uint32_t k)
 {
     if (type <= 0 || type >= (int32_t)NELEM(N_ITYPE))
         return &TP[P_IA + k];
@@ -257,7 +257,7 @@ static const param_desc_t ESYNC_DESC[3] = {   /* ATK DEC REL with ENV SYNC on: t
     {"REL", F_INT, 0, 127, 60, ESYNC_NAMES, 0},
 };
 
-static const param_desc_t *track_desc(const track_t *t, uint32_t id)
+CTL_SMALL static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 {
     if (is_drum(t)) {                                 /* a drum track: its kit, its drum mix */
         if (id == P_E0)
@@ -571,7 +571,7 @@ static int page_shown(const page_t *pg)
     return pg->id[0] != P_FTYPE || (!is_drum(TSEL) && TSEL->eng_req % NENGINES == 0u);
 }
 
-static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
+CTL_SMALL static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
 {
     uint32_t id = pg->id[slot];
     if (id == 0xFFu || (is_drum(TSEL) && (!page_for_drum(pg) || (pg->scope == SC_GLOBAL && id == G_INITSND)))) {

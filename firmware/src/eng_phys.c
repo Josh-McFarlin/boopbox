@@ -64,7 +64,7 @@ static const param_desc_t *const PHYS_DESC[PM_COUNT][8] = {
     [PM_SYMP] = {0, &PHYS_D_CHRD, 0, 0, &PHYS_D_SYMP, 0, &PHYS_D_BUZZ, 0},
 };
 
-static const param_desc_t *phys_desc(const track_t *t, uint32_t k)
+CTL_SMALL static const param_desc_t *phys_desc(const track_t *t, uint32_t k)
 {
     return k < 8u ? PHYS_DESC[(uint32_t)t->p[P_E0] % PM_COUNT][k] : 0;
 }
@@ -133,7 +133,7 @@ static void phys_reset(phys_slot_t *S, uint32_t md, uint32_t seed)
     }
 }
 
-static void phys_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void phys_note_on(track_t *t, voice_t *v)
 {
     phys_slot_t *S = phys_slot_of(t, v);
     uint32_t md = (uint32_t)t->p[P_E0] % PM_COUNT;

@@ -9,7 +9,7 @@ static const char *const N_RATIO[] = {".5", "1", "2", "3", "4", "5", "6", "7", "
 static const uint16_t RATIO_Q8[15] = {128, 256, 512, 768, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816,
                                       3072, 3584, 4096};
 
-static void digital_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void digital_note_on(track_t *t, voice_t *v)
 {
     (void)t;
     v->ph[0] = v->ph[1] = v->ph[2] = 0;

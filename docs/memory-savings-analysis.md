@@ -4,6 +4,16 @@ Analysis of the 1.3.0 tree (`main`, e546d30), 2026-11-01. A reference for the ne
 full: nothing in the firmware was changed by it. The figures are those of that tree; re-measure before relying on
 one (section 7). Items are numbered F1..F10 (flash) and R1..R13 (RAM) so they can be referred to.
 
+**Status.** The conservative part of the short list has since been applied to the tree: F10, F2 (`drums`, `lim_dac`,
+`lim_usb` and `tx`; `punch` stays in `.data`, as `punch.req` and `punch.cur` must start at -1 in every boot path and
+test harness), F7 (`lk_slot`, `ota_show`, `cpu1_supplies`; the USB counters and `stack_paint` are kept as
+diagnostics), F1 (`CTL_SMALL` in `core.h`, on `seq.c`, `comp.c`, `patbank.c`, `patcodec.c`, `harmony.c`, `voice.c`,
+`engines.c` and the engines' note-on and `*_desc` / `*_coef` helpers) and the `lcd_clear` / `ui_text_r` / `ui_text_mid`
+/ `knob_strip` / lazy-ramp parts of F6. Proxy result: code -7,318 B, constants -246 B, `.data` initialisers -2,632 B;
+the 182 golden renders and all 191 test screen renders are unchanged, and the render loops of `tests/target_budget.py`
+are byte-identical in the proxy (the real-build gate needs the JieLi toolchain). F3, F4, F5, F8, F9, the other RAM items
+and the rest of F6 (`BANK` / `ICON_MAP` packing, uppercase literals) are not applied.
+
 **How it was measured.** The JieLi pi32v2 toolchain is not available here, so every code figure comes from the
 proxy build (`tools/proxy_size.py`: the whole firmware for RV32IMC at `-Os` with the host clang), compared function
 by function with `tools/proxy_diff.py` after a change. Constant tables, structs and RAM are exact in the proxy;

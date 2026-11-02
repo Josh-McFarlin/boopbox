@@ -106,7 +106,7 @@ static void hit_render(uint32_t note, double *zc, double *tail)
     uint32_t i, n = 66150, c = 0;
     double e0 = 0, e1 = 0;
     memset(&drums, 0, sizeof drums);
-    drums.set = -2;
+    drums.set = 0;
     memset(L, 0, sizeof L), memset(R, 0, sizeof R), memset(RV, 0, sizeof RV), memset(DL, 0, sizeof DL);
     rng_state = 0x1234567u;
     drum_on(TDRUM, note, 110);

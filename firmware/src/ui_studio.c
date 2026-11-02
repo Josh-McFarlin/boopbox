@@ -115,7 +115,7 @@ UI_SMALL static void ui_dials(int32_t y0, const char *const lab[4], const char *
     cv_begin(240, ui.msg_t ? 240u - (uint32_t)y0 : 40u, C_BLACK);
     if (ui.msg_t) {                                     /* a message: a white bar */
         cv_rect(0, 10, 240, 32, C_WHITE);
-        cv_text((240 - text_w(&FONT_S, ui.msg)) / 2, 18, &FONT_S, ui.msg, C_BLACK);
+        ui_text_mid(18, ui.msg, C_BLACK);
         cv_blit(0, (uint32_t)y0);
         return;
     }
@@ -221,7 +221,7 @@ UI_SMALL static void ui_header(const char *title, uint16_t tc, uint32_t *cache, 
             cv_text(bx + 4, 5, &FONT_S, sb, C_BLACK);
         }
         if (song.solo)
-            cv_text(236 - text_w(&FONT_S, "solo"), 22, &FONT_S, "solo", C_WHITE);
+            ui_text_r(22, "solo", C_WHITE);
     }
     cv_rule(0, 39, 240, UI_G1);
     cv_blit(0, 0);
@@ -864,7 +864,7 @@ UI_SMALL static void rec_screen_draw(void)
     if (take)
         bars = ft_fit(ft_t, &bpm);
     if (!rec_shown || lay != layout) {
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         ui.force = 1;
     }
     rec_shown = 1;
@@ -901,7 +901,7 @@ UI_SMALL static void rec_screen_draw(void)
             foot = 1u;
             cv_begin(240, 16, C_BLACK);
             cv_text(4, 0, &FONT_S, "rec: close", UI_G3);
-            cv_text(236 - text_w(&FONT_S, "play: drop"), 0, &FONT_S, "play: drop", UI_G3);
+            ui_text_r(0, "play: drop", UI_G3);
             cv_blit(0, 224);
         }
         return;

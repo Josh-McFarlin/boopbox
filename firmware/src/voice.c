@@ -14,11 +14,11 @@
 static uint32_t vage;                                   /* voice ages: one clock for every part */
 /* engines that play recorded material (a position, not a phase): no phases kept or spread */
 #if FELUCCA_SLICE
-static int eng_sampled(const engine_t *e) { return e == &ENG_SAMPLE || e == &ENG_SLICE; }
+CTL_SMALL static int eng_sampled(const engine_t *e) { return e == &ENG_SAMPLE || e == &ENG_SLICE; }
 #else
-static int eng_sampled(const engine_t *e) { return e == &ENG_SAMPLE; }
+CTL_SMALL static int eng_sampled(const engine_t *e) { return e == &ENG_SAMPLE; }
 #endif
-static int32_t lfo_wave(track_t *t, uint32_t ph)
+CTL_SMALL static int32_t lfo_wave(track_t *t, uint32_t ph)
 {
     switch (t->p[P_LWAVE]) {
     case 1:
@@ -50,7 +50,7 @@ static __attribute__((noinline)) uint32_t lfo_sync_inc(const int16_t *p)   /* (n
     return q * CTL + (r * CTL + CTL) / cyc;
 }
 
-static void track_lfo_tick(track_t *t)
+CTL_SMALL static void track_lfo_tick(track_t *t)
 {
     uint32_t old = t->lfo_ph;
     t->lfo_ph += t->p[P_LSYNC] ? lfo_sync_inc(t->p) : LFO_INC[t->p[P_LRATE] & 127];
@@ -66,14 +66,14 @@ static void track_lfo_tick(track_t *t)
 }
 
 /* voices the engine may use (POLY and UNISON): its cap, else all of them */
-static uint32_t trk_nvoice(const track_t *t)
+CTL_SMALL static uint32_t trk_nvoice(const track_t *t)
 {
     uint32_t c = ENGINES[t->engine] == &ENG_PHYS ? phys_poly(t) : ENGINES[t->engine]->poly;   /* (PHYS: by MODEL) */
     return c && c < NPOLY ? c : NPOLY;
 }
 
 /* ------------------------------------------------- the shared voice budget --- */
-static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
+CTL_SMALL static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
 {
     uint32_t p, i, n = 0;
     for (p = 0; p < NTRK; p++)
@@ -82,7 +82,7 @@ static uint32_t voices_busy(void)                       /* sounding voices of al
     return n;
 }
 
-static uint32_t lowest_held(const track_t *t)           /* index of the lowest held note (the bass), NVOICE = none */
+CTL_SMALL static uint32_t lowest_held(const track_t *t)           /* index of the lowest held note (the bass), NVOICE = none */
 {
     uint32_t i, low = NVOICE;
     for (i = 0; i < NVOICE; i++)
@@ -93,7 +93,7 @@ static uint32_t lowest_held(const track_t *t)           /* index of the lowest h
 
 /* the voice to give up for a new one (see the top); soft: only released voices and
  * extra UNISON voices of other parts. Returns its index, *pp its part; NVOICE = none */
-static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
+CTL_SMALL static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
 {
     uint32_t p, i, best = NVOICE, cat = 4;
     for (p = 0; p < NTRK; p++) {
@@ -127,7 +127,7 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
 
 static uint32_t voice_kills;                            /* voices given up (budget, overload): console, hostsim */
 #define KILL_BLOCKS 2u                                  /* 1.5 ms: no click on a bass, little extra load */
-static void voice_kill(voice_t *v)                      /* fade out over the next blocks (env_tick stage 4) */
+CTL_SMALL static void voice_kill(voice_t *v)                      /* fade out over the next blocks (env_tick stage 4) */
 {
     v->gate = 0;
     if (v->stage != 4u)
@@ -143,7 +143,7 @@ static void voice_kill(voice_t *v)                      /* fade out over the nex
  * voice budget keeps them: a dense chord on a heavy engine thins out from the top, bass and lead stay. */
 static uint32_t shed_count;
 
-static void shed_voice(void)
+CTL_SMALL static void shed_voice(void)
 {
     uint32_t p, i;
     voice_t *best = 0;
@@ -175,7 +175,7 @@ static void shed_voice(void)
 }
 
 /* the budget is full: free a voice for part t. 0 = nothing to take (soft) */
-static int voice_room(track_t *t, int soft)
+CTL_SMALL static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
@@ -195,7 +195,7 @@ static int voice_room(track_t *t, int soft)
  * held one, never the lowest held note (the bass). A free voice needs room in the
  * shared budget: when the voice to give up is one of this part's, it is restarted
  * in place instead. */
-static voice_t *voice_alloc(track_t *t, uint32_t note)
+CTL_SMALL static voice_t *voice_alloc(track_t *t, uint32_t note)
 {
     uint32_t i, np = trk_nvoice(t), best = np, low = np, nfree = 0;
     int32_t bd = 0x7FFFFFFF;
@@ -256,12 +256,12 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
  * takes (any interval at that speed), TIME = GLIDE is the time of any glide. A sequencer SLIDE with
  * GLIDE 0 glides in SLIDE_T (TIME), as an acid slide */
 #define SLIDE_T 54                                       /* TIME_MS index: ~50 ms */
-static int32_t glide_ticks(int32_t g)                    /* control ticks of TIME_MS index g */
+CTL_SMALL static int32_t glide_ticks(int32_t g)                    /* control ticks of TIME_MS index g */
 {
     int32_t k = (int32_t)ENV_LIN[g & 127];
     return k ? (int32_t)((1u << 24) / (uint32_t)k) : 1;
 }
-static void glide_set(track_t *t, voice_t *v, int glide)
+CTL_SMALL static void glide_set(track_t *t, voice_t *v, int glide)
 {
     int32_t d, ticks;
     if (!glide || !v->pitch_cur) {
@@ -291,7 +291,7 @@ static void glide_set(track_t *t, voice_t *v, int glide)
 #define VP_OFF 2u
 #define VP_GLIDE 4u
 #define VP_UNI 8u   /* (after Clipper 1.2) an extra UNISON voice: its start spread (unison_spread) */
-static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
+CTL_SMALL static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
 {
     const engine_t *e = ENGINES[t->engine];
     int sounding = v->active && v->stage != 0;
@@ -358,7 +358,7 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
 
 /* a UNISON voice's start phases moved by r (Q32: a turn of its note), as if it had started that much of a period
  * sooner: in phase the voices stack, spread they sum as noise */
-static void unison_spread(track_t *t, voice_t *v, uint32_t r)
+CTL_SMALL static void unison_spread(track_t *t, voice_t *v, uint32_t r)
 {
     const engine_t *e = ENGINES[t->engine];
     /* (after Clipper 1.2) each engine moves all its oscillators (and reseeds its noise): ph[0] alone left the others in
@@ -389,7 +389,7 @@ static void unison_spread(track_t *t, voice_t *v, uint32_t r)
 
 /* MONO / LEGATO / UNISON: one note on one voice (eight for UNISON, or the
  * engine's voice cap, spread by DETUNE over the same width) */
-static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int glide)
+CTL_SMALL static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int glide)
 {
     uint32_t mode = (uint32_t)t->p[P_VOICE], nv = mode == V_UNISON ? trk_nvoice(t) : 1u, i;
     for (i = 0; i < nv; i++) {
@@ -422,7 +422,7 @@ static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int g
 }
 
 /* the note the mono stack asks for (PRIO: LAST / LOW / HIGH), 0 = none */
-static uint32_t mono_pick(const track_t *t)
+CTL_SMALL static uint32_t mono_pick(const track_t *t)
 {
     uint32_t i, n;
     if (!t->nmono)
@@ -437,7 +437,7 @@ static uint32_t mono_pick(const track_t *t)
     return n;
 }
 
-static void mono_remove(track_t *t, uint32_t note)
+CTL_SMALL static void mono_remove(track_t *t, uint32_t note)
 {
     uint32_t j, k = 0;
     for (j = 0; j < t->nmono; j++)
@@ -455,7 +455,7 @@ static volatile uint8_t vis_hit, vis_kick_hit, vis_note[NTRK];
 static volatile uint32_t vis_keys;                  /* KEY CITY: the keys a note started on, two octaves (note % 24), */
 static volatile uint8_t vis_keyt[24];               /* each one's track (a chord lights all its keys) */
 
-static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
+CTL_SMALL static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
     uint32_t any = 0, i, mode = (uint32_t)t->p[P_VOICE];
     if (trk_silent(t))
@@ -518,14 +518,14 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
  * start cancels it, a track's all-off (STOP) clears them */
 #define STQ 16u
 static struct { uint8_t on, trk, note, vel; uint32_t left; } stq[STQ];
-static void strum_cancel(const track_t *t, uint32_t note, int all)
+CTL_SMALL static void strum_cancel(const track_t *t, uint32_t note, int all)
 {
     uint32_t i;
     for (i = 0; i < STQ; i++)
         if (stq[i].on && stq[i].trk == (uint8_t)(t - trk) && (all || stq[i].note == note))
             stq[i].on = 0;
 }
-static void trk_note_off(track_t *t, uint32_t note)
+CTL_SMALL static void trk_note_off(track_t *t, uint32_t note)
 {
     uint32_t i, k = 0, mode = (uint32_t)t->p[P_VOICE];
     if (is_drum(t))
@@ -566,7 +566,7 @@ static void trk_note_off(track_t *t, uint32_t note)
     }
 }
 
-static void trk_all_off(track_t *t)
+CTL_SMALL static void trk_all_off(track_t *t)
 {
     uint32_t i;
     strum_cancel(t, 0, 1);
@@ -581,7 +581,7 @@ static void trk_all_off(track_t *t)
 }
 
 /* note i of a chord of n (notes[]): at once, or strummed (rank: its place from the lowest, or the highest) */
-static void trk_note_chord(track_t *t, const uint8_t *notes, uint32_t n, uint32_t i, uint32_t vel)
+CTL_SMALL static void trk_note_chord(track_t *t, const uint8_t *notes, uint32_t n, uint32_t i, uint32_t vel)
 {
     int32_t s = t->p[P_STRUM];
     uint32_t rank = 0, j, q;
@@ -611,7 +611,7 @@ static void trk_note_chord(track_t *t, const uint8_t *notes, uint32_t n, uint32_
     stq[q].on = 1;
 }
 /* each audio block: the strummed notes due */
-static void strum_block(uint32_t n)
+CTL_SMALL static void strum_block(uint32_t n)
 {
     uint32_t i;
     for (i = 0; i < STQ; i++)
@@ -637,7 +637,7 @@ static void strum_block(uint32_t n)
  * new values; IRQ off). The voices sounding then fade out over XF_BLOCKS rendered with these values, the part's DIST,
  * INSERT, level trim and sends included (fx.c mix_part), as for an engine switch: no jump of a filter, a drive or a
  * release in the middle of a note (a click). A fade under way keeps the sound it started from */
-static void sound_change(track_t *t)
+CTL_SMALL static void sound_change(track_t *t)
 {
     if (!t->pold) {                                     /* (the ISR reads p_old only once pold is set: no IRQ-off
                                                          * here, the caller's own IRQ-off section stays whole; an
@@ -648,7 +648,7 @@ static void sound_change(track_t *t)
         t->pold = 1;
     }
 }
-static void engine_block(track_t *t)
+CTL_SMALL static void engine_block(track_t *t)
 {
     uint32_t i, any = 0;
     if (t->xf_on || t->eng_req != t->engine || t->pold) {
@@ -705,7 +705,7 @@ static void engine_block(track_t *t)
 _Static_assert(CTL == 32, "esync_one: 4.6 CTL in Q16 is 9646899");
 static uint32_t esync_k[NTRK][3];   /* ATK's step, DEC's and REL's coefficient (Q16): the part's, this block (env_tick);
                                      * per track (dualcore: a part renders on each core at once) */
-static uint32_t esync_one(uint32_t quarter, int32_t v, uint32_t i)
+CTL_SMALL static uint32_t esync_one(uint32_t quarter, int32_t v, uint32_t i)
 {
     uint32_t u = ESYNC_UNITS[esync_idx(v)], T = quarter * u / 96u, x, x2, x3, x4;   /* T: samples */
     if (T < CTL)
@@ -739,7 +739,7 @@ static __attribute__((noinline)) void esync_coef(const track_t *t)   /* (not inl
 }
 
 /* one control tick (CTL samples) of the amplitude envelope; returns Q15 */
-static int32_t env_tick(track_t *t, voice_t *v)
+CTL_SMALL static int32_t env_tick(track_t *t, voice_t *v)
 {
     const uint32_t *ek = esync_k[(uint32_t)(t - trk) % NTRK];   /* the part's steps (esync_coef) */
     const int16_t *p = t->p;
@@ -782,7 +782,7 @@ static int32_t env_tick(track_t *t, voice_t *v)
 }
 
 /* render one block of a part into out (cleared here); returns the voices rendered */
-static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
+CTL_SMALL static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
 {
     const engine_t *e = ENGINES[t->engine];
     const int16_t *p = t->p;

@@ -175,7 +175,7 @@ static void ota_show(uint32_t step, int32_t code)
     static const char *const STEP[] = {"", "PACKAGE", "CHECK HEAD", "LOADER", "CONFIRM", "RESTART"};
     char b[24];
     if (recovery_active) return;             /* keep polled USB alive during OTA */
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+    lcd_clear();
     draw_text_box(0, 92, 240, &FONT_S, "UPDATE", C_WHITE, 1);
     if (step < 9u) {
         draw_text_box(0, 124, 240, &FONT_S, STEP[step < 6u ? step : 0], C_HI, 1);
@@ -184,14 +184,8 @@ static void ota_show(uint32_t step, int32_t code)
     if (code == 1)
         str_cpy(b, "DRY RUN OK", sizeof b);
     else {
-        uint32_t k = 0, v = (uint32_t)-code;
-        str_cpy(b, "FAILED  -", sizeof b);
-        while (b[k])
-            k++;
-        if (v >= 10u)
-            b[k++] = (char)('0' + v / 10u);
-        b[k++] = (char)('0' + v % 10u);
-        b[k] = 0;
+        str_cpy(b, "FAILED  ", sizeof b);
+        fmt_int(b + 8, code);                   /* (the code is negative: "FAILED  -12") */
     }
     draw_text_box(0, 124, 240, &FONT_S, b, C_HI, 1);
     fm1_delay_ms(1500);

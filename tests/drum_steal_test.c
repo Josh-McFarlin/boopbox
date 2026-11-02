@@ -20,7 +20,7 @@ static uint32_t run_kit(uint32_t kit, int dense, uint32_t *kicks, uint32_t *natu
     uint32_t step, b, i, cut = 0, nk = 0, SB = FS / 8u / CTL, now = 0;
     kk_t k[64];
     memset(&drums, 0, sizeof drums);
-    drums.set = -2;
+    drums.set = 0;
     TDRUM->p[P_E0] = (int16_t)kit;
     TDRUM->p[P_MUTE] = 0;
     for (i = 0; i < 20; i++) block();

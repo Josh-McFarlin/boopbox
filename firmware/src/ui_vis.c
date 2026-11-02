@@ -846,7 +846,7 @@ UI_SMALL static void vis_draw(void)
     uint32_t pass;
     if (!vis_shown_last || ui.force) {
         vis_shown_last = 1;
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
     } else if (ui.frame & 1u) {
         return;
     }

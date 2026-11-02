@@ -728,7 +728,7 @@ UI_SMALL static void layer_title(const char *name, const char *sub, uint16_t col
         cv_rect(236 - w, 4, w, 15, C_WHITE);
         cv_text(240 - w, 4, &FONT_S, "LOCK", C_BLACK);
     } else if (hdr_r[0]) {                                /* (2.7.2) a right-aligned readout (FX: the fade), like a knob's */
-        cv_text(236 - text_w(&FONT_S, hdr_r), 4, &FONT_S, hdr_r, UI_G3);
+        ui_text_r(4, hdr_r, UI_G3);
     }
     cv_rule(0, 38, 240, UI_G1);
     cv_blit(0, 0);
@@ -754,7 +754,7 @@ UI_SMALL static void layer_screen_draw(void)
     track_t *t = TSEL;
     uint16_t col = UI_COL[sel];
     if (!layer_shown) {
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         ui.force = 1;
         layer_shown = 1;
     }
@@ -1117,7 +1117,7 @@ UI_SMALL static void hold_screen_draw(void)
     uint32_t sig = ui.hold_kind * 7u + (uint32_t)ratio / 20u + ui.hold_trk * 131u;
     char b[24];
     if (!layer_shown) {
-        lcd_fill(0, 0, 240, 240, C_BLACK);
+        lcd_clear();
         layer_shown = 1;
         cache = ~sig;
     }

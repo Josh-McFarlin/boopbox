@@ -136,7 +136,7 @@ static inline int32_t sample_next(const smp_zone_t *z, voice_t *v, int loop)
     return v->s[0];
 }
 
-static void sample_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void sample_note_on(track_t *t, voice_t *v)
 {
     uint32_t si = (uint32_t)t->p[P_E0] % SMP_NALL, i, zi = 0xFFFFu;
     if (si < SMP_NSETS) {

@@ -180,7 +180,7 @@ static void drawbar_block(track_t *t)
     }
 }
 
-static void drawbar_note_on(track_t *t, voice_t *v)
+CTL_SMALL static void drawbar_note_on(track_t *t, voice_t *v)
 {
     uint32_t vi = (uint32_t)(v - t->v) % NVOICE, k, held = 0;
     drw_part_t *P = drw_of(t);

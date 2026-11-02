@@ -22,14 +22,14 @@ UI_SMALL static __attribute__((noinline)) void pw_v(pw_t *w, int32_t v)
         pw_u8(w, ((uint32_t)v >> 8) & 0xFFu);
     }
 }
-static uint32_t pw_open(pw_t *w, uint32_t tag)          /* a chunk: its length is written by pw_close */
+CTL_SMALL static uint32_t pw_open(pw_t *w, uint32_t tag)          /* a chunk: its length is written by pw_close */
 {
     pw_u8(w, tag);
     pw_u8(w, 0);
     pw_u8(w, 0);
     return w->n;
 }
-static void pw_close(pw_t *w, uint32_t at)
+CTL_SMALL static void pw_close(pw_t *w, uint32_t at)
 {
     uint32_t len = w->n - at;
     if (at - 2u < w->max)
@@ -152,12 +152,12 @@ UI_SMALL static __attribute__((noinline)) void step_get(pr_t *r, track_t *t, uin
             s->rat = (uint8_t)pr_u8(r);
     }
 }
-static uint32_t step_mf(const track_t *t, uint32_t k)  /* a step's nudge (6 bits) | its fill condition << 6 (format 6's) */
+CTL_SMALL static uint32_t step_mf(const track_t *t, uint32_t k)  /* a step's nudge (6 bits) | its fill condition << 6 (format 6's) */
 {
     return ((uint32_t)t->micro[k] & 63u) | step_fill(t, k) << 6;
 }
-static uint32_t lock_code(uint32_t id) { return id < P_E0 ? id : 0xF0u + (id - P_E0); }   /* (P_E0 moves: see 'T') */
-static uint32_t lock_id(uint32_t code) { return code >= 0xF0u ? (code - 0xF0u < 8u ? P_E0 + code - 0xF0u : P_COUNT) : code < P_E0 ? code : P_COUNT; }
+CTL_SMALL static uint32_t lock_code(uint32_t id) { return id < P_E0 ? id : 0xF0u + (id - P_E0); }   /* (P_E0 moves: see 'T') */
+CTL_SMALL static uint32_t lock_id(uint32_t code) { return code >= 0xF0u ? (code - 0xF0u < 8u ? P_E0 + code - 0xF0u : P_COUNT) : code < P_E0 ? code : P_COUNT; }
 UI_SMALL static __attribute__((noinline)) void pat_put(pw_t *w, const track_t *t)
 {
     uint8_t map[NSTEP / 8];
