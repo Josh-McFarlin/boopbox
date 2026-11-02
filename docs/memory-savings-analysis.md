@@ -380,6 +380,11 @@ The changes marked "measured" were made in scratch copies during the analysis an
 one's files, lines and the tests that covered it, which is enough to redo any of them in an hour or two. F8, F9, F10
 and R11 were made together and passed the 182 golden renders as one tree.
 
-One thing seen in passing, not caused by any of this: on the unmodified tree, `tests/phys_tune_test.c` reports
-`TANPURA 100: +64.5 cents FAIL` under `HOST_ONLY=1 sh tests/run_tests.sh` on this machine (x86-64, clang 18). It
-reproduces identically with the engine changes applied, so it is a pre-existing host result worth a look of its own.
+One thing seen in passing, not caused by any of this: on the unmodified tree, `tests/phys_tune_test.c` reported
+`TANPURA 100: +64.5 cents FAIL` under `HOST_ONLY=1 sh tests/run_tests.sh` on this machine (x86-64, clang 18). It was
+an engine bug, not a host quirk: the SYMP model's sympathetic strings could be tuned above 4.4 kHz (the octave and
+two-octave partners of the top notes), where their loop gain is clamped at 0.9999 and they rang several times louder
+than the main string, into the soft knee. The note came out up to 60 cents off, at random: about 5 % of the random
+plucks at E7 and E6-G#6, and which ones depended on what had played before (the global `rng()`). Fixed by leaving out
+partners whose period is under 5 half-rate steps (`PX_YMIN_P` in `phys_symp.c`): worst case over 60 plucks at E7 is
+10.8 cents, golden renders unchanged.

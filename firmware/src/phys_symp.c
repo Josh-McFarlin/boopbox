@@ -36,6 +36,13 @@
 #define PX_YLINE 256             /* sympathetic string line (16-bit) at half the rate: 86 Hz and up, lower folds up */
 #define PX_YMASK (PX_YLINE - 1)
 #define PX_NSYMP 3
+/* The shortest period a sympathetic string may have, in half-rate steps (22.05 kHz / 5 = 4.4 kHz). Shorter, the loop is
+ * two or three samples long, the FIR and the linear interpolation are no longer a string, and its loop gain is clamped
+ * at 0.9999 (a resonance of 10^4 at a coupling of 1 / 16): on the top notes of CHRD 0 / 1 (the partners an octave or two
+ * above the note: E7 sounds 5.3 and 10.5 kHz) it rang at several times the main string, into the voice's soft knee,
+ * and the level swung 4x with the pluck's random burst. The note then came out up to 60 cents off at random
+ * (tests/phys_tune_test.c: TANPURA at E7, depending on what had played before it). */
+#define PX_YMIN_P 5u
 
 typedef struct {                                         /* coefficients (px_symp_block; kept while unchanged) */
     uint32_t d[PX_NSYMP];                                /* read delay, whole samples */
@@ -87,7 +94,7 @@ static __attribute__((noinline)) void px_symp_block(px_symp_t *Y, const uint32_t
         while (p > (uint32_t)(PX_YLINE - 4) << 16)       /* fold up an octave */
             p >>= 1;
         p -= (uint32_t)(65536 - b);                      /* less the FIR's delay */
-        if (p < 2u << 16)
+        if (p < PX_YMIN_P << 16)                         /* too high for this loop: left out (see PX_YMIN_P) */
             continue;
         /* gain per period 2^(-10 period / RT60) = 2^(-10 p / (1543.5 steps) * k8) */
         e = (uint32_t)(((((uint64_t)p * 27826874u) >> 32) * (uint32_t)k8) >> 16);   /* octaves, Q16 (10 / 1543.5: Q32) */
