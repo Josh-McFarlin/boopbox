@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.3.0](#whats-new-in-130)
+1. [What's new in 1.3.1](#whats-new-in-131)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,17 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.3.0
+## What's new in 1.3.1
+
+A tuning fix for TANPURA, and room for what comes next ([all changes](CHANGELOG.md)):
+
+- **TANPURA stays in tune on the top notes.** The sympathetic strings that ring along with the note could be tuned
+  so high on the top octave that they rang louder than the string you played, and the note came out as much as 60
+  cents off, differently each time. They are left out above 4.4 kHz now; only the highest notes of a sound change, and they stay in tune.
+- **4.7 KB more room in the firmware** (6.2 KB of the app slot free, up from 1.5 KB). Nothing was taken out.
+- Projects, songs, presets and settings from 1.3.0 open as they are, and a saved project sounds as it did.
+
+### 1.3.0
 
 Even loudness between the factory sounds, and a drum LEVEL that turns ([all changes](CHANGELOG.md)):
 

@@ -13,6 +13,22 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.3.1
+
+A tuning fix for TANPURA, and room in the firmware:
+
+- **TANPURA stays in tune on the top notes.** The PHYS sympathetic strings (the ones that ring along with the string you
+  play) are tuned an octave below and an octave or two above it. On the top octaves those partners landed above 5 kHz,
+  where their loop is only two or three samples long and its gain is at the limit. They rang several times louder than
+  the string you played, into the soft clip, and the level changed with every pluck: the top notes came out up to 60
+  cents off, about one pluck in twenty. Partners above 4.4 kHz are left out now. At E7 the worst of 60 plucks is 11
+  cents off (it was 59), and at C7 it is 10 (it was 41). Only the highest notes of a SYMP sound change; SITAR and
+  PHYS HARP were not affected on the notes measured, and no other engine changed.
+- **4.7 KB more room in the firmware** (the app is 575,316 B; 6,248 B of the 581,564 B slot are free, up from 1,540 B).
+  The sequencer, voice and set-up code is compiled for size, four tables that only held an initial value no longer
+  take flash, and a few repeated routines are shared. Nothing was taken out and no sound or screen changed.
+- Projects, songs, presets and settings from 1.3.0 open as they are, and a saved project sounds as it did.
+
 ## 1.3.0
 
 Even loudness between the factory sounds, and a drum LEVEL that turns:
