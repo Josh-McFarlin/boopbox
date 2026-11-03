@@ -342,39 +342,66 @@ under.section("D", {4: DEEP_DRUMS, **COMMONU}, mute=(5, 7))                     
 under.song = [("A", 8), ("B", 8), ("C", 8), ("D", 8), ("A", 4)]
 
 # ---------------------------------------------------------------------------------------------------------------
-# LEVEL 3 (variant)  LANTERNS  melodic dubstep, 150 BPM (half-time), G minor, Eb F Gm Gm (VI VII i i, a bar each).
+# LEVEL 3  LANTERNS  melodic dubstep, 150 BPM (half-time), G minor, Eb F Gm Gm (VI VII i i, a bar each).
 #   Piano chords in the intro, a saw pad that a SLIDE lock opens through the build, a sync-lead hook, and a talking
-#   growl in the drop: WOW BASS with a lock on its VOWEL on every hit, so it says something different each time.
+#   growl in the drop on WOW BASS (the VOICE engine). The chosen Level 3; GROWLS holds four ways to make it talk.
 # ---------------------------------------------------------------------------------------------------------------
-lant = Song("LANTERNS", 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
-lant.prog = [(6, 1), (7, 1), (1, 2)]
-lant.track(4, "DUBSTEP", 16, "1/16")
-lant.track(8, "HYPER", 64, "1/16", level=100)
-lant.track(1, "WOW BASS", 16, "1/16", gate=90, level=96, follow="TRANS")      # (an octave under the keys)
-lant.track(2, "SUB BASS", 16, "1/16", gate=127, follow="TRANS")
-lant.track(3, "SYNC LEAD", 32, "1/8", gate=110, DLY=40, REV=40)
-lant.track(5, "SAW PAD", 1, "1BAR", gate=110, follow="SCALE", REV=60, REL=60)
-lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50)
-lant.track(7, "RISER", 64, "1/16", gate=127, REV=60)
-# the growl: a vowel lock on each hit (VOWL, EDIT 1 KNOB 1)
-GROWL = Pattern(steps="G3 - . G3 . . G3 - | Bb3 - . . G3 . F3 -",
-                locks=[(1, "E0", 20, 0), (4, "E0", 100, 0), (7, "E0", 60, 0), (9, "E0", 120, 0), (13, "E0", 10, 0),
-                       (15, "E0", 80, 0)])
-SUBL = Pattern(steps="G3 " + "- " * 15)
-HOOKL = Pattern(steps="G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -")
-PIANOL = Pattern(steps="G3+Bb3+D4 - - . G3+Bb3+D4 - . .")
-PADL = Pattern(steps="G3+Bb3+D4")
-DROPL = {"KICK": "x... .... ..x. ....", "SNARE": ".... .... X... ....", "CLAP": ".... .... x... ....",
-         "HAT": "..x. ..x. ..x. ..x."}
-BUILDL = Pattern(lanes={"SNARE": "x...x...x...x... | x.x.x.x.x.x.x.x. | xxxxxxxxxxxxxxxx | 2222333344444444"})
-COMMONL = {1: GROWL, 2: SUBL, 3: HOOKL, 5: PADL, 6: PIANOL, 7: Pattern(steps=". " * 32 + "C4 " + "- " * 31)}
-lant.section("A", {4: Pattern(), 8: BUILDL, **COMMONL}, mute=(8, 1, 2, 3, 5, 7))      # intro: the piano alone
-lant.section("B", {4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: BUILDL, **COMMONL,
-                   5: Pattern(steps="G3+Bb3+D4", locks=[(1, "TFLT", 30, 1)])}, mute=(1, 2))       # the build
-lant.section("C", {4: Pattern(lanes=DROPL), 8: Pattern(lanes={"CRASH": "x" + "." * 63}), **COMMONL},
-             mute=(5, 6, 7))                                                                     # the drop
-lant.section("D", {4: Pattern(lanes={"HAT": DROPL["HAT"]}), 8: BUILDL, **COMMONL}, mute=(8, 1, 6, 7))  # the break
-lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
+GROWLS = {
+    # 1  TALK: a vowel lock on each hit (VOWL, EDIT 1 KNOB 1), so each says something else
+    "TALK": Pattern(steps="G3 - . G3 . . G3 - | Bb3 - . . G3 . F3 -",
+                    locks=[(1, "E0", 20, 0), (4, "E0", 100, 0), (7, "E0", 60, 0), (9, "E0", 120, 0), (13, "E0", 10, 0),
+                           (15, "E0", 80, 0)]),
+    # 2  YOI: longer notes; locks on TALK (EDIT 1 KNOB 3: how fast it goes from one vowel to the other) make a slow
+    #    "wooow" and a quick "yoi"; VOWL2 locks change where it goes; a SLIDE lock on SHIFT lifts the formant at the end
+    "YOI": Pattern(steps="G3 - - - . . G3 - | Bb3 - - . G3 - F3 -",
+                   locks=[(1, "E2", 115, 0), (1, "E1", 10, 0), (7, "E2", 25, 0), (7, "E1", 120, 0), (9, "E2", 90, 0),
+                          (9, "E0", 120, 0), (13, "E2", 20, 0), (15, "E3", 9, 1)]),
+    # 3  STUTTER: shorter hits, MULT components fire 3 and 4 hits inside a step, and PARAM components pick a random
+    #    vowel each time (+-40 % of VOWL): the riff never talks the same way twice (the SEED keeps a PLAY repeatable)
+    "STUTTER": Pattern(steps="G3 G3 . G3 . . G3 G3 | Bb3 . . G3 . G3 F3 F3",
+                       comps=[(8, "MULT", 3, 0), (16, "MULT", 4, 0), (1, "PARAM", 63, 40), (4, "PARAM", 63, 40),
+                              (7, "PARAM", 63, 40), (12, "PARAM", 63, 40), (14, "PARAM", 63, 40)],
+                       locks=[(2, "E0", 110, 0), (9, "E0", 30, 0)], seed=5),
+    # 4  DIVE: pitch moves on the growl: BEND components dive an octave down (TO) and scoop up a fourth (FROM),
+    #    PORTA glides one note into the next, and the vowels still change on each hit
+    "DIVE": Pattern(steps="G3 - . G3 . . G4 - | Bb3 - . . G3 . G3 -",
+                    comps=[(7, "BEND", -12, 0), (9, "BEND", 5, 1), (4, "PORTA", 40, 0), (15, "BEND", -12, 0)],
+                    locks=[(1, "E0", 30, 0), (4, "E0", 100, 0), (7, "E0", 120, 0), (9, "E0", 60, 0), (13, "E0", 10, 0),
+                           (15, "E0", 90, 0)]),
+}
+
+
+def lanterns(growl):
+    lant = Song("LANTERNS " + growl, 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
+    lant.variant = growl
+    lant.prog = [(6, 1), (7, 1), (1, 2)]
+    lant.track(4, "DUBSTEP", 16, "1/16")
+    lant.track(8, "HYPER", 64, "1/16", level=100)
+    lant.track(1, "WOW BASS", 16, "1/16", gate=90, level=96, follow="TRANS")      # (an octave under the keys)
+    lant.track(2, "SUB BASS", 16, "1/16", gate=127, follow="TRANS")
+    lant.track(3, "SYNC LEAD", 32, "1/8", gate=110, DLY=40, REV=40)
+    lant.track(5, "SAW PAD", 1, "1BAR", gate=110, follow="SCALE", REV=60, REL=60)
+    lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50)
+    lant.track(7, "RISER", 64, "1/16", gate=127, REV=60)
+    subl = Pattern(steps="G3 " + "- " * 15)
+    hook = Pattern(steps="G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -")
+    piano = Pattern(steps="G3+Bb3+D4 - - . G3+Bb3+D4 - . .")
+    pad = Pattern(steps="G3+Bb3+D4")
+    drop = {"KICK": "x... .... ..x. ....", "SNARE": ".... .... X... ....", "CLAP": ".... .... x... ....",
+            "HAT": "..x. ..x. ..x. ..x."}
+    build = Pattern(lanes={"SNARE": "x...x...x...x... | x.x.x.x.x.x.x.x. | xxxxxxxxxxxxxxxx | 2222333344444444"})
+    common = {1: GROWLS[growl], 2: subl, 3: hook, 5: pad, 6: piano, 7: Pattern(steps=". " * 32 + "C4 " + "- " * 31)}
+    lant.section("A", {4: Pattern(), 8: build, **common}, mute=(8, 1, 2, 3, 5, 7))      # intro: the piano alone
+    lant.section("B", {4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: build, **common,
+                       5: Pattern(steps="G3+Bb3+D4", locks=[(1, "TFLT", 30, 1)])}, mute=(1, 2))   # the build
+    lant.section("C", {4: Pattern(lanes=drop), 8: Pattern(lanes={"CRASH": "x" + "." * 63}), **common},
+                 mute=(5, 6, 7))                                                                 # the drop
+    lant.section("D", {4: Pattern(lanes={"HAT": drop["HAT"]}), 8: build, **common}, mute=(8, 1, 6, 7))  # the break
+    lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
+    return lant
+
+
+LANTERNS = [lanterns(g) for g in GROWLS]
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
@@ -443,4 +470,6 @@ acid.section("D", {4: Pattern(lanes={"HAT": D909["HAT"]}), **COMMONA,
 acid.song = [("A", 8), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8)]
 
 # BLUE HOUR stays in the score, but is not a choice (the trainer's Level 3 is dubstep or house)
-SONGS = [first, neon, fault, under, lant, glow, velv, acid]   # Level 3: three dubstep options, then three house
+# Level 3 is LANTERNS, in four growls for now. FAULT LINE, UNDERPASS, AFTERGLOW, VELVET ROOM, ACID RAIN and BLUE HOUR
+# stay in the score, set aside
+SONGS = [first, neon] + LANTERNS
