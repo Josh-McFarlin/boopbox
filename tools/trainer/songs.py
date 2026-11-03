@@ -510,8 +510,11 @@ LESS = {
                      mix={1: -6}),                               # (more stabs: track 1 down to match)
     "ONE CHORD": dict(hook="", prog=[(1, 4)]),                   # Dm the whole song: no chord changes
 }
-LANTERNS = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5,
-                     {**MIXES["DROP"], **kw.pop("mix", {})}, **kw) for m, kw in LESS.items()]
+LANTERNS_LESS = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5,
+                          {**MIXES["DROP"], **dict(kw).pop("mix", {})}, **{k: v for k, v in kw.items() if k != "mix"})
+                 for m, kw in LESS.items()]
+# THE LEVEL 3 SONG (approved): LANTERNS, CINEMATIC, D minor, the DROP mix, ONE CHORD
+LANTERNS = [lanterns("CINEMATIC DM ONE CHORD", "CHORDS", "CINEMATIC", "D", -5, MIXES["DROP"], **LESS["ONE CHORD"])]
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
@@ -582,4 +585,4 @@ acid.song = [("A", 8), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8)]
 # BLUE HOUR stays in the score, but is not a choice (the trainer's Level 3 is dubstep or house)
 # Level 3 is LANTERNS, in four growls for now. FAULT LINE, UNDERPASS, AFTERGLOW, VELVET ROOM, ACID RAIN and BLUE HOUR
 # stay in the score, set aside
-SONGS = [first, neon] + LANTERNS
+SONGS = [first, neon] + LANTERNS          # the trainer's three songs
