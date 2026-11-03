@@ -403,9 +403,11 @@ PALETTES = {
 }
 
 
-def lanterns(name, growl, palette="ORIGINAL"):
+def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0):
+    """shift: semitones the whole song moves (key, chords and every note; the drums stay)"""
     pal = PALETTES[palette]
-    lant = Song("LANTERNS " + name, 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
+    lant = Song("LANTERNS " + name, 3, "MELODIC DUBSTEP", bpm=150, key=key, scale="MIN", DTIME=6, DFDBK=50)
+    lant.shift = shift
     lant.variant, lant.palette = growl, palette
     lant.prog = [(6, 1), (7, 1), (1, 2)]
     lant.track(4, "DUBSTEP", 16, "1/16")
@@ -416,7 +418,7 @@ def lanterns(name, growl, palette="ORIGINAL"):
     else:
         snd, gate, lvl, more, bass = DROPS[growl]
         more = dict(more)
-        lant.track(1, snd, 16, "1/16", gate=gate, level=lvl, follow=more.pop("follow", "TRANS"), **more)
+        lant.track(1, snd, 16, "1/16", gate=gate, level=lvl, follow=more.pop("follow", "SCALE"), **more)   # SCALE: the riff stays in the key
         if growl == "CHORDS":
             lant.g["DUCK"] = 50
     lant.track(2, "SUB BASS", 16, "1/16", gate=127, follow="TRANS")
@@ -441,15 +443,39 @@ def lanterns(name, growl, palette="ORIGINAL"):
                  mute=(5, 6, 7))                                                                 # the drop
     lant.section("D", {4: Pattern(lanes={"HAT": drop["HAT"]}), 8: build, **common}, mute=(8, 1, 6, 7))  # the break
     lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
+    if shift:
+        transpose(lant, shift)
     return lant
+
+
+def transpose(song, shift):
+    """every synth note of the song shift semitones (the patterns copied first: they are shared); a sub that would
+    go under E1 is taken up an octave (SUB BASS plays two octaves under the keys: E3 written)"""
+    import copy
+    done = {}
+    for name, sec in song.sections.items():
+        for num, pat in list(sec.items()):
+            if num == "_mute" or not pat.steps:
+                continue
+            if id(pat) not in done:
+                q = copy.deepcopy(pat)
+                sub = song.tracks[num].sound == "SUB BASS"
+                low = min(n for x in q.steps if isinstance(x, tuple) for n in x[0]) + shift
+                extra = 12 if sub and low < note_num("E3") else 0
+                q.steps = [(tuple(n + shift + extra for n in x[0]) and [n + shift + extra for n in x[0]], x[1], x[2])
+                           if isinstance(x, tuple) else x for x in q.steps]
+                done[id(pat)] = q
+            sec[num] = done[id(pat)]
 
 
 # with the VOICE engine's growl (WOW BASS): set aside for now
 LANTERNS_VOICE = [lanterns(g, g) for g in GROWLS]
 # without it
-LANTERNS = [lanterns("REESE", "REESE"), lanterns("WOBBLE", "WOBBLE"),
-            lanterns("WARM REESE", "REESE", "WARM"), lanterns("WARM FM", "FM GROWL", "WARM"),
-            lanterns("CINEMATIC", "CHORDS", "CINEMATIC")]
+LANTERNS_FIRST = [lanterns("REESE", "REESE"), lanterns("WOBBLE", "WOBBLE"), lanterns("WARM FM", "FM GROWL", "WARM")]
+# the two kept, in G minor (as written) and lower: F minor (-2), E minor (-3), D minor (-5)
+KEYS = [("G", 0), ("F", -2), ("E", -3), ("D", -5)]
+LANTERNS = ([lanterns(f"WARM REESE {k}M", "REESE", "WARM", k, sh) for k, sh in KEYS] +
+            [lanterns(f"CINEMATIC {k}M", "CHORDS", "CINEMATIC", k, sh) for k, sh in KEYS])
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
