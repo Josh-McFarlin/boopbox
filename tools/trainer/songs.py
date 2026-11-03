@@ -371,17 +371,60 @@ GROWLS = {
 }
 
 
-def lanterns(growl):
-    lant = Song("LANTERNS " + growl, 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
-    lant.variant = growl
+# Basses for the drop without the VOICE engine (written two octaves over what they play: REESE, WOBBLE and FM BASS
+# play two octaves under the keys). (name, sound, gate, level, extra track parameters, pattern)
+DROPS = {
+    # a REESE that opens and closes on SLIDE locks of its CUT (EDIT 2, KNOB 1), across each long note
+    "REESE": ("REESE", 120, 104, {},
+              Pattern(steps="G4 - - - - - . G4 | Bb4 - - - G4 - F4 -",
+                      locks=[(1, "E4", 25, 0), (6, "E4", 85, 1), (9, "E4", 35, 0), (13, "E4", 95, 1),
+                             (16, "E4", 40, 1)])),
+    # the wobble: locks on the LFO's RATE (at 150 BPM: 75 a quarter, 88 an eighth, 96 a triplet, 101 a sixteenth)
+    "WOBBLE": ("WOBBLE", 100, 100, {},
+               Pattern(steps="G4 - - - - - G4 - | Bb4 - - - G4 - F4 -",
+                       locks=[(1, "LRATE", 75, 0), (4, "LRATE", 88, 0), (7, "LRATE", 101, 0), (9, "LRATE", 96, 0),
+                              (13, "LRATE", 88, 0), (15, "LRATE", 101, 0)])),
+    # an FM growl: locks on the FM amount (IDX, EDIT 2 KNOB 1) and FEEDBACK (KNOB 3) on each hit
+    "FM GROWL": ("FM BASS", 90, 100, {"E5": 90},
+                 Pattern(steps="G4 - . G4 . . G4 - | Bb4 - . . G4 . F4 -",
+                         locks=[(1, "E4", 70, 0), (1, "E6", 20, 0), (4, "E4", 120, 0), (4, "E6", 90, 0),
+                                (7, "E4", 90, 0), (9, "E4", 127, 0), (9, "E6", 60, 0), (13, "E4", 60, 0),
+                                (15, "E4", 110, 0), (15, "E6", 110, 0)])),
+    # no growl: the drop is big chords pumping under the kick (DUCK on GLO > MASTER), the sub under them
+    "CHORDS": ("WARM PAD", 45, 127, {"REL": 12, "ATK": 0, "follow": "SCALE"},
+               Pattern(steps="G3+Bb3+D4 - . G3+Bb3+D4 . . G3+Bb3+D4 - | G3+Bb3+D4 - - . G3+Bb3+D4 . G3+Bb3+D4 -")),
+}
+# the sounds around the drop. ORIGINAL: as Lanterns was. WARM: an analog lead and pad, the roll on the song's own kit,
+# more room (less of the TRIO engine's square and the HYPER kit). CINEMATIC: the hook on a bowed cello (PHYS).
+PALETTES = {
+    "ORIGINAL": dict(lead=("SYNC LEAD", 110, {"DLY": 40, "REV": 40}), pad=("SAW PAD", {"REL": 60}), roll="HYPER"),
+    "WARM": dict(lead=("FAT LEAD", 110, {"DLY": 45, "REV": 55}), pad=("WARM PAD", {"REL": 50}), roll="DUBSTEP"),
+    "CINEMATIC": dict(lead=("CELLO BOW", 120, {"level": 114, "DLY": 30, "REV": 70}), pad=("WARM PAD", {"REL": 50}), roll="DUBSTEP"),
+}
+
+
+def lanterns(name, growl, palette="ORIGINAL"):
+    pal = PALETTES[palette]
+    lant = Song("LANTERNS " + name, 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
+    lant.variant, lant.palette = growl, palette
     lant.prog = [(6, 1), (7, 1), (1, 2)]
     lant.track(4, "DUBSTEP", 16, "1/16")
-    lant.track(8, "HYPER", 64, "1/16", level=100)
-    lant.track(1, "WOW BASS", 16, "1/16", gate=90, level=96, follow="TRANS")      # (an octave under the keys)
+    lant.track(8, pal["roll"], 64, "1/16", level=100)
+    if growl in GROWLS:
+        lant.track(1, "WOW BASS", 16, "1/16", gate=90, level=96, follow="TRANS")      # (an octave under the keys)
+        bass = GROWLS[growl]
+    else:
+        snd, gate, lvl, more, bass = DROPS[growl]
+        more = dict(more)
+        lant.track(1, snd, 16, "1/16", gate=gate, level=lvl, follow=more.pop("follow", "TRANS"), **more)
+        if growl == "CHORDS":
+            lant.g["DUCK"] = 50
     lant.track(2, "SUB BASS", 16, "1/16", gate=127, follow="TRANS")
-    lant.track(3, "SYNC LEAD", 32, "1/8", gate=110, DLY=40, REV=40)
-    lant.track(5, "SAW PAD", 1, "1BAR", gate=110, follow="SCALE", REV=60, REL=60)
-    lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50)
+    lsnd, lgate, lmore = pal["lead"]
+    lant.track(3, lsnd, 32, "1/8", gate=lgate, **lmore)
+    psnd, pmore = pal["pad"]
+    lant.track(5, psnd, 1, "1BAR", gate=110, follow="SCALE", REV=60, **pmore)
+    lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50 if palette == "ORIGINAL" else 65)
     lant.track(7, "RISER", 64, "1/16", gate=127, REV=60)
     subl = Pattern(steps="G3 " + "- " * 15)
     hook = Pattern(steps="G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -")
@@ -390,7 +433,7 @@ def lanterns(growl):
     drop = {"KICK": "x... .... ..x. ....", "SNARE": ".... .... X... ....", "CLAP": ".... .... x... ....",
             "HAT": "..x. ..x. ..x. ..x."}
     build = Pattern(lanes={"SNARE": "x...x...x...x... | x.x.x.x.x.x.x.x. | xxxxxxxxxxxxxxxx | 2222333344444444"})
-    common = {1: GROWLS[growl], 2: subl, 3: hook, 5: pad, 6: piano, 7: Pattern(steps=". " * 32 + "C4 " + "- " * 31)}
+    common = {1: bass, 2: subl, 3: hook, 5: pad, 6: piano, 7: Pattern(steps=". " * 32 + "C4 " + "- " * 31)}
     lant.section("A", {4: Pattern(), 8: build, **common}, mute=(8, 1, 2, 3, 5, 7))      # intro: the piano alone
     lant.section("B", {4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: build, **common,
                        5: Pattern(steps="G3+Bb3+D4", locks=[(1, "TFLT", 30, 1)])}, mute=(1, 2))   # the build
@@ -401,7 +444,12 @@ def lanterns(growl):
     return lant
 
 
-LANTERNS = [lanterns(g) for g in GROWLS]
+# with the VOICE engine's growl (WOW BASS): set aside for now
+LANTERNS_VOICE = [lanterns(g, g) for g in GROWLS]
+# without it
+LANTERNS = [lanterns("REESE", "REESE"), lanterns("WOBBLE", "WOBBLE"),
+            lanterns("WARM REESE", "REESE", "WARM"), lanterns("WARM FM", "FM GROWL", "WARM"),
+            lanterns("CINEMATIC", "CHORDS", "CINEMATIC")]
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
