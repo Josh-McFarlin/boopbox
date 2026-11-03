@@ -12,6 +12,7 @@ A drum lane is one character a step:  . none  x NORM  s SOFT  g GHOST  X HARD  2
 '|' in either is only for reading (bar lines); spaces are ignored.
 """
 
+DRUM_KITS = {"DUBSTEP", "HYPER", "HOUSE", "AFRO", "LO-FI", "SYNTHWV", "TRIBAL", "LATIN", "D.HOUSE", "909", "JAZZ", "INDUSTR"}
 LANES = ["KICK", "KICK2", "SNARE", "CLAP", "HAT", "OHAT", "PEDAL", "RIM",
          "SNARE2", "LOTOM", "HITOM", "CRASH", "RIDE", "SHAKER", "CONGA", "COWBELL"]
 DIVS = ["1/4", "1/8", "1/16", "1/32", "8T", "16T", "1/2", "1BAR", "2BAR"]
@@ -403,8 +404,9 @@ PALETTES = {
 }
 
 
-def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0):
-    """shift: semitones the whole song moves (key, chords and every note; the drums stay)"""
+def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0, mix=None):
+    """shift: semitones the whole song moves (key, chords and every note; the drums stay); mix: {track: LEVEL steps
+    up or down} (about half a dB a step on a synth track; a drum track's LVL is its own 0..127 scale)"""
     pal = PALETTES[palette]
     lant = Song("LANTERNS " + name, 3, "MELODIC DUBSTEP", bpm=150, key=key, scale="MIN", DTIME=6, DFDBK=50)
     lant.shift = shift
@@ -445,6 +447,10 @@ def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0):
     lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
     if shift:
         transpose(lant, shift)
+    for num, d in (mix or {}).items():
+        t = lant.tracks[num]
+        base = t.level if t.level is not None else (100 if t.sound in DRUM_KITS else 104)
+        t.level = max(0, min(127, base + d))
     return lant
 
 
@@ -474,8 +480,18 @@ LANTERNS_VOICE = [lanterns(g, g) for g in GROWLS]
 LANTERNS_FIRST = [lanterns("REESE", "REESE"), lanterns("WOBBLE", "WOBBLE"), lanterns("WARM FM", "FM GROWL", "WARM")]
 # the two kept, in G minor (as written) and lower: F minor (-2), E minor (-3), D minor (-5)
 KEYS = [("G", 0), ("F", -2), ("E", -3), ("D", -5)]
-LANTERNS = ([lanterns(f"WARM REESE {k}M", "REESE", "WARM", k, sh) for k, sh in KEYS] +
-            [lanterns(f"CINEMATIC {k}M", "CHORDS", "CINEMATIC", k, sh) for k, sh in KEYS])
+LANTERNS_KEYS = ([lanterns(f"WARM REESE {k}M", "REESE", "WARM", k, sh) for k, sh in KEYS] +
+                 [lanterns(f"CINEMATIC {k}M", "CHORDS", "CINEMATIC", k, sh) for k, sh in KEYS])
+# the chosen one, CINEMATIC in D minor, in five mixes: what each puts in front, as GLO's levels would
+#   tracks: 1 drop chords, 2 sub, 3 cello hook, 4 drums, 5 pad, 6 piano, 7 riser, 8 build roll and crash
+MIXES = {
+    "BALANCED": {},
+    "HOOK": {3: 8, 1: -10, 5: -6},
+    "DROP": {2: 8, 4: 20, 3: -10, 6: -6},
+    "DRUMS": {4: 27, 8: 27, 2: 2, 1: -16, 3: -12, 5: -10, 6: -8},   # (a drum LVL tops out at 127: the rest go down)
+    "ATMOSPHERE": {5: 10, 6: 10, 7: 6, 4: -25, 1: -8, 2: -6},
+}
+LANTERNS = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5, mix) for m, mix in MIXES.items()]
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
