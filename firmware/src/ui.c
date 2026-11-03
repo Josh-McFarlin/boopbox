@@ -1105,10 +1105,18 @@ static const struct { uint8_t kind, e; const char *name; } BANK[] = {
     {BK_ORGAN, 7, "REGGAE ORG"}, {BK_PAD, 0, "WARM PAD"}, {BK_PAD, 6, "SAW PAD"}, {BK_PAD, 1, "GLASS PAD"},
     {BK_PAD, 0, "DARK STR"}, {BK_PAD, 2, "CZ STRING"}, {BK_PAD, 0, "ATMOS PAD"}, {BK_PAD, 8, "LOFI CLOUD"},
     {BK_PAD, 8, "VIBE HAZE"}, {BK_PAD, 5, "CHOIR AAH"}, {BK_PAD, 5, "SOUL OOH"}, {BK_PAD, ENGI_FM6, "SOFT PAD"},
-    {BK_PAD, 6, "ENSEMBLE"}, {BK_PAD, 8, "STR CLOUD"}, {BK_PAD, 8, "SHIMMER"}, {BK_PAD, 8, "DRONE"},
+    {BK_PAD, 6, "ENSEMBLE"},
+#if !FELUCCA_TRAINER                                 /* (the TRAINER: no STRGS, HORNS, SCRCH sets) */
+    {BK_PAD, 8, "STR CLOUD"},
+#endif
+    {BK_PAD, 8, "SHIMMER"}, {BK_PAD, 8, "DRONE"},
     {BK_PAD, ENGI_PHYS, "BOWED MTL"}, {BK_PAD, ENGI_NOISE, "WIND"}, {BK_PAD, ENGI_PHYS, "CELLO BOW"},
     {BK_PAD, ENGI_PHYS, "GLASS BOWL"}, {BK_PAD, ENGI_NOISE, "OCEAN"}, {BK_PAD, 2, "CZ PAD"},
-    {BK_PAD, 5, "VOX PAD"}, {BK_PAD, 8, "PNO FREEZE"}, {BK_PAD, 8, "HORN CLOUD"}, {BK_PAD, 0, "SINE PAD"},
+    {BK_PAD, 5, "VOX PAD"}, {BK_PAD, 8, "PNO FREEZE"},
+#if !FELUCCA_TRAINER
+    {BK_PAD, 8, "HORN CLOUD"},
+#endif
+    {BK_PAD, 0, "SINE PAD"},
     {BK_PAD, 6, "PULSE PAD"}, {BK_LEAD, 0, "SUPERSAW"}, {BK_LEAD, 0, "G-FUNK LD"}, {BK_LEAD, 6, "SYNC LEAD"},
     {BK_LEAD, 6, "HOOVER"}, {BK_LEAD, 5, "TALKBOX"}, {BK_LEAD, 3, "GAME LEAD"}, {BK_LEAD, 4, "LOFI FLUTE"},
     {BK_LEAD, 8, "FLUTE DUST"}, {BK_LEAD, 0, "FAT LEAD"}, {BK_LEAD, 0, "PAN FLUTE"}, {BK_LEAD, 5, "HARMONICA"},
@@ -1127,9 +1135,16 @@ static const struct { uint8_t kind, e; const char *name; } BANK[] = {
     {BK_PLUCK, ENGI_PHYS, "STEEL PAN"}, {BK_PLUCK, ENGI_PHYS, "WOOD BLOCK"}, {BK_PLUCK, 3, "1BIT BEEP"},
     {BK_PLUCK, 2, "CZ RESO"}, {BK_PLUCK, 1, "TUBE BELL"}, {BK_PLUCK, 1, "FM PLUCK"}, {BK_STAB, 6, "MIN STAB"},
     {BK_STAB, 6, "MIN7 STAB"}, {BK_STAB, 6, "RAVE STAB"}, {BK_STAB, 6, "DUB CHORD"}, {BK_STAB, 0, "SYN BRASS"},
-    {BK_STAB, 2, "CZ BRASS"}, {BK_STAB, 4, "HORN STAB"}, {BK_STAB, 4, "STRING STB"},
+    {BK_STAB, 2, "CZ BRASS"},
+#if !FELUCCA_TRAINER
+    {BK_STAB, 4, "HORN STAB"}, {BK_STAB, 4, "STRING STB"},
+#endif
     {BK_STAB, ENGI_FM6, "BRASS SECT"}, {BK_STAB, 6, "80S POLY"}, {BK_STAB, 3, "CHIP CHORD"},
-    {BK_STAB, 6, "POWER STAB"}, {BK_FX, 4, "SCRATCH"}, {BK_FX, 4, "GM KIT"}, {BK_FX, ENGI_PHYS, "HAND DRUM"},
+    {BK_STAB, 6, "POWER STAB"},
+#if !FELUCCA_TRAINER
+    {BK_FX, 4, "SCRATCH"},
+#endif
+    {BK_FX, 4, "GM KIT"}, {BK_FX, ENGI_PHYS, "HAND DRUM"},
     {BK_FX, ENGI_PHYS, "MEMB TOMS"}, {BK_FX, ENGI_NOISE, "RAIN"}, {BK_FX, ENGI_NOISE, "NZ METAL"},
     {BK_FX, ENGI_PHYS, "TABLA"}, {BK_FX, ENGI_PHYS, "CONGA"}, {BK_FX, ENGI_PHYS, "TIMPANI"},
     {BK_FX, ENGI_NOISE, "VINYL"}, {BK_FX, ENGI_NOISE, "HISS"}, {BK_FX, ENGI_NOISE, "RISER"},
