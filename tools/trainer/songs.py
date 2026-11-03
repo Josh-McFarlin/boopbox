@@ -404,14 +404,17 @@ PALETTES = {
 }
 
 
-def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0, mix=None):
+def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0, mix=None, hook=None, prog=None, chords=None,
+             drop_perc=None):
     """shift: semitones the whole song moves (key, chords and every note; the drums stay); mix: {track: LEVEL steps
-    up or down} (about half a dB a step on a synth track; a drum track's LVL is its own 0..127 scale)"""
+    up or down} (about half a dB a step on a synth track; a drum track's LVL is its own 0..127 scale). hook, chords: the
+    cello hook and the drop's track 1 in place of the song's (written in G minor; "" for none); prog: the progression;
+    drop_perc: more lanes for track 8 in the drop"""
     pal = PALETTES[palette]
     lant = Song("LANTERNS " + name, 3, "MELODIC DUBSTEP", bpm=150, key=key, scale="MIN", DTIME=6, DFDBK=50)
     lant.shift = shift
     lant.variant, lant.palette = growl, palette
-    lant.prog = [(6, 1), (7, 1), (1, 2)]
+    lant.prog = prog or [(6, 1), (7, 1), (1, 2)]
     lant.track(4, "DUBSTEP", 16, "1/16")
     lant.track(8, pal["roll"], 64, "1/16", level=100)
     if growl in GROWLS:
@@ -431,7 +434,11 @@ def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0, mix=None):
     lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50 if palette == "ORIGINAL" else 65)
     lant.track(7, "RISER", 64, "1/16", gate=127, REV=60)
     subl = Pattern(steps="G3 " + "- " * 15)
-    hook = Pattern(steps="G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -")
+    if hook is None:
+        hook = "G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -"
+    hook = Pattern(steps=hook) if hook else Pattern()
+    if chords:
+        bass = Pattern(steps=chords)
     piano = Pattern(steps="G3+Bb3+D4 - - . G3+Bb3+D4 - . .")
     pad = Pattern(steps="G3+Bb3+D4")
     drop = {"KICK": "x... .... ..x. ....", "SNARE": ".... .... X... ....", "CLAP": ".... .... x... ....",
@@ -441,7 +448,7 @@ def lanterns(name, growl, palette="ORIGINAL", key="G", shift=0, mix=None):
     lant.section("A", {4: Pattern(), 8: build, **common}, mute=(8, 1, 2, 3, 5, 7))      # intro: the piano alone
     lant.section("B", {4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: build, **common,
                        5: Pattern(steps="G3+Bb3+D4", locks=[(1, "TFLT", 30, 1)])}, mute=(1, 2))   # the build
-    lant.section("C", {4: Pattern(lanes=drop), 8: Pattern(lanes={"CRASH": "x" + "." * 63}), **common},
+    lant.section("C", {4: Pattern(lanes=drop), 8: Pattern(lanes={"CRASH": "x" + "." * 63, **(drop_perc or {})}), **common},
                  mute=(5, 6, 7))                                                                 # the drop
     lant.section("D", {4: Pattern(lanes={"HAT": drop["HAT"]}), 8: build, **common}, mute=(8, 1, 6, 7))  # the break
     lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
@@ -491,7 +498,20 @@ MIXES = {
     "DRUMS": {4: 27, 8: 27, 2: 2, 1: -16, 3: -12, 5: -10, 6: -8},   # (a drum LVL tops out at 127: the rest go down)
     "ATMOSPHERE": {5: 10, 6: 10, 7: 6, 4: -25, 1: -8, 2: -6},
 }
-LANTERNS = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5, mix) for m, mix in MIXES.items()]
+LANTERNS_MIXES = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5, mix) for m, mix in MIXES.items()]
+# the chosen one, CINEMATIC in D minor with the DROP mix, made less melodic (written in G minor, moved to D)
+LESS = {
+    "DROP": {},                                                  # as chosen
+    "NO HOOK": dict(hook=""),                                    # no cello: the chords and the beat carry it
+    "SPARSE": dict(hook="G5 - - - - - - - | . . . . . . . . | D5 - - - - - - - | . . . . . . . ."),   # two long notes
+    "RHYTHMIC": dict(hook="", chords="G3+Bb3+D4 . G3+Bb3+D4 . . G3+Bb3+D4 . . | G3+Bb3+D4 . . G3+Bb3+D4 . G3+Bb3+D4 . .",
+                     drop_perc={"LOTOM": "..x. .... .x.. x... | ..x. .... .x.. .x.x | ..x. .... .x.. x... | .... x.x. xxx. xxxx",
+                                "RIM": "...x ..x. .... ..x. | ...x ..x. .... ..x. | ...x ..x. .... ..x. | ...x ..x. .... ...."},
+                     mix={1: -6}),                               # (more stabs: track 1 down to match)
+    "ONE CHORD": dict(hook="", prog=[(1, 4)]),                   # Dm the whole song: no chord changes
+}
+LANTERNS = [lanterns(f"CINEMATIC DM {m}", "CHORDS", "CINEMATIC", "D", -5,
+                     {**MIXES["DROP"], **kw.pop("mix", {})}, **kw) for m, kw in LESS.items()]
 
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
