@@ -124,6 +124,17 @@ static void play(FILE *f, FILE *log, uint32_t bars)
         mix_block(out, CTL);
         b = voices_busy();
         nb++;
+        if (getenv("TRACE") && fr < (uint32_t)atoi(getenv("TRACE")) * FS) {
+            static uint8_t on[NTRK][NVOICE];
+            for (i = 0; i < NTRK; i++) {
+                uint32_t j;
+                for (j = 0; j < NVOICE; j++) {
+                    uint8_t a = trk[i].v[j].active && trk[i].v[j].stage == 1u;
+                    if (a && !on[i][j]) fprintf(log, "  %.2f T%u note %u\n", fr / (double)FS, i + 1, trk[i].v[j].note);
+                    on[i][j] = a;
+                }
+            }
+        }
         for (i = 0; i < NTRK; i++) {
             uint32_t j, n = 0;
             for (j = 0; j < NVOICE; j++) {

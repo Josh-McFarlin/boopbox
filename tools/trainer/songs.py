@@ -98,13 +98,13 @@ class Song:
 # ---------------------------------------------------------------------------------------------------------------
 # LEVEL 1  FIRST LIGHT  lo-fi hip-hop, 86 BPM, A minor
 #   The basics: pick a track, a kit and a sound; drum steps; notes on steps (SEQ layer); key and scale; chord mode;
-#   DIV / LEN / GATE; tempo and swing; mutes to perform it.
+#   DIV / LEN / GATE; tempo; a track's swing; mutes to perform it.
 # ---------------------------------------------------------------------------------------------------------------
-first = Song("FIRST LIGHT", 1, "LO-FI HIP-HOP", bpm=86, key="A", scale="MIN", swing=30)
-first.track(4, "LO-FI", 16, "1/16")
+first = Song("FIRST LIGHT", 1, "LO-FI HIP-HOP", bpm=86, key="A", scale="MIN")   # swing per track (SEQ + KNOB 3)
+first.track(4, "LO-FI", 16, "1/16", SSWING=30)
 first.track(1, "808 BOOM", 16, "1/4", gate=100)
 first.track(2, "RHODES", 4, "1BAR", gate=120, CHORD=2, REV=40)            # chord mode 7TH
-first.track(3, "KALIMBA", 16, "1/8", DLY=40, REV=30)
+first.track(3, "KALIMBA", 16, "1/8", DLY=40, REV=30, SSWING=30)
 first.section("LOOP", {
     4: Pattern(lanes={
         "KICK":  "x... ...x ..x. ....",
@@ -226,4 +226,83 @@ glow.section("D", {   # the break: pad, lead and arp, no beat; the arp back and 
 }, mute=(4, 1, 2, 7))
 glow.song = [("A", 4), ("B", 4), ("C", 8), ("D", 4), ("B", 4), ("C", 8), ("A", 2)]
 
-SONGS = [first, neon, glow]
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  FAULT LINE  dubstep, 140 BPM (half-time), F minor, progression Fm Db Ab Eb (i VI III VII, two
+#   bars each). Level 3's features on a dubstep track: the wobble is parameter locks on the LFO's RATE (on the TIE
+#   steps too, so the speed changes inside one long note); the build is a snare roll that speeds up (ratchets) and a
+#   high-pass lock that SLIDEs open; the sub and the wobble FOLLOW the progression (TRANS: the riff's shape kept).
+# ---------------------------------------------------------------------------------------------------------------
+fault = Song("FAULT LINE", 3, "DUBSTEP", bpm=140, key="F", scale="MIN")
+fault.prog = [(1, 2), (6, 2), (3, 2), (7, 2)]
+fault.track(4, "DUBSTEP", 16, "1/16")
+fault.track(8, "INDUSTR", 64, "1/16")
+fault.track(1, "WOBBLE", 32, "1/16", gate=110, follow="TRANS")       # plays two octaves under the keys
+fault.track(2, "SUB BASS", 32, "1/16", gate=127, follow="TRANS")     # (808 family: two octaves under the keys)
+fault.track(3, "HOOVER", 64, "1/8", gate=110, REV=45, DLY=30)
+fault.track(5, "DARK STR", 1, "1BAR", gate=110, follow="SCALE", REV=70, TFLT=-30, REL=60)
+fault.track(7, "RISER", 64, "1/16", gate=127, REV=60)
+# LRATE at 140 BPM: 73 a quarter, 86 an eighth, 94 an eighth triplet, 99 a sixteenth (the LFO restarts on each note)
+WOB = Pattern(steps="F3 - - - - - - - . . F3 - - - - - | F3 - - - - - F3 - Ab3 - - - F3 - - -",
+              locks=[(1, "LRATE", 73, 0), (5, "LRATE", 86, 0), (11, "LRATE", 94, 0), (17, "LRATE", 99, 0),
+                     (23, "LRATE", 86, 0), (25, "LRATE", 73, 0), (29, "LRATE", 99, 0)])
+SUB = Pattern(steps="F3 " + "- " * 31)
+DROP_DRUMS = {
+    "KICK":  "x... .... ..x. ....",
+    "SNARE": ".... .... X... ....",
+    "CLAP":  ".... .... x... ....",
+    "HAT":   "g.s. g.s. g.s. g.ss",
+}
+HOOK = Pattern(  # the HOOVER hook
+    steps="C5 - - Ab4 - - F4 - | G4 - Ab4 - C5 - - - | F5 - - Eb5 - - Db5 - | C5 - - - Ab4 - - - | "
+                     "Eb5 - - C5 - - Ab4 - | Bb4 - C5 - Eb5 - - - | G5 - - F5 - - Eb5 - | Bb4 - - - - - - -")
+PADF = Pattern(steps="F3+Ab3+C4", locks=[(1, "TFLT", 0, 1)])
+RISEF = Pattern(steps=". " * 32 + "C4 " + "- " * 31)
+# the build: quarters, eighths, sixteenths, then 32nds (x2 ratchets), louder each bar; a high-pass opens over it
+ROLL = Pattern(lanes={"SNARE": "s...s...s...s... | s.s.s.s.s.s.s.s. | xxxxxxxxxxxxxxxx | 2222222222222222"},
+               locks=[(1, "TFLT", 0, 0), (49, "TFLT", 40, 1)])
+CRASHF = Pattern(lanes={"CRASH": "x" + "." * 63}, comps=[(1, "COND", 1, 2)])   # a crash every other 4-bar loop
+COMMONF = {1: WOB, 2: SUB, 3: HOOK, 5: PADF, 7: RISEF}
+fault.section("A", {   # intro: the pad and the hoover hook, hats
+    4: Pattern(lanes={"HAT": DROP_DRUMS["HAT"]}), 8: CRASHF, **COMMONF,
+}, mute=(8, 1, 2, 7))
+fault.section("B", {   # build: the roll, the riser, the pad
+    4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: ROLL, **COMMONF,
+}, mute=(1, 2, 3))
+fault.section("C", {   # the drop: half-time drums, the wobble and the sub
+    4: Pattern(lanes=DROP_DRUMS, comps=[(16, "TRIG", 50, 0)]), 8: CRASHF, **COMMONF,
+}, mute=(3, 5, 7))
+fault.section("D", {   # the break: the hook over the sub, the pad, a kick on the one
+    4: Pattern(lanes={"KICK": "x... .... .... ....", "HAT": DROP_DRUMS["HAT"]}), 8: CRASHF, **COMMONF,
+}, mute=(8, 1, 7))
+fault.song = [("A", 8), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 2)]
+
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  BLUE HOUR  medium-swing jazz, 132 BPM, Bb major (a friendly key for tenor and alto sax).
+#   An eight-bar form, ii V I vi | ii V I I (Cm7 F7 Bbmaj7 Gm7 | Cm7 F7 Bbmaj7 Bbmaj7), on the CHORDS screen. The
+#   Rhodes comps rootless voicings written once on I that FOLLOW SCALE into each chord; the walking bass is written out;
+#   the vibes play the head (a melody to harmonize a third or sixth under); the SOLO section is the form without the
+#   head, for the sax. Components make the drums and the comping breathe (TRIG, with a SEED).
+# ---------------------------------------------------------------------------------------------------------------
+blue = Song("BLUE HOUR", 3, "JAZZ", bpm=132, key="Bb", scale="MAJ")   # swing per track: not the bass
+blue.prog = [(2, 1), (5, 1), (1, 1), (6, 1), (2, 1), (5, 1), (1, 2)]
+blue.track(4, "JAZZ", 8, "1/8", level=127, SSWING=64)
+blue.track(8, "JAZZ", 16, "1/8", level=118, SSWING=64)
+blue.track(1, "UP BASS", 32, "1/4", gate=110, level=94)
+blue.track(2, "RHODES", 8, "1/8", gate=70, level=94, follow="SCALE", REV=30, SSWING=64)
+blue.track(3, "VIBES", 64, "1/8", gate=110, REV=40, SSWING=64)
+WALK = ("C2 D2 Eb2 E2 | F2 A2 C3 B2 | Bb2 F2 D2 F#2 | G2 F2 D2 Db2 | "
+        "C2 Eb2 G2 Gb2 | F2 Eb2 C2 A1 | Bb1 D2 F2 A2 | Bb2 A2 G2 Db2")
+SWING_DRUMS = Pattern(lanes={"RIDE": "x.xxx.xx", "PEDAL": "..x...x.", "KICK": "g...g..."})
+COMPING = Pattern(lanes={"SNARE": ".....g.. ..g...s.", "RIM": "...g.... ......g."},
+                  comps=[(6, "TRIG", 50, 0), (11, "TRIG", 40, 0), (15, "TRIG", 35, 0), (4, "TRIG", 30, 0)], seed=7)
+# rootless voicing on I (D F A C: Bbmaj9); FOLLOW SCALE makes Cm9, F13-ish (A C Eb F), Gm7 (Bb D F G)
+COMP = Pattern(steps="D3+F3+A3+C4 . . D3+F3+A3+C4 . . . .", comps=[(4, "TRIG", 75, 0)], seed=3)
+HEAD = Pattern(steps="Eb5 - - D5 C5 - Bb4 - | A4 - - - C5 - Eb5 - | D5 - - - - - . . | . D5 F5 - D5 - Bb4 - | "
+                     "C5 - - Eb5 G5 - F5 Eb5 | D5 - C5 - A4 - Eb5 - | D5 - - - - - - - | . . . . . . C5 D5",
+               locks=[(49, "REV", 100, 1)])
+COMMONB = {1: Pattern(steps=WALK), 2: COMP, 4: SWING_DRUMS, 8: COMPING}
+blue.section("A", {**COMMONB, 3: HEAD}, mute=(3,))            # intro / solo: the band, no head
+blue.section("B", {**COMMONB, 3: HEAD})                       # the head
+blue.song = [("A", 8), ("B", 8), ("A", 16), ("B", 8)]
+
+SONGS = [first, neon, glow, fault, blue]
