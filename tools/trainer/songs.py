@@ -305,4 +305,142 @@ blue.section("A", {**COMMONB, 3: HEAD}, mute=(3,))            # intro / solo: th
 blue.section("B", {**COMMONB, 3: HEAD})                       # the head
 blue.song = [("A", 8), ("B", 8), ("A", 16), ("B", 8)]
 
-SONGS = [first, neon, glow, fault, blue]
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  UNDERPASS  deep dubstep, 140 BPM (half-time), E minor, Em for four bars, C for four (i VI).
+#   Sparse and sub-heavy: a shuffled beat (the drums' own swing), a REESE whose filter moves with SLIDE locks across
+#   each long note, a sub under it, a dark FM bell over an atmos pad and wind. Components drop hats at random (TRIG)
+#   and bring a rim in every other bar (COND).
+# ---------------------------------------------------------------------------------------------------------------
+under = Song("UNDERPASS", 3, "DEEP DUBSTEP", bpm=140, key="E", scale="MIN", DTIME=6, DFDBK=65)
+under.prog = [(1, 4), (6, 4)]
+under.track(4, "DUBSTEP", 32, "1/16", SSWING=55)
+under.track(8, "TRIBAL", 32, "1/16", level=116, SSWING=55)
+under.track(1, "REESE", 32, "1/16", gate=120, follow="TRANS")         # plays two octaves under the keys
+under.track(2, "SUB BASS", 32, "1/16", gate=127, follow="TRANS")
+under.track(3, "GLASS BELL", 64, "1/8", gate=80, level=112, DLY=70, REV=60, VOICE=1)
+under.track(5, "ATMOS PAD", 1, "1BAR", gate=110, follow="SCALE", REV=80, TFLT=-20, REL=70)
+under.track(7, "WIND", 64, "1/16", gate=127, level=104, REV=60)
+DEEP_HAT = "..s. ..s. ..s. ..s. | ..s. ..s. ..s. ..ss"
+DEEP_DRUMS = Pattern(lanes={
+    "KICK":  "x... .... .... .... | ..x. .... ..x. ....",
+    "SNARE": ".... .... X... .... | .... .... X... ....",
+    "HAT":   "..s. ..s. ..s. ..s. | ..s. ..s. ..s. ..ss",
+}, comps=[(7, "TRIG", 60, 0), (15, "TRIG", 60, 0), (23, "TRIG", 50, 0)])
+PERCU = Pattern(lanes={"RIM": ".... ..g. .... ...g | .... .... .... .g..", "LOTOM": ".... .... .... .... | .... .... .... ..s."},
+                comps=[(7, "COND", 2, 2), (16, "COND", 2, 2)])
+# the REESE: long notes; its CUT (EDIT 2, KNOB 1) opens and closes over them with SLIDE locks
+REESE = Pattern(steps="E3 - - - - - - - - - - - . . G3 - | - - - - . . E3 - - - - - D3 - - -",
+                locks=[(1, "E4", 30, 0), (9, "E4", 80, 1), (17, "E4", 40, 1), (25, "E4", 90, 1)])
+BELL = Pattern(steps="B4 - - - . . G4 - | A4 - - - - - . . | B4 - - - . . E5 - | D5 - - - B4 - - - | "
+                     "C5 - - - . . G4 - | B4 - - - - - . . | C5 - - - . . E5 - | D5 - - - - - - -")
+COMMONU = {1: REESE, 2: SUB, 3: BELL, 5: Pattern(steps="E3+G3+B3", locks=[(1, "TFLT", 10, 1)]),
+           7: Pattern(steps="E4 " + "- " * 63), 8: PERCU}
+under.section("A", {4: Pattern(lanes={"HAT": DEEP_HAT}), **COMMONU}, mute=(1, 2, 8))  # intro
+under.section("B", {4: DEEP_DRUMS, **COMMONU}, mute=(3, 5, 7))                                      # the drop
+under.section("C", {4: Pattern(lanes={"KICK": "x" + "." * 31}), **COMMONU}, mute=(1, 7))           # the break
+under.section("D", {4: DEEP_DRUMS, **COMMONU}, mute=(5, 7))                                         # drop 2: the bell
+under.song = [("A", 8), ("B", 8), ("C", 8), ("D", 8), ("A", 4)]
+
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  LANTERNS  melodic dubstep, 150 BPM (half-time), G minor, Eb F Gm Gm (VI VII i i, a bar each).
+#   Piano chords in the intro, a saw pad that a SLIDE lock opens through the build, a sync-lead hook, and a talking
+#   growl in the drop: WOW BASS with a lock on its VOWEL on every hit, so it says something different each time.
+# ---------------------------------------------------------------------------------------------------------------
+lant = Song("LANTERNS", 3, "MELODIC DUBSTEP", bpm=150, key="G", scale="MIN", DTIME=6, DFDBK=50)
+lant.prog = [(6, 1), (7, 1), (1, 2)]
+lant.track(4, "DUBSTEP", 16, "1/16")
+lant.track(8, "HYPER", 64, "1/16", level=100)
+lant.track(1, "WOW BASS", 16, "1/16", gate=90, level=96, follow="TRANS")      # (an octave under the keys)
+lant.track(2, "SUB BASS", 16, "1/16", gate=127, follow="TRANS")
+lant.track(3, "SYNC LEAD", 32, "1/8", gate=110, DLY=40, REV=40)
+lant.track(5, "SAW PAD", 1, "1BAR", gate=110, follow="SCALE", REV=60, REL=60)
+lant.track(6, "GRAND PNO", 8, "1/8", gate=120, follow="SCALE", REV=50)
+lant.track(7, "RISER", 64, "1/16", gate=127, REV=60)
+# the growl: a vowel lock on each hit (VOWL, EDIT 1 KNOB 1)
+GROWL = Pattern(steps="G3 - . G3 . . G3 - | Bb3 - . . G3 . F3 -",
+                locks=[(1, "E0", 20, 0), (4, "E0", 100, 0), (7, "E0", 60, 0), (9, "E0", 120, 0), (13, "E0", 10, 0),
+                       (15, "E0", 80, 0)])
+SUBL = Pattern(steps="G3 " + "- " * 15)
+HOOKL = Pattern(steps="G5 - - F5 - - Eb5 - | F5 - - - C5 - D5 - | D5 - - - - - Bb4 - | C5 - Bb4 - A4 - G4 -")
+PIANOL = Pattern(steps="G3+Bb3+D4 - - . G3+Bb3+D4 - . .")
+PADL = Pattern(steps="G3+Bb3+D4")
+DROPL = {"KICK": "x... .... ..x. ....", "SNARE": ".... .... X... ....", "CLAP": ".... .... x... ....",
+         "HAT": "..x. ..x. ..x. ..x."}
+BUILDL = Pattern(lanes={"SNARE": "x...x...x...x... | x.x.x.x.x.x.x.x. | xxxxxxxxxxxxxxxx | 2222333344444444"})
+COMMONL = {1: GROWL, 2: SUBL, 3: HOOKL, 5: PADL, 6: PIANOL, 7: Pattern(steps=". " * 32 + "C4 " + "- " * 31)}
+lant.section("A", {4: Pattern(), 8: BUILDL, **COMMONL}, mute=(8, 1, 2, 3, 5, 7))      # intro: the piano alone
+lant.section("B", {4: Pattern(lanes={"KICK": "x... x... x... x..."}), 8: BUILDL, **COMMONL,
+                   5: Pattern(steps="G3+Bb3+D4", locks=[(1, "TFLT", 30, 1)])}, mute=(1, 2))       # the build
+lant.section("C", {4: Pattern(lanes=DROPL), 8: Pattern(lanes={"CRASH": "x" + "." * 63}), **COMMONL},
+             mute=(5, 6, 7))                                                                     # the drop
+lant.section("D", {4: Pattern(lanes={"HAT": DROPL["HAT"]}), 8: BUILDL, **COMMONL}, mute=(8, 1, 6, 7))  # the break
+lant.song = [("A", 4), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8), ("A", 4)]
+
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  VELVET ROOM  deep house, 120 BPM, D minor, Dm9 for two bars, Gm9 for two (i iv).
+#   Rootless ninth chords on the DX RHODES written once on I that FOLLOW SCALE, a choir pad, an FM bass that follows
+#   (TRANS), a "soul ooh" vocal chop with a SLIDE lock on its vowel, and latin percussion that never plays the same
+#   bar twice (TRIG, COND).
+# ---------------------------------------------------------------------------------------------------------------
+velv = Song("VELVET ROOM", 3, "DEEP HOUSE", bpm=120, key="D", scale="MIN", swing=20, DTIME=6, DFDBK=45)
+velv.prog = [(1, 2), (4, 2)]
+velv.track(4, "D.HOUSE", 16, "1/16")
+velv.track(8, "LATIN", 32, "1/16", level=112)
+velv.track(1, "FM BASS", 32, "1/16", gate=80, follow="TRANS")        # (two octaves under the keys)
+velv.track(2, "DX RHODES", 32, "1/16", gate=100, follow="SCALE", REV=40)
+velv.track(3, "SOUL OOH", 32, "1/16", gate=90, level=116, DLY=50, REV=50)
+velv.track(5, "CHOIR AAH", 1, "2BAR", gate=110, follow="SCALE", level=106, REV=70, REL=70)
+velv.track(6, "KALIMBA", 16, "1/16", gate=60, level=88, follow="SCALE", DLY=60, PAN=-30)
+DEEPH = {"KICK": "x... x... x... x...", "CLAP": ".... x... .... x...", "OHAT": "..x. ..x. ..x. ..x.",
+         "HAT": ".x.x .x.x .x.x .xx."}
+LATIN = Pattern(lanes={"CONGA":   "..x. .x.. x... ..x. | ..x. .x.. x.x. ...x",
+                       "SHAKER":  "xsxs xsxs xsxs xsxs | xsxs xsxs xsxs xsxs",
+                       "COWBELL": ".... .... .... ..g. | .... .... .... ...."},
+                comps=[(3, "TRIG", 70, 0), (19, "TRIG", 70, 0), (27, "COND", 2, 2), (15, "COND", 1, 2)])
+BASSV = Pattern(steps="D3 - . . . . . D3 . . D3 - . . F3 . | . . . . . . . D3 . . D3 - . . C3 .")
+CHORDV = Pattern(steps="F3+A3+C4+E4 - - . . . F3+A3+C4+E4 . . . . . . . . . | "
+                       ". . . F3+A3+C4+E4 - - . . . . F3+A3+C4+E4 - - . . .")
+OOH = Pattern(steps=". . . . . . A4 - . . C5 - . . . . | . . . . . . D5 - - - C5 - A4 - - -",
+              locks=[(23, "E0", 40, 1), (27, "E0", 110, 1)])
+COMMONV = {1: BASSV, 2: CHORDV, 3: OOH, 5: Pattern(steps="D3+F3+A3"), 6: Pattern(steps="A5 . E5 . D5 . . . A5 . . . E5 . . .",
+           comps=[(9, "RUP", 3, 2)]), 8: LATIN}
+velv.section("A", {4: Pattern(lanes={"KICK": DEEPH["KICK"], "HAT": DEEPH["HAT"]}), **COMMONV}, mute=(1, 3, 6))
+velv.section("B", {4: Pattern(lanes=DEEPH), **COMMONV}, mute=(3, 5))
+velv.section("C", {4: Pattern(lanes=DEEPH), **COMMONV}, mute=(5, 6))
+velv.section("D", {4: Pattern(lanes={"HAT": DEEPH["HAT"]}), **COMMONV}, mute=(1, 8))
+velv.song = [("A", 8), ("B", 8), ("C", 8), ("D", 4), ("C", 8), ("A", 4)]
+
+# ---------------------------------------------------------------------------------------------------------------
+# LEVEL 3 (variant)  ACID RAIN  acid house, 124 BPM, A minor, Am for two bars, Dm for two (i iv: FOLLOW moves the 303 up a fourth).
+#   The ACID 303 is the song: slides, accents and CUT locks with SLIDE that sweep the filter, a RAMP that walks a note
+#   up the scale each pass, and a pattern that runs backwards in the break (DIR REV). 909 drums, a second kit for the
+#   ride and claps, Rhodes chords and a rave stab.
+# ---------------------------------------------------------------------------------------------------------------
+acid = Song("ACID RAIN", 3, "ACID HOUSE", bpm=124, key="A", scale="MIN", DTIME=6, DFDBK=55)
+acid.prog = [(1, 2), (4, 2)]
+acid.track(4, "909", 16, "1/16")
+acid.track(8, "HOUSE", 16, "1/16", level=112)
+acid.track(1, "ACID 303", 16, "1/16", gate=70, follow="TRANS", DLY=20)   # (an octave under the keys)
+acid.track(2, "DX RHODES", 32, "1/16", gate=90, follow="SCALE", level=94, REV=40)
+acid.track(3, "RAVE STAB", 32, "1/16", gate=40, level=92, DLY=50, REV=40)
+acid.track(5, "ATMOS PAD", 1, "2BAR", gate=110, follow="SCALE", level=104, REV=70, REL=70)
+acid.track(7, "RISER", 64, "1/16", gate=127, REV=60)
+D909 = {"KICK": "x... x... x... x...", "OHAT": "..x. ..x. ..x. ..x.", "HAT": "xx.x xx.x xx.x xx.x"}
+PERC9 = Pattern(lanes={"CLAP": ".... x... .... x...", "RIDE": "..x. ..x. ..x. ..x."}, comps=[(15, "TRIG", 50, 0)])
+# the 303: slides (~), accents (!), the CUT swept by SLIDE locks; RAMP+ walks the last note up the scale
+ACID = Pattern(steps="A3! A3 A4~ A3 . A3 C4! A3~ | A3 E4! A3 G3~ A3 . A4! C4",
+               locks=[(1, "E4", 20, 0), (5, "E4", 70, 1), (9, "E4", 30, 0), (13, "E4", 95, 1)],
+               comps=[(16, "RUP", 4, 1)])
+COMMONA = {1: ACID, 2: Pattern(steps="A3+C4+E4+G4 - . . . . . . . . . . . . . . | . . . . . . . . A3+C4+E4+G4 - . . . . . ."),
+           3: Pattern(steps=". . . . . . . . . . A4 . . . . . | . . . . . . A4 . . . A4 . . . . ."),
+           5: Pattern(steps="A3+C4+E4"), 7: Pattern(steps=". " * 48 + "C4 " + "- " * 15), 8: PERC9}
+acid.section("A", {4: Pattern(lanes={"KICK": D909["KICK"], "HAT": D909["HAT"]}), **COMMONA}, mute=(2, 3, 7))
+acid.section("B", {4: Pattern(lanes=D909), **COMMONA}, mute=(3, 5))
+acid.section("C", {4: Pattern(lanes=D909), **COMMONA}, mute=(5, 7))
+acid.section("D", {4: Pattern(lanes={"HAT": D909["HAT"]}), **COMMONA,
+                   1: Pattern(steps="A3! A3 A4~ A3 . A3 C4! A3~ | A3 E4! A3 G3~ A3 . A4! C4",
+                              direction="REV", locks=ACID.locks)}, mute=(8, 7))
+acid.song = [("A", 8), ("B", 4), ("C", 8), ("D", 8), ("B", 4), ("C", 8)]
+
+# BLUE HOUR stays in the score, but is not a choice (the trainer's Level 3 is dubstep or house)
+SONGS = [first, neon, fault, under, lant, glow, velv, acid]   # Level 3: three dubstep options, then three house
