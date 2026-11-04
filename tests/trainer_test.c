@@ -255,11 +255,34 @@ static void do_notes(const tr_card_t *c)
 }
 /* drum lanes on the DRUMS grid: KNOB 1 the sound, the keys the steps, KNOB 2 the step, KNOB 4 its level, OCT+ held:
  * the sheet (RATCHET) */
+static uint32_t grid_hints, grid_lost;
+static int hint_num(const char *h, const char *after);
 static void do_lanes(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
     const uint8_t *d = &TR_DATA[c->data];
-    uint32_t len = d[0], nl = d[1], l, i;
+    uint32_t len = d[0], nl = d[1], l, i, g;
+    for (g = 0; g < 12u && !(on_drum_page() && !drum_page) && t->p[P_SLEN] == (int16_t)len; g++) {
+        int n;                                           /* to the grid as the hints say, from where the step before left */
+        frames(2);
+        if (tr_goal(c))
+            return;
+        grid_hints++;
+        if ((n = hint_num(tr.hint, "ALGORITHM TO TRACK ")) > 0 || (n = hint_num(tr.hint, "ALGORITHM TO ")) > 0) {
+            if (tr_prefix(tr.hint, "TAP HOME"))
+                tap(B_HOME);
+            else
+                slow(EN_ALGO, song.sel < (uint32_t)n - 1u ? 1 : -1);
+        } else if (tr_prefix(tr.hint, "TAP HOME"))
+            tap(B_HOME);
+        else if (tr_prefix(tr.hint, "TAP SEQ"))
+            tap(B_SEQ);
+        else {
+            printf("trainer: %s: off the grid, the hint says: \"%s\"\n", c->head, tr.hint);
+            grid_lost++;
+            break;
+        }
+    }
     home();
     algo_to(c->trk);
     if (t->p[P_SLEN] != (int16_t)len) {
@@ -693,6 +716,22 @@ int main(int argc, char **argv)
     ui.force = 1; frame(); ppm(outdir, "trainer-picker");
     tap(B_OCTDN);
     check(!ui.menu, "OCT- closes the picker");
+    {   /* the studio screens' head covers the two rows over their list: nothing left there from HOME (its labels) */
+        uint32_t x, y, bad = 0, w;
+        for (w = 0; w < 3u; w++) {
+            home();
+            frames(5);
+            if (w == 0u) pats_screen();
+            else if (w == 1u) tap(B_SAVE);
+            else open_page(B_SCL, "CHORDS");
+            frames(10);
+            for (y = 40; y < 42u; y++)
+                for (x = 0; x < 240u; x++)
+                    bad += screen[y * 240 + x] != screen[y * 240];   /* (each row one colour: no text) */
+        }
+        check(!bad, "PATTERNS, SONG, CHORDS: nothing left over the list from the screen before (rows 40-41)");
+        home();
+    }
     {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */
         static const struct { uint32_t lvl; const char *head, *act; } V[] = {
             {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO 77"}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO -20"},
@@ -750,6 +789,8 @@ int main(int argc, char **argv)
         snprintf(what, sizeof what, "PATTERNS steps done by their hints alone (%u presses), from the track left on",
                  hint_steps);
         check(!hint_lost && hint_steps > 20u, what);
+        snprintf(what, sizeof what, "drum steps: to the grid by their hints (%u presses)", grid_hints);
+        check(!grid_lost && grid_hints > 3u, what);
         snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
                  algo_said, algo_home);
         check(algo_said > 5u && algo_home > 0u, what);

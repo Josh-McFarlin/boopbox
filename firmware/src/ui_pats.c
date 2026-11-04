@@ -54,7 +54,7 @@ UI_SMALL static void pats_screen_draw(void)
     if (!ui.force && !ui.msg_t && sig == previous)
         return;
     previous = ui.msg_t ? ~sig : sig;
-    cv_begin(240, 40, C_BLACK);                  /* the head */
+    cv_begin(240, 42, C_BLACK);                  /* the head (and the two rows over the grid: never left from another screen) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "PATTERNS", C_WHITE);
     str_cpy(b, "q ", 3);
@@ -246,7 +246,7 @@ UI_SMALL static void chords_screen_draw(void)
     if (!ui.force && !ui.msg_t && sig == previous)
         return;
     previous = ui.msg_t ? ~sig : sig;
-    cv_begin(240, 40, C_BLACK);                  /* the head: the key and scale asked for, when */
+    cv_begin(240, 42, C_BLACK);                  /* the head: the key and scale asked for, when (42 rows: the two over the list too) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "CHORDS", C_WHITE);
     str_cpy(b, N_HKEY[(uint32_t)clamp(song.g[G_HKEY], 0, 11)], 4);

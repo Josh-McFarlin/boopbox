@@ -439,6 +439,15 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
     }
     if (bad == NSTEP)
         return 1;
+    if (!layer && !(on_drum_page() && !drum_page)) {   /* the DRUMS grid first (SEQ held: its keys are the steps anywhere) */
+        if (on_drum_page())
+            tr_say("TAP SEQ: BACK TO THE GRID", ""), tr.btn = B_SEQ;
+        else if (ui.home && !ui.menu)
+            tr_say("TAP SEQ: THE DRUM GRID", ""), tr.btn = B_SEQ;
+        else
+            tr_say("TAP HOME, THEN SEQ: THE GRID", ""), tr.btn = B_HOME;
+        return 0;
+    }
     if (pen_lane != lane) {                         /* the sound to work on: KNOB 1 (or its black key) */
         tr_say("KNOB 1 TO ", LANE_NAME[lane]);
         tr.keys = 1u << drum_black_key(lane);
