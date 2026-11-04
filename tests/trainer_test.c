@@ -134,7 +134,7 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
-static uint32_t browse_seen, keyed_cards;
+static uint32_t browse_seen, keyed_cards, seq_unlit, seq_taps;
 static int on_target(const tr_card_t *c)
 {
     const track_t *t = &trk[c->trk];
@@ -198,7 +198,27 @@ static void do_notes(const tr_card_t *c)
             hold_layer(B_SEQ);
             while (ui.step_page != i / 16u)
                 tap(B_OCTUP);
-            key(key_of_white(i % 16u));
+            {   /* as a person does: every step of the page wanting this note, one tap at a time; the ones left stay lit */
+                uint32_t j, m, left = 0;
+                for (j = i; j < len && j / 16u == i / 16u; j++)
+                    if (kind[j] == 1u && want[j][4] == want[i][4] && !memcmp(want[j], want[i], want[i][4]) &&
+                        !(t->step[j].time == ST_NOTE && t->step[j].n))
+                        left |= 1u << (j % 16u);
+                for (j = 0; j < 16u; j++) {
+                    if (!((left >> j) & 1u))
+                        continue;
+                    key(key_of_white(j));
+                    frames(2);
+                    left &= ~(1u << j);
+                    for (m = 0; m < 16u; m++)
+                        if (((left >> m) & 1u) && !((tr.keys >> key_of_white(m)) & 1u)) {
+                            printf("trainer: card %s: step %u wants the same note, no longer lit\n", c->head,
+                                   (i / 16u) * 16u + m + 1u);
+                            seq_unlit++;
+                        }
+                    seq_taps++;
+                }
+            }
             let_go(B_SEQ);
         }
         return;
@@ -600,6 +620,8 @@ int main(int argc, char **argv)
         char what[96];
         snprintf(what, sizeof what, "the cards about keys (%u): only their keys lit, no landmarks, no old steps", keyed_cards);
         check(keyed_cards > 20u, what);
+        snprintf(what, sizeof what, "SEQ held, a note in hand: its steps stay lit until all are in (%u taps)", seq_taps);
+        check(!seq_unlit && seq_taps > 10u, what);
     }
     {   /* level 3's song as the lessons built it, from its start in song mode, to DIR/trainer-l3-song.wav (to compare with
          * the approved render, build/trainer/3-*.wav: tests/trainer_song_compare.py) */

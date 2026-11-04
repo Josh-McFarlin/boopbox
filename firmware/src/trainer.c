@@ -261,7 +261,32 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     }
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
+        uint32_t pen = 0, first = NSTEP;
         page = ui.step_page;
+        /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
+         * first step wrong may want another note: going there would put out the keys of this one) */
+        for (i = page * 16u; i < page * 16u + 16u && i < len; i++) {
+            tr_st(c, i, &x);
+            if (x.kind == 1u && tr_st_off(t, i, &x) == 1u && !(t->step[i].time == ST_NOTE && t->step[i].n) &&
+                tr_pen_is(&x)) {
+                pen |= 1u << key_of_white(i % 16u);
+                if (first == NSTEP)
+                    first = i;
+            }
+        }
+        if (pen) {
+            tr_st(c, first, &x);
+            note_name(nb, x.note[0]);
+            if (!held) {
+                tr_step(first, "HOLD SEQ, TAP KEY ", "");
+                tr_num((int32_t)(first % 16u) + 1);
+                tr.btn = B_SEQ;
+            } else {
+                tr_say(x.n > 1u ? "THE CHORD" : nb, ": TAP THE LIT KEYS");
+                tr.keys = pen;
+            }
+            return 0;
+        }
         if (w.kind != 1u || (t->step[bad].time == ST_NOTE && t->step[bad].n)) {   /* a note to take out first */
             if (!held) {
                 tr_step(bad, "HOLD SEQ, TAP KEY ", "");
