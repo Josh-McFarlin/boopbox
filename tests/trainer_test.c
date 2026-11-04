@@ -618,6 +618,29 @@ int main(int argc, char **argv)
     ui.force = 1; frame(); ppm(outdir, "trainer-picker");
     tap(B_OCTDN);
     check(!ui.menu, "OCT- closes the picker");
+    {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */
+        static const struct { uint32_t lvl; const char *head, *act; } V[] = {
+            {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO 77"}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO -20"},
+            {2, "A BIT QUIETER", "ON HOME: KNOB 2 TO 75"}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
+            {1, "LONGER NOTES", "TURN KNOB 4 (GATE) TO 79%"}, {1, "LAID BACK: 86 BPM", "TAP HOME, SELECT TO 86 BPM"},
+        };
+        uint32_t i, j, bad = 0;
+        char act[40];
+        for (i = 0; i < NELEM(V); i++) {
+            const tr_level_t *L = &TR_LEVELS[V[i].lvl - 1u];
+            for (j = 0; j < L->n && !(!strcmp(L->cards[j].head, V[i].head) &&
+                                      (L->cards[j].goal == TG_PARAM || L->cards[j].goal == TG_GLOBAL)); j++)
+                ;
+            act[0] = 0;
+            if (j < L->n)
+                tr_act(&L->cards[j], act, sizeof act);
+            if (strcmp(act, V[i].act)) {
+                printf("  level %u %s: \"%s\", the screen shows \"%s\"\n", V[i].lvl, V[i].head, act, V[i].act);
+                bad++;
+            }
+        }
+        check(!bad, "a value to turn to reads as its screen shows it (HOME's LEVEL 77, not -8 dB)");
+    }
     for (l = 0; l < TR_NLEVELS; l++) {
         char what[96];
         snprintf(what, sizeof what, "level %u (%s): every card reached with the panel, DONE", l + 1u, TR_LEVELS[l].name);

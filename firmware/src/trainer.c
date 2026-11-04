@@ -99,6 +99,27 @@ UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a 
         str_cpy(b + str_len(b), unit, 16 - str_len(b));
     }
 }
+/* a card's value as the screen the card is on shows it: HOME's knobs (ui_studio.c: LEVEL 0..100, PAN as it is) and SEQ
+ * held (LEN a number) are not the parameter's own format (LEVEL in dB, PAN in %, LEN in STEP) */
+UI_SMALL static void tr_card_value(char *b, const tr_card_t *c, int32_t v)
+{
+    if (c->goal == TG_PARAM && c->btn == B_HOME && (c->p == P_LEVEL || c->p == P_PAN))
+        fmt_int(b, c->p == P_LEVEL ? v * 100 / 127 : v);
+    else if (c->goal == TG_PARAM && c->btn == B_SEQ && !c->data && c->p == P_SLEN)
+        fmt_int(b, v);                                  /* (SEQ held: "steps 4", ui_layers.c) */
+    else
+        tr_value(b, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), v);
+}
+UI_SMALL static void tr_now_c(const tr_card_t *c, int32_t v)   /* "NOW 30% (WANT 24%)", as the card's screen shows them */
+{
+    char b[16];
+    tr_card_value(b, c, v);
+    tr_say("NOW ", b);
+    tr_card_value(b, c, c->v);
+    tr_cat(" (WANT ");
+    tr_cat(b);
+    tr_cat(")");
+}
 UI_SMALL static void tr_now(const param_desc_t *d, int32_t v, int32_t want)   /* "NOW 30% (WANT 24%)" */
 {
     char b[16];
@@ -547,14 +568,14 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             return 0;
         if (!tr_on_page(c))
             return 0;
-        tr_now(track_desc(t, c->p), t->p[c->p], c->v);
+        tr_now_c(c, t->p[c->p]);
         return 0;
     case TG_GLOBAL:
         if (tr_near(song.g[c->p], c->v, c->tol))
             return 1;
         if (!tr_on_page(c))
             return 0;
-        tr_now(&GP[c->p], song.g[c->p], c->v);
+        tr_now_c(c, song.g[c->p]);
         return 0;
     case TG_PLAY:
         return (song.playing != 0) == (c->v != 0);
@@ -904,7 +925,7 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
     for (; *a && o + 1u < n; a++) {
         if (*a == '@' && (c->goal == TG_PARAM || c->goal == TG_GLOBAL)) {
             char v[16];
-            tr_value(v, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), c->v);
+            tr_card_value(v, c, c->v);
             str_cpy(b + o, v, n - o);
             o = str_len(b);
         } else
