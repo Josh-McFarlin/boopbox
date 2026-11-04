@@ -7,7 +7,8 @@
  * about, what to do, and what is still wrong ("STEP 8: KICK MISSING"); it lights the button to press and the keys to play
  * or the step keys to press. When the goal holds, the card says NICE and the next one comes. HOME held: the menu's
  * TRAINER section (the levels; in a level: SKIP STEP, STEP BACK, RESTART, QUIT). Progress is kept with the settings (the
- * side record, ui.c): a level goes on where it was left, a finished one shows DONE and can be done again. */
+ * side record, ui.c): a level goes on where it was left, a finished one shows DONE and can be done again. A level
+ * starts from a new project: the loop there (and, by level 3, the sections) are replaced without asking. */
 enum {
     TG_TRACK, TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_PLAY, TG_PAGE, TG_OCT, TG_NOTES, TG_LANES, TG_MUTES,
     TG_LOCK, TG_PATSEL, TG_PATS, TG_PATHAS, TG_SAVED, TG_SONG, TG_SONGMODE, TG_DONE
@@ -39,10 +40,9 @@ static struct {
     uint8_t done;                                  /* the levels finished, a bit each (kept) */
     uint8_t seen;                                  /* the welcome was shown (kept) */
     uint8_t ok;                                    /* the goal held: NICE until ok_ms + TR_OK_MS */
-    uint8_t arm;                                   /* a level asked for over work: 1 + the level, confirm with OCT+ */
     uint8_t pend;                                  /* a level to begin once the transport has stopped: 1 + the level */
     uint8_t dirty;                                 /* to be saved with the settings */
-    uint32_t ok_ms, t0, arm_ms, saved_ms;
+    uint32_t ok_ms, t0, saved_ms;
     uint32_t base;                                 /* TG_SAVED: the section's sum when the card came */
     uint32_t sig;                                  /* the band as last drawn */
     uint32_t keys;                                 /* the keys lit (hint) */
@@ -500,14 +500,6 @@ UI_SMALL static void tr_go(int32_t d)                    /* the next / the card 
     tr.card = (uint8_t)clamp(n, 0, L->n - 1);
     tr_card_begin();
 }
-UI_SMALL static int tr_work(void)                        /* something would be lost: notes in the loop */
-{
-    uint32_t k;
-    for (k = 0; k < NTRK; k++)
-        if (!track_empty(&trk[k]))
-            return 1;
-    return 0;
-}
 /* level l from its first card: a new project, in loop mode (when stopped: stopping a song puts the loop it kept back) */
 UI_SMALL static void tr_begin(uint32_t l)
 {
@@ -523,13 +515,6 @@ UI_SMALL static void tr_begin(uint32_t l)
 UI_SMALL static void tr_start(uint32_t l, int again)
 {
     if (again || !tr.at[l] || tr.at[l] >= TR_LEVELS[l].n - 1u) {
-        if (tr_work() && tr.arm != l + 1u) {
-            tr.arm = (uint8_t)(l + 1u);
-            tr.arm_ms = fm1_ms;
-            ui_message(l == 2u ? "OCT+ AGAIN: LOOP + SECTIONS GO" : "OCT+ AGAIN: YOUR LOOP GOES");
-            return;
-        }
-        tr.arm = 0;
         menu_close();
         if (song.playing || transport_req) {           /* stopped first, then the new project (trainer_tick) */
             transport_req = 2;
@@ -539,7 +524,6 @@ UI_SMALL static void tr_start(uint32_t l, int again)
         tr_begin(l);
         return;
     }
-    tr.arm = 0;
     tr.lvl = (uint8_t)(l + 1u);
     tr.card = tr.at[l];
     tr_card_begin();
@@ -570,8 +554,6 @@ UI_SMALL static uint32_t tr_band_h(void)
 UI_SMALL static void trainer_tick(void)
 {
     const tr_card_t *c = tr_card();
-    if (tr.arm && fm1_ms - tr.arm_ms > 3000u)
-        tr.arm = 0;
     if (tr.pend && !song.playing && !transport_req) {
         tr_begin(tr.pend - 1u);
         tr.pend = 0;
@@ -729,8 +711,6 @@ UI_SMALL static const char *tr_row_value(uint32_t r, uint16_t *c)
         *c = C_DIM;
         return "FOLLOW THE TOP LINE";
     }
-    if (tr.arm == r + 1u)
-        return "OCT+ AGAIN";
     if ((tr.done >> r) & 1u)
         return "DONE: OCT+ AGAIN";
     if (!tr.at[r])

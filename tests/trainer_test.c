@@ -458,8 +458,6 @@ static int play_level(uint32_t l, const char *shots)
     uint32_t n = 0, tries;
     char name[64];
     menu_row(l);
-    if (ui.menu)
-        menu_row(l);                                     /* (OCT+ again: the loop there goes) */
     if (!tr_on() || tr.lvl != l + 1u) {
         check(0, "the level starts from the menu");
         return 0;
@@ -567,11 +565,8 @@ int main(int argc, char **argv)
               "the menu shows the levels done");
         tr_fill(&r);
         menu_row(0);
-        check(!tr_running() && tr.arm == 1u, "a finished level again: OCT+ asks once more (the loop would go)");
-        menu_row(0);
         frames(30);                                      /* (the song stops, then the new project) */
-        printf("  (lvl %u card %u menu %u empty %d arm %u)\n", tr.lvl, tr.card, ui.menu, track_empty(&trk[3]), tr.arm);
-        check(tr_on() && tr.lvl == 1u && tr.card == 0u && track_empty(&trk[3]), "OCT+ again: level 1 from its first card, a new project");
+        check(tr_on() && tr.lvl == 1u && tr.card == 0u && track_empty(&trk[3]), "a finished level, OCT+: from its first card, a new project (no question)");
         tr_go(1); tr_go(1);
         {
             tr_rec_t r2;

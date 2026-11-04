@@ -19,8 +19,8 @@ that song.
 
 - **The first start** opens the menu on **TRAIN**: the three levels. **PRESETS** moves the cursor, **OCT+** starts the
   level. Later: hold **HOME** for the menu; TRAIN is its first section.
-- **A level** starts from a new project. When the loop holds notes, OCT+ asks once more (*OCT+ AGAIN: YOUR LOOP GOES*;
-  level 3 also replaces the sections A–D). A level left half way goes on where it was left.
+- **A level** starts from a new project, replacing the loop there without asking (level 3 also replaces the sections
+  A–D when you save them). A level left half way goes on where it was left.
 - **The coach** takes the screen's title area. On the TRACKS, DRUMS, PATTERNS and SONG screens and while a layer is
   held it has two lines: the step's number and headline (or what is still wrong, in amber), then the action. On the
   pages it has one line, which shows them in turn. The coloured bar under it is the level's progress.
