@@ -1,0 +1,518 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BoopBox Trainer: your song</title>
+<link rel="icon" href="../icon-192.png">
+<style>
+  :root { --bg: #000; --fg: #f2f2f2; --dim: #8a8a92; --tile: #16161a; --line: #2a2a30;
+          --blue: #287cff; --green: #1ecc70; --yellow: #ffc618; --orange: #ff621a; --red: #ff2c34; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.6 "Helvetica Neue", -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  .strip { display: flex; height: 4px; margin: 14px 0 24px; }
+  .strip i { flex: 1; } .strip i:nth-child(1) { background: var(--blue); } .strip i:nth-child(2) { background: var(--green); }
+  .strip i:nth-child(3) { background: var(--yellow); } .strip i:nth-child(4) { background: var(--orange); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .top b { font-size: 18px; letter-spacing: .04em; } .top a { color: var(--dim); font-size: 13px; }
+  h1 { font-size: 13px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 8px; }
+  h2 { font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; margin: 32px 0 12px;
+       display: flex; gap: 10px; align-items: center; }
+  h2 span { display: inline-grid; place-items: center; width: 22px; height: 22px; background: var(--c, var(--orange));
+            color: #000; font-size: 12px; }
+  .lead { font-size: 20px; line-height: 1.35; margin: 0 0 18px; }
+  p { margin: 0 0 12px; } a { color: inherit; }
+  .small { color: var(--dim); font-size: 12.5px; }
+  [hidden] { display: none !important; }
+  button { font: inherit; color: var(--fg); background: var(--tile); border: 1px solid var(--line); padding: 8px 14px;
+           cursor: pointer; }
+  button:disabled { color: var(--dim); cursor: default; }
+  button.go { font-weight: 600; background: var(--orange); color: #000; border: 0; padding: 14px 0; width: 100%;
+              letter-spacing: .08em; text-transform: uppercase; }
+  button.go:disabled { background: var(--tile); color: var(--dim); }
+  button.on { border-color: var(--c, var(--orange)); color: var(--c, var(--orange)); }
+  select, input[type=text] { font: inherit; color: var(--fg); background: var(--tile); border: 1px solid var(--line);
+                              padding: 6px 8px; max-width: 100%; }
+  .drop { display: block; border: 2px dashed var(--line); padding: 28px 16px; text-align: center; cursor: pointer; }
+  .drop.over { border-color: var(--orange); }
+  .drop b { display: block; font-size: 17px; } .drop input { display: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 10px 0; }
+  .stages { list-style: none; padding: 0; margin: 12px 0; }
+  .stages li { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; color: var(--dim); }
+  .stages li.now, .stages li.done { color: var(--fg); }
+  progress { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border: 0; background: var(--tile); }
+  progress::-webkit-progress-bar { background: var(--tile); }
+  progress::-webkit-progress-value { background: var(--orange); }
+  progress::-moz-progress-bar { background: var(--orange); }
+  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .player { background: var(--tile); padding: 14px; border-top: 3px solid var(--c); }
+  .player h3 { margin: 0 0 2px; font-size: 15px; } .player .small { margin-bottom: 10px; }
+  .player .row { margin: 8px 0 0; }
+  .play { width: 100%; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; }
+  .fact { background: var(--tile); padding: 8px 10px; border-top: 3px solid var(--c); }
+  .fact b { display: block; font-size: 18px; color: var(--c); } .fact span { font-size: 12px; color: var(--dim); }
+  .part { background: var(--tile); padding: 10px 12px; margin: 6px 0; border-left: 3px solid var(--c); }
+  .part header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .part header b { min-width: 64px; }
+  .notes { font: 12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--dim); margin-top: 6px;
+           overflow-x: auto; white-space: nowrap; }
+  .grid { display: grid; grid-template-columns: 76px repeat(16, 1fr); gap: 2px; margin-top: 8px; font-size: 11px; }
+  .grid span { color: var(--dim); align-self: center; }
+  .grid button { padding: 0; height: 22px; border: 0; background: #2a2a30; }
+  .grid button:nth-of-type(4n+1) { background: #34343c; }
+  .grid button.hit { background: var(--c); }
+  .steps { margin: 10px 0 0; padding-left: 2.4em; max-height: 360px; overflow: auto; background: var(--tile);
+           padding-top: 8px; padding-bottom: 8px; font-size: 13.5px; }
+  .steps li { margin: 2px 0; } .steps li b { font-weight: 600; } .steps li span { color: var(--dim); }
+  .meter { height: 6px; background: var(--line); margin: 8px 0 2px; } .meter i { display: block; height: 100%; background: var(--green); }
+  pre { color: var(--dim); font-size: 11px; white-space: pre-wrap; margin-top: 12px; max-height: 160px; overflow: auto; }
+  .warn { color: var(--yellow); }
+  @media (max-width: 600px) { .players { grid-template-columns: 1fr; } .facts { grid-template-columns: repeat(2, 1fr); }
+                              .grid { grid-template-columns: 52px repeat(16, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><b>BOOPBOX TRAINER</b><a href="../installer/#trainer">The installer</a></div>
+  <div class="strip"><i></i><i></i><i></i><i></i></div>
+  <h1>Level 4: your song</h1>
+  <p class="lead">Drop in a song. The page listens to it, writes a version the FM-1 can play, and turns it into a level of
+    the trainer that teaches you to build it, step by step.</p>
+  <p class="small">Everything happens in this browser: the file is not uploaded anywhere. The result is an approximation
+    (four parts, a loop of a few bars), not a transcription: you can correct it before you install it.</p>
+
+  <h2 style="--c: var(--blue)"><span>1</span>Choose a song</h2>
+  <label class="drop" id="drop"><b>Drop an audio file here, or click to choose one</b>
+    <span class="small">MP3, WAV, OGG, M4A or FLAC</span><input type="file" id="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"></label>
+  <div class="row" id="where" hidden>
+    <span id="fname"></span>
+    <label>Listen from <input type="range" id="start" min="0" max="1" step="1" value="0"> <span id="startv"></span></label>
+    <button id="listen" class="go" style="width:auto;padding:10px 20px">Listen</button>
+  </div>
+  <p class="small warn" id="ferr"></p>
+
+  <section id="s2" hidden>
+    <h2 style="--c: var(--green)"><span>2</span>Listening</h2>
+    <ol class="stages" id="stages">
+      <li data-k="split"><span>Drums apart</span><progress max="1" value="0"></progress></li>
+      <li data-k="tempo"><span>Tempo and bars</span><progress max="1" value="0"></progress></li>
+      <li data-k="notes"><span>Notes (Basic Pitch)</span><progress max="1" value="0"></progress></li>
+      <li data-k="done"><span>Your FM-1 version</span><progress max="1" value="0"></progress></li>
+    </ol>
+  </section>
+
+  <section id="s3" hidden>
+    <h2 style="--c: var(--yellow)"><span>3</span>Compare</h2>
+    <div class="players">
+      <div class="player" style="--c: var(--blue)">
+        <h3>The original</h3><p class="small" id="origwhat">The bars the page listened to, on a loop.</p>
+        <button class="play" id="pOrig">Play</button>
+        <div class="row" id="stems"></div>
+      </div>
+      <div class="player" style="--c: var(--orange)">
+        <h3>Your FM-1 version</h3><p class="small">BoopBox's own sound engines: what the FM-1 will play.</p>
+        <button class="play" id="pFm1">Play</button>
+        <div class="row" id="mutes"></div>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact" style="--c: var(--blue)"><b id="fTempo"></b><span>tempo</span></div>
+      <div class="fact" style="--c: var(--green)"><b id="fKey"></b><span>key</span></div>
+      <div class="fact" style="--c: var(--yellow)"><b id="fSteps"></b><span>steps to learn</span></div>
+      <div class="fact" style="--c: var(--orange)"><b id="fSize"></b><span>of the FM-1's room</span></div>
+    </div>
+    <div class="row">
+      <label>Key <select id="root"></select> <select id="scale"><option value="MIN">minor</option><option value="MAJ">major</option></select></label>
+      <label>Style <select id="style"></select></label>
+      <label>Lead <select id="leaddiv"><option value="1/8">eighths</option><option value="1/16">sixteenths (closer)</option></select></label>
+    </div>
+    <div id="parts"></div>
+    <p class="small">Click the drum grid to fix a hit. A part's box takes it out of the song (and out of the lesson).</p>
+    <h3 style="margin:18px 0 0;font-size:15px">The steps the trainer will show</h3>
+    <ol class="steps" id="steps"></ol>
+  </section>
+
+  <section id="s4" hidden>
+    <h2 style="--c: var(--orange)"><span>4</span>Install</h2>
+    <div class="row"><label>Name on the FM-1 <input type="text" id="name" maxlength="16" size="18"></label></div>
+    <p>This installs BoopBox Trainer <span id="ver"></span> with your song as level 4 (projects, samples and settings stay;
+      levels 1 to 3 and their progress too). Connect the FM-1 with USB, switch it on, then press Install. Chrome or Edge on
+      a computer.</p>
+    <button class="go" id="go" disabled>Install on the FM-1</button>
+    <progress id="bar" max="100" value="0" style="margin-top:14px"></progress>
+    <p id="status"></p>
+    <pre id="log"></pre>
+  </section>
+  <hr style="border:0;border-top:1px solid var(--line);margin:32px 0 14px">
+  <p class="small">Notes are found by <a href="https://github.com/spotify/basic-pitch-ts" target="_blank" rel="noopener">Basic Pitch</a>
+    (Spotify, Apache-2.0) on <a href="https://github.com/tensorflow/tfjs" target="_blank" rel="noopener">TensorFlow.js</a>
+    (Apache-2.0), both served from this site. BoopBox is GPL-3.0:
+    <a href="https://github.com/josh-mcfarlin/boopbox" target="_blank" rel="noopener">github.com/josh-mcfarlin/boopbox</a></p>
+</main>
+<script type="application/json" id="consts">{"ACT_MAX":30,"B":{"B_ARP":8,"B_EDIT":4,"B_ENV":2,"B_FX":0,"B_GLO":5,"B_HOME":6,"B_LFO":3,"B_OCTDN":12,"B_OCTUP":13,"B_PLAY":10,"B_REC":11,"B_SAVE":7,"B_SCL":1,"B_SEQ":9,"NB":14},"DIVS":["1/4","1/8","1/16","1/32","8T","16T","1/2","1BAR","2BAR"],"ENGINES":["ANALOG","DIGITAL","PHASE","LOFI","SAMPLE","VOICE","TRIO","WHEEL","GRAIN","FM6","PHYS","NOISE"],"G":{"G_BEND":44,"G_BPM":0,"G_CDEPTH":11,"G_CH1":33,"G_CH2":34,"G_CH3":35,"G_CH5":50,"G_CH6":51,"G_CH7":52,"G_CH8":53,"G_CHOTH":36,"G_CLKOUT":48,"G_CLOCK":2,"G_CLRSEQ":22,"G_COUNT":63,"G_CRATE":10,"G_DCOLOR":6,"G_DFDBK":5,"G_DMIX":7,"G_DRCH":24,"G_DRDLY":32,"G_DRLVL":25,"G_DRMAP":46,"G_DRREV":26,"G_DTIME":4,"G_DUCK":28,"G_DUST":27,"G_ENGGO":21,"G_ENGSEL":20,"G_FILT":29,"G_FXCH":45,"G_FXFADE":49,"G_HKEY":55,"G_HPROG":58,"G_HQ":57,"G_HSCL":56,"G_INFO":15,"G_INITSND":23,"G_KIND":62,"G_LOAD":18,"G_MIDI":12,"G_NAME":17,"G_NEWPRJ":31,"G_PATQ":54,"G_PFXL":60,"G_PFXQ":61,"G_PFXT":59,"G_RDAMP":9,"G_RMCH":47,"G_ROLL":30,"G_ROUTE":14,"G_RSIZE":8,"G_SAVE":19,"G_SLOT":16,"G_SWING":1,"G_SYNC":13,"G_TUNE":3,"G_TXDUCK":43,"G_TXLVL":38,"G_TXMOVE":40,"G_TXRATE":41,"G_TXSRC":37,"G_TXTONE":39,"G_TXWHEN":42},"HEAD_MAX":23,"HOW":{"HOW_ANY":0,"HOW_NOTES":2,"HOW_SEQ":1},"KITS":["ACOUSTIC","DEEP","TIGHT","BRIGHT","DUST","808","909","606","80S","VINTAGE","TRAP","DRILL","BOOMBAP","LO-FI","PHONK","HOUSE","D.HOUSE","TECHNO","MINIMAL","ELECTRO","DISCO","GARAGE","JUNGLE","DUBSTEP","DEMBOW","AMAPIANO","AFRO","LATIN","TRIBAL","SYNTHWV","CHIP","ARCADE","GLITCH","INDUSTR","HYPER","AMBIENT","JAZZ"],"LANES":["KICK","KICK2","SNARE","CLAP","HAT","OHAT","PEDAL","RIM","SNARE2","LOTOM","HITOM","CRASH","RIDE","SHAKER","CONGA","COWBELL"],"NSTEP":64,"P":{"P_AGATE":20,"P_AHOLD":23,"P_ALLOC":43,"P_AMODE":17,"P_AOCT":19,"P_AORDER":24,"P_APROB":22,"P_ARATE":18,"P_ASWING":21,"P_ATK":1,"P_CHOR":34,"P_CHORD":49,"P_COUNT":71,"P_DEC":2,"P_DETUNE":44,"P_DIST":33,"P_DLY":35,"P_E0":63,"P_E1":64,"P_E2":65,"P_E3":66,"P_E4":67,"P_E5":68,"P_E6":69,"P_E7":70,"P_ED_FLT":5,"P_ED_FX":8,"P_ED_PIT":6,"P_ED_SHP":7,"P_ESYNC":59,"P_FTYPE":58,"P_GLIDE":38,"P_GLMODE":41,"P_IA":54,"P_IB":55,"P_IC":56,"P_IMIX":57,"P_ITYPE":53,"P_LD_AMP":16,"P_LD_FLT":14,"P_LD_PIT":13,"P_LD_SHP":15,"P_LEVEL":0,"P_LFADE":12,"P_LPHASE":11,"P_LPOL":62,"P_LRATE":9,"P_LSYNC":60,"P_LTRIG":61,"P_LWAVE":10,"P_MUTE":40,"P_PAN":39,"P_PRIO":42,"P_QUANT":27,"P_REL":4,"P_REV":36,"P_ROOT":25,"P_SCALE":26,"P_SDIV":30,"P_SGATE":32,"P_SLCR":45,"P_SLDEPTH":48,"P_SLEN":29,"P_SLPAT":46,"P_SLRATE":47,"P_SSWING":31,"P_STRUM":51,"P_SUS":3,"P_TFLT":50,"P_TRANS":28,"P_VLEAD":52,"P_VOICE":37},"PAGES":[{"fam":"ENV","title":"ENV"},{"fam":"ENV","title":"ENV DEST"},{"fam":"LFO","title":"LFO"},{"fam":"LFO","title":"LFO 2"},{"fam":"LFO","title":"LFO DEST"},{"fam":"FX","title":"FX"},{"fam":"FX","title":"FILTER"},{"fam":"FX","title":"SLICER"},{"fam":"FX","title":"INSERT"},{"fam":"FX","title":"DLY"},{"fam":"FX","title":"REV/CHO"},{"fam":"FX","title":"PERF"},{"fam":"SCL","title":"SEL"},{"fam":"SCL","title":"SEL 2"},{"fam":"SCL","title":"HARMONY"},{"fam":"SCL","title":"FOLLOW"},{"fam":"SCL","title":"CHORDS"},{"fam":"EDIT","title":"EDIT 1"},{"fam":"EDIT","title":"EDIT 2"},{"fam":"EDIT","title":"FILTER"},{"fam":"EDIT","title":"VOICE"},{"fam":"EDIT","title":"VOICE 2"},{"fam":"GLO","title":"GLOBAL"},{"fam":"GLO","title":"MASTER"},{"fam":"GLO","title":"DRUMS"},{"fam":"GLO","title":"TEXTURE"},{"fam":"GLO","title":"TEXTURE 2"},{"fam":"MIDI","title":"MIDI"},{"fam":"MIDI","title":"MIDI 2"},{"fam":"MIDI","title":"MIDI 3"},{"fam":"MIDI","title":"MIDI 4"},{"fam":"MIDI","title":"SYSTEM"},{"fam":"SAVE","title":"PRESETS"},{"fam":"SAVE","title":"USER"},{"fam":"SAVE","title":"SECTION"},{"fam":"SAVE","title":"TOOLS"},{"fam":"ARP","title":"ARP"},{"fam":"ARP","title":"ARP 2"},{"fam":"SEQ","title":"NOTES"},{"fam":"SEQ","title":"TIMING"},{"fam":"SEQ","title":"PLAY"},{"fam":"SEQ","title":"PATTERNS"},{"fam":"SEQ","title":"SONG"},{"fam":"TRK","title":"TRACKS"},{"fam":"TRK","title":"DRUMS"}],"SCALES":["CHR","MAJ","MIN","DOR","MIX","PEN","MPEN","HARM","PHRY","LYD","LOC","MEL","BLUES","WHOLE","DIMHW","DIMWH"],"SOUNDS":{"1BIT BEEP":{"boopbox":5,"engine":3,"trainer":5},"808 BOOM":{"boopbox":0,"engine":0,"trainer":0},"808 DIRTY":{"boopbox":1,"engine":0,"trainer":1},"808 SLIDE":{"boopbox":3,"engine":0,"trainer":3},"80S POLY":{"boopbox":10,"engine":6,"trainer":10},"8BIT ARP":{"boopbox":2,"engine":3,"trainer":2},"ACCORDION":{"boopbox":8,"engine":6,"trainer":8},"ACID 303":{"boopbox":4,"engine":0,"trainer":4},"AFRO KEYS":{"boopbox":5,"engine":1,"trainer":5},"ATMOS PAD":{"boopbox":15,"engine":0,"trainer":15},"BANJO":{"boopbox":14,"engine":10,"trainer":14},"BASS GTR":{"boopbox":18,"engine":1,"trainer":18},"BELL TREE":{"boopbox":0,"engine":10,"trainer":0},"BIG BELL":{"boopbox":18,"engine":10,"trainer":18},"BITCRUSH":{"boopbox":9,"engine":11,"trainer":9},"BOWED MTL":{"boopbox":3,"engine":10,"trainer":3},"BRASS SECT":{"boopbox":3,"engine":9,"trainer":3},"CELESTA":{"boopbox":15,"engine":1,"trainer":15},"CELLO BOW":{"boopbox":15,"engine":10,"trainer":15},"CHAPEL":{"boopbox":6,"engine":7,"trainer":6},"CHIMES":{"boopbox":17,"engine":10,"trainer":17},"CHIP CHORD":{"boopbox":4,"engine":3,"trainer":4},"CHIP NOISE":{"boopbox":7,"engine":3,"trainer":7},"CHOIR AAH":{"boopbox":0,"engine":5,"trainer":0},"CLAV":{"boopbox":3,"engine":1,"trainer":3},"CONGA":{"boopbox":24,"engine":10,"trainer":24},"CZ BASS":{"boopbox":0,"engine":2,"trainer":0},"CZ BRASS":{"boopbox":4,"engine":2,"trainer":4},"CZ LEAD":{"boopbox":5,"engine":2,"trainer":5},"CZ PAD":{"boopbox":6,"engine":2,"trainer":6},"CZ RESO":{"boopbox":7,"engine":2,"trainer":7},"CZ STRING":{"boopbox":2,"engine":2,"trainer":2},"DARK STR":{"boopbox":14,"engine":0,"trainer":14},"DIRTY B3":{"boopbox":3,"engine":7,"trainer":3},"DRAWBARS":{"boopbox":6,"engine":9,"trainer":6},"DRONE":{"boopbox":5,"engine":8,"trainer":4},"DUB CHORD":{"boopbox":4,"engine":6,"trainer":4},"DX RHODES":{"boopbox":1,"engine":1,"trainer":1},"ENSEMBLE":{"boopbox":9,"engine":6,"trainer":9},"FAT BASS":{"boopbox":0,"engine":6,"trainer":0},"FAT LEAD":{"boopbox":17,"engine":0,"trainer":17},"FLUTE DUST":{"boopbox":2,"engine":8,"trainer":2},"FM BASS":{"boopbox":12,"engine":1,"trainer":12},"FM GRAND":{"boopbox":21,"engine":1,"trainer":21},"FM PLUCK":{"boopbox":20,"engine":1,"trainer":20},"FUNK BASS":{"boopbox":8,"engine":0,"trainer":8},"G-FUNK LD":{"boopbox":9,"engine":0,"trainer":9},"GAME LEAD":{"boopbox":0,"engine":3,"trainer":0},"GB BASS":{"boopbox":1,"engine":3,"trainer":1},"GLASS BELL":{"boopbox":1,"engine":9,"trainer":1},"GLASS BOWL":{"boopbox":20,"engine":10,"trainer":20},"GLASS PAD":{"boopbox":11,"engine":1,"trainer":11},"GLOCKEN":{"boopbox":14,"engine":1,"trainer":14},"GOSPEL":{"boopbox":1,"engine":7,"trainer":1},"HAND DRUM":{"boopbox":5,"engine":10,"trainer":5},"HARMONICA":{"boopbox":4,"engine":5,"trainer":4},"HARP":{"boopbox":17,"engine":1,"trainer":17},"HISS":{"boopbox":6,"engine":11,"trainer":6},"HOOVER":{"boopbox":7,"engine":6,"trainer":7},"HOUSE ORGN":{"boopbox":4,"engine":7,"trainer":4},"JAZZ ORGAN":{"boopbox":2,"engine":7,"trainer":2},"KALIMBA":{"boopbox":9,"engine":1,"trainer":9},"KOTO":{"boopbox":13,"engine":10,"trainer":13},"LOFI CLOUD":{"boopbox":0,"engine":8,"trainer":0},"M1 PIANO":{"boopbox":4,"engine":1,"trainer":4},"MARIMBA":{"boopbox":8,"engine":1,"trainer":8},"MEMB TOMS":{"boopbox":6,"engine":10,"trainer":6},"MIN STAB":{"boopbox":1,"engine":6,"trainer":1},"MIN7 STAB":{"boopbox":2,"engine":6,"trainer":2},"MODAL BAR":{"boopbox":1,"engine":10,"trainer":1},"MONO BASS":{"boopbox":18,"engine":0,"trainer":18},"MUSIC BOX":{"boopbox":7,"engine":1,"trainer":7},"MUTED GTR":{"boopbox":11,"engine":10,"trainer":11},"NES BASS":{"boopbox":3,"engine":3,"trainer":3},"NYLON GTR":{"boopbox":9,"engine":10,"trainer":9},"NYLON PICK":{"boopbox":7,"engine":9,"trainer":7},"NZ ARCADE":{"boopbox":2,"engine":11,"trainer":2},"NZ METAL":{"boopbox":3,"engine":11,"trainer":3},"NZ SNARE":{"boopbox":8,"engine":11,"trainer":8},"OCEAN":{"boopbox":4,"engine":11,"trainer":4},"PAN FLUTE":{"boopbox":16,"engine":0,"trainer":16},"PHYS HARP":{"boopbox":8,"engine":10,"trainer":8},"PLUCK BASS":{"boopbox":12,"engine":10,"trainer":12},"PLUGG BASS":{"boopbox":5,"engine":0,"trainer":5},"PLUGG BELL":{"boopbox":10,"engine":1,"trainer":10},"PNO FREEZE":{"boopbox":6,"engine":8,"trainer":5},"POWER STAB":{"boopbox":12,"engine":6,"trainer":12},"PULSE PAD":{"boopbox":13,"engine":6,"trainer":13},"PWM LEAD":{"boopbox":19,"engine":0,"trainer":19},"RADIO":{"boopbox":10,"engine":11,"trainer":10},"RAIN":{"boopbox":1,"engine":11,"trainer":1},"RAVE STAB":{"boopbox":3,"engine":6,"trainer":3},"REESE":{"boopbox":6,"engine":0,"trainer":6},"REGGAE ORG":{"boopbox":7,"engine":7,"trainer":7},"RESO PLUCK":{"boopbox":3,"engine":2,"trainer":3},"RHODES":{"boopbox":0,"engine":1,"trainer":0},"RISER":{"boopbox":7,"engine":11,"trainer":7},"ROBOT":{"boopbox":5,"engine":5,"trainer":5},"ROCK ORGAN":{"boopbox":5,"engine":7,"trainer":5},"ROUND BASS":{"boopbox":2,"engine":9,"trainer":2},"SAW BASS":{"boopbox":20,"engine":0,"trainer":20},"SAW PAD":{"boopbox":5,"engine":6,"trainer":5},"SHIMMER":{"boopbox":4,"engine":8,"trainer":3},"SINE PAD":{"boopbox":21,"engine":0,"trainer":21},"SITAR":{"boopbox":7,"engine":10,"trainer":7},"SOFT KEYS":{"boopbox":1,"engine":2,"trainer":1},"SOFT PAD":{"boopbox":4,"engine":9,"trainer":4},"SOUL OOH":{"boopbox":1,"engine":5,"trainer":1},"SOUL ORGAN":{"boopbox":0,"engine":7,"trainer":0},"SQR LEAD":{"boopbox":11,"engine":6,"trainer":11},"STEEL DRUM":{"boopbox":13,"engine":1,"trainer":13},"STEEL GTR":{"boopbox":10,"engine":10,"trainer":10},"STEEL PAN":{"boopbox":21,"engine":10,"trainer":21},"STR PLUCK":{"boopbox":2,"engine":10,"trainer":2},"SUB BASS":{"boopbox":2,"engine":0,"trainer":2},"SUPERSAW":{"boopbox":12,"engine":0,"trainer":12},"SYN BRASS":{"boopbox":11,"engine":0,"trainer":11},"SYNC LEAD":{"boopbox":6,"engine":6,"trainer":6},"TABLA":{"boopbox":23,"engine":10,"trainer":23},"TALKBOX":{"boopbox":2,"engine":5,"trainer":2},"TANPURA":{"boopbox":16,"engine":10,"trainer":16},"THUMB PNO":{"boopbox":4,"engine":10,"trainer":4},"TIMPANI":{"boopbox":25,"engine":10,"trainer":25},"TINE EP":{"boopbox":0,"engine":9,"trainer":0},"TRAP BELL":{"boopbox":6,"engine":1,"trainer":6},"TRAP PLUCK":{"boopbox":10,"engine":0,"trainer":10},"TUBE BELL":{"boopbox":19,"engine":1,"trainer":19},"VIBE HAZE":{"boopbox":1,"engine":8,"trainer":1},"VIBRA BAR":{"boopbox":19,"engine":10,"trainer":19},"VINYL":{"boopbox":5,"engine":11,"trainer":5},"VOX PAD":{"boopbox":6,"engine":5,"trainer":6},"WARM PAD":{"boopbox":13,"engine":0,"trainer":13},"WAVE LEAD":{"boopbox":6,"engine":3,"trainer":6},"WIND":{"boopbox":0,"engine":11,"trainer":0},"WOBBLE":{"boopbox":7,"engine":0,"trainer":7},"WOOD BARS":{"boopbox":5,"engine":9,"trainer":5},"WOOD BLOCK":{"boopbox":22,"engine":10,"trainer":22},"WOW BASS":{"boopbox":3,"engine":5,"trainer":3},"WURLI":{"boopbox":2,"engine":1,"trainer":2},"XYLOPHONE":{"boopbox":16,"engine":1,"trainer":16}},"ST":{"ST_NOTE":0,"ST_REST":2,"ST_TIE":1},"TG":{"TG_DONE":18,"TG_GLOBAL":4,"TG_KIT":1,"TG_LANES":9,"TG_LOCK":11,"TG_MUTES":10,"TG_NOTES":8,"TG_OCT":7,"TG_PAGE":6,"TG_PARAM":3,"TG_PATHAS":14,"TG_PATS":13,"TG_PATSEL":12,"TG_PLAY":5,"TG_SAVED":15,"TG_SONG":16,"TG_SONGMODE":17,"TG_SOUND":2,"TG_TRACK":0},"TOPICS":["PARTS","SOUNDS","GRID","KICK","BACKBEAT","HATS","TEMPO","SWING","KEY","MINOR","VALUES","BASS1","GATE","SEVENTH","PROG1","REGISTER","SPACE","PENTA","ECHO","MUTES","DONE1","FLOOR","DYNAMICS","ROLL","BASS2","PROG2","PADS","ARP","MIX","SECTIONS","OPENHAT","LEAD","DONE2","HALFTIME","CRASH","SUB","STABS","PUMP","ONECHORD","RISER","BUILD","BREAK","FILTER","FORM","DONE3"],"VAL_MAX":4}</script>
+<script type="application/json" id="meta">{"version": "1.5.0", "product": "FM-1_915", "pkg": "../../firmware/boopbox-trainer-1.5.0.fwsc", "sha256": "ab98c2e7622ac8f7f41605b7bc0e2af03ebbaa8a4f64343ae5041515c2f0e446"}</script>
+<script type="module">
+import * as A from "./songanalyze.js";
+import { makeLesson, checkScore, NOTE_NAMES, DRUM_LANES } from "./songgen.js";
+import { STYLES, CHOICES, defaultSounds, styleFor } from "./songsounds.js";
+import { encodeSong, patchPackage, SLOT_SIZE } from "./trslot.js";
+import { programOf, PART_TRACK } from "./songplay.js";
+import { productOf, logicalImage } from "./fm1pkg.js";
+import { Updater } from "./fm1ota.js";
+
+const $ = (id) => document.getElementById(id);
+const C = JSON.parse($("consts").textContent), meta = JSON.parse($("meta").textContent);
+const PARTS = [["drums", "Drums", "var(--blue)"], ["bass", "Bass", "var(--green)"], ["chords", "Chords", "var(--yellow)"],
+               ["lead", "Lead", "var(--orange)"]];
+const LANE_LABEL = { KICK: "Kick", SNARE: "Snare", CLAP: "Clap", HAT: "Hat", OHAT: "Open hat" };
+const nn = (n) => NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
+const S = { file: null, buf: null, x: null, r: null, score: null, lesson: null, sounds: null, off: {}, ctx: null,
+            src: null, fm1: null, playing: null };
+window.trainerSong = S;                                   // (tests/trainer_page_test.py)
+
+// ---- 1. the file
+function chosen(f) {
+  if (!f) return;
+  S.file = f;
+  $("ferr").textContent = "";
+  $("fname").textContent = f.name;
+  f.arrayBuffer().then(async (bytes) => {
+    try {
+      audio();
+      S.buf = await S.ctx.decodeAudioData(bytes);
+    } catch (e) { $("ferr").textContent = `This browser cannot read that file (${e.message || e}). Try an MP3 or WAV.`; return; }
+    const d = Math.floor(S.buf.duration), st = $("start");
+    st.max = Math.max(0, d - 10);
+    st.value = d > 60 ? Math.round(d * 0.25) : 0;      // (past the intro, most often)
+    st.oninput = () => { $("startv").textContent = `${st.value} s (of ${d} s)`; };
+    st.oninput();
+    $("where").hidden = false;
+  });
+}
+$("file").addEventListener("change", (e) => chosen(e.target.files[0]));
+const drop = $("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); chosen(e.dataTransfer.files[0]); });
+
+function audio() {                                       // one context at 44.1 kHz (BoopBox's engines' rate)
+  if (!S.ctx) S.ctx = new AudioContext({ sampleRate: 44100 });
+  return S.ctx;
+}
+async function window22050(buf, from, secs) {          // the stretch listened to, mono at 22050 Hz
+  const n = Math.min(buf.length - Math.floor(from * buf.sampleRate), Math.floor(secs * buf.sampleRate));
+  const off = new OfflineAudioContext(1, Math.ceil((n / buf.sampleRate) * A.RATE), A.RATE), s = off.createBufferSource();
+  s.buffer = buf;
+  s.connect(off.destination);
+  s.start(0, from, n / buf.sampleRate);
+  return (await off.startRendering()).getChannelData(0);
+}
+let tfReady = null;
+function loadModel() {                                   // TensorFlow.js and the note model, on first use
+  tfReady ??= new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = "vendor/tfjs/tf.min.js";
+    s.onload = async () => {
+      const BP = await import("./vendor/basic-pitch/inference.js"), TM = await import("./vendor/basic-pitch/toMidi.js");
+      ok({ BasicPitch: BP.BasicPitch, outputToNotesPoly: TM.outputToNotesPoly, noteFramesToTime: TM.noteFramesToTime,
+           model: tf.loadGraphModel("vendor/basic-pitch/model.json") });
+    };
+    s.onerror = () => no(new Error("could not load TensorFlow.js"));
+    document.head.appendChild(s);
+  });
+  return tfReady;
+}
+
+// ---- 2. listening
+$("listen").addEventListener("click", async () => {
+  if (!S.buf) return;
+  stopAll();
+  $("listen").disabled = true;
+  $("s2").hidden = false;
+  document.querySelectorAll("#stages li").forEach((li) => { li.className = ""; li.querySelector("progress").value = 0; });
+  const stage = (k, p) => {
+    for (const li of document.querySelectorAll("#stages li")) {
+      const order = ["split", "tempo", "notes", "done"], at = order.indexOf(li.dataset.k), now = order.indexOf(k);
+      li.className = at < now ? "done" : at === now ? "now" : "";
+      li.querySelector("progress").value = at < now ? 1 : at === now ? p : 0;
+    }
+  };
+  try {
+    S.start = +$("start").value;
+    S.x = await window22050(S.buf, S.start, 30);
+    const bp = await loadModel();
+    const t = performance.now();
+    S.r = await A.analyze(S.x, bp, stage);
+    S.secs = (performance.now() - t) / 1000;
+    S.key = S.r.key;
+    S.style = styleFor(S.r.bpm);
+    S.off = {};
+    rescore(true);
+    $("name").value = S.file.name.replace(/\.[^.]+$/, "").toUpperCase().replace(/[^ -~]/g, "").slice(0, 16);
+    stems();
+    await fm1Player();
+    update();
+    stage("done", 1);
+    $("s3").hidden = $("s4").hidden = false;
+    $("s3").scrollIntoView({ behavior: "smooth" });
+  } catch (e) {
+    $("ferr").textContent = `Listening failed: ${e.message || e}`;
+    console.error(e);
+  }
+  $("listen").disabled = false;
+});
+
+// ---- 3. the score, the lesson, the players
+function rescore(fresh) {                                // the score from the analysis, with the choices made
+  const base = A.scoreOf({ ...S.r, key: S.key }, { leadDiv: $("leaddiv").value });
+  const snd = defaultSounds(base, C, S.style);
+  if (!fresh && S.score) {                               // (the drum grid as clicked, the sounds as picked)
+    base.drums.lanes = S.score.drums.lanes;
+    for (const k of ["bass", "chords", "lead"]) if (snd[k] && S.sounds?.[k]) snd[k].sound = S.sounds[k];
+  }
+  S.sounds = { kit: (!fresh && S.sounds?.kit) || snd.kit, bass: snd.bass?.sound, chords: snd.chords?.sound, lead: snd.lead?.sound };
+  S.score = { ...base, drums: { ...base.drums, kit: S.sounds.kit }, bass: snd.bass, chords: snd.chords, lead: snd.lead };
+  if (fresh) controls();
+}
+function playable() {                                    // the score as it will be taught: the parts kept
+  const s = { ...S.score, name: $("name").value || "YOUR SONG" };
+  for (const [k] of PARTS) if (S.off[k]) s[k] = null;
+  return s;
+}
+function update() {
+  const s = playable(), bad = checkScore(s, C);
+  try { S.lesson = makeLesson(s, C); S.area = encodeSong(S.lesson); }
+  catch (e) { S.lesson = null; $("status").textContent = e.message; }
+  $("fTempo").textContent = `${s.bpm} BPM`;
+  $("fKey").textContent = `${NOTE_NAMES[s.root]} ${s.scale === "MIN" ? "minor" : "major"}`;
+  const used = S.area ? S.area[8] | (S.area[9] << 8) : 0;
+  $("fSteps").textContent = S.lesson ? S.lesson.cards.length : "-";
+  $("fSize").textContent = `${((100 * used) / SLOT_SIZE).toFixed(0)} %`;
+  $("go").disabled = !S.lesson || bad.length > 0 || !meta.pkg;
+  parts();
+  stepsList();
+  if (S.fm1 && S.lesson) {
+    S.fm1.port.postMessage({ type: "load", ops: programOf(S.lesson, C) });
+    for (const [k] of PARTS) S.fm1.port.postMessage({ type: "mute", track: PART_TRACK[k], on: !!S.mute?.[k] });
+    if (S.playing === "fm1") S.fm1.port.postMessage({ type: "play", on: true });
+  }
+}
+function controls() {
+  $("root").innerHTML = NOTE_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join("");
+  $("root").value = S.key.root;
+  $("scale").value = S.key.scale;
+  $("style").innerHTML = STYLES.map((s, i) => `<option value="${i}">${s.name.toLowerCase()}</option>`).join("");
+  $("style").value = STYLES.indexOf(S.style);
+}
+$("root").onchange = $("scale").onchange = () => { S.key = { root: +$("root").value, scale: $("scale").value }; rescore(false); update(); };
+$("style").onchange = () => { S.style = STYLES[+$("style").value]; S.sounds = null; rescore(false); S.sounds.kit = S.style.kit; S.score.drums.kit = S.style.kit; update(); };
+$("leaddiv").onchange = () => { rescore(false); update(); };
+$("name").oninput = () => update();
+
+function parts() {
+  const box = $("parts"), s = S.score;
+  box.innerHTML = "";
+  for (const [k, label, col] of PARTS) {
+    const part = s[k], el = document.createElement("div");
+    el.className = "part";
+    el.style.setProperty("--c", col);
+    if (!part || (k === "drums" && !part.lanes)) {
+      el.innerHTML = `<header><b>${label}</b><span class="small">not heard in these bars</span></header>`;
+      box.appendChild(el);
+      continue;
+    }
+    const opts = (k === "drums" ? C.KITS.slice(5) : CHOICES[k]).map((n) => `<option${n === (k === "drums" ? S.sounds.kit : S.sounds[k]) ? " selected" : ""}>${n}</option>`).join("");
+    el.innerHTML = `<header><label><input type="checkbox" ${S.off[k] ? "" : "checked"}> <b>${label}</b></label>
+      <label>${k === "drums" ? "Kit" : "Sound"} <select>${opts}</select></label><span class="small">${desc(k, part)}</span></header>`;
+    el.querySelector("input").onchange = (e) => { S.off[k] = !e.target.checked; update(); };
+    el.querySelector("select").onchange = (e) => {
+      if (k === "drums") { S.sounds.kit = e.target.value; S.score.drums.kit = e.target.value; }
+      else { S.sounds[k] = e.target.value; S.score[k].sound = e.target.value; }
+      update();
+    };
+    if (k === "drums") {
+      const g = document.createElement("div");
+      g.className = "grid";
+      for (const lane of DRUM_LANES) {
+        g.insertAdjacentHTML("beforeend", `<span>${LANE_LABEL[lane]}</span>`);
+        for (let i = 0; i < 16; i++) {
+          const b = document.createElement("button");
+          b.title = `${LANE_LABEL[lane]}, step ${i + 1}`;
+          if (part.lanes[lane][i]) b.className = "hit";
+          b.onclick = () => { part.lanes[lane][i] = part.lanes[lane][i] ? 0 : 1; update(); };
+          g.appendChild(b);
+        }
+      }
+      el.appendChild(g);
+    } else {
+      const n = document.createElement("div");
+      n.className = "notes";
+      n.textContent = k === "chords" ? part.steps.map((c) => c.map(nn).join("+")).join("  |  ")
+        : part.steps.map((x, i) => (i && i % 4 === 0 ? "| " : "") + (x == null ? "." : nn(x))).join(" ");
+      el.appendChild(n);
+    }
+    box.appendChild(el);
+  }
+}
+function desc(k, p) {
+  if (k === "drums") return "a bar of sixteenths";
+  if (k === "chords") return `a chord a bar, ${p.steps.length} bars`;
+  return k === "bass" ? "a note a beat, four bars" : p.div === "1/16" ? "sixteenths, one bar" : "eighths, two bars";
+}
+function stepsList() {
+  const ol = $("steps");
+  ol.innerHTML = "";
+  for (const c of S.lesson?.cards || []) {
+    const li = document.createElement("li");
+    const v = c.goal === C.TG.TG_PARAM && c.p === C.P.P_SDIV ? C.DIVS[c.v] : c.goal === C.TG.TG_PARAM && c.p === C.P.P_SCALE ?
+      C.SCALES[c.v] : c.goal === C.TG.TG_GLOBAL ? `${c.v} BPM` : String(c.v);
+    li.innerHTML = `<b></b> <span></span>`;
+    li.querySelector("b").textContent = c.head;
+    li.querySelector("span").textContent = "— " + c.act.replace("@", v);
+    ol.appendChild(li);
+  }
+}
+
+// the original: the bars listened to, on a loop; or one of its parts
+function stems() {
+  const r = S.r, sc = S.score, rate = A.RATE;
+  const from = Math.max(0, sc.t0), len = Math.min(r.sep.harmonic.length / rate - from, sc.barSec * 4);
+  S.loop = { from, len };
+  $("origwhat").textContent = `Bars from ${(S.start + from).toFixed(1)} s, on a loop.`;
+  const mk = (data) => {
+    const b = S.ctx.createBuffer(1, data.length, rate);
+    b.copyToChannel(data, 0);
+    return b;
+  };
+  S.parts = { drums: mk(r.sep.percussive), music: mk(r.sep.harmonic) };
+  S.stem = "full";
+  const row = $("stems");
+  row.innerHTML = "";
+  for (const [k, label] of [["full", "Full"], ["drums", "Drums"], ["bass", "Bass"], ["other", "Other"]]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.style.setProperty("--c", "var(--blue)");
+    b.className = k === S.stem ? "on" : "";
+    b.onclick = () => { S.stem = k; row.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+                        if (S.playing === "orig") playOrig(); };
+    row.appendChild(b);
+  }
+}
+function playOrig() {
+  stopAll();
+  const ctx = audio();
+  ctx.resume();
+  const s = ctx.createBufferSource();
+  let node = s;
+  if (S.stem === "full") { s.buffer = S.buf; s.loopStart = S.start + S.loop.from; }
+  else {
+    s.buffer = S.stem === "drums" ? S.parts.drums : S.parts.music;
+    s.loopStart = S.loop.from;
+    if (S.stem !== "drums") {
+      const f = ctx.createBiquadFilter();
+      f.type = S.stem === "bass" ? "lowpass" : "highpass";
+      f.frequency.value = 220;
+      s.connect(f);
+      node = f;
+    }
+  }
+  s.loop = true;
+  s.loopEnd = s.loopStart + S.loop.len;
+  node.connect(ctx.destination);
+  s.start(0, s.loopStart);
+  S.src = s;
+  S.playing = "orig";
+  $("pOrig").textContent = "Stop";
+}
+async function fm1Player() {
+  if (S.fm1) return;
+  const ctx = audio();
+  await ctx.audioWorklet.addModule("song-worklet.js");
+  const r = await fetch("../editor/boopbox-preview.wasm");
+  const module = await WebAssembly.compile(await r.arrayBuffer());
+  S.fm1 = new AudioWorkletNode(ctx, "boopbox-song", { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { module, C } });
+  S.fm1.onprocessorerror = (e) => { S.fm1Error = String(e.message || e); say(`The FM-1 player stopped: ${S.fm1Error}`); };
+  S.fm1.connect(ctx.destination);
+  S.mute = {};
+  S.fm1.port.onmessage = ({ data }) => { if (data.error) console.error(data.error); };
+  const row = $("mutes");
+  row.innerHTML = "";
+  for (const [k, label, col] of PARTS) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.style.setProperty("--c", col);
+    b.className = "on";
+    b.title = "Mute or unmute";
+    b.onclick = () => { S.mute[k] = !S.mute[k]; b.className = S.mute[k] ? "" : "on";
+                        S.fm1.port.postMessage({ type: "mute", track: PART_TRACK[k], on: S.mute[k] }); };
+    row.appendChild(b);
+  }
+}
+function stopAll() {
+  if (S.src) { try { S.src.stop(); } catch {} S.src = null; }
+  if (S.fm1) S.fm1.port.postMessage({ type: "play", on: false });
+  S.playing = null;
+  $("pOrig").textContent = $("pFm1").textContent = "Play";
+}
+$("pOrig").onclick = () => (S.playing === "orig" ? stopAll() : playOrig());
+$("pFm1").onclick = () => {
+  if (S.playing === "fm1") return stopAll();
+  stopAll();
+  audio().resume();
+  S.fm1.port.postMessage({ type: "play", on: true });
+  S.playing = "fm1";
+  $("pFm1").textContent = "Stop";
+};
+
+// ---- 4. install: the trainer package with the song in its song area
+$("ver").textContent = meta.version || "";
+const say = (t) => { $("status").textContent = t; };
+const log = (t) => { $("log").textContent += t + "\n"; };
+async function trainerPackage() {
+  const r = await fetch(meta.pkg, { cache: "no-cache" });
+  if (!r.ok) throw new Error(`${meta.pkg}: HTTP ${r.status}`);
+  const pkg = new Uint8Array(await r.arrayBuffer());
+  const h = [...new Uint8Array(await crypto.subtle.digest("SHA-256", pkg))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (h !== meta.sha256 || productOf(pkg) !== meta.product) throw new Error("the trainer package did not download whole: reload the page");
+  return pkg;
+}
+window.trainerPackageWithSong = async () => patchPackage(await trainerPackage(), S.area);   // (tests)
+let writing = false;
+window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = "The FM-1 is being written."; } });
+$("go").onclick = async () => {
+  if (writing || !S.area) return;
+  if (!navigator.requestMIDIAccess) { say("This browser has no Web MIDI: use Chrome or Edge on a computer."); return; }
+  writing = true;
+  $("go").disabled = true;
+  let midi;
+  try {
+    const image = logicalImage(patchPackage(await trainerPackage(), S.area));
+    try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
+    catch { throw new Error("MIDI (SysEx) access was not allowed: allow MIDI for this site and press Install again."); }
+    const total = 74 + 1179;
+    const step = (k, a) => {
+      log(`${k} ${a ?? ""}`);
+      if (k === "start") say("Restarting the FM-1 into its updater…");
+      if (k === "verify") { say("Checking…"); $("bar").value = Math.min(100, (a / total) * 100); }
+      if (k === "write") { say("Writing… do not unplug the FM-1."); $("bar").value = Math.min(100, ((74 + a) / total) * 100); }
+      if (k === "reboot") say("Restarting…");
+      if (k === "done") { $("bar").value = 100; say("Done. Hold HOME on the FM-1: your song is level 4."); }
+    };
+    const up = new Updater(midi, log), ota = await up.find((id) => /^ota-/i.test(id.model), true);
+    if (ota) { ota.link.close(); await up.resume(image, step); }
+    else await up.install(image, meta.product, step);
+  } catch (e) {
+    say(e.message || String(e));
+    log(String(e && e.stack || e));
+  }
+  writing = false;
+  $("go").disabled = false;
+};
+if (!meta.pkg) say("This site has no BoopBox Trainer package to install.");
+</script>
+</body>
+</html>

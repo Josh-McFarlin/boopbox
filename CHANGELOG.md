@@ -13,6 +13,29 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.5.0
+
+**BoopBox Trainer: your song as level 4** ([the trainer](docs/trainer.md)):
+
+- **A new page, [Your song](https://josh-mcfarlin.github.io/boopbox/webapp/song/)** (also linked from the installer).
+  Drop in an audio file (MP3, WAV, OGG, M4A, FLAC). The page listens to 30 seconds of it, in your browser: the file is
+  not uploaded anywhere. It finds the tempo, the key, a bar of drums (kick, snare, hats), a bass line, a chord a bar and
+  a lead; the notes are found by Basic Pitch, Spotify's note model, served from the site.
+- **Compare** the original (or its drums, bass or the rest alone) with **your FM-1 version**, played by BoopBox's own
+  sound engines in the browser, part by part. Fix a drum hit with a click, pick another key, style, kit or sound, or
+  leave a part out. The steps the trainer will show are listed as you go.
+- **Install** it: the page installs BoopBox Trainer 1.5.0 with your song in it (Chrome or Edge on a computer, as the
+  installer). On the FM-1, hold HOME: the picker has **LEVEL 4: YOUR SONG**, taught like the others, with the same
+  hints, lights and why pages. Another song replaces it; its progress starts again, the other levels' stays.
+- It is an approximation, not a transcription: four parts and a loop of a few bars. Songs with a clear beat work best;
+  in a dense mix a bass can sound like a kick (fix it on the drum grid).
+
+The trainer keeps an 8 KiB song area for level 4 (about 1.5 KB of code more); without a song it has its three levels as
+before. The editor's sound preview plays the drum track again (its track 4 was not a drum track in the browser).
+
+BoopBox itself is unchanged in this release (only its version number). Projects, songs, presets, settings and the
+trainer's progress from 1.4.3 open as they are.
+
 ## 1.4.3
 
 **BoopBox Trainer: why you are doing each step** ([the trainer](docs/trainer.md)):

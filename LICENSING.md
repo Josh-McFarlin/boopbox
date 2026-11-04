@@ -44,6 +44,8 @@ section 7 permission Felucca gave for combining them is not needed.
 | msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis, ported to integer C by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
 | DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models, ported to fixed point by Leo Kuroshita | MIT | `firmware/src/phys_dsp.c`, `firmware/src/phys_symp.c` (the notice is in each file) |
 | The second-core HAL after X0X by Charles Vestal and the dual-core work of Andre Rezemini (sloop-lab) | GPL-3.0 | `firmware/hal/fm1_cpu1.*`, `firmware/src/cpu1.*` (the notice is in each file) |
+| Basic Pitch by Spotify (<https://github.com/spotify/basic-pitch-ts>, 1.0.1): the note model and its code, on the trainer's song page only (the model as published; the code with TensorFlow.js taken from the page and its MIDI file export left out) | Apache-2.0 | `web/vendor/basic-pitch/` (`LICENSE` there) |
+| TensorFlow.js 3.21.0 by Google (<https://github.com/tensorflow/tfjs>): runs Basic Pitch, on the song page only | Apache-2.0 | `web/vendor/tfjs/tf.min.js`, `web/vendor/tfjs/LICENSE` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Contributions

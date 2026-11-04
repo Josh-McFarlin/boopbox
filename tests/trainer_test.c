@@ -1186,6 +1186,28 @@ int main(int argc, char **argv)
         menu_close();
         ui.force = 1;
     }
+    if (getenv("TR_SONGS")) {   /* songs the web page made (tests/trainer_song_test.mjs: web/songgen.js), each as level 4 */
+        static char list[4096];
+        char *path, what[160];
+        static uint8_t b[TR_SLOT_SIZE];
+        snprintf(list, sizeof list, "%s", getenv("TR_SONGS"));
+        for (path = strtok(list, ":"); path; path = strtok(0, ":")) {
+            FILE *f = fopen(path, "rb");
+            size_t got = f ? fread(b, 1, sizeof b, f) : 0;
+            if (f)
+                fclose(f);
+            snprintf(what, sizeof what, "a song from the web page (%s): the firmware takes it",
+                     strrchr(path, '/') ? strrchr(path, '/') + 1 : path);
+            memset(&tr, 0, sizeof tr);                         /* a song comes with an install: a power cycle */
+            check(got == sizeof b && tr_slot_load(b), what);
+            tr_log_boot();
+            if (got != sizeof b || tr_nlv != TR_NLV)
+                continue;
+            snprintf(what, sizeof what, "  %s (%u steps): every step reached with the panel, DONE", tr_l4.name, tr_l4.n);
+            check(play_level(TR_NLEVELS, 0), what);
+        }
+        tr_slot_load(tr_slot());
+    }
     printf("trainer: %s\n", fails ? "FAIL" : "PASS");
     return fails != 0;
 }

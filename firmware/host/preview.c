@@ -51,6 +51,10 @@ void preview_init(void)
     song.master_q12 = 4096;
     for (k = 0; k < NTRK; k++) {
         for (i = 0; i < P_COUNT; i++) trk[k].p[i] = TP[i].def;
+        if (trk_def_kind(k) == TK_DRUM) {           /* the drum tracks as at power-on (params.c TRK_DEF): track 4's kit */
+            trk[k].kind = TK_DRUM;
+            pon_params(k, trk[k].p);
+        }
         steps_clear(&trk[k]);
     }
     dsu_defaults();
@@ -66,6 +70,39 @@ void preview_track(uint32_t k, uint32_t engine, uint32_t preset)
     if (t->eng_req != engine || t->preset != preset) sound_change(t);
     t->eng_req = (uint8_t)engine;
     t->preset = (uint8_t)preset;
+}
+/* a factory sound on track k as the FM-1's sound browser loads it (ui.c apply_preset_to): the sound's parameters to the
+ * preset's, the pattern and the mix kept (the trainer's song page: web/song-worklet.js) */
+void preview_preset(uint32_t k, uint32_t engine, uint32_t pi)
+{
+    if (k >= NPART || engine >= NENGINES) return;
+    track_t *t = &trk[k];
+    const engine_t *e = ENGINES[engine];
+    static const uint8_t FX_DEF[4] = {0, 24, 28, 36};
+    if (is_drum(t) || !e->npresets) return;
+    sound_change(t);
+    t->eng_req = (uint8_t)engine;
+    t->user = 0;
+    pi %= e->npresets;
+    t->preset = (uint8_t)pi;
+    for (uint32_t i = 0; i < P_E0; i++)
+        if (!(i == P_LEVEL || i == P_PAN || i == P_MUTE || (i >= P_SLEN && i <= P_SGATE) || (i >= P_ROOT && i <= P_QUANT) ||
+              i == P_CHORD || i == P_TFLT || i == P_STRUM || i == P_VLEAD))
+            t->p[i] = TP[i].def;
+    for (uint32_t i = 0; i < 8u; i++) t->p[P_E0 + i] = (int16_t)e->presets[pi].e[i];
+    t->p[P_ATK] = e->presets[pi].env[0];
+    t->p[P_DEC] = e->presets[pi].env[1];
+    t->p[P_SUS] = e->presets[pi].env[2];
+    t->p[P_REL] = e->presets[pi].env[3];
+    t->p[P_ED_FLT] = e->presets[pi].fenv;
+    t->p[P_ED_FX] = preset_trim(engine, pi);
+    t->p[P_VOICE] = e->presets[pi].mono ? V_LEGATO : V_POLY;
+    for (uint32_t i = 0; i < 4u; i++) {
+        t->p[P_DIST + i] = (int16_t)(e->presets[pi].fx[i] ? e->presets[pi].fx[i] - 1 : FX_DEF[i]);
+        t->p[P_AMODE + i] = (int16_t)(e->presets[pi].arp[i] ? e->presets[pi].arp[i] - 1 : TP[P_AMODE + i].def);
+    }
+    preset_extras(t->p, &e->presets[pi]);
+    fm6_track_loaded(t);
 }
 void preview_param(uint32_t k, uint32_t id, int32_t value)
 {

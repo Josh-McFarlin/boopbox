@@ -106,8 +106,36 @@ if [ ! -f "$TGEN/trainer_lessons.h" ] || [ "$TGEN/trainer_lessons.h" -ot tools/t
 fi
 mkdir -p "$OUT/trainer"
 $CC -O2 -w -I$TGEN -Ifirmware/src -Ifirmware/hal -Itests -o "$OUT/trainer_test" tests/trainer_test.c -lm
-run "TRAINER: the three levels and a song in the song area (level 4) played to DONE with the panel alone, the songs' settings, progress" \
-    "$OUT/trainer_test" "$OUT/trainer"
+# the web page's songs (webapp/song/: web/songgen.js), each played as level 4 by the trainer test below (TR_SONGS): three
+# written scores; with the trainer's renders (python3 tools/trainer/render.py), levels 1 and 2 as the page hears them
+# (web/songanalyze.js and Basic Pitch: the tempo, the key, the drums against their scores). Needs Node.js
+TR_SONGS=""
+if command -v node >/dev/null; then
+    python3 tools/trainer/consts.py "$OUT/trainer/consts.json" >/dev/null || fail=1
+    PW=""; [ -f build/preview/boopbox-preview.wasm ] && PW=build/preview/boopbox-preview.wasm
+    echo "== TRAINER song page: scores to songs for level 4, the FM-1 player (web/songgen.js, web/songplay.js)"
+    PREVIEW_WASM=$PW node tests/trainer_song_test.mjs "$OUT/trainer/consts.json" "$OUT/trainer/songs" > "$OUT/trainer/songs.log" || fail=1
+    grep -v '^SONGS=' "$OUT/trainer/songs.log"
+    TR_SONGS=$(sed -n 's/^SONGS=//p' "$OUT/trainer/songs.log")
+    if [ -f build/trainer/1-first-light.wav ] && [ -f build/trainer/2-neon-avenue.wav ]; then
+        echo "== TRAINER song page: levels 1 and 2 as the page hears them (Basic Pitch on the CPU: a few minutes)"
+        node tests/trainer_analyze_test.mjs "$OUT/trainer/consts.json" "$OUT/trainer/heard" build/trainer/1-first-light.wav \
+            build/trainer/2-neon-avenue.wav 2>/dev/null | grep -v '^SONGS=' | grep -v '^$' > "$OUT/trainer/heard.log" || fail=1
+        cat "$OUT/trainer/heard.log"
+        grep -q '^analyze: PASS' "$OUT/trainer/heard.log" || fail=1
+        TR_SONGS="$TR_SONGS:$(ls "$OUT"/trainer/heard/heard-*.bin | tr '\n' ':')"
+    else
+        echo "(skipped: the page's listening test needs the trainer's renders: python3 tools/trainer/render.py)"
+    fi
+fi
+run "TRAINER: the three levels, a song in the song area and the web page's songs (level 4) played to DONE with the panel alone" \
+    env TR_SONGS="$TR_SONGS" "$OUT/trainer_test" "$OUT/trainer"
+# the song page in Chromium (an MP3 of level 1 in, the tempo, the key, both players, the package with the song), on the
+# site in docs/ (web/make_site.py ... --trainer); skipped without Playwright or the renders
+if [ -f docs/webapp/song/index.html ] && [ -f build/trainer/1-first-light.mp3 ] && command -v node >/dev/null; then
+    run "TRAINER song page in Chromium: listen, compare, the package to install" \
+        node tests/trainer_page_test.mjs docs build/trainer/1-first-light.mp3 "$OUT/trainer"
+fi
 # level 4 on the way to the FM-1: a trainer package with a song written in (web/trslot.js, tools/trainer/slot.py) is the
 # package the build makes with that song, the browser and slot.py byte for byte (needs the trainer build and Node.js)
 if [ -f build/trainer-fw/felucca-trainer.fwsc ] && command -v node >/dev/null; then

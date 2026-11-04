@@ -26,7 +26,7 @@ def main():
                            ('gen_drumkits.py', 'felucca_drumkits.h'), ('gen_fm6_patches.py', 'felucca_fm6.h')]:
         subprocess.run([sys.executable, str(ROOT / 'tools' / script), str(GEN / header)], cwd=ROOT, check=True)
     exports = ['init', 'buffer', 'frames', 'rate', 'track', 'param', 'global', 'select', 'step', 'locks',
-               'fm6', 'sample', 'kit', 'hit', 'note', 'play', 'position', 'panic', 'render']
+               'fm6', 'sample', 'kit', 'hit', 'note', 'play', 'position', 'panic', 'render', 'preset']
     if not emcc:                                     # clang + wasm-ld, freestanding, with tools/wasm_shim
         shim = ROOT / 'tools' / 'wasm_shim'
         mem = OUT / 'mem.o'
