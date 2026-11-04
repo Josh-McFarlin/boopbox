@@ -508,6 +508,41 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     if (!tr_algo_ok() && ui.layer == LY_PLAY)
         tr.btn = B_HOME;
 }
+/* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
+UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
+{
+    if (tr_quiet)
+        return;
+    if (!on_pats_page()) {
+        if (is_drum(TSEL) && !on_drum_page()) {         /* (a drum track: SEQ opens its DRUMS screen) */
+            uint32_t s;
+            for (s = 0; s < NTRK && is_drum(&trk[s]); s++)
+                ;
+            tr_say("ALGORITHM TO ", "");               /* "ALGORITHM TO 1, THEN SEQ" */
+            tr_num((int32_t)(s % NTRK) + 1);
+            tr_cat(", THEN SEQ");
+        } else if (on_drum_page())
+            tr_say("TAP HOME, THEN A SYNTH TRACK", ""), tr.btn = B_HOME;
+        else
+            tr_say("TAP SEQ UNTIL PATTERNS", ""), tr.btn = B_SEQ;
+        return;
+    }
+    if (song.sel != k) {
+        tr_algo_say(k);
+        return;
+    }
+    if (pats_cursor != p) {
+        tr_say("KNOB 1 TO PATTERN ", "");
+        tr_num((int32_t)p + 1);
+        return;
+    }
+    if (copy)
+        tr_say(pats_arm == 1u ? "KNOB 4 RIGHT AGAIN: COPY" : "KNOB 4 RIGHT TWICE: COPY", "");
+    else if (song.playing && trk[k].pat_req)
+        tr_say("WAIT FOR THE BAR", "");
+    else
+        tr_say("PRESS OCT+ TO PLAY IT", ""), tr.btn = B_OCTUP;
+}
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
     if (tr_quiet || song.sel == c->trk)
@@ -654,40 +689,47 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             tr_say("ON ADD: TAP OCT+", ""), tr.btn = B_OCTUP;
         return 0;
     }
-    case TG_PATSEL:
-        if (t->pat == c->v && (!(c->flags & 1u) || !pat_empty(t)))
+    case TG_PATSEL: {
+        uint32_t k = c->trk % NTRK, has = pb_find(k, c->v) >= 0 || (t->pat == c->v && !pat_empty(t));
+        if (t->pat == c->v && (!(c->flags & 1u) || has))
             return 1;
-        if (t->pat == c->v)
-            tr_say("EMPTY: COPY INTO IT FIRST", "");
-        else if (tr_sel(c)) {
-            tr_say("NOW PATTERN ", "");
-            tr_num(t->pat + 1);
-        }
+        if ((c->flags & 1u) && !has)                    /* to play a pattern that holds something: the copy first */
+            tr_pat_way(k, t->pat == c->v ? 0u : (uint32_t)c->v, t->pat != c->v);
+        else
+            tr_pat_way(k, (uint32_t)c->v, 0);
         return 0;
+    }
     case TG_PATS: {
-        uint32_t k;
+        uint32_t k, w0 = 255u, same = 1, bad = NTRK;
         for (k = 0; k < NTRK; k++) {
             uint32_t w = TR_DATA[c->data + k];
-            if (w != 255u && trk[k].pat != w) {
-                tr_say("TRACK ", "");
-                tr_num((int32_t)k + 1);
-                tr_cat(": PATTERN ");
-                tr_num((int32_t)w + 1);
-                return 0;
-            }
+            if (w == 255u)
+                continue;
+            same &= w0 == 255u || w == w0;
+            w0 = w;
+            if (trk[k].pat != w && (bad == NTRK || k == song.sel))
+                bad = k;                                /* (the track selected first) */
         }
-        return 1;
+        if (bad == NTRK)
+            return 1;
+        if (same && on_pats_page() && pats_cursor == w0) {   /* one pattern for all: OCT- asks every track */
+            tr_say(song.playing && trk[bad].pat_req ? "WAIT FOR THE BAR" : "PRESS OCT-: EVERY TRACK", "");
+            tr.btn = B_OCTDN;
+            return 0;
+        }
+        tr_pat_way(bad, TR_DATA[c->data + bad], 0);
+        return 0;
     }
     case TG_PATHAS: {
-        uint32_t k;
+        uint32_t k, bad = NTRK;
         for (k = 0; k < NTRK; k++)
-            if ((((uint32_t)c->v >> k) & 1u) && pb_find(k, c->p) < 0 && !(trk[k].pat == c->p && !pat_empty(&trk[k]))) {
-                tr_say("TRACK ", "");
-                tr_num((int32_t)k + 1);
-                tr_cat(": NOT COPIED YET");
-                return 0;
-            }
-        return 1;
+            if ((((uint32_t)c->v >> k) & 1u) && pb_find(k, c->p) < 0 && !(trk[k].pat == c->p && !pat_empty(&trk[k])) &&
+                (bad == NTRK || k == song.sel))
+                bad = k;                                /* (the track selected first) */
+        if (bad == NTRK)
+            return 1;
+        tr_pat_way(bad, c->p, 1);
+        return 0;
     }
     case TG_SAVED:
         return proj_ok(&proj_slot[c->v & 3]) && proj_slot[c->v & 3].sum != tr.base;

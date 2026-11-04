@@ -134,7 +134,7 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
-static uint32_t browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
+static uint32_t hint_tries, browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
 static int on_target(const tr_card_t *c)
 {
     const track_t *t = &trk[c->trk];
@@ -387,6 +387,52 @@ static void do_lock(const tr_card_t *c)
     tap(B_OCTDN);
     tap(B_OCTDN);
 }
+/* the PATTERNS steps done as the hints say, from where the step before left the FM-1 (nothing else known): each hint
+ * read, the one press it asks for */
+static uint32_t hint_steps, hint_lost;
+static int hint_num(const char *h, const char *after)
+{
+    const char *p = strstr(h, after);
+    return p ? atoi(p + strlen(after)) : -1;
+}
+static void follow_hints(const tr_card_t *c)
+{
+    uint32_t g;
+    for (g = 0; g < 120u; g++) {
+        const char *h = tr.hint;
+        int n;
+        frames(2);
+        if (tr.card != (uint32_t)(c - TR_LEVELS[tr.lvl - 1u].cards) || tr.ok || tr_goal(c))
+            return;
+        hint_steps++;
+        if (!strcmp(h, "TAP SEQ UNTIL PATTERNS"))
+            tap(B_SEQ);
+        else if (tr_prefix(h, "TAP HOME"))
+            tap(B_HOME);
+        else if ((n = hint_num(h, "ALGORITHM TO TRACK ")) > 0 || (n = hint_num(h, "ALGORITHM TO ")) > 0) {
+            if (song.sel != (uint32_t)n - 1u)
+                slow(EN_ALGO, song.sel < (uint32_t)n - 1u ? 1 : -1);
+            else if (strstr(h, "THEN SEQ"))
+                tap(B_SEQ);
+        } else if ((n = hint_num(h, "KNOB 1 TO PATTERN ")) > 0)
+            slow(EN_K1, pats_cursor < (uint32_t)n - 1u ? 1 : -1);
+        else if (tr_prefix(h, "KNOB 4 RIGHT"))
+            slow(EN_K4, 1);
+        else if (tr_prefix(h, "PRESS OCT+"))
+            tap(B_OCTUP);
+        else if (tr_prefix(h, "PRESS OCT-"))
+            tap(B_OCTDN);
+        else if (!strcmp(h, "WAIT FOR THE BAR"))
+            frames(20);
+        else {
+            printf("trainer: %s: a hint that says no press: \"%s\"\n", c->head, h);
+            hint_lost++;
+            return;
+        }
+    }
+    printf("trainer: %s: the hints went round\n", c->head);
+    hint_lost++;
+}
 static void do_card(const tr_card_t *c)
 {
     switch (c->goal) {
@@ -417,12 +463,18 @@ static void do_card(const tr_card_t *c)
     case TG_LANES: do_lanes(c); break;
     case TG_MUTES: do_mutes(c); break;
     case TG_LOCK: do_lock(c); break;
-    case TG_PATSEL:
+    case TG_PATSEL: case TG_PATS: case TG_PATHAS:
+        if (hint_tries++ == 0u) {                        /* (the first try: the hints alone) */
+            follow_hints(c);
+            break;
+        }
+        if (c->goal == TG_PATS) goto pats;
+        if (c->goal == TG_PATHAS) goto pathas;
         if (c->flags & 1u)                               /* a pattern to play that holds something: copy into it first */
             pat_copy_to(c->trk, (uint32_t)c->v);
         pat_select(c->trk, (uint32_t)c->v);
         break;
-    case TG_PATS: {
+    pats: {
         uint32_t k, all = 1, w0 = TR_DATA[c->data];
         for (k = 0; k < NTRK; k++)
             all &= TR_DATA[c->data + k] == 255u || TR_DATA[c->data + k] == w0;
@@ -440,7 +492,7 @@ static void do_card(const tr_card_t *c)
                     pat_select(k, TR_DATA[c->data + k]);
         break;
     }
-    case TG_PATHAS: {
+    pathas: {
         uint32_t k;
         for (k = 0; k < NTRK; k++)
             if (((uint32_t)c->v >> k) & 1u)
@@ -584,7 +636,13 @@ static int play_level(uint32_t l, const char *shots)
                 }
             }
         }
+        hint_tries = 0;
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
+            if (hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS)) {
+                printf("trainer: level %u card %u (%s): the hints alone did not get there: %s\n", l + 1u, at + 1u,
+                       c->head, tr.hint);
+                hint_lost++;
+            }
             do_card(c);
             frames(70);                                  /* (NICE, then the next card) */
         }
@@ -672,6 +730,9 @@ int main(int argc, char **argv)
         check(keyed_cards > 20u, what);
         snprintf(what, sizeof what, "SEQ held, a note in hand: its steps stay lit until all are in (%u taps)", seq_taps);
         check(!seq_unlit && seq_taps > 10u, what);
+        snprintf(what, sizeof what, "PATTERNS steps done by their hints alone (%u presses), from the track left on",
+                 hint_steps);
+        check(!hint_lost && hint_steps > 20u, what);
         snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
                  algo_said, algo_home);
         check(algo_said > 5u && algo_home > 0u, what);
