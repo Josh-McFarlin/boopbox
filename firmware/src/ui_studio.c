@@ -39,6 +39,17 @@ UI_SMALL static void drum_black_pick(uint32_t b)          /* black key b: its so
 }
 UI_SMALL static void drum_hear(uint32_t lane) { if (drum_preview) audition_lane(lane); }   /* (2.7.1) menu DRUM PREVIEW */
 static void trk_short_name(uint32_t c, char *b);
+static void sound_name(char *pn);                   /* (ui_draw.c) */
+/* (1.4.2) a track's LEVEL, REV or PAN as its page shows it (a synth's LEVEL in dB, PAN in %; the drums' 0..127), the
+ * unit after it: the same value on every screen ("-8dB", "-31%"), b holds 8 */
+UI_SMALL static void mix_fmt(char *b, const track_t *t, uint32_t pid, int32_t v)   /* (v: the value shown) */
+{
+    const char *u;
+    param_format(track_desc(t, pid), v, b, &u);
+    if (str_len(b) + str_len(u) < 8u)
+        str_cpy(b + str_len(b), u, 8 - str_len(b));
+}
+#define mix_value(b, t, pid) mix_fmt(b, t, pid, (t)->p[pid])
 UI_SMALL static int on_drum_page(void) { return !ui.home && cur_page()->scope == SC_DRUM; }
 
 /* ---------------------------------------------------------------- style --- */
@@ -321,9 +332,12 @@ UI_SMALL static void studio_tracks_draw(void)
         int32_t ratio[4];
         uint32_t lvl = (uint32_t)t->p[P_LEVEL];
         swing_str(v[0], song.g[G_SWING]);
-        fmt_int(v[1], t->p[P_MUTE] ? 0 : (int32_t)lvl * 100 / 127);
+        if (t->p[P_MUTE])
+            str_cpy(v[1], "mute", 8);
+        else
+            mix_value(v[1], t, P_LEVEL);
         fmt_int(v[2], t->p[P_SLEN]);
-        fmt_int(v[3], t->p[P_PAN]);
+        mix_value(v[3], t, P_PAN);
         ratio[0] = song.g[G_SWING] * 10;
         ratio[1] = t->p[P_MUTE] ? 0 : (int32_t)lvl * 1000 / 127;
         ratio[2] = (t->p[P_SLEN] - 1) * 1000 / 63;
@@ -514,7 +528,7 @@ UI_SMALL static void drum_screen_draw(void)
             if (drum_tune[dfi()][drum_lane] > 0) { v[1][0] = '+'; fmt_int(v[1] + 1, drum_tune[dfi()][drum_lane]); }
             fmt_int(v[2], drum_dec[dfi()][drum_lane]);
             if (drum_dec[dfi()][drum_lane] > 0) { v[2][0] = '+'; fmt_int(v[2] + 1, drum_dec[dfi()][drum_lane]); }
-            fmt_int(v[3], DFOC->p[P_LEVEL] * 100 / 127);
+            mix_value(v[3], DFOC, P_LEVEL);
             ratio[0] = (int32_t)drum_lane * 1000 / (DRUM_LANES - 1);
             ratio[1] = (drum_tune[dfi()][drum_lane] - DRUM_TUNE_MIN) * 1000 / (DRUM_TUNE_MAX - DRUM_TUNE_MIN);
             ratio[2] = (drum_dec[dfi()][drum_lane] - DRUM_DEC_MIN) * 1000 / (DRUM_DEC_MAX - DRUM_DEC_MIN);
@@ -522,9 +536,9 @@ UI_SMALL static void drum_screen_draw(void)
             ui_dials(184, LS, val, ratio, 3u, &footer);
         } else {
             fmt_int(v[0], (int32_t)kit + 1);
-            fmt_int(v[1], DFOC->p[P_LEVEL] * 100 / 127);
-            fmt_int(v[2], DFOC->p[P_REV] * 100 / 127);
-            fmt_int(v[3], DFOC->p[P_PAN]);
+            mix_value(v[1], DFOC, P_LEVEL);
+            mix_value(v[2], DFOC, P_REV);
+            mix_value(v[3], DFOC, P_PAN);
             ratio[0] = (int32_t)kit * 1000 / (int32_t)(DRUM_KITS - 1u);
             ratio[1] = DFOC->p[P_LEVEL] * 1000 / 127;
             ratio[2] = DFOC->p[P_REV] * 1000 / 127;
@@ -715,6 +729,10 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
             if (ft_owns_press()) ;
             else if (!song.playing && arrangement_enabled && !arr_valid(&arrangement, arrangement_ready())) ui_message("EMPTY SECTION: REC");
             else transport_req = song.playing ? 2 : 1;
+        } else if (b == B_SEQ && drum_page == 2u) {     /* SOUND -> PATTERNS (1.4.2), as layer_tap */
+            drum_page = 0;
+            studio_open(SC_PATS);
+            return;
         } else if (b == B_SEQ || b == B_EDIT) {
             drum_page = (uint8_t)((drum_page + 1u) % 3u);   /* GRID -> KIT -> SOUND (2.7) */
             ui.msg_t = 0;
@@ -738,7 +756,27 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
                 ui.force = 1;
             }
     }
-    panel_enc(EN_ALGO);                                /* (ALGORITHM selects a track on TRACKS only: HOME, then turn) */
+    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {     /* ALGORITHM: the track (1.4.2, as on every page): a drum track
+                                                        * stays on this screen, a synth track goes to its NOTES */
+        uint32_t was = song.sel;
+        track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+        if (song.sel != was) {
+            char b[24], pn[16];
+            if (!is_drum(TSEL)) {
+                for (k = 0; k < NPAGES && PAGES[k].scope != SC_STEP; k++)
+                    ;
+                ui.page = (uint8_t)k;
+                page_entered();
+            }
+            str_cpy(b, "TRACK ", sizeof b);
+            fmt_int(b + 6, (int32_t)song.sel + 1);
+            str_cpy(b + str_len(b), ": ", 4);
+            sound_name(pn);
+            ui_say(b, pn);
+            ui.force = 1;
+            return;
+        }
+    }
     if ((s = panel_enc(EN_PRESET))) DFOC->p[P_E0] = (int16_t)clamp(DFOC->p[P_E0] + s, 0, DRUM_KITS - 1);
     for (k = 0; k < 4u; k++) if ((s = panel_enc(EN_K1 + k))) {
         ui.hot_col = (uint8_t)k;

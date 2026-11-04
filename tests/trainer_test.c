@@ -317,8 +317,8 @@ static void do_lanes(const tr_card_t *c)
     if (!(on_drum_page() && !drum_page)) {
         home();
         tap(B_SEQ);
-        while (on_drum_page() && drum_page)
-            tap(B_SEQ);
+        for (g = 0; g < 6u && !(on_drum_page() && !drum_page); g++)
+            tap(B_SEQ);                                  /* (GRID KIT SOUND PATTERNS, round) */
     }
     for (l = 0; l < nl; l++) {
         const uint8_t *h = &d[2u + l * (len + 1u)];
@@ -498,8 +498,8 @@ static void do_card(const tr_card_t *c)
                 home();                                  /* (once: from a drum track, where SEQ has no way there) */
                 algo_to(3);
                 tap(B_SEQ);
-                check(is_drum(TSEL) && !tr_goal(c) && !strcmp(tr.hint, "TAP HOME, THEN A SYNTH TRACK"),
-                      "PATTERNS asked on a drum track's DRUMS screen: TAP HOME, THEN A SYNTH TRACK");
+                check(is_drum(TSEL) && on_drum_page() && !tr_goal(c) && (!tr.hint[0] || !strcmp(tr.hint, "TAP SEQ UNTIL PATTERNS")),
+                      "PATTERNS from a drum track's grid: TAP SEQ UNTIL PATTERNS (GRID, KIT, SOUND, PATTERNS)");
             }
             follow_hints(c);
             break;
@@ -507,7 +507,8 @@ static void do_card(const tr_card_t *c)
         home();
         if (PAGES[c->p].scope == SC_DRUM) {
             tap(B_SEQ);
-            while (on_drum_page() && drum_page)
+            uint32_t g;
+            for (g = 0; g < 6u && !(on_drum_page() && !drum_page); g++)
                 tap(B_SEQ);
         } else if (PAGES[c->p].scope == SC_PATS)
             pats_screen();
@@ -756,14 +757,32 @@ int main(int argc, char **argv)
         check(!bad, "PATTERNS, SONG, CHORDS: nothing left over the list from the screen before (rows 40-41)");
         home();
     }
+    {   /* (1.4.2) a drum track: ALGORITHM on its grid, SEQ on to PATTERNS and round */
+        uint32_t g, ok;
+        home();
+        algo_to(3);
+        tap(B_SEQ);
+        ok = on_drum_page() && !drum_page;
+        slow(EN_ALGO, 1);
+        ok = ok && song.sel == 4u && on_notes_page();
+        check(ok, "the DRUMS grid: ALGORITHM changes the track (a synth track: its NOTES)");
+        slow(EN_ALGO, -1);
+        check(song.sel == 3u && on_drum_page() && !drum_page, "NOTES: ALGORITHM onto a drum track opens its grid");
+        for (g = 0; g < 3u; g++)
+            tap(B_SEQ);
+        ok = on_pats_page() && song.sel == 3u;
+        tap(B_SEQ);
+        check(ok && on_drum_page() && !drum_page, "a drum track: SEQ walks GRID, KIT, SOUND, PATTERNS and back to the GRID");
+        home();
+    }
     {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */
         static const struct { uint32_t lvl; const char *head, *act; } V[] = {
-            {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO 77"}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO -20"},
-            {2, "A BIT QUIETER", "ON HOME: KNOB 2 TO 75"}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
+            {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO "}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO "},
+            {2, "A BIT QUIETER", "ON HOME: KNOB 2 TO "}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
             {1, "LONGER NOTES", "TURN KNOB 4 (GATE) TO 79%"}, {1, "LAID BACK: 86 BPM", "TAP HOME, SELECT TO 86 BPM"},
         };
         uint32_t i, j, bad = 0;
-        char act[40];
+        char act[40], want[48];
         for (i = 0; i < NELEM(V); i++) {
             const tr_level_t *L = &TR_LEVELS[V[i].lvl - 1u];
             for (j = 0; j < L->n && !(!strcmp(L->cards[j].head, V[i].head) &&
@@ -772,12 +791,16 @@ int main(int argc, char **argv)
             act[0] = 0;
             if (j < L->n)
                 tr_act(&L->cards[j], act, sizeof act);
-            if (strcmp(act, V[i].act)) {
-                printf("  level %u %s: \"%s\", the screen shows \"%s\"\n", V[i].lvl, V[i].head, act, V[i].act);
+            strcpy(want, V[i].act);
+            if (j < L->n && L->cards[j].btn == B_HOME && L->cards[j].goal == TG_PARAM) {   /* HOME's dial (ui_studio.c) */
+                mix_fmt(want + strlen(want), &trk[L->cards[j].trk], L->cards[j].p, L->cards[j].v);
+            }
+            if (strcmp(act, want)) {
+                printf("  level %u %s: \"%s\", the screen shows \"%s\"\n", V[i].lvl, V[i].head, act, want);
                 bad++;
             }
         }
-        check(!bad, "a value to turn to reads as its screen shows it (HOME's LEVEL 77, not -8 dB)");
+        check(!bad, "a value to turn to reads as its screen shows it (HOME's LEVEL and PAN as their pages)");
     }
     for (l = 0; l < TR_NLEVELS; l++) {
         char what[96];
@@ -817,7 +840,7 @@ int main(int argc, char **argv)
         check(!grid_lost && grid_hints > 3u, what);
         snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
                  algo_said, algo_home);
-        check(algo_said > 5u && algo_home > 0u, what);
+        check(algo_said > 5u, what);
     }
     {   /* level 3's song as the lessons built it, from its start in song mode, to DIR/trainer-l3-song.wav (to compare with
          * the approved render, build/trainer/3-*.wav: tests/trainer_song_compare.py) */

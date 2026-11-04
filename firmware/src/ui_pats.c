@@ -139,7 +139,11 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             if (!ft_owns_press())
                 transport_req = song.playing ? 2 : 1;
         } else if (b == B_SEQ) {
-            open_family(FAM_SEQ);                    /* (the next SEQ screen: SONG) */
+            if (is_drum(t)) {                        /* a drum track: back to its grid (1.4.2: GRID KIT SOUND PATTERNS) */
+                drum_page = 0;
+                studio_open(SC_DRUM);
+            } else
+                open_family(FAM_SEQ);                /* (the next SEQ screen: SONG) */
             return;
         } else if (b == B_OCTUP) {
             pats_ask(sel, pats_cursor);

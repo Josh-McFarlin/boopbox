@@ -99,13 +99,13 @@ UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a 
         str_cpy(b + str_len(b), unit, 16 - str_len(b));
     }
 }
-/* a card's value as the screen the card is on shows it: HOME's knobs (ui_studio.c: LEVEL 0..100, PAN as it is) and SEQ
- * held (LEN a number) are not the parameter's own format (LEVEL in dB, PAN in %, LEN in STEP) */
+/* a card's value as the screen the card is on shows it: the parameter's own format (since 1.4.2 HOME's LEVEL and PAN too:
+ * ui_studio.c mix_value), but SEQ held shows LEN as a number (not "4 STEP") */
 UI_SMALL static void tr_card_value(char *b, const tr_card_t *c, int32_t v)
 {
-    if (c->goal == TG_PARAM && c->btn == B_HOME && (c->p == P_LEVEL || c->p == P_PAN))
-        fmt_int(b, c->p == P_LEVEL ? v * 100 / 127 : v);
-    else if (c->goal == TG_PARAM && c->btn == B_SEQ && !c->data && c->p == P_SLEN)
+    if (c->goal == TG_PARAM && c->btn == B_HOME && (c->p == P_LEVEL || c->p == P_PAN)) {
+        mix_fmt(b, &trk[c->trk % NTRK], c->p, v);      /* (HOME's dials: ui_studio.c, "-7.0dB") */
+    } else if (c->goal == TG_PARAM && c->btn == B_SEQ && !c->data && c->p == P_SLEN)
         fmt_int(b, v);                                  /* (SEQ held: "steps 4", ui_layers.c) */
     else
         tr_value(b, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), v);
@@ -441,7 +441,7 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
         return 1;
     if (!layer && !(on_drum_page() && !drum_page)) {   /* the DRUMS grid first (SEQ held: its keys are the steps anywhere) */
         if (on_drum_page())
-            tr_say("TAP SEQ: BACK TO THE GRID", ""), tr.btn = B_SEQ;
+            tr_say("TAP SEQ UNTIL THE GRID", ""), tr.btn = B_SEQ;
         else if (ui.home && !ui.menu)
             tr_say("TAP SEQ: THE DRUM GRID", ""), tr.btn = B_SEQ;
         else
@@ -503,12 +503,11 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
 /* ---------------------------------------------------------------- the goals --- */
 static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
 UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
-/* ALGORITHM picks the track here (ui_input.c): not on the DRUMS grid or the SONG screen (theirs), not while a button is
- * held, nor in a take; there HOME comes first */
+/* ALGORITHM picks the track here (ui_input.c; the DRUMS screen too since 1.4.2): not on the SONG screen (its loop), not
+ * while a button is held, nor in a take; there HOME comes first */
 UI_SMALL static int tr_algo_ok(void)
 {
-    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_drum_page() &&
-           !on_song_page();
+    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page();
 }
 UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first */
 {
@@ -517,29 +516,13 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     if (!tr_algo_ok() && ui.layer == LY_PLAY)
         tr.btn = B_HOME;
 }
-/* the way to the PATTERNS screen: SEQ from a synth track (on a drum track SEQ opens its DRUMS screen, which has no
- * way there; ALGORITHM picks any track on PATTERNS after); 0 and the hint while not on it */
-UI_SMALL static void tr_to_pats_text(char *b, uint32_t n)
-{
-    uint32_t s;
-    for (s = 0; s < NTRK && is_drum(&trk[s]); s++)
-        ;
-    if (!is_drum(TSEL))
-        str_cpy(b, "TAP SEQ UNTIL PATTERNS", n);
-    else if (!tr_algo_ok())
-        str_cpy(b, "TAP HOME, THEN A SYNTH TRACK", n);
-    else {                                              /* "ALGORITHM TO 1, THEN SEQ" */
-        str_cpy(b, "ALGORITHM TO ", n);
-        fmt_int(b + str_len(b), (int32_t)(s % NTRK) + 1);
-        str_cpy(b + str_len(b), ", THEN SEQ", n - str_len(b));
-    }
-}
+/* the way to the PATTERNS screen: SEQ, from any track (1.4.2: a drum track's DRUMS screen goes on to it after SOUND) */
 UI_SMALL static int tr_to_pats(void)
 {
     if (tr_quiet || on_pats_page())
         return 1;
-    tr_to_pats_text(tr.hint, sizeof tr.hint);
-    tr.btn = !is_drum(TSEL) ? B_SEQ : !tr_algo_ok() ? B_HOME : NB;
+    tr_say("TAP SEQ UNTIL PATTERNS", "");
+    tr.btn = B_SEQ;
     return 0;
 }
 /* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
@@ -648,7 +631,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             if (str_eq(tr.hint, c->act))
                 tr.hint[0] = 0;                         /* (what the action says already) */
         } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
-            tr_say("TAP SEQ: BACK TO THE GRID", "");
+            tr_say("TAP SEQ UNTIL THE GRID", "");
         else if (!ui.home && !on_drum_page() && !on_pats_page() && !on_song_page())
             tr_say("NOW ON ", cur_page()->title);
         return 0;
@@ -985,10 +968,6 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 {
     const char *a = c->act;
     uint32_t o = 0;
-    if (c->goal == TG_PAGE && PAGES[c->p].scope == SC_PATS && is_drum(TSEL)) {   /* (a drum track: SEQ no way there) */
-        tr_to_pats_text(b, n);
-        return;
-    }
     if (!tr_algo_ok() && tr_prefix(a, "TURN ALGORITHM TO TRACK ")) {   /* (ALGORITHM does nothing here: HOME first) */
         str_cpy(b, "TAP HOME, ALGORITHM TO ", n);
         o = str_len(b);

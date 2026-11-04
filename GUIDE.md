@@ -189,7 +189,7 @@ tracks 1–4 (a darker one on a light theme), so each track has its own colour, 
 list tracks show the bank of four the selected track is in: 1–4 or 5–8. More in
 [the groovebox controls](docs/groovebox-controls.md).
 
-**ALGORITHM** picks the track you play, record and edit (1 to 8), on the TRACKS screen (HOME takes you there) and on the PATTERNS and CHORDS screens; on other screens it does nothing, so the track does not change by accident. The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
+**ALGORITHM** picks the track you play, record and edit (1 to 8), on every screen but SONG (where it sets the loop's start); the page stays and shows the new track. On the DRUMS screen (1.4.2) a synth track goes to its NOTES page, and on NOTES a drum track goes to its DRUMS grid. The screen and the whole editor take the colour of the selected track. **White** on the screen always means *what you are touching*; **red** always means *recording*.
 
 ### Tap and hold
 
@@ -238,7 +238,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEQ** | SEQ pages (NOTES, TIMING, PLAY, then the PATTERNS and SONG screens) · with the drum track: the **DRUMS** screen in place of NOTES (2.7.1: from any page; it opened STEP from ARP's) · on DRUMS: grid ↔ kit | step layer |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
-| **ALGORITHM** | select the track, on the TRACKS screen (the home screen: HOME takes you there) and the PATTERNS and CHORDS screens. On other screens it does nothing, so a stray turn does not change the track (inside a layer it waits; not during a free take) | — |
+| **ALGORITHM** | select the track, on every screen but SONG (its loop start); on DRUMS a synth track goes to its NOTES, on NOTES a drum track to its DRUMS grid (1.4.2). Inside a layer it waits; not during a free take | — |
 | **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it (a drum track: its **kits**) · on the DRUMS screen: the kit | — |
 | **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends) · DRUMS screen: grid ↔ kit · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
@@ -313,7 +313,7 @@ Every kit is level-matched. The kit is saved with projects and song sections. Ch
 
 ### The DRUMS screen
 
-Open it with **EDIT** or **SEQ** tapped on the TRACKS screen while the drum track is selected. It has three pages, grid, kit and (2.7) sound; **EDIT / SEQ tapped** goes to the next one, **SELECT** right / left walks them.
+Open it with **EDIT** or **SEQ** tapped on the TRACKS screen while the drum track is selected. It has three pages, grid, kit and (2.7) sound; **EDIT / SEQ tapped** goes to the next one, **SELECT** right / left walks them. After sound, **SEQ** goes on to the **PATTERNS** screen (1.4.2: a drum track's way there), and SEQ there back to the grid.
 
 **Grid page** — the 16 sounds × 16 steps, levels as shades, ratchets as notches.
 

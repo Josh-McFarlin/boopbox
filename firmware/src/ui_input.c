@@ -850,7 +850,12 @@ UI_SMALL static void layer_tap(uint32_t layer)
         break;
     case LY_ERASE:
     case LY_STEP:
-        if (on_drum_page()) {                             /* DRUMS: GRID -> KIT -> SOUND (2.7) */
+        if (on_drum_page()) {                             /* DRUMS: GRID -> KIT -> SOUND (2.7) -> PATTERNS (1.4.2: */
+            if (layer == LY_STEP && drum_page == 2u) {     /* a drum track's way there; SEQ there: back to the grid) */
+                drum_page = 0;
+                studio_open(SC_PATS);
+                break;
+            }
             drum_page = (uint8_t)((drum_page + 1u) % 3u);
             ui.force = 1;
             break;
@@ -1381,8 +1386,12 @@ UI_SMALL static void ui_input(void)
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* ALGORITHM: the selected track (not in a take). 1.2: on every
                                                      * page too (TRACKS, PATTERNS and CHORDS only before): the page stays
                                                      * and shows the new track, the header names it a moment */
-        uint32_t was = song.sel;
+        uint32_t was = song.sel, notes_pg = !ui.home && cur_page()->scope == SC_STEP;
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+        if (song.sel != was && notes_pg && is_drum(TSEL)) {
+            drum_page = 0;                              /* (1.4.2) NOTES onto a drum track: its grid (and back: ui_studio.c) */
+            studio_open(SC_DRUM);
+        }
         if (song.sel != was && !on_home()) {
             char b[24], pn[16];
             str_cpy(b, "TRACK ", sizeof b);
