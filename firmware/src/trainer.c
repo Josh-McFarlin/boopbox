@@ -9,8 +9,9 @@
  *   fixes it ("STEP 5: NO KICK HERE (KEY 5)"). It blinks the button to press; while a card is about keys it takes the
  *   keys' lights over: only the keys to press are lit, all of them (every step of the page to fix). In the sound browser a
  *   fading dot marks the group and the sound; a sound or kit card is done when SAVE closes the browser on it.
- *   HOME held: the level picker (one level a page, SELECT turns them, OCT+ does the action picked with KNOB 1; its last
- *   page opens BoopBox's menu). Progress is a log in its own flash sector (TR_LOG: a few bytes a card, written while the
+ *   HOME held: in a level, the step's "why" first (its music, tools/trainer/theory.py; SELECT turns the pages), then the
+ *   level picker (one level a page, SELECT turns them, OCT+ does the action picked with KNOB 1; its last page opens
+ *   BoopBox's menu). Progress is a log in its own flash sector (TR_LOG: a few bytes a card, written while the
  *   music plays too; erased when full, stopped). One level is in progress at a time: starting one (from a new project)
  *   resets the others that are not done. */
 enum {
@@ -26,6 +27,7 @@ typedef struct {
     int16_t v;                                     /* the value wanted */
     uint8_t tol, flags;                            /* how far off it may be; per goal (HOW_*, SLIDE, filled...) */
     uint16_t data;                                 /* where its target is in TR_DATA */
+    uint8_t why;                                   /* its topic: the "why" pages (TR_WHY, tools/trainer/theory.py) */
 } tr_card_t;
 typedef struct {
     const char *name, *style, *learn1, *learn2;    /* the picker's page: the song, its style and tempo, what it teaches */
@@ -49,6 +51,7 @@ static struct {
     uint8_t pend;                                  /* a level to begin once the transport has stopped: 1 + the level */
     uint8_t dirty;                                 /* a record for the log */
     uint8_t page, sel;                             /* the picker: the page shown (a level, or TR_NLEVELS: the menu), action */
+    uint8_t wp;                                    /* the picker on the step's "why" pages: 1 + the page, 0: not */
     uint8_t btn;                                   /* a button the hint asks for (B_*, NB: the card's) */
     uint8_t keyed;                                 /* the card is about keys: the coach owns their lights */
     uint32_t ok_ms, t0;
@@ -1056,8 +1059,8 @@ UI_SMALL static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl)
 {
     const tr_card_t *c = tr_card();
     uint32_t k, ph = (fm1_ms / 125u) & 3u;
-    if (ui.menu == 3u) {                                /* the picker: OCT+ does the action */
-        if (ph < 2u)
+    if (ui.menu == 3u) {                                /* the picker: OCT+ does the action (not on the "why" pages) */
+        if (ph < 2u && !tr.wp)
             led_put(nl, panel.btn[B_OCTUP], 1);
         return;
     }
@@ -1124,6 +1127,7 @@ UI_SMALL static void tr_pick_open(void)
     ui.menu = 3;
     ui.force = 1;
     tr.page = (uint8_t)(tr.lvl ? tr.lvl - 1u : 0u);
+    tr.wp = (uint8_t)(tr_card() != 0);              /* in a level: the step's "why" first */
     tr.sel = 0;
     tr.psig = 0;
 }
@@ -1136,9 +1140,24 @@ UI_SMALL static void tr_pick_input(uint32_t pressed)
         menu_close();
         return;
     }
+    if (tr.wp) {                                    /* the "why" pages: SELECT turns them, past the last: the level */
+        const tr_card_t *c = tr_card();
+        uint32_t n = c ? TR_WHY[c->why % TR_NWHY].n : 0u;
+        if ((s = panel_enc(EN_SELECT)) != 0 || (s = panel_enc(EN_ALGO)) != 0) {
+            if (s > 0 && tr.wp >= n)
+                tr.wp = 0;                              /* (on to the level's own page) */
+            else
+                tr.wp = (uint8_t)clamp((int32_t)tr.wp + (s > 0 ? 1 : -1), 1, (int32_t)n);
+            tr.sel = 0;
+            ui.force = 1;
+        }
+        enc_drop();
+        return;
+    }
     if ((s = panel_enc(EN_SELECT)) != 0 || (s = panel_enc(EN_ALGO)) != 0) {
         tr.page = (uint8_t)clamp((int32_t)tr.page + (s > 0 ? 1 : -1), 0, TR_NLEVELS);
         tr.sel = 0;
+        ui.force = 1;
     }
     if ((s = panel_enc(EN_K1)) != 0 || (s = panel_enc(EN_PRESET)) != 0)
         tr.sel = (uint8_t)clamp((int32_t)tr.sel + (s > 0 ? 1 : -1), 0, (int32_t)n - 1);
@@ -1164,8 +1183,54 @@ UI_SMALL static void tr_pick_input(uint32_t pressed)
     }
     enc_drop();
 }
+UI_SMALL static void tr_why_draw(void)             /* the step's topic: a page of its text, as tools/trainer/lessons.py
+                                                      * wrapped it (10 lines at most) */
+{
+    const tr_card_t *c = tr_card();
+    uint32_t t = c->why % TR_NWHY, n = TR_WHY[t].n, pg = (tr.wp - 1u) % n, pass, sig;
+    const char *x = TR_WHY_PG[TR_WHY[t].first + pg];
+    uint16_t acc = UI_COL[(tr.lvl - 1u) & 3u];
+    char b[32];
+    sig = 0x5A17u + t * 131u + pg * 7u;
+    if (!ui.force && sig == tr.psig)
+        return;
+    tr.psig = sig;
+    for (pass = 0; pass < 2u; pass++) {             /* (the canvas holds 124 rows: two bands) */
+        const char *l = x;
+        int32_t y = 48;
+        cv_begin(240, pass ? 116u : 124u, C_BLACK);
+        cv_oy = pass ? -124 : 0;
+        str_cpy(b, "WHY: STEP ", sizeof b);
+        fmt_int(b + str_len(b), tr.card + 1);
+        cv_text(4, 2, &FONT_S, b, C_HI);
+        fmt_int(b, (int32_t)pg + 1);
+        str_cpy(b + str_len(b), "/", 2);
+        fmt_int(b + str_len(b), (int32_t)n);
+        ui_text_r(2, b, C_GRAY);
+        cv_rect(0, 20, 240, 1, C_LINE);
+        cv_text(4, 26, &FONT_S, TR_WHY[t].title, acc);
+        while (*l) {                                /* the lines, '\n' between */
+            uint32_t k = 0;
+            while (l[k] && l[k] != '\n' && k < sizeof b - 1u)
+                b[k] = l[k], k++;
+            b[k] = 0;
+            cv_text(4, y, &FONT_S, b, C_WHITE);
+            y += 17;
+            l += k;
+            if (*l == '\n')
+                l++;
+        }
+        cv_text(4, 226, &FONT_S, pg + 1u < n ? "SELECT: MORE   OCT-: CLOSE" : "SELECT: LEVELS   OCT-: CLOSE", C_DIM);
+        cv_oy = 0;
+        cv_blit(0, pass * 124u);
+    }
+}
 UI_SMALL static void tr_pick_draw(void)
 {
+    if (tr.wp && tr_card()) {
+        tr_why_draw();
+        return;
+    }
     uint8_t a[8];
     uint32_t page = tr.page, n = tr_actions(page, a), pass, i, first, sig;
     const tr_level_t *L = page < TR_NLEVELS ? &TR_LEVELS[page] : 0;

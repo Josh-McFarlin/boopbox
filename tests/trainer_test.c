@@ -616,6 +616,9 @@ static void pick(uint32_t page, uint32_t act)              /* HOME held: the pic
         frames(60);                                      /* (held 0.7 s) */
         up(B_HOME);
     }
+    while (tr.wp && g--)                                 /* (in a level: the step's "why" pages first) */
+        slow(EN_SELECT, 1);
+    g = 20;
     while (tr.page != page && g--)
         slow(EN_SELECT, tr.page < page ? 1 : -1);
     n = tr_actions(tr.page, a);
@@ -756,6 +759,48 @@ int main(int argc, char **argv)
         }
         check(!bad, "PATTERNS, SONG, CHORDS: nothing left over the list from the screen before (rows 40-41)");
         home();
+    }
+    {   /* the "why" pages: HOME held in a level opens the step's topic; SELECT its pages, then the level's page */
+        uint32_t i, ok = 1, t, n;
+        pick(0, TA_START);
+        frames(30);
+        tr_go(1); tr_go(1); tr_go(1);                    /* (the kick: KICK) */
+        frames(3);
+        down(B_HOME); frames(60); up(B_HOME);
+        t = tr_card()->why;
+        n = TR_WHY[t].n;
+        ok = ui.menu == 3u && tr.wp == 1u && !strcmp(TR_WHY[t].title, "THE KICK");
+        ui.force = 1; frame(); ppm(outdir, "trainer-why-1");
+        for (i = 1; i < n; i++)
+            slow(EN_SELECT, 1);
+        ok &= tr.wp == n;
+        ui.force = 1; frame(); ppm(outdir, "trainer-why-2");
+        slow(EN_SELECT, 1);
+        ok &= tr.wp == 0u && tr.page == 0u;
+        slow(EN_SELECT, -1);
+        ok &= tr.wp == 0u && tr.page == 0u;                /* (the levels: no way back into "why") */
+        tap(B_OCTDN);
+        ok &= !ui.menu && tr.lvl == 1u && tr.card == 3u;
+        check(ok, "HOME held in a level: the step's why (THE KICK), SELECT its pages, then the level; OCT- closes");
+        for (i = 0, ok = 1; i < TR_NWHY; i++)
+            ok &= TR_WHY[i].n >= 1u && TR_WHY[i].first + TR_WHY[i].n <= NELEM(TR_WHY_PG);
+        for (i = 0; i < NELEM(TR_WHY_PG); i++) {          /* every line fits the screen */
+            const char *l = TR_WHY_PG[i];
+            uint32_t lines = 0;
+            while (*l) {
+                char b[40];
+                uint32_t k = 0;
+                while (l[k] && l[k] != '\n' && k < 39u)
+                    b[k] = l[k], k++;
+                b[k] = 0;
+                ok &= text_w(&FONT_S, b) <= 232 && k < 39u;
+                lines++;
+                l += k + (l[k] == '\n');
+            }
+            ok &= lines >= 1u && lines <= 10u;
+        }
+        check(ok, "every why page: its lines fit the screen, 10 at most");
+        pick(0, TA_QUIT);
     }
     {   /* (1.4.2) a drum track: ALGORITHM on its grid, SEQ on to PATTERNS and round */
         uint32_t g, ok;

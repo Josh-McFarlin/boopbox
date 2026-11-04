@@ -218,6 +218,7 @@ UI_SMALL static uint32_t lights_keys_mask(void)
 
 #if FELUCCA_TRAINER
 static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl);
+static void tr_pick_open(void);
 #endif
 UI_SMALL static void ui_leds(void)
 {
@@ -1199,7 +1200,8 @@ UI_SMALL static void ui_input(void)
         } else {
             layer_unlock();
 #if FELUCCA_TRAINER
-            ui.menu = 3;                                /* (the TRAINER: its level picker; the menu is its last page) */
+            tr_pick_open();                             /* (the TRAINER: the step's "why", its level picker; the menu is
+                                                         * its last page) */
 #else
             ui.menu = 1;
 #endif

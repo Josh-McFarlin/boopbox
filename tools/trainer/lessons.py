@@ -17,6 +17,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import songs as S  # noqa: E402
+import theory as T  # noqa: E402
 
 HEAD_MAX, ACT_MAX = 23, 30
 KITS = None                                     # filled in main(): the drum kits' names, as drums.c numbers them
@@ -45,6 +46,7 @@ class Card:
         assert "@" not in act or goal in ("TG_PARAM", "TG_GLOBAL"), act
         self.head, self.act, self.goal, self.trk, self.p, self.v = head, act, goal, trk, p, v
         self.tol, self.flags, self.data, self.btn, self.keys = tol, flags, data, btn, keys
+        self.topic = None
 
 
 def key_list(steps):
@@ -434,6 +436,83 @@ def level3():
     return L
 
 
+# each level's "why" topics (tools/trainer/theory.py): a topic starts at the first step (from the one before) with that
+# headline and holds until the next
+TOPIC_AT = {
+    1: [("THE DRUMS: TRACK 4", "PARTS"), ("DRUM KIT: LO-FI", "SOUNDS"), ("THE DRUM GRID", "GRID"),
+        ("KICK: KNOB 1 TO KICK", "KICK"), ("SNARE: KNOB 1 TO SNARE", "BACKBEAT"), ("HATS: KNOB 1 TO HAT", "HATS"),
+        ("LAID BACK: 86 BPM", "TEMPO"), ("SWING THE BEAT", "SWING"), ("THE BASS: TRACK 1", "PARTS"),
+        ("THE SONG IS IN A", "KEY"), ("A MINOR", "MINOR"), ("ONE STEP A BEAT", "VALUES"), ("THE BASS LINE", "BASS1"),
+        ("LONGER NOTES", "GATE"), ("THE CHORDS: TRACK 2", "PARTS"), ("ONE KEY, ONE CHORD", "SEVENTH"),
+        ("ONE STEP A BAR", "VALUES"), ("AN OCTAVE DOWN", "REGISTER"), ("FOUR CHORDS", "PROG1"), ("LET THEM RING", "GATE"),
+        ("SOME ROOM", "SPACE"), ("THE HOOK: TRACK 3", "PARTS"), ("A NEW SOUND: KALIMBA", "SOUNDS"),
+        ("EIGHTH NOTES", "VALUES"), ("UP AN OCTAVE", "REGISTER"), ("THE HOOK", "PENTA"), ("SWING IT TOO", "SWING"),
+        ("AN ECHO", "ECHO"), ("AND A ROOM", "SPACE"), ("PERFORM: THE INTRO", "MUTES"), ("LEVEL 1 DONE!", "DONE1")],
+    2: [("SYNTHWAVE AT 104", "TEMPO"), ("THE SONG IS IN D", "KEY"), ("D MINOR", "MINOR"), ("THE DRUMS: TRACK 4", "PARTS"),
+        ("DRUM KIT: SYNTHWV", "SOUNDS"), ("THE DRUM GRID", "GRID"), ("FOUR ON THE FLOOR: KICK", "FLOOR"),
+        ("SNARE, THEN CLAP", "BACKBEAT"), ("HIT THE SNARE HARD", "DYNAMICS"), ("HATS ON THE OFFBEAT", "HATS"),
+        ("SOFT HATS: 1 5 9 13", "DYNAMICS"), ("A ROLL ON STEP 16", "ROLL"), ("HEAR IT", "FLOOR"),
+        ("THE BASS: TRACK 1", "PARTS"), ("BASS SOUND: SAW BASS", "SOUNDS"), ("FOUR BARS OF EIGHTHS", "VALUES"),
+        ("TYPE THE BASS LINE", "BASS2"), ("ACCENT THE LAST NOTE", "DYNAMICS"), ("LONGER NOTES", "GATE"),
+        ("THE PAD: TRACK 2", "PADS"), ("ONE STEP A BEAT", "VALUES"), ("THREE-NOTE CHORDS", "PROG2"),
+        ("A BAR EACH", "PADS"), ("LET THEM RING", "GATE"), ("MORE ROOM", "SPACE"), ("TRACK 5: A PLUCK", "PARTS"),
+        ("PLUCK SOUND: FM PLUCK", "SOUNDS"), ("THE PLUCK LINE", "ARP"), ("ECHOES", "ECHO"), ("A LITTLE ROOM", "SPACE"),
+        ("TO THE LEFT", "MIX"), ("THE ECHO'S TIMING", "ECHO"), ("THE CHORUS: PATTERNS", "SECTIONS"),
+        ("OPEN HATS", "OPENHAT"), ("THE LEAD: PWM LEAD", "LEAD"), ("ITS OWN PATTERN 2", "SECTIONS"),
+        ("FOUR BARS OF EIGHTHS", "VALUES"), ("THE HOOK", "LEAD"), ("SMOOTHER", "GATE"), ("AN ECHO", "ECHO"),
+        ("A ROOM", "SPACE"), ("VERSE AND CHORUS", "SECTIONS"), ("LEVEL 2 DONE!", "DONE2")],
+    3: [("MELODIC DUBSTEP: 150", "TEMPO"), ("THE SONG IS IN D", "KEY"), ("D MINOR", "MINOR"),
+        ("THE DRUMS: TRACK 4", "PARTS"), ("DRUM KIT: DUBSTEP", "SOUNDS"), ("THE DRUM GRID", "GRID"),
+        ("HALF-TIME KICK", "HALFTIME"), ("HIT IT HARD", "DYNAMICS"), ("OFFBEAT HATS", "HATS"),
+        ("DRUMS UP FRONT", "MIX"), ("TRACK 8: MORE DRUMS", "CRASH"), ("THE SUB: TRACK 2", "SUB"),
+        ("HELD THE WHOLE BAR", "GATE"), ("MORE SUB", "SUB"), ("THE CHORDS: TRACK 1", "STABS"), ("SHORTER", "GATE"),
+        ("FULL LEVEL", "MIX"), ("THE PUMP", "PUMP"), ("HEAR THE DROP", "ONECHORD"), ("THE PIANO: TRACK 6", "ONECHORD"),
+        ("ONE BAR OF EIGHTHS", "VALUES"), ("TWO CHORDS", "ONECHORD"), ("LONGER", "GATE"), ("A BIG ROOM", "SPACE"),
+        ("A BIT QUIETER", "MIX"), ("THE PAD: TRACK 5", "PADS"), ("ONE STEP, A BAR LONG", "VALUES"),
+        ("ONE CHORD", "ONECHORD"), ("ALMOST THE WHOLE BAR", "GATE"), ("ROOM", "SPACE"),
+        ("THE RISER: TRACK 7", "RISER"), ("THE ECHO'S TIMING", "ECHO"), ("PATTERNS FOR SECTIONS", "FORM"),
+        ("THE BUILD'S BEAT", "BUILD"), ("THE BREAK'S BEAT", "BREAK"), ("THE BUILD'S ROLL", "BUILD"),
+        ("THE BUILD'S PAD", "FILTER"), ("STOP TO SAVE", "FORM"), ("LEVEL 3 DONE!", "DONE3")],
+}
+PAGE_W, PAGE_LINES = 232, 10                    # a "why" page: its text wrapped to the screen (FONT_S), lines
+
+
+def set_topics(L):
+    at, cur = 0, None
+    for head, topic in TOPIC_AT[L.num]:
+        assert topic in T.TOPICS, topic
+        while at < len(L.cards) and L.cards[at].head != head:
+            L.cards[at].topic = cur
+            at += 1
+        assert at < len(L.cards), f"level {L.num}: no step '{head}' for {topic} (after the one before)"
+        cur = topic
+    for c in L.cards[at:]:
+        c.topic = cur
+    assert all(c.topic for c in L.cards), f"level {L.num}: a step before the first topic"
+
+
+def font_adv(gen):
+    """FONT_S's advance of each character (felucca_font.h), the text as the screen draws it (upper case)"""
+    import re
+    h = open(os.path.join(gen, "felucca_font.h")).read()
+    m = re.search(r"FONT_S_ADV\[\d+\] = \{([^}]*)\}", h)
+    adv = [int(x) for x in m.group(1).split(",") if x.strip()]
+    first = int(re.search(r"FONT_S = \{ \d+, \d+, (\d+),", h).group(1))
+    return lambda ch: adv[ord(ch) - first] if 0 <= ord(ch) - first < len(adv) else 8
+
+
+def wrap(text, w):
+    lines, cur = [], ""
+    for word in text.upper().split():
+        t = (cur + " " + word).strip()
+        if sum(w(ch) for ch in t) <= PAGE_W:
+            cur = t
+        else:
+            lines.append(cur)
+            cur = word
+    return lines + [cur]
+
+
 # ---------------------------------------------------------------------------------------------------------------
 def presets_from_sources(root):
     """factory sounds: engine index and preset index, read from the engines' preset tables and the samples header"""
@@ -526,7 +605,11 @@ def main(out):
     os.environ.setdefault("FELUCCA_TRAINER", "1")
     PRESETS["GRAND PNO"] = (4, "SMP_PRESET_GRAND_PNO")      # (the samples header numbers the SAMPLE presets)
     levels = [level1(), level2(), level3()]
+    for lv in levels:
+        set_topics(lv)
     blob = c_data(levels)
+    keys = list(T.TOPICS)
+    adv = font_adv(os.path.dirname(out))
     L = ["/* generated by tools/trainer/lessons.py from tools/trainer/songs.py: the TRAINER's lessons */", "#pragma once", ""]
     L.append(f"static const uint8_t TR_DATA[{max(1, len(blob))}] = {{")
     for i in range(0, len(blob), 24):
@@ -538,13 +621,30 @@ def main(out):
             btn = f"B_{c.btn.replace('-', 'DN').replace('+', 'UP')}" if c.btn and c.btn.startswith("OCT") else \
                   f"B_{'SCL' if c.btn == 'SEL' else c.btn}" if c.btn else "NB"
             L.append(f'    {{"{c.head}", "{c.act}", {c.goal}, {c.trk}, {c.p}, {btn}, {c.v}, {c.tol}, {c.flags}, '
-                     f'{c.off}}},')
+                     f'{c.off}, {keys.index(c.topic)}}},')
         L.append("};")
     L.append("static const tr_level_t TR_LEVELS[] = {")
     for lv in levels:
         L.append(f'    {{"{lv.name}", "{lv.style}", "{lv.learn1}", "{lv.learn2}", TR_L{lv.num}, {len(lv.cards)}}},')
     L.append("};")
     L.append(f"#define TR_NLEVELS {len(levels)}")
+    # the "why" pages (tools/trainer/theory.py): each topic's title and pages, a page its lines as the screen wraps them
+    pages, why = [], []
+    for k in keys:
+        title, ps = T.TOPICS[k]
+        assert len(title) <= 22, title
+        why.append((title, len(pages), len(ps)))
+        for i, ptext in enumerate(ps):
+            lines = wrap(ptext, adv)
+            assert len(lines) <= PAGE_LINES, f"why {k} page {i + 1}: {len(lines)} lines (at most {PAGE_LINES})"
+            pages.append("\\n".join(l.replace('"', "'") for l in lines))
+    L.append(f"static const char *const TR_WHY_PG[{len(pages)}] = {{")
+    L += [f'    "{x}",' for x in pages]
+    L.append("};")
+    L.append("static const struct { const char *title; uint8_t first, n; } TR_WHY[] = {")
+    L += [f'    {{"{t}", {a}, {n}}},' for t, a, n in why]
+    L.append("};")
+    L.append(f"#define TR_NWHY {len(why)}")
     # what each level's song sets, for the tests (tests/trainer_test.c): (level, track or 255 for a global, id, value)
     chk = []
     for lv in levels:
@@ -570,7 +670,8 @@ def main(out):
     L.append("};")
     L.append("#endif")
     open(out, "w").write("\n".join(L) + "\n")
-    print(f"trainer: {', '.join(str(len(l.cards)) for l in levels)} cards, {len(blob)} B of targets -> {out}")
+    print(f"trainer: {', '.join(str(len(l.cards)) for l in levels)} cards, {len(blob)} B of targets, {len(keys)} why "
+          f"topics ({len(pages)} pages) -> {out}")
 
 
 if __name__ == "__main__":

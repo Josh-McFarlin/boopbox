@@ -13,6 +13,19 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.4.3
+
+**BoopBox Trainer: why you are doing each step** ([the trainer](docs/trainer.md)):
+
+- **Hold HOME** during a level: before the level picker, the trainer explains the step you are on in music terms:
+  the backbeat, swing, the minor scale, seventh chords, i - iv - VI - v, the pentatonic hook, four on the floor, voice
+  leading, half-time, the side-chain pump, risers, builds, song form and more: 45 topics, two screens each, in plain
+  words. **SELECT** turns the pages, then on to the levels; **OCT-** closes.
+- Each level ends on a page about what you made.
+
+BoopBox itself is unchanged in this release (only its version number). Projects, songs, presets, settings and the
+trainer's progress from 1.4.2 open as they are.
+
 ## 1.4.2
 
 **The sound browser stays open until you close it** (BoopBox and BoopBox Trainer):
