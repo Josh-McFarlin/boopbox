@@ -141,7 +141,7 @@ static int on_target(const tr_card_t *c)
     return c->goal == TG_KIT ? is_drum(t) && t->p[P_E0] == c->v :
            !is_drum(t) && t->eng_req == c->p && t->preset == (uint8_t)c->v && user_of(t) >= UP_SLOTS;
 }
-static void do_browse(const tr_card_t *c)
+static void browse_find(const tr_card_t *c)
 {
     uint32_t g, s;
     home();
@@ -160,11 +160,35 @@ static void do_browse(const tr_card_t *c)
             slow(EN_K2, 1);
     }
     frames(10);
-    if (!browse_seen++)
-        check(on_target(c) && !tr.ok && tr_browsing() && !strcmp(tr.hint, "THAT'S IT! TAP HOME TO KEEP IT"),
-              "a sound card: on the sound in the browser, not done yet (HOME closes it on it)");
-    tap(B_HOME);                                         /* "THAT'S IT! TAP HOME TO KEEP IT" */
+}
+static void do_browse(const tr_card_t *c)
+{
+    static uint8_t seen_kind[2];
+    browse_seen++;
+    if (!seen_kind[c->goal == TG_SOUND]++) {             /* the first kit, the first sound: the browser stays; HOME puts
+                                                         * the sound back */
+        const track_t *t = &trk[c->trk];
+        uint8_t kind, eng, pre;
+        int16_t e0;
+        home();
+        algo_to(c->trk);
+        kind = t->kind, eng = t->eng_req, pre = t->preset, e0 = t->p[P_E0];
+        browse_find(c);
+        frames(300);                                     /* (4.8 s untouched: before 1.4.2 it went back by itself) */
+        check(on_target(c) && !tr.ok && tr_browsing() && !strcmp(tr.hint, "THAT'S IT! TAP SAVE TO KEEP IT"),
+              "the sound browser stays open untouched; on the sound: not done yet (SAVE keeps it)");
+        tap(B_HOME);
+        frames(5);
+        check(!tr_browsing() && t->kind == kind && t->p[P_E0] == e0 &&
+              (kind == TK_DRUM || (t->eng_req == eng && t->preset == pre)) && !on_target(c),
+              c->goal == TG_SOUND ? "HOME closes the browser and puts back the synth sound it opened on" :
+              "HOME closes the browser and puts back the kit it opened on");
+    }
+    browse_find(c);
+    tap(B_SAVE);                                         /* "THAT'S IT! TAP SAVE TO KEEP IT" */
     frames(5);
+    if (seen_kind[c->goal == TG_SOUND] == 1u)
+        check(!tr_browsing() && on_target(c), "SAVE closes the browser and keeps the sound");
 }
 /* a synth pattern, as the card says: the SEQ layer (play the note, hold SEQ, the step key) or the NOTES page */
 static void do_notes(const tr_card_t *c)

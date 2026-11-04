@@ -799,6 +799,8 @@ UI_SMALL static void open_family(uint32_t fam)
         ui.page = ui.fam_last[fam] && PAGES[ui.fam_last[fam]].fam == fam && page_shown(&PAGES[ui.fam_last[fam]])
                       ? ui.fam_last[fam] : (uint8_t)page_first(fam);
     }
+    if (PAGES[ui.page].graph == GR_BROWSE && ui.page + 1u < NPAGES && PAGES[ui.page + 1u].fam == fam)
+        ui.page++;                                      /* (the browser: PRESETS opens it, SAVE closes it) */
     ui.fam_last[fam] = ui.page;
     ui.home = 0;
     page_entered();
@@ -1420,7 +1422,6 @@ UI_SMALL static void preset_go(uint32_t n)                    /* load list index
 #define BR_KIT 0x8000u                               /* br_n: a drum kit, | its number */
 #define BR_GDRUM 200u                                /* br_gid: DRUMS' first kind of kit (200 .. 203) */
 #define BR_ARM 0xEAu                                 /* ui.arm: a change of the track's kind, waiting for a second detent */
-#define BR_IDLE_MS 4000u                             /* opened from TRACKS: back to it after this long untouched */
 static const char *const BR_KITG[4] = {"GM KIT", "MACHINE", "USR SMP", "USR SYN"};
 static uint8_t br_kind;                              /* VIEW: 0 ENGINE, 1 KIND (not kept: ENGINE at power-on) */
 static uint8_t br_back, br_home, br_page;            /* opened by PRESETS on TRACKS: the screen it goes back to */
@@ -1564,7 +1565,7 @@ UI_SMALL static void br_step(int32_t s, int level)
     }
     br_go(p, nf);
 }
-UI_SMALL static void br_open(void)                   /* PRESETS on TRACKS: the browser, until left untouched */
+UI_SMALL static void br_open(void)                   /* PRESETS on TRACKS: the browser, until SAVE or HOME */
 {
     uint32_t i = 0;
     while (PAGES[i].graph != GR_BROWSE)
@@ -1577,20 +1578,57 @@ UI_SMALL static void br_open(void)                   /* PRESETS on TRACKS: the b
     br_back = 1;
     br_t0 = fm1_ms;
 }
-UI_SMALL static void br_poll(void)                   /* once a pass: opened from TRACKS, back there when idle */
+/* the sound the track had when the browser opened: HOME puts it back, SAVE keeps the one browsed to (1.4.2: it stays
+ * open until one of them; another button leaving it keeps the sound, as a track changed there does) */
+static struct {
+    int16_t p[P_COUNT];
+    uint8_t on, trk, kind, eng, preset, user;
+    int8_t fav;
+} br_was;
+UI_SMALL static void br_poll(void)                   /* once a pass: the browser's sound to go back to */
 {
-    if (!br_back)
-        return;
-    if (ui.home || cur_page()->graph != GR_BROWSE)   /* (a button took it elsewhere: it stays there) */
+    track_t *t = TSEL;
+    if (ui.home || cur_page()->graph != GR_BROWSE) {
+        br_was.on = 0;
         br_back = 0;
-    else if (fm1_ms - ui_input_ms > BR_IDLE_MS) {
+    } else if (!br_was.on || br_was.trk != song.sel) {
+        memcpy(br_was.p, t->p, sizeof br_was.p);
+        br_was.on = 1, br_was.trk = song.sel, br_was.kind = t->kind, br_was.eng = t->eng_req;
+        br_was.preset = t->preset, br_was.user = t->user, br_was.fav = fav_at;
+    }
+}
+UI_SMALL static void br_close(int keep)              /* SAVE (keep) or HOME (the sound before): back where it opened */
+{
+    track_t *t = TSEL;
+    uint32_t i;
+    if (!keep && br_was.on && br_was.trk == song.sel) {
+        if (t->kind != br_was.kind)
+            track_kind_switch(br_was.kind, br_was.eng);
+        if (!is_drum(t) && t->eng_req != br_was.eng)
+            set_engine(br_was.eng);
+        fm1_irq_off();
+        locks_restore(t);
+        sound_change(t);                              /* (what sounds fades out with the browsed sound) */
+        for (i = 0; i < P_COUNT; i++)
+            if (i != P_MUTE)
+                t->p[i] = br_was.p[i];
+        t->preset = br_was.preset, t->user = br_was.user;
+        fm1_irq_on();
+        panic_req |= (uint8_t)(1u << trk_index(t));
+        fm6_track_loaded(t);
+        fav_at = br_was.fav;
+        sync_reload = 1;
+    }
+    ui_message(keep ? "SOUND KEPT" : "SOUND PUT BACK");
+    br_was.on = 0;
+    if (br_back) {
         ui.home = br_home;
         ui.page = br_page;
         br_back = 0;
         page_entered();
-    }
+    } else
+        go_home();
 }
-
 /* HOME: what KNOB k edits: the engine's four main parameters; on a drum track
  * LEVEL and REV (its drum mix), PAN and LEN */
 UI_SMALL static const param_desc_t *home_param(uint32_t k, int16_t **vp)

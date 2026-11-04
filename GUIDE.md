@@ -848,9 +848,15 @@ synthesised kits (808, 909, TRAP…), **USR SMP** your sample kits (USR1–4, US
 If the track has a pattern, the first click says *AGAIN* and a second click within about 1.5 s changes it. On an
 empty track, it changes at once.
 
-Opened from TRACKS, the browser goes back there by itself after 4 s without a knob, key or button; a button goes where
-it always does. It is also the SAVE → **PRESETS** page (it stays open there). MIDI Program Change counts the list in
-the KIND order, as before.
+The browser stays open until you close it (1.4.2):
+
+- **SAVE** keeps the sound you are on and closes the browser (*SOUND KEPT*).
+- **HOME** closes it and puts back the sound the track had when it opened (*SOUND PUT BACK*), the kit or the engine and
+  its settings too. A change of TYPE cleared the pattern: HOME puts the sound back, not the pattern.
+- Any other button goes where it always does and keeps the sound you are on.
+
+It closes to the screen it opened from. SAVE tapped elsewhere opens the SAVE pages at **USER** (USER, SECTION, TOOLS);
+the browser is the PRESETS knob's. MIDI Program Change counts the list in the KIND order, as before.
 
 To start from the engine's defaults: SAVE → TOOLS → **INIT**.
 

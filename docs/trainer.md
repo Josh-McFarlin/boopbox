@@ -35,7 +35,8 @@ that song.
   - The button to press **blinks**. On a step about keys the coach owns the keys' lights: only the keys to press are
     lit (every step of the page still to fix, blinking), not BoopBox's beat markers or the steps already there.
   - In the sound browser, a dot fading in and out marks the group and the sound (or kit) to pick, whichever is
-    highlighted, and stays until the step is done. The step is done when you tap **HOME** with that sound chosen.
+    highlighted, and stays until the step is done. The step is done when you tap **SAVE** on that sound (HOME puts
+    the sound back).
   - The coach checks the result, not the buttons: any way of getting there counts.
   - When the step is right it says **NICE!** and the next step comes.
 - **Progress** is written to its own flash sector a few bytes at a time, after every step, while the music plays too:

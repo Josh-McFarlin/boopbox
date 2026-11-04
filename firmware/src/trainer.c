@@ -8,7 +8,7 @@
  *   what to do ("@" in it: the value wanted, as the screen shows it), and, when something is off, what is wrong and what
  *   fixes it ("STEP 5: NO KICK HERE (KEY 5)"). It blinks the button to press; while a card is about keys it takes the
  *   keys' lights over: only the keys to press are lit, all of them (every step of the page to fix). In the sound browser a
- *   fading dot marks the group and the sound; a sound or kit card is done when the browser closes on it.
+ *   fading dot marks the group and the sound; a sound or kit card is done when SAVE closes the browser on it.
  *   HOME held: the level picker (one level a page, SELECT turns them, OCT+ does the action picked with KNOB 1; its last
  *   page opens BoopBox's menu). Progress is a log in its own flash sector (TR_LOG: a few bytes a card, written while the
  *   music plays too; erased when full, stopped). One level is in progress at a time: starting one (from a new project)
@@ -603,7 +603,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         if (!tr_sel(c))
             return 0;
         if (on)
-            tr_say("THAT'S IT! TAP HOME TO KEEP IT", ""), tr.btn = B_HOME;
+            tr_say("THAT'S IT! TAP SAVE TO KEEP IT", ""), tr.btn = B_SAVE;
         else if (tr_browsing())
             tr_say("FOLLOW THE DOTS: KNOB 2, 3", "");
         else

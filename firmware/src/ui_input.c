@@ -883,7 +883,9 @@ UI_SMALL static void layer_tap(uint32_t layer)
         open_family(FAM_GLO);
         break;
     case LY_SONG:                                         /* SAVE tapped: TRACKS -> the song, else the SAVE pages */
-        if (on_song_page())
+        if (!ui.home && cur_page()->graph == GR_BROWSE)
+            br_close(1);                                  /* the sound browser: the sound browsed to kept, closed */
+        else if (on_song_page())
             arrangement_save();
         else if (!ui.home && cur_page()->scope == SC_TRK)
             studio_open(SC_SONG);
@@ -1184,7 +1186,7 @@ UI_SMALL static void ui_input(void)
     fm6_poll();                                         /* FM6: PTCH turned -> its patch */
     ml_poll();                                          /* MIDI LEARN: a CC came for the picked parameter (2.6) */
     page_fix();                                         /* (a page the track does not have: its neighbour, 2.6) */
-    br_poll();                                          /* the sound browser opened from TRACKS: back when idle */
+    br_poll();                                          /* the sound browser: the sound HOME puts back */
     midi_entry();                                       /* (the STEP page's MIDI notes: read every frame, 2.6) */
     if (home == BT_HOLD) {                              /* HOME held: open the menu, or leave it */
         if (ui.menu) {
@@ -1292,7 +1294,9 @@ UI_SMALL static void ui_input(void)
     }
 #endif
     if (home == BT_TAP) {                               /* HOME acts on release: a hold opens the menu */
-        if (!ui.home && cur_page()->scope == SC_TRK && !vis_on)
+        if (!ui.home && cur_page()->graph == GR_BROWSE)
+            br_close(0);                                /* the sound browser: closed, the sound it opened on back */
+        else if (!ui.home && cur_page()->scope == SC_TRK && !vis_on)
             vis_open();                                 /* HOME on HOME: the visualiser (ui_vis.c) */
         else {
             vis_on = 0;                                 /* (HOME again: back to the TRACKS screen) */
