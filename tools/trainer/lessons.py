@@ -17,6 +17,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import songs as S  # noqa: E402
+import theory as T  # noqa: E402
 
 HEAD_MAX, ACT_MAX = 23, 30
 KITS = None                                     # filled in main(): the drum kits' names, as drums.c numbers them
@@ -45,6 +46,7 @@ class Card:
         assert "@" not in act or goal in ("TG_PARAM", "TG_GLOBAL"), act
         self.head, self.act, self.goal, self.trk, self.p, self.v = head, act, goal, trk, p, v
         self.tol, self.flags, self.data, self.btn, self.keys = tol, flags, data, btn, keys
+        self.topic = None
 
 
 def key_list(steps):
@@ -432,6 +434,83 @@ def level3():
     L.songmode("PLAY THE SONG", "OCT-: SONG MODE, THEN PLAY")
     L.done("LEVEL 3 DONE!", "SAVE + KEYS 1-4: PLAY SECTIONS")
     return L
+
+
+# each level's "why" topics (tools/trainer/theory.py): a topic starts at the first step (from the one before) with that
+# headline and holds until the next
+TOPIC_AT = {
+    1: [("THE DRUMS: TRACK 4", "PARTS"), ("DRUM KIT: LO-FI", "SOUNDS"), ("THE DRUM GRID", "GRID"),
+        ("KICK: KNOB 1 TO KICK", "KICK"), ("SNARE: KNOB 1 TO SNARE", "BACKBEAT"), ("HATS: KNOB 1 TO HAT", "HATS"),
+        ("LAID BACK: 86 BPM", "TEMPO"), ("SWING THE BEAT", "SWING"), ("THE BASS: TRACK 1", "PARTS"),
+        ("THE SONG IS IN A", "KEY"), ("A MINOR", "MINOR"), ("ONE STEP A BEAT", "VALUES"), ("THE BASS LINE", "BASS1"),
+        ("LONGER NOTES", "GATE"), ("THE CHORDS: TRACK 2", "PARTS"), ("ONE KEY, ONE CHORD", "SEVENTH"),
+        ("ONE STEP A BAR", "VALUES"), ("AN OCTAVE DOWN", "REGISTER"), ("FOUR CHORDS", "PROG1"), ("LET THEM RING", "GATE"),
+        ("SOME ROOM", "SPACE"), ("THE HOOK: TRACK 3", "PARTS"), ("A NEW SOUND: KALIMBA", "SOUNDS"),
+        ("EIGHTH NOTES", "VALUES"), ("UP AN OCTAVE", "REGISTER"), ("THE HOOK", "PENTA"), ("SWING IT TOO", "SWING"),
+        ("AN ECHO", "ECHO"), ("AND A ROOM", "SPACE"), ("PERFORM: THE INTRO", "MUTES"), ("LEVEL 1 DONE!", "DONE1")],
+    2: [("SYNTHWAVE AT 104", "TEMPO"), ("THE SONG IS IN D", "KEY"), ("D MINOR", "MINOR"), ("THE DRUMS: TRACK 4", "PARTS"),
+        ("DRUM KIT: SYNTHWV", "SOUNDS"), ("THE DRUM GRID", "GRID"), ("FOUR ON THE FLOOR: KICK", "FLOOR"),
+        ("SNARE, THEN CLAP", "BACKBEAT"), ("HIT THE SNARE HARD", "DYNAMICS"), ("HATS ON THE OFFBEAT", "HATS"),
+        ("SOFT HATS: 1 5 9 13", "DYNAMICS"), ("A ROLL ON STEP 16", "ROLL"), ("HEAR IT", "FLOOR"),
+        ("THE BASS: TRACK 1", "PARTS"), ("BASS SOUND: SAW BASS", "SOUNDS"), ("FOUR BARS OF EIGHTHS", "VALUES"),
+        ("TYPE THE BASS LINE", "BASS2"), ("ACCENT THE LAST NOTE", "DYNAMICS"), ("LONGER NOTES", "GATE"),
+        ("THE PAD: TRACK 2", "PADS"), ("ONE STEP A BEAT", "VALUES"), ("THREE-NOTE CHORDS", "PROG2"),
+        ("A BAR EACH", "PADS"), ("LET THEM RING", "GATE"), ("MORE ROOM", "SPACE"), ("TRACK 5: A PLUCK", "PARTS"),
+        ("PLUCK SOUND: FM PLUCK", "SOUNDS"), ("THE PLUCK LINE", "ARP"), ("ECHOES", "ECHO"), ("A LITTLE ROOM", "SPACE"),
+        ("TO THE LEFT", "MIX"), ("THE ECHO'S TIMING", "ECHO"), ("THE CHORUS: PATTERNS", "SECTIONS"),
+        ("OPEN HATS", "OPENHAT"), ("THE LEAD: PWM LEAD", "LEAD"), ("ITS OWN PATTERN 2", "SECTIONS"),
+        ("FOUR BARS OF EIGHTHS", "VALUES"), ("THE HOOK", "LEAD"), ("SMOOTHER", "GATE"), ("AN ECHO", "ECHO"),
+        ("A ROOM", "SPACE"), ("VERSE AND CHORUS", "SECTIONS"), ("LEVEL 2 DONE!", "DONE2")],
+    3: [("MELODIC DUBSTEP: 150", "TEMPO"), ("THE SONG IS IN D", "KEY"), ("D MINOR", "MINOR"),
+        ("THE DRUMS: TRACK 4", "PARTS"), ("DRUM KIT: DUBSTEP", "SOUNDS"), ("THE DRUM GRID", "GRID"),
+        ("HALF-TIME KICK", "HALFTIME"), ("HIT IT HARD", "DYNAMICS"), ("OFFBEAT HATS", "HATS"),
+        ("DRUMS UP FRONT", "MIX"), ("TRACK 8: MORE DRUMS", "CRASH"), ("THE SUB: TRACK 2", "SUB"),
+        ("HELD THE WHOLE BAR", "GATE"), ("MORE SUB", "SUB"), ("THE CHORDS: TRACK 1", "STABS"), ("SHORTER", "GATE"),
+        ("FULL LEVEL", "MIX"), ("THE PUMP", "PUMP"), ("HEAR THE DROP", "ONECHORD"), ("THE PIANO: TRACK 6", "ONECHORD"),
+        ("ONE BAR OF EIGHTHS", "VALUES"), ("TWO CHORDS", "ONECHORD"), ("LONGER", "GATE"), ("A BIG ROOM", "SPACE"),
+        ("A BIT QUIETER", "MIX"), ("THE PAD: TRACK 5", "PADS"), ("ONE STEP, A BAR LONG", "VALUES"),
+        ("ONE CHORD", "ONECHORD"), ("ALMOST THE WHOLE BAR", "GATE"), ("ROOM", "SPACE"),
+        ("THE RISER: TRACK 7", "RISER"), ("THE ECHO'S TIMING", "ECHO"), ("PATTERNS FOR SECTIONS", "FORM"),
+        ("THE BUILD'S BEAT", "BUILD"), ("THE BREAK'S BEAT", "BREAK"), ("THE BUILD'S ROLL", "BUILD"),
+        ("THE BUILD'S PAD", "FILTER"), ("STOP TO SAVE", "FORM"), ("LEVEL 3 DONE!", "DONE3")],
+}
+PAGE_W, PAGE_LINES = 232, 10                    # a "why" page: its text wrapped to the screen (FONT_S), lines
+
+
+def set_topics(L):
+    at, cur = 0, None
+    for head, topic in TOPIC_AT[L.num]:
+        assert topic in T.TOPICS, topic
+        while at < len(L.cards) and L.cards[at].head != head:
+            L.cards[at].topic = cur
+            at += 1
+        assert at < len(L.cards), f"level {L.num}: no step '{head}' for {topic} (after the one before)"
+        cur = topic
+    for c in L.cards[at:]:
+        c.topic = cur
+    assert all(c.topic for c in L.cards), f"level {L.num}: a step before the first topic"
+
+
+def font_adv(gen):
+    """FONT_S's advance of each character (felucca_font.h), the text as the screen draws it (upper case)"""
+    import re
+    h = open(os.path.join(gen, "felucca_font.h")).read()
+    m = re.search(r"FONT_S_ADV\[\d+\] = \{([^}]*)\}", h)
+    adv = [int(x) for x in m.group(1).split(",") if x.strip()]
+    first = int(re.search(r"FONT_S = \{ \d+, \d+, (\d+),", h).group(1))
+    return lambda ch: adv[ord(ch) - first] if 0 <= ord(ch) - first < len(adv) else 8
+
+
+def wrap(text, w):
+    lines, cur = [], ""
+    for word in text.upper().split():
+        t = (cur + " " + word).strip()
+        if sum(w(ch) for ch in t) <= PAGE_W:
+            cur = t
+        else:
+            lines.append(cur)
+            cur = word
+    return lines + [cur]
 
 
 # ---------------------------------------------------------------------------------------------------------------
