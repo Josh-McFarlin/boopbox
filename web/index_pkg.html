@@ -84,6 +84,7 @@
   <p id="status"></p>
   <pre id="log"></pre>
   <a class="ed" href="../editor/" data-t="editor"></a>
+  <a class="ed" href="../song/" id="songlink" hidden data-t="song"></a>
   <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor.html" data-t="edOffline"></a></p>
   <p><button id="app" class="ed" hidden data-t="appInstall"></button></p>
   <hr>
@@ -110,6 +111,7 @@ const TEXT = {
     pickBoop: "グルーヴボックス（いつもの BoopBox）",
     pickTrainer: "FM-1 の上で 3 曲の作り方をステップごとに学べます。エディタと一部の音色はありません。",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
+    song: "曲からトレーナーのレベル 4 を作る（音声ファイルを聴いて、FM-1 で作り方を教えます）",
     edOffline: "エディタをダウンロード（パソコンでインターネットなしで使う：ファイルを Chrome / Edge で開く）",
     appInstall: "アプリとしてインストール（エディタとインストーラーがオフラインで使える・Android も）",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
@@ -148,6 +150,7 @@ const TEXT = {
     pickBoop: "The groovebox (the usual BoopBox)",
     pickTrainer: "Learn to make three songs, step by step, on the FM-1 itself. No web editor, a few sounds fewer.",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
+    song: "Your song as a trainer level (an audio file in, level 4 out: the trainer teaches you to make it)",
     edOffline: "Download the editor to use it without internet on a computer (open the file in Chrome or Edge)",
     appInstall: "Install the app (the editor and the installer offline, Android too)",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
@@ -257,6 +260,7 @@ async function load() {
 }
 if (meta.trainer) {
   $("pick").hidden = false;
+  $("songlink").hidden = false;
   document.querySelector(`#pick input[value="${choice}"]`).checked = true;
   $("pick").addEventListener("change", (e) => {
     if (writing) return;

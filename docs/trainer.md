@@ -11,6 +11,8 @@ works on BoopBox too.
 | 2 | **Neon Avenue** | synthwave, 104 BPM, D minor, 5 tracks | the NOTES page (typing a line, chords, LEN, accents); drum levels and a ratchet; track 5; the sound browser; the delay; pan and level; patterns for a verse and a chorus |
 | 3 | **Lanterns** | melodic dubstep, 150 BPM, D minor, 7 tracks | an 8-track drop; envelopes; the DUCK pump; patterns per section; a 64-step roll with ratchets; a lock with SLIDE; mutes and sections A–D; the SONG screen and song mode |
 
+| 4 | **Your song** | any | a song from an audio file: [the song page](#the-song-page) writes it, the installer puts it in the trainer (below: [Level 4](#level-4-the-song-area)) |
+
 The songs were rendered for approval with the firmware's own engines on a computer (`tools/trainer/render.py`); the
 lessons' targets are taken from the same score, and `tests/trainer_test.c` checks that the song the lessons build is
 that song.
@@ -47,6 +49,81 @@ that song.
   switching off never loses more than the step you were on. A finished level shows *DONE* on its page. Levels can be
   taken in any order.
 
+## Level 4: the song area
+
+The trainer image keeps an 8 KiB **song area** (`TR_SLOT`, `firmware/src/trainer.c`) for one more level, a song made
+somewhere else: [the song page](#the-song-page) turns an audio file into one. The song is written into the area
+of the trainer package before it is installed, so it needs no new flash and no change to the update loader: installing
+it again with another song replaces it, and the loader rewrites only the sectors that changed. Projects, samples and
+settings are not touched.
+
+- **On the FM-1.** With a song in the area the picker has four levels (the song is *LEVEL 4: YOUR SONG*) and its last
+  page, BoopBox's menu, is the fifth. The song's coach is the same as the others': the same goals and hints, the same
+  why pages (a song's steps name a topic of `tools/trainer/theory.py`). Without a song (or with an area that does not
+  check out) there are three levels, as before.
+- **Checked at power-on.** The area is checked field by field before it is used: the magic, the format, a CRC-32, every
+  string (printable, short enough for the screen), every card's goal, track, button, topic and parameter, and every
+  target (notes, drum lanes, locks, patterns, song entries) against the sizes the coach indexes; the last step, and only
+  that one, is the DONE. A damaged area is no level 4, never a crash.
+- **Progress** of level 4 is kept like the others' and belongs to its song (the record keeps a tag from the song's
+  CRC): another song starts from its first step; the other levels' progress stays.
+- **Size.** A song is a header, 16 bytes a step (up to 128 steps), the targets and the strings; the three built-in
+  levels as songs take 2,166, 4,048 and 5,825 B, so a song as long as level 3 fits.
+
+The format is in `tools/trainer/slot.py`. Two tools write it:
+
+```
+python3 tools/trainer/slot.py show build/trainer-fw/felucca-trainer.fwsc       # what the package's area holds
+python3 tools/trainer/slot.py patch IN.fwsc SONG.bin OUT.fwsc                    # a song into a trainer package
+python3 tools/trainer/slot.py clear IN.fwsc OUT.fwsc                             # the area emptied
+```
+
+and `web/trslot.js` in the browser (`encodeSong` from the steps' fields, `patchPackage`, `songAreaOf`). Both find the
+area by its magic in the app, write it, and make every CRC on the way out again (app.bin's entry, the app area's head,
+flash.bin's, the UFW list and header). `tests/trainer_slot_test.py` checks that a patched package is byte for byte the
+package `fm1pkg_make.py` builds from the app with the song in it, and that the browser and `slot.py` agree.
+`tests/trainer_test.c` writes level 2 as a song, plays it as level 4 from the picker to DONE with the panel alone, and
+checks that damaged areas are refused and that the progress follows the song.
+
+## The song page
+
+[webapp/song/](https://josh-mcfarlin.github.io/boopbox/webapp/song/) (`web/song.html`, linked from the installer) makes
+level 4 from an audio file, in the browser: nothing is uploaded, and there is no server.
+
+1. **Listen** to 30 seconds of the file (from where the slider says; a quarter in by default, past most intros):
+   - `web/songanalyze.js` splits the drums from the rest (harmonic / percussive separation: median filters on the
+     spectrogram), finds the tempo (the onsets' autocorrelation, near 110 BPM preferred), the beat and the bar (the
+     kick), and each drum lane's hits on the sixteenths, folded into one bar. The snare is taken on the backbeat when
+     it stands out there (its body is in the kick's band too).
+   - [Basic Pitch](https://github.com/spotify/basic-pitch-ts) (Spotify's note model, Apache-2.0; `web/vendor/`, served
+     from the site with TensorFlow.js) finds the notes of the part without drums: about a minute for 30 s on a laptop.
+   - The key from the notes (Krumhansl's profiles); a bass line (the lowest note on each beat, four bars), a chord a
+     bar (the scale's triad that holds most of the bar's notes), a lead (the highest note on each eighth, two bars, or
+     sixteenths). Every note is moved into the keys' range and onto the key: the keys play the scale.
+2. **Compare**: the original (the bars heard, on a loop; or its drums, its bass or the rest) and the FM-1 version,
+   played by BoopBox's engines in the browser (the editor's WebAssembly, `firmware/host/preview.c`;
+   `web/songplay.js` replays the lesson's own steps, so what plays is what the steps build). The drum grid takes clicks;
+   the key, a style (a kit and three sounds by tempo, `web/songsounds.js`), each part's sound and the parts kept can be
+   changed. The steps are listed as they will be on the FM-1.
+3. **Install**: the page fetches the trainer package of the site, checks its SHA-256, writes the song into its song
+   area (`web/trslot.js`) and installs it as the installer does (`web/fm1ota.js`).
+
+`web/songgen.js` writes the steps the way `tools/trainer/lessons.py` writes levels 1 and 2 (the same kinds of step,
+buttons, pages and why topics): the tempo, the key, the drums lane by lane, then the bass (the SEQ layer), the chords
+(typed on the NOTES page, a step a bar), the lead and an echo, and DONE. A song is 14 to 30 steps and 1-2 KB.
+The firmware's numbers (goals, parameters, buttons, pages, kits, sounds as the trainer and as BoopBox number them, the
+topics) come from `tools/trainer/consts.py`, which `web/make_site.py` runs.
+
+Tests (`tests/run_tests.sh`): `tests/trainer_song_test.mjs` makes songs from three scores and checks the FM-1 player
+plays each part; with the renders (`python3 tools/trainer/render.py`), `tests/trainer_analyze_test.mjs` listens to
+levels 1 and 2 as the page does (the tempo and the key of both, level 1's drums, against their scores); the trainer
+test then plays every one of those songs as level 4 to DONE with the panel alone; `tests/trainer_page_test.mjs` uses
+the page in Chromium (level 1's MP3 in, both players, the package it installs).
+
+It is an approximation: four parts, a loop of a few bars, a bar of drums. Songs with a clear beat and few parts work
+best. In a dense mix a bass on eighths can look like a kick (level 2's render: its kick comes out on every eighth),
+and a sub bass two octaves down is often missed; the drum grid and the parts' boxes are there to fix it.
+
 ## What the trainer build leaves out
 
 To make room for the lessons (the app slot is full in the normal build), the trainer build has:
@@ -55,8 +132,9 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 552,656 B of the 581,564 B app slot (about 29 KB free); the coach and the lessons take about
-39 KB with the why pages (about 18 KB of them), and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
+The trainer image is 562,396 B of the 581,564 B app slot (about 19 KB free); the coach and the lessons take about
+39 KB with the why pages (about 18 KB of them), the song area 8 KiB and its checks about 1.5 KB; RAM: level 4's cards
+(2.5 KB) and under 120 B more. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
 

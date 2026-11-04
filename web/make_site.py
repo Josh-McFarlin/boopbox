@@ -9,6 +9,9 @@
                               second choice in the installer
   webapp/installer/index.html index_pkg.html with fm1pkg.js, fm1ota.js and the metadata inlined
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
+  webapp/song/index.html      with --trainer: song.html, the page that makes level 4 of the trainer from an audio file
+                              (its modules, the note model in vendor/, the firmware's numbers: tools/trainer/consts.py);
+                              online only (not kept by sw.js: the model is 2 MB)
   webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6): its icon font inlined,
                               its links to the installer and the font licence online; opened from the disk in
                               Chrome / Edge (file:// is a secure context: Web MIDI asks for permission)
@@ -118,6 +121,31 @@ def check_pkg(pkg):
     return raw, product
 
 
+SONG_FILES = ("songanalyze.js", "songgen.js", "songsounds.js", "songplay.js", "song-worklet.js", "trslot.js", "fm1pkg.js",
+              "fm1ota.js")
+
+
+def song_page(d, tmeta):
+    """webapp/song/: the song page, its modules, the note model (web/vendor) and the firmware's numbers"""
+    import subprocess
+    import tempfile
+    d.mkdir(parents=True)
+    with tempfile.TemporaryDirectory() as t:
+        cj = Path(t) / "consts.json"
+        subprocess.run([sys.executable, str(HERE.parent / "tools" / "trainer" / "consts.py"), str(cj)], check=True,
+                       stdout=subprocess.DEVNULL)
+        consts = json.dumps(json.loads(cj.read_text()), separators=(",", ":"))
+    html = (HERE / "song.html").read_text(encoding="utf-8")
+    for mark in ("/*CONSTS*/", "/*META*/"):
+        if html.count(mark) != 1:
+            raise SystemExit(f"song.html must contain {mark} once; update make_site.py")
+    html = html.replace("/*CONSTS*/", consts).replace("/*META*/", json.dumps(tmeta))
+    (d / "index.html").write_text(html, encoding="utf-8")
+    for f in SONG_FILES:
+        shutil.copy(HERE / f, d / f)
+    shutil.copytree(HERE / "vendor", d / "vendor")
+
+
 def main(pkg, version, out, trainer=None):
     pkg, out = Path(pkg), Path(out)
     raw, product = check_pkg(pkg)
@@ -177,6 +205,11 @@ def main(pkg, version, out, trainer=None):
         shutil.copy(dsp, ed / dsp.name)
     elif (ed / dsp.name).exists():
         (ed / dsp.name).unlink()  # never serve an old audio build as the current one
+    song = out / "webapp" / "song"
+    if song.exists():
+        shutil.rmtree(song)
+    if tname:
+        song_page(song, json.loads(meta)["trainer"])   # (its pkg: ../../firmware/, from webapp/song/ as from the installer)
     app_files(out, version, name, (tname,) if tname else ())
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>BoopBox</title>'

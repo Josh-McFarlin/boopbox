@@ -514,8 +514,9 @@ def wrap(text, w):
 
 
 # ---------------------------------------------------------------------------------------------------------------
-def presets_from_sources(root):
-    """factory sounds: engine index and preset index, read from the engines' preset tables and the samples header"""
+def presets_from_sources(root, trainer=True):
+    """factory sounds: engine index and preset index, read from the engines' preset tables and the samples header
+    (trainer: as the trainer build has the tables; False: as BoopBox has them, for the web page's player)"""
     import re
     src = os.path.join(root, "firmware", "src")
     files = {"ANALOG": "eng_analog.c", "DIGITAL": "eng_digital.c", "PHASE": "eng_phase.c", "LOFI": "eng_lofi.c",
@@ -530,7 +531,7 @@ def presets_from_sources(root):
         for line in body.splitlines():                  # (#if FELUCCA_TRAINER: the trainer's view of the table)
             ls = line.strip()
             if ls.startswith("#if"):
-                cond = "!FELUCCA_TRAINER" not in ls       # (#if FELUCCA_TRAINER: on; #if !FELUCCA_TRAINER: off)
+                cond = ("!FELUCCA_TRAINER" not in ls) == trainer   # (#if FELUCCA_TRAINER: on; #if !FELUCCA_TRAINER: off)
                 active.append(cond if "FELUCCA_TRAINER" in ls else active[-1])
                 continue
             if ls.startswith("#else"):
