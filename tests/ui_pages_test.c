@@ -1999,13 +1999,31 @@ int main(int argc, char **argv)
              gid[9] == BR_GDRUM && br_n(cur, nf) == cur;
         check(ok, "browser: SELECT the VIEW = KIND, the eight kinds then USER, the PRESETS list's order, the sound kept");
         ui.force = 1; frame(); ppm("page-browser-kind");
-        frames(BR_IDLE_MS / 16u - 20u);
+        frames(300);                                         /* (1.4.2: it stays open; SAVE keeps, HOME puts back) */
         ok = !ui.home && cur_page()->graph == GR_BROWSE;
-        frames(30);
-        check(ok && !ui.home && cur_page()->scope == SC_TRK && !br_back, "browser: untouched for 4 s, back to TRACKS");
+        tap(B_SAVE); frames(3);                              /* (kept: the sound now; opened again on it) */
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        encs[panel.enc[EN_PRESET]] = 1; frames(12);
+        ok &= !ui.home && cur_page()->graph == GR_BROWSE;
+        for (i = 0; i < 3u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(2); }
+        ok &= trk[1].preset != p0 || trk[1].eng_req != e0;
+        tap(B_HOME); frames(3);
+        check(ok && !ui.home && cur_page()->scope == SC_TRK && !br_back && trk[1].eng_req == e0 && trk[1].preset == p0,
+              "browser: open after 4.8 s untouched; HOME back to TRACKS, the sound it opened on put back");
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        for (i = 0; i < 2u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(2); }
+        e0 = trk[1].eng_req; p0 = trk[1].preset;
+        tap(B_SAVE); frames(3);
+        check(!ui.home && cur_page()->scope == SC_TRK && trk[1].eng_req == e0 && trk[1].preset == p0,
+              "browser: SAVE keeps the sound browsed to, back to TRACKS");
+        open_family(FAM_ENV); frames(2);
+        tap(B_SAVE); frames(2);
+        check(!ui.home && cur_page()->fam == FAM_SAVE && cur_page()->graph != GR_BROWSE,
+              "SAVE elsewhere: the SAVE pages from USER (the browser is the PRESETS knob's)");
+        go_home(); frames(2);
         encs[panel.enc[EN_PRESET]] = 1; frames(2);
         open_family(FAM_ENV); frames(2);
-        frames(BR_IDLE_MS / 16u + 10u);
+        frames(300);
         check(cur_page()->fam == FAM_ENV && !br_back, "browser: a button takes it elsewhere, it stays there");
         br_kind = 0;
         song.sel = 3; go_home(); frames(2);                  /* the drum track: PRESETS opens the browser on its kit */
