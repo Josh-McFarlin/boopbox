@@ -1,14 +1,18 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The TRAINER (FELUCCA_TRAINER builds only): three levels that teach three songs on the FM-1 itself. A level is a list
  * of cards (build/gen/trainer_lessons.h, made by tools/trainer/lessons.py from the approved songs); a card is a goal on
- * the state of the FM-1 (a track selected, a kit, a sound, a parameter, a pattern's notes or hits, the mutes, a lock, the
- * patterns playing, a section saved, the song...). Every screen, button, knob and key works as in BoopBox: the coach only
- * watches. It owns the header line (lcd_clip_y: no page draws there while a level runs), where it says what the card is
- * about, what to do, and what is still wrong ("STEP 8: KICK MISSING"); it lights the button to press and the keys to play
- * or the step keys to press. When the goal holds, the card says NICE and the next one comes. HOME held: the menu's
- * TRAINER section (the levels; in a level: SKIP STEP, STEP BACK, RESTART, QUIT). Progress is kept with the settings (the
- * side record, ui.c): a level goes on where it was left, a finished one shows DONE and can be done again. A level
- * starts from a new project: the loop there (and, by level 3, the sections) are replaced without asking. */
+ * the state of the FM-1 (a track selected, a page open, a kit, a sound, a parameter, a pattern's notes or hits, the mutes,
+ * a lock, the patterns playing, a section saved, the song...). Every screen, button, knob and key works as in BoopBox:
+ * the coach only watches.
+ *   The coach owns the screen's title area (lcd_clip_y: no page draws there while a level runs): what the card is about,
+ *   what to do ("@" in it: the value wanted, as the screen shows it), and, when something is off, what is wrong and what
+ *   fixes it ("STEP 5: NO KICK HERE (KEY 5)"). It blinks the button to press; while a card is about keys it takes the
+ *   keys' lights over: only the keys to press are lit, all of them (every step of the page to fix). In the sound browser a
+ *   fading dot marks the group and the sound; a sound or kit card is done when the browser closes on it.
+ *   HOME held: the level picker (one level a page, SELECT turns them, OCT+ does the action picked with KNOB 1; its last
+ *   page opens BoopBox's menu). Progress is a log in its own flash sector (TR_LOG: a few bytes a card, written while the
+ *   music plays too; erased when full, stopped). One level is in progress at a time: starting one (from a new project)
+ *   resets the others that are not done. */
 enum {
     TG_TRACK, TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_PLAY, TG_PAGE, TG_OCT, TG_NOTES, TG_LANES, TG_MUTES,
     TG_LOCK, TG_PATSEL, TG_PATS, TG_PATHAS, TG_SAVED, TG_SONG, TG_SONGMODE, TG_DONE
@@ -24,15 +28,17 @@ typedef struct {
     uint16_t data;                                 /* where its target is in TR_DATA */
 } tr_card_t;
 typedef struct {
-    const char *name;
+    const char *name, *style, *learn1, *learn2;    /* the picker's page: the song, its style and tempo, what it teaches */
     const tr_card_t *cards;
     uint8_t n;
 } tr_level_t;
 #include "trainer_lessons.h"
 
 #define TR_OK_MS 700u                              /* NICE shows this long, then the next card */
-#define TR_HEAD_MS 2200u                           /* a new card: its number and headline this long, then the action */
-#define TR_ALT_MS 1800u                            /* the action and the hint take turns */
+#define TR_HEAD_MS 2000u                           /* a new card (one line): its number and headline this long */
+#define TR_ALT_MS 2200u                            /* one line: the action and the hint take turns */
+#define TR_LOG 0xFB000u                            /* the progress log's flash sector (fm1_flash.h FL_TRN_OK) */
+#define TR_REC 16u
 static struct {
     uint8_t lvl;                                   /* the level running + 1, 0 = none */
     uint8_t card;                                  /* its card */
@@ -41,11 +47,15 @@ static struct {
     uint8_t seen;                                  /* the welcome was shown (kept) */
     uint8_t ok;                                    /* the goal held: NICE until ok_ms + TR_OK_MS */
     uint8_t pend;                                  /* a level to begin once the transport has stopped: 1 + the level */
-    uint8_t dirty;                                 /* to be saved with the settings */
-    uint32_t ok_ms, t0, saved_ms;
+    uint8_t dirty;                                 /* a record for the log */
+    uint8_t page, sel;                             /* the picker: the page shown (a level, or TR_NLEVELS: the menu), action */
+    uint8_t btn;                                   /* a button the hint asks for (B_*, NB: the card's) */
+    uint8_t keyed;                                 /* the card is about keys: the coach owns their lights */
+    uint32_t ok_ms, t0;
     uint32_t base;                                 /* TG_SAVED: the section's sum when the card came */
-    uint32_t sig;                                  /* the band as last drawn */
-    uint32_t keys;                                 /* the keys lit (hint) */
+    uint32_t sig, psig;                            /* the band, the picker as last drawn */
+    uint32_t keys;                                 /* the keys lit */
+    uint32_t log_at;                               /* the log's next free record (offset in TR_LOG) */
     char hint[32];
 } tr;
 
@@ -64,34 +74,62 @@ UI_SMALL static int tr_running(void)                    /* a level on a card to 
     return c && c->goal != TG_DONE;
 }
 
-/* ---------------------------------------------------------------- the goals --- */
-UI_SMALL static void tr_say(const char *a, const char *b)
+/* ---------------------------------------------------------------- what to say --- */
+UI_SMALL static void tr_cat(const char *a) { str_cpy(tr.hint + str_len(tr.hint), a, sizeof tr.hint - str_len(tr.hint)); }
+UI_SMALL static void tr_num(int32_t v) { char b[8]; fmt_int(b, v); tr_cat(b); }
+UI_SMALL static void tr_say(const char *a, const char *b) { tr.hint[0] = 0; tr_cat(a); tr_cat(b); }
+UI_SMALL static void tr_step(uint32_t i, const char *a, const char *b)   /* "STEP 8: " a b */
 {
-    str_cpy(tr.hint, a, sizeof tr.hint);
-    str_cpy(tr.hint + str_len(tr.hint), b, sizeof tr.hint - str_len(tr.hint));
+    tr.hint[0] = 0;
+    tr_cat("STEP ");
+    tr_num((int32_t)i + 1);
+    tr_cat(": ");
+    tr_cat(a);
+    tr_cat(b);
 }
-UI_SMALL static void tr_say_step(uint32_t i, const char *what)   /* "STEP 8: KICK MISSING" */
-{
-    char b[8];
-    str_cpy(tr.hint, "STEP ", sizeof tr.hint);
-    fmt_int(b, (int32_t)i + 1);
-    str_cpy(tr.hint + str_len(tr.hint), b, sizeof tr.hint - str_len(tr.hint));
-    str_cpy(tr.hint + str_len(tr.hint), ": ", sizeof tr.hint - str_len(tr.hint));
-    str_cpy(tr.hint + str_len(tr.hint), what, sizeof tr.hint - str_len(tr.hint));
-}
-UI_SMALL static void tr_say_now(const param_desc_t *d, int32_t v)   /* "NOW 90 BPM" */
+UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a value as the screen shows it: "24%" */
 {
     char val[12];
     const char *unit = "";
     param_format(d, v, val, &unit);
-    str_cpy(tr.hint, "NOW ", sizeof tr.hint);
-    str_cpy(tr.hint + 4, val, sizeof tr.hint - 4u);
+    str_cpy(b, val, 16);
     if (unit[0]) {
-        str_cpy(tr.hint + str_len(tr.hint), " ", sizeof tr.hint - str_len(tr.hint));
-        str_cpy(tr.hint + str_len(tr.hint), unit, sizeof tr.hint - str_len(tr.hint));
+        if (unit[0] != '%')
+            str_cpy(b + str_len(b), " ", 2);
+        str_cpy(b + str_len(b), unit, 16 - str_len(b));
     }
 }
+UI_SMALL static void tr_now(const param_desc_t *d, int32_t v, int32_t want)   /* "NOW 30% (WANT 24%)" */
+{
+    char b[16];
+    tr_value(b, d, v);
+    tr_say("NOW ", b);
+    tr_value(b, d, want);
+    tr_cat(" (WANT ");
+    tr_cat(b);
+    tr_cat(")");
+}
 UI_SMALL static int tr_near(int32_t a, int32_t b, uint32_t tol) { return a - b <= (int32_t)tol && b - a <= (int32_t)tol; }
+UI_SMALL static uint32_t tr_white_of(uint32_t k)       /* key k's number among the white keys (1..16), 0: a black key */
+{
+    uint32_t w;
+    for (w = 0; w < 16u; w++)
+        if (key_of_white(w) == k)
+            return w + 1u;
+    return 0;
+}
+UI_SMALL static void tr_key_text(char *b, uint32_t keys)   /* "KEY 6", "THE LIT KEYS", "THE LIT BLACK KEY" */
+{
+    uint32_t k, n = 0, at = 0;
+    for (k = 0; k < 27u; k++)
+        if ((keys >> k) & 1u)
+            n++, at = k;
+    if (n == 1u && tr_white_of(at)) {
+        str_cpy(b, "KEY ", 8);
+        fmt_int(b + 4, (int32_t)tr_white_of(at));
+    } else
+        str_cpy(b, n == 1u ? "LIT BLACK KEY" : "LIT KEYS", 16);
+}
 
 /* the keys (bit k: key k, F3 = 0) that play notes c[0..n) on track t as it is now (chord mode: the key of that chord);
  * 0 and *oct the way to go (+1 up, -1 down) when the keys cannot at this octave */
@@ -128,259 +166,399 @@ UI_SMALL static uint32_t tr_keys_for(const track_t *t, const uint8_t *c, uint32_
     }
     return *oct ? 0u : m;
 }
-/* a step's notes as one name ("D4", "D4 CHORD") */
-UI_SMALL static void tr_note_text(char *b, const uint8_t *c, uint32_t n)
-{
-    note_name(b, c[0]);
-    if (n > 1u)
-        str_cpy(b + str_len(b), " CHORD", 8);
-}
 
-/* TG_NOTES: the synth pattern of t against its target (TR_DATA: LEN, then per step 0 empty, 2 TIE, or 1 | flags << 2,
- * n, the notes). 1: as wanted; 0: tr.hint says the first thing off, tr.keys the keys to press */
+/* ---------------------------------------------------------------- a synth pattern --- */
+/* the target's step i (TR_DATA: LEN, then per step 0 empty, 2 TIE, or 1 | flags << 2, n, the notes) */
+typedef struct { uint8_t kind, fl, n; const uint8_t *note; } tr_st_t;
+UI_SMALL static void tr_st(const tr_card_t *c, uint32_t i, tr_st_t *o)
+{
+    const uint8_t *d = &TR_DATA[c->data + 1u];
+    uint32_t j;
+    for (j = 0;; j++) {
+        o->kind = *d & 3u, o->fl = (uint8_t)(*d >> 2), o->n = 0, o->note = 0;
+        d++;
+        if (o->kind == 1u) {
+            o->n = *d++;
+            o->note = d;
+            d += o->n;
+        }
+        if (j == i)
+            return;
+    }
+}
+/* step i of t against the target: 0 as wanted, 1 its notes, 2 a TIE, 3 its accent or slide */
+UI_SMALL static uint32_t tr_st_off(const track_t *t, uint32_t i, const tr_st_t *w)
+{
+    const step_t *s = &t->step[i];
+    uint32_t have = s->time == ST_TIE ? 2u : s->time == ST_NOTE && s->n ? 1u : 0u, j, pa = 0, pw = 0;
+    if (w->kind != 1u)
+        return w->kind == have ? 0u : have == 1u || w->kind == 0u ? 1u : 2u;
+    if (have != 1u)
+        return have == 2u ? 2u : 1u;
+    for (j = 0; j < w->n; j++)
+        pw |= 1u << (w->note[j] % 12u);
+    for (j = 0; j < s->n && j < 4u; j++)
+        pa |= 1u << (s->note[j] % 12u);
+    if (s->n != w->n || pa != pw || (w->n == 1u && s->note[0] != w->note[0]))
+        return 1u;
+    return (s->flags & SF_ACCENT) == (w->fl & 1u) && ((s->flags & SF_SLIDE) != 0) == ((w->fl & 2u) != 0) ? 0u : 3u;
+}
+UI_SMALL static int tr_pen_is(const tr_st_t *w)     /* the SEQ layer's pen (the note or chord played last) is the target's */
+{
+    uint32_t j, n = pen_n ? pen_n : 1u;
+    if (n != w->n)
+        return 0;
+    for (j = 0; j < n; j++)
+        if ((pen_n ? pen_note[j] : last_note) % 12u != w->note[j] % 12u ||
+            (n == 1u && (pen_n ? pen_note[0] : last_note) != w->note[0]))
+            return 0;
+    return 1;
+}
 UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
 {
-    const uint8_t *d = &TR_DATA[c->data];
-    uint32_t len = *d++, i, j;
+    uint32_t len = TR_DATA[c->data], i, bad = NSTEP, why = 0, page;
+    tr_st_t w, x;
+    char nb[16], kb[16];
     if ((uint32_t)t->p[P_SLEN] != len) {
-        char b[6];
-        fmt_int(b, (int32_t)len);
-        tr_say("TIMING: LEN TO ", b);
+        tr_say("HOLD SEQ, KNOB 4 STEPS TO ", "");
+        tr_num((int32_t)len);
         return 0;
     }
-    for (i = 0; i < len; i++) {
-        uint32_t kind = *d & 3u, fl = *d >> 2, n = 0, have, an;
-        const uint8_t *note = 0;
-        const step_t *s = &t->step[i];
-        d++;
-        if (kind == 1u) {
-            n = *d++;
-            note = d;
-            d += n;
+    for (i = 0; i < len && bad == NSTEP; i++) {
+        tr_st(c, i, &w);
+        if ((why = tr_st_off(t, i, &w)) != 0)
+            bad = i;
+    }
+    if (bad == NSTEP)
+        return 1;
+    tr_st(c, bad, &w);
+    if (why == 2u || (why == 1u && w.kind != 1u && t->step[bad].time == ST_TIE)) {   /* a length: at its note's step */
+        uint32_t s0 = bad, L = 1;
+        while (s0 && t->step[s0].time == ST_TIE)
+            s0--;
+        while (s0 && w.kind == 2u && (tr_st(c, s0, &x), x.kind == 2u))
+            s0--;
+        tr_st(c, s0, &x);
+        while (s0 + L < len && (tr_st(c, s0 + L, &w), w.kind == 2u))
+            L++;
+        if (on_notes_page() && ui.cursor != s0) {
+            tr_say("KNOB 1 TO STEP ", "");
+            tr_num((int32_t)s0 + 1);
+        } else {
+            tr_step(s0, "KNOB 3 LEN TO ", "");
+            tr_num((int32_t)L);
         }
-        have = s->time == ST_TIE ? 2u : s->time == ST_NOTE && s->n ? 1u : 0u;
-        an = have == 1u ? s->n : 0u;
-        if (kind == 0u && have == 0u)
-            continue;
-        if (kind == 2u && have == 2u)
-            continue;
-        if (kind == 1u && have == 1u) {
-            uint32_t pa = 0, pw = 0, same = an == n;
-            for (j = 0; j < n; j++)
-                pw |= 1u << (note[j] % 12u);
-            for (j = 0; j < an && j < 4u; j++)
-                pa |= 1u << (s->note[j] % 12u);
-            if (same && n == 1u)
-                same = s->note[0] == note[0];
-            if (same && pa == pw && n > 1u)
-                same = 1;
-            else if (n > 1u)
-                same = 0;
-            if (same && (s->flags & SF_ACCENT) == (fl & 1u) && ((s->flags & SF_SLIDE) != 0) == ((fl & 2u) != 0))
-                continue;
-            if (same) {
-                tr_say_step(i, (fl & 1u) != (s->flags & SF_ACCENT) ? ((fl & 1u) ? "KNOB 4 TO ACC" : "NO ACCENT")
-                                                                  : ((fl & 2u) ? "SLIDE ON" : "NO SLIDE"));
-                tr.keys = 0;
-                return 0;
+        return 0;
+    }
+    if (why == 3u) {
+        if (on_notes_page() && ui.cursor != bad) {
+            tr_say("KNOB 1 TO STEP ", "");
+            tr_num((int32_t)bad + 1);
+        } else
+            tr_step(bad, (w.fl & 1u) ? "KNOB 4 TO ACC" : (t->step[bad].flags & SF_ACCENT) ? "KNOB 4 TO NORM" :
+                         (w.fl & 2u) ? "SLIDE ON (HOLD OCT+)" : "SLIDE OFF (HOLD OCT+)", "");
+        return 0;
+    }
+    if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
+        int held = ui.layer == LY_STEP;
+        page = ui.step_page;
+        if (w.kind != 1u || (t->step[bad].time == ST_NOTE && t->step[bad].n)) {   /* a note to take out first */
+            if (!held) {
+                tr_step(bad, "HOLD SEQ, TAP KEY ", "");
+                tr_num((int32_t)(bad % 16u) + 1);
+                tr.btn = B_SEQ;
+            } else if (bad / 16u != page) {
+                tr_say("HOLD SEQ, OCT+: NEXT 16 STEPS", "");
+            } else {
+                tr_step(bad, "TAP KEY ", "");
+                tr_num((int32_t)(bad % 16u) + 1);
+                tr_cat(" TO CLEAR");
+                tr.keys = 1u << key_of_white(bad % 16u);
             }
-            if (pa == pw && n == 1u) {                     /* the right note, another octave */
-                tr_say_step(i, s->note[0] > note[0] ? "AN OCTAVE LOWER" : "AN OCTAVE HIGHER");
-                tr.keys = 0;
-                return 0;
-            }
-        }
-        if (kind == 0u) {
-            tr_say_step(i, have == 2u ? "SHORTER (KNOB 3)" : "SHOULD BE EMPTY");
-            tr.keys = 0;
-            if (c->flags == HOW_SEQ && ui.layer == LY_STEP && i / 16u == ui.step_page)
-                tr.keys = 1u << key_of_white(i % 16u);
             return 0;
         }
-        if (kind == 2u) {
-            tr_say_step(i, "LONGER NOTE BEFORE");
-            tr.keys = 0;
-            return 0;
-        }
-        {   /* a note (or chord) wanted here: what to play, where */
+        note_name(nb, w.note[0]);
+        if (!tr_pen_is(&w)) {
             int32_t oct;
-            char nb[16];
-            uint32_t keys = tr_keys_for(t, note, n, &oct);
-            tr_note_text(nb, note, n);
-            if (oct) {
-                tr_say_step(i, oct > 0 ? "PRESS OCT+" : "PRESS OCT-");
-                tr.keys = 0;
-                return 0;
-            }
-            if (c->flags == HOW_SEQ) {
-                int pen = pen_n == n || (n == 1u && !pen_n);
-                for (j = 0; j < n && pen; j++)
-                    pen = (pen_n ? pen_note[j] : last_note) % 12u == note[j] % 12u;
-                if (ui.layer == LY_STEP) {
-                    if (!pen) {
-                        tr_say_step(i, "LET GO OF SEQ, PLAY");
-                        tr.keys = 0;
-                    } else if (i / 16u != ui.step_page) {
-                        tr_say_step(i, "SEQ + OCT+: NEXT 16");
-                        tr.keys = 0;
-                    } else {
-                        tr_say_step(i, have ? "PRESS IT TWICE" : "PRESS THE LIT KEY");
-                        tr.keys = 1u << key_of_white(i % 16u);
-                    }
-                } else if (pen) {
-                    tr_say_step(i, "HOLD SEQ + LIT STEP");
-                    tr.keys = 0;
-                } else {
-                    tr_say_step(i, nb);
-                    tr.keys = keys;
+            uint32_t k = tr_keys_for(t, w.note, w.n, &oct);
+            if (held) {
+                tr_say("LET GO OF SEQ, PLAY ", w.n > 1u ? "THE CHORD" : nb);
+            } else if (oct) {
+                tr_step(bad, nb, oct > 0 ? ": PRESS OCT+" : ": PRESS OCT-");
+                tr.btn = oct > 0 ? B_OCTUP : B_OCTDN;
+            } else {
+                tr_key_text(kb, k);
+                tr_step(bad, "PLAY ", w.n > 1u ? "THE LIT KEY" : nb);
+                if (w.n == 1u) {
+                    tr_cat(" (");
+                    tr_cat(kb);
+                    tr_cat(")");
                 }
-                return 0;
+                tr.keys = k;
             }
-            if (on_notes_page() && ui.cursor != i)
-                tr_say_step(i, "KNOB 1 TO IT");
-            else
-                tr_say_step(i, nb);
-            tr.keys = keys;
             return 0;
+        }
+        if (!held) {
+            tr_step(bad, "HOLD SEQ, TAP KEY ", "");
+            tr_num((int32_t)(bad % 16u) + 1);
+            tr.btn = B_SEQ;
+            return 0;
+        }
+        if (bad / 16u != page) {
+            tr_say("HOLD SEQ, OCT+: NEXT 16 STEPS", "");
+            return 0;
+        }
+        for (i = page * 16u; i < page * 16u + 16u && i < len; i++) {   /* every step of the page this note goes on */
+            tr_st(c, i, &x);
+            if (x.kind == 1u && tr_st_off(t, i, &x) == 1u && !(t->step[i].time == ST_NOTE && t->step[i].n)) {
+                uint32_t j, same = x.n == w.n;
+                for (j = 0; j < x.n && same; j++)
+                    same = x.note[j] == w.note[j];
+                if (same)
+                    tr.keys |= 1u << key_of_white(i % 16u);
+            }
+        }
+        tr_say(nb, ": TAP THE LIT KEYS");
+        return 0;
+    }
+    /* the NOTES page: KNOB 1 to the step, the keys write it */
+    if (!on_notes_page()) {
+        tr_say("TAP SEQ UNTIL YOU SEE NOTES", "");
+        tr.btn = B_SEQ;
+        return 0;
+    }
+    if (ui.cursor != bad) {
+        tr_say("KNOB 1 TO STEP ", "");
+        tr_num((int32_t)bad + 1);
+        return 0;
+    }
+    if (w.kind != 1u) {
+        tr_step(bad, "TAP EDIT TO DELETE IT", "");
+        tr.btn = B_EDIT;
+        return 0;
+    }
+    note_name(nb, w.note[0]);
+    {
+        int32_t oct;
+        uint32_t k = tr_keys_for(t, w.note, w.n, &oct);
+        if (oct) {
+            tr_step(bad, nb, oct > 0 ? ": PRESS OCT+" : ": PRESS OCT-");
+            tr.btn = oct > 0 ? B_OCTUP : B_OCTDN;
+        } else if (w.n > 1u) {
+            tr_step(bad, "LIT KEYS TOGETHER", "");
+            tr.keys = k;
+        } else {
+            tr_key_text(kb, k);
+            tr_step(bad, "PRESS ", nb);
+            tr_cat(" (");
+            tr_cat(kb);
+            tr_cat(")");
+            tr.keys = k;
         }
     }
-    return 1;
+    return 0;
 }
 
-/* TG_LANES: a drum pattern against its target (TR_DATA: LEN, the lanes listed, then per lane its number and a byte a
- * step: 0x10 a hit | level | ratchet << 2); the lanes not listed must be empty */
-UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
+/* ---------------------------------------------------------------- drum lanes --- */
+/* the target's lane l, step i: 0x10 a hit | level | ratchet << 2 (TR_DATA: LEN, the lanes listed, then each lane's number
+ * and a byte a step); a lane not listed: empty */
+UI_SMALL static uint32_t tr_hit(const tr_card_t *c, uint32_t lane, uint32_t i)
 {
     const uint8_t *d = &TR_DATA[c->data];
-    uint32_t len = d[0], nl = d[1], i, l, listed = 0;
+    uint32_t len = d[0], nl = d[1], l;
+    for (l = 0; l < nl; l++)
+        if (d[2u + l * (len + 1u)] == lane)
+            return d[3u + l * (len + 1u) + i];
+    return 0;
+}
+static const uint8_t TR_LANE_ORDER[DRUM_LANES] = {0, 2, 3, 4, 5, 6, 7, 1, 8, 9, 10, 11, 12, 13, 14, 15};
+UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
+{
+    uint32_t len = TR_DATA[c->data], i, li, lane = DRUM_LANES, bad = NSTEP, page, layer = ui.layer == LY_STEP;
     if ((uint32_t)t->p[P_SLEN] != len) {
-        char b[6];
-        fmt_int(b, (int32_t)len);
-        tr_say("HOLD SEQ, KNOB 4 LEN ", b);
+        tr_say("HOLD SEQ, KNOB 4 STEPS TO ", "");
+        tr_num((int32_t)len);
         return 0;
     }
-    tr.keys = 0;
-    for (l = 0; l < nl; l++) {
-        const uint8_t *h = &d[2u + l * (len + 1u)];
-        uint32_t lane = h[0];
-        listed |= 1u << lane;
+    for (li = 0; li < DRUM_LANES && bad == NSTEP; li++) {   /* the first lane with something to change */
+        uint32_t l = TR_LANE_ORDER[li];
         for (i = 0; i < len; i++) {
-            uint32_t w = h[1u + i], on = dstep_has(&t->dstep[i], lane);
-            const char *what = 0;
-            if ((w & 0x10u) && !on)
-                what = "MISSING";
-            else if (!(w & 0x10u) && on)
-                what = "NOT HERE";
-            else if (on && dstep_lvl(&t->dstep[i], lane) != (w & 3u))
-                what = (w & 3u) == LV_GHOST ? "GHOST (KNOB 4)" : (w & 3u) == LV_HARD ? "HARD (KNOB 4)" :
-                       (w & 3u) == LV_SOFT ? "SOFT (KNOB 4)" : "NORM (KNOB 4)";
-            else if (on && dstep_rat(&t->dstep[i], lane) != ((w >> 2) & 3u)) {
-                static const char *const R[4] = {"NO RATCHET", "RATCHET X2", "RATCHET X3", "RATCHET X4"};
-                what = R[(w >> 2) & 3u];
+            uint32_t w = tr_hit(c, l, i), on = dstep_has(&t->dstep[i], l);
+            if (((w & 0x10u) != 0) != (on != 0) ||
+                (on && (dstep_lvl(&t->dstep[i], l) != (w & 3u) || dstep_rat(&t->dstep[i], l) != ((w >> 2) & 3u)))) {
+                lane = l, bad = i;
+                break;
             }
-            if (what) {
-                char b[24];
-                str_cpy(b, LANE_NAME[lane], sizeof b);
-                str_cpy(b + str_len(b), " ", sizeof b - str_len(b));
-                str_cpy(b + str_len(b), what, sizeof b - str_len(b));
-                tr_say_step(i, b);
-                if (pen_lane == lane && i / 16u == drum_cursor / 16u && (grid_keys_on() || ui.layer == LY_STEP))
-                    tr.keys = 1u << key_of_white(i % 16u);
-                else if (pen_lane != lane)
-                    tr.keys = 1u << drum_black_key(lane);   /* the black key that picks the sound */
+        }
+    }
+    if (bad == NSTEP)
+        return 1;
+    if (pen_lane != lane) {                         /* the sound to work on: KNOB 1 (or its black key) */
+        tr_say("KNOB 1 TO ", LANE_NAME[lane]);
+        tr.keys = 1u << drum_black_key(lane);
+        return 0;
+    }
+    page = layer ? ui.step_page : drum_cursor / 16u;
+    for (i = 0; i < len; i++) {                     /* the hits to put in or take out: first on this page */
+        uint32_t w = tr_hit(c, lane, i), on = dstep_has(&t->dstep[i], lane);
+        if (((w & 0x10u) != 0) != (on != 0) && i / 16u == page) {
+            tr.keys |= 1u << key_of_white(i % 16u);
+            if (bad / 16u != page || ((tr_hit(c, lane, bad) & 0x10u) != 0) == (dstep_has(&t->dstep[bad], lane) != 0))
+                bad = i;
+        }
+    }
+    {
+        uint32_t w = tr_hit(c, lane, bad), on = dstep_has(&t->dstep[bad], lane);
+        if (((w & 0x10u) != 0) != (on != 0)) {
+            if (bad / 16u != page) {
+                tr_say(layer ? "HOLD SEQ, OCT+: STEPS " : "TAP OCT+: STEPS ", "");
+                tr_num((int32_t)(bad / 16u) * 16 + 1);
+                tr_cat("-");
+                tr_num((int32_t)(bad / 16u) * 16 + 16);
+                tr.keys = 0;
+                tr.btn = B_OCTUP;
                 return 0;
             }
-        }
-    }
-    for (i = 0; i < len; i++) {
-        uint32_t extra = dstep_mask(&t->dstep[i]) & ~listed;
-        if (extra) {
-            for (l = 0; !((extra >> l) & 1u); l++)
-                ;
-            {
-                char b[24];
-                str_cpy(b, "NO ", sizeof b);
-                str_cpy(b + 3, LANE_NAME[l], sizeof b - 3u);
-                tr_say_step(i, b);
-            }
+            tr_step(bad, on ? "NO " : "ADD ", LANE_NAME[lane]);
+            tr_cat(on ? " HERE (KEY " : " (KEY ");
+            tr_num((int32_t)(bad % 16u) + 1);
+            tr_cat(")");
             return 0;
         }
+        tr.keys = 0;                                    /* its level or its ratchet: the knobs */
+        if (drum_cursor != bad) {
+            tr_say("KNOB 2 TO STEP ", "");
+            tr_num((int32_t)bad + 1);
+        } else if (dstep_lvl(&t->dstep[bad], lane) != (w & 3u)) {
+            tr_step(bad, "KNOB 4 TO ", (w & 3u) == LV_GHOST ? "GHOST" : (w & 3u) == LV_HARD ? "HARD" :
+                                       (w & 3u) == LV_SOFT ? "SOFT" : "NORM");
+        } else {
+            static const char *const R[4] = {"X1", "X2", "X3", "X4"};
+            if (ui.sheet)
+                tr_step(bad, "KNOB 2: RATCHET ", R[(w >> 2) & 3u]);
+            else {
+                tr_step(bad, "HOLD OCT+, RATCHET ", R[(w >> 2) & 3u]);
+                tr.btn = B_OCTUP;
+            }
+        }
+        return 0;
     }
-    return 1;
 }
 
+/* ---------------------------------------------------------------- the goals --- */
+static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
+UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
+UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
+{
+    if (tr_quiet || song.sel == c->trk)
+        return 1;
+    tr_say("TURN ALGORITHM TO TRACK ", "");
+    tr_num(c->trk + 1);
+    return 0;
+}
+/* a parameter card's page (data: 1 + its PAGES index, 0: any, a held button's knobs): off it, the hint says where */
+UI_SMALL static int tr_on_page(const tr_card_t *c)
+{
+    if (tr_quiet || !c->data || ui.layer != LY_PLAY || (!ui.home && !ui.menu && ui.page == c->data - 1u))
+        return 1;
+    tr_say("OPEN THE ", PAGES[c->data - 1u].title);
+    tr_cat(" PAGE");
+    tr.btn = c->btn;
+    return 0;
+}
 UI_SMALL static int tr_goal(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk % NTRK];
     tr.hint[0] = 0;
     tr.keys = 0;
+    tr.btn = NB;
     switch (c->goal) {
     case TG_TRACK:
         if (song.sel == c->trk)
             return 1;
-        {
-            char b[4];
-            fmt_int(b, song.sel + 1);
-            tr_say("NOW TRACK ", b);
-        }
+        tr_say("NOW TRACK ", "");
+        tr_num(song.sel + 1);
         return 0;
     case TG_KIT:
-        if (song.sel != c->trk && !(is_drum(t) && t->p[P_E0] == c->v))
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        if (is_drum(t) && t->p[P_E0] == c->v)
-            return 1;
-        tr_say("NOW ", is_drum(t) ? DRUM_KIT_NAMES[(uint32_t)t->p[P_E0] % DRUM_KITS] : "A SYNTH");
+    case TG_SOUND: {
+        int on = c->goal == TG_KIT ? is_drum(t) && t->p[P_E0] == c->v :
+                 !is_drum(t) && t->eng_req == c->p && t->preset == (uint8_t)c->v && user_of(t) >= UP_SLOTS;
+        if (on && (tr_quiet || !tr_browsing()))
+            return 1;                                   /* (done when the browser closes on it) */
+        if (!tr_sel(c))
+            return 0;
+        if (on)
+            tr_say("THAT'S IT! TAP HOME TO KEEP IT", ""), tr.btn = B_HOME;
+        else if (tr_browsing())
+            tr_say("FOLLOW THE DOTS: KNOB 2, 3", "");
+        else
+            tr_say("TURN PRESETS, FOLLOW THE DOTS", "");
         return 0;
-    case TG_SOUND:
-        if (!is_drum(t) && t->eng_req == c->p && t->preset == (uint8_t)c->v && user_of(t) >= UP_SLOTS)
-            return 1;
-        if (song.sel != c->trk)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        tr_say("NOW ", is_drum(t) ? "DRUMS" : ENGINES[t->eng_req % NENGINES]->presets[t->preset %
-                ENGINES[t->eng_req % NENGINES]->npresets].name);
-        return 0;
+    }
     case TG_PARAM:
         if (tr_near(t->p[c->p], c->v, c->tol))
             return 1;
-        if (song.sel != c->trk && c->p != P_MUTE)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        tr_say_now(track_desc(t, c->p), t->p[c->p]);
+        if (c->p == P_ROOT) {                           /* SEL held + a key of that note: the keys lit */
+            uint32_t k;
+            for (k = 0; k < 27u; k++)
+                if ((53u + k) % 12u == (uint32_t)c->v)
+                    tr.keys |= 1u << k;
+            tr.btn = B_SCL;
+            return 0;
+        }
+        if (c->p != P_MUTE && !tr_sel(c))
+            return 0;
+        if (!tr_on_page(c))
+            return 0;
+        tr_now(track_desc(t, c->p), t->p[c->p], c->v);
         return 0;
     case TG_GLOBAL:
         if (tr_near(song.g[c->p], c->v, c->tol))
             return 1;
-        tr_say_now(&GP[c->p], song.g[c->p]);
+        if (!tr_on_page(c))
+            return 0;
+        tr_now(&GP[c->p], song.g[c->p], c->v);
         return 0;
     case TG_PLAY:
         return (song.playing != 0) == (c->v != 0);
-    case TG_PAGE:
-        return c->p == PG_DRUMS ? on_drum_page() && !drum_page && !ui.menu :
-               c->p == PG_PATTERNS ? on_pats_page() && !ui.menu : on_song_page() && !ui.menu;
+    case TG_PAGE: {
+        int at = ui.menu || ui.layer != LY_PLAY ? 0 :
+                 PAGES[c->p].scope == SC_DRUM ? on_drum_page() && !drum_page :
+                 PAGES[c->p].scope == SC_PATS ? on_pats_page() : PAGES[c->p].scope == SC_SONG ? on_song_page() :
+                 !ui.home && ui.page == c->p;
+        if (at)
+            return 1;
+        if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
+            tr_say("TAP SEQ: BACK TO THE GRID", "");
+        else if (!ui.home && !on_drum_page() && !on_pats_page() && !on_song_page())
+            tr_say("NOW ON ", cur_page()->title);
+        return 0;
+    }
     case TG_OCT:
         if (song.octave == c->v)
             return 1;
-        {
-            char b[6];
-            fmt_int(b, song.octave);
-            tr_say("NOW OCTAVE ", b);
-        }
+        tr_say("NOW OCTAVE ", "");
+        tr_num(song.octave);
+        tr.btn = song.octave < c->v ? B_OCTUP : B_OCTDN;
         return 0;
     case TG_NOTES:
-        if (song.sel != c->trk)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        return tr_notes(c, t);
+        tr.keyed = 1;
+        return tr_sel(c) && tr_notes(c, t);
     case TG_LANES:
-        if (song.sel != c->trk)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        return tr_lanes(c, t);
+        tr.keyed = 1;
+        return tr_sel(c) && tr_lanes(c, t);
     case TG_MUTES: {
         uint32_t k;
         for (k = 0; k < NTRK; k++)
             if (((c->p >> k) & 1u) && (trk[k].p[P_MUTE] != 0) != (((uint32_t)c->v >> k) & 1u)) {
-                char b[16];
-                str_cpy(b, "TRACK ", sizeof b);
-                fmt_int(b + 6, (int32_t)k + 1);
-                tr_say(b, trk[k].p[P_MUTE] ? ": UNMUTE" : ": MUTE");
+                tr_say("TRACK ", "");
+                tr_num((int32_t)k + 1);
+                tr_cat(trk[k].p[P_MUTE] ? ": UNMUTE (GLO + KEY " : ": MUTE (GLO + KEY ");
+                tr_num((int32_t)(k % 4u) + 1);
+                tr_cat(")");
+                if (k / 4u != song.sel / 4u) {          /* (GLO's keys 1-4: the bank of the selected track) */
+                    tr_say(k < 4u ? "ALGORITHM TO A TRACK 1-4" : "ALGORITHM TO A TRACK 5-8", "");
+                }
                 return 0;
             }
         return 1;
@@ -390,18 +568,32 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         for (k = 0; k < NLOCK; k++)
             if (t->lock[k].step == step && (t->lock[k].param & LOCK_PID) == c->p) {
                 if (!tr_near(t->lock[k].val, c->v, c->tol)) {
-                    tr_say_now(lock_desc(t, c->p), t->lock[k].val);
+                    tr_now(lock_desc(t, c->p), t->lock[k].val, c->v);
                     return 0;
                 }
                 if ((c->flags & 1u) && !(t->lock[k].param & LOCK_SLIDE)) {
-                    tr_say("THE LOCK: SLIDE ON", "");
+                    tr_say("KNOB 3: SLIDE ON", "");
                     return 0;
                 }
                 return 1;
             }
-        if (song.sel != c->trk)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        tr_say_step(step, "NO LOCK YET");
+        if (!tr_sel(c))
+            return 0;
+        if (tr_quiet)
+            return 0;
+        if (ui.home || ui.menu || cur_page()->scope != SC_STEP)
+            tr_say("OPEN THE NOTES PAGE (SEQ)", ""), tr.btn = B_SEQ;
+        else if (!ui.sheet && ui.cursor != step) {
+            tr_say("KNOB 1 TO STEP ", "");
+            tr_num((int32_t)step + 1);
+        } else if (!ui.sheet)
+            tr_say("HOLD OCT+ FOR THE STEP'S MENU", ""), tr.btn = B_OCTUP;
+        else if (!ui.lsheet)
+            tr_say("KNOB 1 TO LOCKS, TAP OCT+", ""), tr.btn = B_OCTUP;
+        else if (ui.lock_par != c->p) {
+            tr_say("KNOB 1 TO ADD, KNOB 2 TO ", lock_desc(t, c->p)->label);
+        } else
+            tr_say("ON ADD: TAP OCT+", ""), tr.btn = B_OCTUP;
         return 0;
     }
     case TG_PATSEL:
@@ -409,12 +601,9 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             return 1;
         if (t->pat == c->v)
             tr_say("EMPTY: COPY INTO IT FIRST", "");
-        else if (song.sel != c->trk)
-            return tr_goal(&(tr_card_t){0, 0, TG_TRACK, c->trk, 0, NB, 0, 0, 0, 0}), 0;
-        else {
-            char b[4];
-            fmt_int(b, t->pat + 1);
-            tr_say("NOW PATTERN ", b);
+        else if (tr_sel(c)) {
+            tr_say("NOW PATTERN ", "");
+            tr_num(t->pat + 1);
         }
         return 0;
     case TG_PATS: {
@@ -422,12 +611,10 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         for (k = 0; k < NTRK; k++) {
             uint32_t w = TR_DATA[c->data + k];
             if (w != 255u && trk[k].pat != w) {
-                char b[24];
-                str_cpy(b, "TRACK ", sizeof b);
-                fmt_int(b + 6, (int32_t)k + 1);
-                str_cpy(b + str_len(b), ": PATTERN ", sizeof b - str_len(b));
-                fmt_int(b + str_len(b), (int32_t)w + 1);
-                tr_say(b, "");
+                tr_say("TRACK ", "");
+                tr_num((int32_t)k + 1);
+                tr_cat(": PATTERN ");
+                tr_num((int32_t)w + 1);
                 return 0;
             }
         }
@@ -437,10 +624,9 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         uint32_t k;
         for (k = 0; k < NTRK; k++)
             if ((((uint32_t)c->v >> k) & 1u) && pb_find(k, c->p) < 0 && !(trk[k].pat == c->p && !pat_empty(&trk[k]))) {
-                char b[24];
-                str_cpy(b, "TRACK ", sizeof b);
-                fmt_int(b + 6, (int32_t)k + 1);
-                tr_say(b, ": NOT COPIED YET");
+                tr_say("TRACK ", "");
+                tr_num((int32_t)k + 1);
+                tr_cat(": NOT COPIED YET");
                 return 0;
             }
         return 1;
@@ -451,23 +637,23 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         const uint8_t *d = &TR_DATA[c->data];
         uint32_t k;
         if (arrangement.count != d[0]) {
-            char b[6];
-            fmt_int(b, d[0]);
-            tr_say("KNOB 4: STEPS TO ", b);
+            tr_say("KNOB 4: STEPS TO ", "");
+            tr_num(d[0]);
             return 0;
         }
         if (c->flags & 1u)
             return 1;
         for (k = 0; k < d[0]; k++)
             if (arrangement.entry[k].scene != d[1u + 2u * k] || arrangement.entry[k].bars != d[2u + 2u * k]) {
-                char b[24];
-                str_cpy(b, "STEP ", sizeof b);
-                fmt_int(b + 5, (int32_t)k + 1);
-                str_cpy(b + str_len(b), ": ", sizeof b - str_len(b));
-                str_cpy(b + str_len(b), SEC_NAME[d[1u + 2u * k] & 3u], sizeof b - str_len(b));
-                str_cpy(b + str_len(b), ", ", sizeof b - str_len(b));
-                fmt_int(b + str_len(b), d[2u + 2u * k]);
-                tr_say(b, " BARS");
+                tr_say(song_cursor != k ? "KNOB 1 TO STEP " : "STEP ", "");
+                tr_num((int32_t)k + 1);
+                if (song_cursor == k) {
+                    tr_cat(": ");
+                    tr_cat(SEC_NAME[d[1u + 2u * k] & 3u]);
+                    tr_cat(", ");
+                    tr_num(d[2u + 2u * k]);
+                    tr_cat(" BARS");
+                }
                 return 0;
             }
         return 1;
@@ -479,6 +665,53 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     }
 }
 
+/* ------------------------------------------------------------- the log (progress, in its own flash sector) --- */
+typedef struct {
+    uint8_t mark, lvl, card, done, seen, at[TR_NLEVELS], rsv[7 - TR_NLEVELS];
+    uint32_t crc;
+} tr_rec_t;
+_Static_assert(sizeof(tr_rec_t) == TR_REC, "a record of the log");
+#define TR_MARK 0x5Au
+UI_SMALL static void tr_log_boot(void)              /* power-on: the last record of the log */
+{
+    tr_rec_t r, last;
+    uint32_t o, k, got = 0;
+    for (o = 0; o + TR_REC <= 0x1000u; o += TR_REC) {
+        if (!flash_ok || st_read(TR_LOG + o, &r, TR_REC) || r.mark == 0xFFu)
+            break;
+        if (r.mark == TR_MARK && r.crc == st_crc32(&r, TR_REC - 4u))
+            last = r, got = 1;
+    }
+    tr.log_at = o;
+    if (!got)
+        return;
+    for (k = 0; k < TR_NLEVELS; k++)
+        tr.at[k] = (uint8_t)(last.at[k] < TR_LEVELS[k].n ? last.at[k] : 0u);
+    tr.done = last.done, tr.seen = last.seen;
+    if (last.lvl && last.lvl <= TR_NLEVELS) {
+        tr.lvl = last.lvl;
+        tr.card = tr.at[last.lvl - 1u];
+    }
+}
+UI_SMALL static void tr_log_put(void)               /* a record (a few bytes programmed: also while playing) */
+{
+    tr_rec_t r;
+    if (!flash_ok)
+        return;
+    if (tr.log_at + TR_REC > 0x1000u) {             /* full: erased, only stopped (an erase stops the audio ~50 ms) */
+        if (song.playing || transport_req || st_erase(TR_LOG))
+            return;
+        tr.log_at = 0;
+    }
+    memset(&r, 0, sizeof r);
+    r.mark = TR_MARK, r.lvl = tr.lvl, r.card = tr.card, r.done = tr.done, r.seen = tr.seen;
+    memcpy(r.at, tr.at, sizeof tr.at);
+    r.crc = st_crc32(&r, TR_REC - 4u);
+    if (st_prog(TR_LOG + tr.log_at, &r, TR_REC) == 0)
+        tr.dirty = 0;
+    tr.log_at += TR_REC;
+}
+
 /* ------------------------------------------------------------- the levels --- */
 UI_SMALL static void tr_card_begin(void)
 {
@@ -486,6 +719,7 @@ UI_SMALL static void tr_card_begin(void)
     tr.ok = 0;
     tr.t0 = fm1_ms;
     tr.sig = 0;
+    tr.keyed = 0;
     if (c && c->goal == TG_SAVED)
         tr.base = proj_ok(&proj_slot[c->v & 3]) ? proj_slot[c->v & 3].sum : 0u;
     if (c && c->goal == TG_DONE)
@@ -500,34 +734,58 @@ UI_SMALL static void tr_go(int32_t d)                    /* the next / the card 
     tr.card = (uint8_t)clamp(n, 0, L->n - 1);
     tr_card_begin();
 }
-/* level l from its first card: a new project, in loop mode (when stopped: stopping a song puts the loop it kept back) */
+/* going on with a level: the cards done since its last change of pattern or section are checked again (the loop may be
+ * older than the progress: BoopBox autosaves it only when stopped); it goes on at the first one that no longer holds */
+static const uint8_t TR_STATE[] = {TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_NOTES, TG_LANES, TG_LOCK};
+UI_SMALL static void tr_resume(void)
+{
+    const tr_level_t *L = &TR_LEVELS[tr.lvl - 1u];
+    uint32_t i, from = 0, k;
+    for (i = 0; i < tr.card; i++)
+        if (L->cards[i].goal == TG_PATSEL || L->cards[i].goal == TG_PATS || L->cards[i].goal == TG_PATHAS ||
+            L->cards[i].goal == TG_SAVED)
+            from = i + 1u;
+    tr_quiet = 1;
+    for (i = from; i < tr.card; i++)
+        for (k = 0; k < sizeof TR_STATE; k++)
+            if (L->cards[i].goal == TR_STATE[k] && !tr_goal(&L->cards[i])) {
+                tr.card = (uint8_t)i;
+                i = tr.card;
+                break;
+            }
+    tr_quiet = 0;
+    tr_card_begin();
+}
+/* level l from its first card: a new project, in loop mode (when stopped: stopping a song puts the loop it kept back);
+ * the other levels not done start again too (their loop is gone) */
 UI_SMALL static void tr_begin(uint32_t l)
 {
+    uint32_t k;
     arrangement_enabled = 0;
     project_new();
-    tr.at[l] = 0;
+    for (k = 0; k < TR_NLEVELS; k++)
+        if (k == l || !((tr.done >> k) & 1u))
+            tr.at[k] = 0;
     tr.done &= (uint8_t)~(1u << l);
     tr.lvl = (uint8_t)(l + 1u);
     tr.card = 0;
     tr_card_begin();
 }
-/* level l (0..): its card where it was left; again: from the start (a new project) */
-UI_SMALL static void tr_start(uint32_t l, int again)
+UI_SMALL static void tr_start(uint32_t l, int again)    /* level l: on where it was left; again: from its start */
 {
-    if (again || !tr.at[l] || tr.at[l] >= TR_LEVELS[l].n - 1u) {
-        menu_close();
-        if (song.playing || transport_req) {           /* stopped first, then the new project (trainer_tick) */
-            transport_req = 2;
-            tr.pend = (uint8_t)(l + 1u);
-            return;
-        }
-        tr_begin(l);
+    menu_close();
+    if (!again && tr.at[l] && !((tr.done >> l) & 1u)) {
+        tr.lvl = (uint8_t)(l + 1u);
+        tr.card = tr.at[l];
+        tr_resume();
         return;
     }
-    tr.lvl = (uint8_t)(l + 1u);
-    tr.card = tr.at[l];
-    tr_card_begin();
-    menu_close();
+    if (song.playing || transport_req) {           /* stopped first, then the new project (trainer_tick) */
+        transport_req = 2;
+        tr.pend = (uint8_t)(l + 1u);
+        return;
+    }
+    tr_begin(l);
 }
 UI_SMALL static void tr_quit(void)
 {
@@ -539,8 +797,8 @@ UI_SMALL static void tr_quit(void)
 }
 
 /* the coach's band: the screen's title area. The studio screens (TRACKS, DRUMS, PATTERNS, SONG, CHORDS, a layer held,
- * REC, the visualiser) have a 40-row title in large type: there two lines (the headline or the hint, then the action);
- * the pages and the browser a 20-row header: one line, in turn */
+ * REC, the visualiser) have a 40-row title in large type: there two lines (the headline or what is wrong, then the
+ * action); the pages and the browser a 20-row header: one line, in turn */
 UI_SMALL static uint32_t tr_band_h(void)
 {
     if (ui.menu)
@@ -559,11 +817,8 @@ UI_SMALL static void trainer_tick(void)
         tr.pend = 0;
         c = tr_card();
     }
-    if (tr.dirty && !song.playing && !transport_req && !ui.menu && fm1_ms - tr.saved_ms > 8000u) {
-        tr.dirty = 0;                                   /* (a flash write stops the audio ~50 ms: stopped only, and at */
-        tr.saved_ms = fm1_ms;                           /* most every 8 s; a power-off loses a few steps at most) */
-        settings_save();
-    }
+    if (tr.dirty)
+        tr_log_put();
     if (!c) {
         lcd_clip_y = 0;
         return;
@@ -577,7 +832,7 @@ UI_SMALL static void trainer_tick(void)
         lcd_clip_y = (uint8_t)h;
     }
     if (ui.menu) {
-        tr.sig = 0;                                     /* (the menu drew over the line: again after it) */
+        tr.sig = 0;                                     /* (the menu drew over the band: again after it) */
         return;
     }
     if (tr.ok) {
@@ -589,33 +844,52 @@ UI_SMALL static void trainer_tick(void)
         tr.ok = 1;
         tr.ok_ms = fm1_ms;
         tr.keys = 0;
+        tr.btn = NB;
     }
 }
 
-/* the band: the card's number and headline (then the hint, in turn), the action; a UI message; NICE; a progress bar */
+/* the card's action as shown: "@" the value wanted, as the screen shows it ("KNOB 4 (GATE) TO 79%") */
+UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
+{
+    const char *a = c->act;
+    uint32_t o = 0;
+    for (; *a && o + 1u < n; a++) {
+        if (*a == '@' && (c->goal == TG_PARAM || c->goal == TG_GLOBAL)) {
+            char v[16];
+            tr_value(v, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), c->v);
+            str_cpy(b + o, v, n - o);
+            o = str_len(b);
+        } else
+            b[o++] = *a;
+    }
+    b[o] = 0;
+}
+/* the band: the card's number and headline, or what is wrong (amber); the action; a UI message; NICE; a progress bar */
 UI_SMALL static void trainer_draw(void)
 {
     const tr_card_t *c = tr_card();
     const tr_level_t *L;
     uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD;
-    char b[40];
+    char b[40], act[40];
     uint16_t col;
     if (!c || ui.menu || !h)
         return;
     L = &TR_LEVELS[tr.lvl - 1u];
     el = fm1_ms - tr.t0;
-    /* line 1 (or the line): 0 number + headline, 1 the action (one line only), 2 the hint, 3 NICE, 4 a UI message */
+    tr_act(c, act, sizeof act);
+    /* line 1 (or the line): 0 number + headline, 1 the action (one line only), 2 what is wrong, 3 NICE, 4 a message.
+     * Two lines: what is wrong stays on line 1 (the action under it); one line: the action and it take turns */
     if (two)
-        phase = el < TR_HEAD_MS || !tr.hint[0] ? 0u : ((el - TR_HEAD_MS) / TR_ALT_MS) & 1u ? 0u : 2u;
+        phase = tr.hint[0] && el >= TR_HEAD_MS / 2u ? 2u : 0u;
     else
-        phase = el < TR_HEAD_MS ? 0u : !tr.hint[0] ? 1u : ((el - TR_HEAD_MS) / TR_ALT_MS) & 1u ? 2u : 1u;
+        phase = el < TR_HEAD_MS ? 0u : !tr.hint[0] ? 1u : ((el - TR_HEAD_MS) / TR_ALT_MS) & 1u ? 1u : 2u;
     if (c->goal == TG_DONE)
         phase = two || el < TR_HEAD_MS ? 0u : 1u;
     if (tr.ok)
         phase = 3u;
     if (ui.msg_t && !tr.ok)
         phase = 4u;                                     /* a message of the UI (on a page its place is this line) */
-    sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, phase == 2u ? tr.hint : phase == 4u ? ui.msg : "");
+    sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, phase == 2u ? tr.hint : phase == 4u ? ui.msg : act);
     if (sig == tr.sig)
         return;
     tr.sig = sig;
@@ -627,7 +901,7 @@ UI_SMALL static void trainer_draw(void)
         str_cpy(b + str_len(b), c->head, sizeof b - str_len(b));
         col = C_WHITE;
     } else if (phase == 1u) {
-        str_cpy(b, c->act, sizeof b);
+        str_cpy(b, act, sizeof b);
         col = C_HI;
     } else if (phase == 2u) {
         str_cpy(b, tr.hint, sizeof b);
@@ -643,32 +917,51 @@ UI_SMALL static void trainer_draw(void)
     cv_begin(240, h, C_BLACK);
     cv_text(2, 1, &FONT_S, b, col);
     if (two)
-        cv_text(2, 19, &FONT_S, c->act, tr.ok ? C_DIM : C_HI);
+        cv_text(2, 19, &FONT_S, act, tr.ok ? C_DIM : C_HI);
     cv_rect(0, (int32_t)h - 2, 240, 2, C_LINE);
     cv_rect(0, (int32_t)h - 2, (int32_t)(240u * (tr.card + (tr.ok ? 1u : 0u)) / L->n), 2, UI_COL[(tr.lvl + 1u) & 7u]);
     cv_blit(0, 0);
     lcd_clip_y = (uint8_t)h;
 }
 
-/* the lights: the card's button blinks, the keys of the hint are lit */
-UI_SMALL static void trainer_leds(uint8_t *nl)
+/* the lights: the button to press blinks; on a card about keys the coach owns the keys' lights: only the keys to press,
+ * pulsing (bright, then dim), every other key dark (BoopBox's own key lights would read as "press these") */
+UI_SMALL static void tr_led_clr(uint8_t *a, uint32_t id)
+{
+    uint8_t q = led_pos[id];
+    if (q != 0xFF)
+        a[q >> 3] &= (uint8_t)~(1u << (q & 7u));
+}
+UI_SMALL static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl)
 {
     const tr_card_t *c = tr_card();
-    uint32_t k, blink = (fm1_ms / 250u) & 1u;
+    uint32_t k, ph = (fm1_ms / 125u) & 3u;
+    if (ui.menu == 3u) {                                /* the picker: OCT+ does the action */
+        if (ph < 2u)
+            led_put(nl, panel.btn[B_OCTUP], 1);
+        return;
+    }
     if (!c || ui.menu || tr.ok)
         return;
-    if (c->btn < NB && blink)
-        led_put(nl, panel.btn[c->btn], 1);
-    for (k = 0; k < 27u; k++)
+    {
+        uint32_t b = tr.btn < NB ? tr.btn : c->btn;
+        if (b < NB && ph < 2u)
+            led_put(nl, panel.btn[b], 1);
+    }
+    if (!tr.keyed && !tr.keys)
+        return;
+    for (k = 0; k < 27u; k++) {
+        tr_led_clr(nl, 14u + k), tr_led_clr(dl, 14u + k), tr_led_clr(bl, 14u + k);
         if ((tr.keys >> k) & 1u)
-            led_put(nl, 14u + k, 1);
+            led_put(ph < 3u ? nl : dl, 14u + k, 1);
+    }
 }
 
-/* the sound browser (ui_draw.c graph_browse): the sound or kit the step asks for, to mark it */
+/* the sound browser (ui_draw.c graph_browse): the sound or kit the card asks for, marked while the card is on */
 UI_SMALL static int tr_browse_target(uint32_t *kit, uint32_t *e, uint32_t *k)
 {
     const tr_card_t *c = tr_card();
-    if (!c || tr.ok || (c->goal != TG_SOUND && c->goal != TG_KIT) || song.sel != c->trk)
+    if (!c || (c->goal != TG_SOUND && c->goal != TG_KIT) || song.sel != c->trk)
         return 0;
     *kit = c->goal == TG_KIT;
     *e = c->p;
@@ -683,101 +976,145 @@ UI_SMALL static uint32_t tr_pulse(void)                 /* 3..8..3 over 1.2 s (n
     return ph < 6u ? ph + 3u : 14u - ph;
 }
 
-/* ------------------------------------------------------------- the menu --- */
-/* the TRAINER section's four rows: the levels (none running), or the level's controls */
-UI_SMALL static const char *tr_row_name(uint32_t r)
+/* ------------------------------------------------------------- the picker (ui.menu 3: HOME held) --- */
+/* one level a page (its song, style, what it teaches, the progress), the last page BoopBox's menu; SELECT (or ALGORITHM)
+ * turns the pages, KNOB 1 (or PRESETS) picks the action, OCT+ does it, OCT- closes */
+enum { TA_CONT, TA_START, TA_AGAIN, TA_OVER, TA_SKIP, TA_BACK, TA_QUIT, TA_MENU };
+static const char *const TA_NAME[] = {"CONTINUE", "START", "PLAY IT AGAIN", "START OVER", "SKIP THIS STEP",
+                                      "GO BACK A STEP", "QUIT THE LEVEL", "OPEN THE MENU"};
+UI_SMALL static uint32_t tr_actions(uint32_t page, uint8_t *a)   /* the page's actions, the first the default */
 {
-    static const char *const RUN[4] = {"SKIP THIS STEP", "STEP BACK", "RESTART THIS LEVEL", "QUIT THE LEVEL"};
-    static char b[24];
-    if (tr_running())
-        return RUN[r & 3u];
-    if (r >= TR_NLEVELS)
-        return "HOW IT WORKS";
-    str_cpy(b, "LEVEL ", sizeof b);
-    fmt_int(b + 6, (int32_t)r + 1);
-    str_cpy(b + 7, ": ", sizeof b - 7u);
-    str_cpy(b + 9, TR_LEVELS[r].name, sizeof b - 9u);
-    return b;
-}
-UI_SMALL static const char *tr_row_value(uint32_t r, uint16_t *c)
-{
-    static char b[16];
-    *c = C_HI;
-    if (tr_running()) {
-        *c = C_DIM;
-        return "";
+    uint32_t n = 0;
+    if (page >= TR_NLEVELS) {
+        a[n++] = TA_MENU;
+        return n;
     }
-    if (r >= TR_NLEVELS) {
-        *c = C_DIM;
-        return "FOLLOW THE TOP LINE";
-    }
-    if ((tr.done >> r) & 1u)
-        return "DONE: OCT+ AGAIN";
-    if (!tr.at[r])
-        return "NEW: OCT+";
-    str_cpy(b, "STEP ", sizeof b);
-    fmt_int(b + 5, tr.at[r] + 1);
-    str_cpy(b + str_len(b), "/", 2);
-    fmt_int(b + str_len(b), TR_LEVELS[r].n);
-    return b;
+    if (tr_running() && tr.lvl == page + 1u) {
+        a[n++] = TA_CONT, a[n++] = TA_SKIP, a[n++] = TA_BACK, a[n++] = TA_OVER, a[n++] = TA_QUIT;
+    } else if ((tr.done >> page) & 1u) {
+        a[n++] = TA_AGAIN;
+    } else if (tr.at[page]) {
+        a[n++] = TA_CONT, a[n++] = TA_OVER;
+    } else
+        a[n++] = TA_START;
+    return n;
 }
-UI_SMALL static void tr_row_do(uint32_t r)              /* OCT+ on row r */
+UI_SMALL static void tr_pick_open(void)
 {
-    if (!tr_running()) {
-        if (r < TR_NLEVELS)
-            tr_start(r, ((tr.done >> r) & 1u) != 0u);
+    ui.menu = 3;
+    ui.force = 1;
+    tr.page = (uint8_t)(tr.lvl ? tr.lvl - 1u : 0u);
+    tr.sel = 0;
+    tr.psig = 0;
+}
+UI_SMALL static void tr_pick_input(uint32_t pressed)
+{
+    int32_t s;
+    uint8_t a[8];
+    uint32_t n = tr_actions(tr.page, a);
+    if ((pressed >> panel.btn[B_OCTDN]) & 1u) {
+        menu_close();
         return;
     }
-    switch (r) {
-    case 0: tr_go(1); menu_close(); break;
-    case 1: tr_go(-1); menu_close(); break;
-    case 2: tr_start(tr.lvl - 1u, 1); break;
-    default: tr_quit(); break;
+    if ((s = panel_enc(EN_SELECT)) != 0 || (s = panel_enc(EN_ALGO)) != 0) {
+        tr.page = (uint8_t)clamp((int32_t)tr.page + (s > 0 ? 1 : -1), 0, TR_NLEVELS);
+        tr.sel = 0;
+    }
+    if ((s = panel_enc(EN_K1)) != 0 || (s = panel_enc(EN_PRESET)) != 0)
+        tr.sel = (uint8_t)clamp((int32_t)tr.sel + (s > 0 ? 1 : -1), 0, (int32_t)n - 1);
+    if ((pressed >> panel.btn[B_OCTUP]) & 1u) {
+        uint32_t l = tr.page, act = a[tr.sel % n];
+        if (act == TA_MENU) {
+            ui.menu = 1;
+            ui.menu_sel = 0;
+            ui.force = 1;
+        } else if (act == TA_CONT) {
+            if (tr_running() && tr.lvl == l + 1u)
+                menu_close();
+            else
+                tr_start(l, 0);
+        } else if (act == TA_SKIP || act == TA_BACK) {
+            tr_go(act == TA_SKIP ? 1 : -1);
+            menu_close();
+        } else if (act == TA_QUIT) {
+            tr_quit();
+            menu_close();
+        } else
+            tr_start(l, 1);
+    }
+    enc_drop();
+}
+UI_SMALL static void tr_pick_draw(void)
+{
+    uint8_t a[8];
+    uint32_t page = tr.page, n = tr_actions(page, a), pass, i, first, sig;
+    const tr_level_t *L = page < TR_NLEVELS ? &TR_LEVELS[page] : 0;
+    uint16_t acc = page < TR_NLEVELS ? UI_COL[page & 3u] : C_GRAY;
+    char b[32];
+    sig = page * 131u + tr.sel * 7u + tr.done * 977u + (L ? tr.at[page] : 0u) * 31u + tr.lvl * 7919u + (uint32_t)tr_running();
+    if (!ui.force && sig == tr.psig)
+        return;
+    tr.psig = sig;
+    first = tr.sel > 2u ? tr.sel - 2u : 0u;
+    for (pass = 0; pass < 2u; pass++) {             /* (the canvas holds 124 rows: two bands) */
+        cv_begin(240, pass ? 116u : 124u, C_BLACK);
+        cv_oy = pass ? -124 : 0;
+        cv_text(4, 2, &FONT_S, "BOOPBOX TRAINER", C_HI);
+        fmt_int(b, (int32_t)page + 1);
+        str_cpy(b + str_len(b), "/", 2);
+        fmt_int(b + str_len(b), TR_NLEVELS + 1);
+        ui_text_r(2, b, C_GRAY);
+        cv_rect(0, 20, 240, 1, C_LINE);
+        if (L) {
+            str_cpy(b, "LEVEL ", sizeof b);
+            fmt_int(b + 6, (int32_t)page + 1);
+            cv_text(4, 26, &FONT_S, b, acc);
+            cv_text(4, 44, &FONT_L, L->name, C_WHITE);
+            cv_text(4, 82, &FONT_S, L->style, C_AMB);
+            cv_text(4, 102, &FONT_S, L->learn1, C_GRAY);
+            cv_text(4, 118, &FONT_S, L->learn2, C_GRAY);
+            cv_rect(4, 140, 232, 6, C_LINE);
+            if ((tr.done >> page) & 1u) {
+                cv_rect(4, 140, 232, 6, acc);
+                str_cpy(b, "DONE", sizeof b);
+            } else if (tr.at[page] || (tr.lvl == page + 1u)) {
+                cv_rect(4, 140, (int32_t)(232u * tr.at[page] / L->n), 6, acc);
+                str_cpy(b, "STEP ", sizeof b);
+                fmt_int(b + 5, tr.at[page] + 1);
+                str_cpy(b + str_len(b), " OF ", sizeof b - str_len(b));
+                fmt_int(b + str_len(b), L->n);
+            } else
+                str_cpy(b, "NOT STARTED", sizeof b);
+            cv_text(4, 150, &FONT_S, b, C_HI);
+        } else {
+            cv_text(4, 26, &FONT_S, "MORE", acc);
+            cv_text(4, 44, &FONT_L, "SETTINGS", C_WHITE);
+            cv_text(4, 82, &FONT_S, "SCREEN, LIGHTS, AUDIO, MIDI,", C_GRAY);
+            cv_text(4, 98, &FONT_S, "CALIBRATION, ABOUT", C_GRAY);
+        }
+        for (i = first; i < n && i < first + 3u; i++) {   /* the actions: the one picked on a bar, OCT+ beside it */
+            int32_t y = 172 + (int32_t)(i - first) * 18;
+            int cur = i == tr.sel;
+            if (cur)
+                cv_rect(0, y - 1, 240, 17, C_LINE);
+            cv_text(4, y, &FONT_S, cur ? "OCT+" : "", C_HI);
+            cv_text(46, y, &FONT_S, TA_NAME[a[i]], cur ? C_WHITE : C_GRAY);
+        }
+        cv_text(4, 226, &FONT_S, n > 1u ? "SELECT: PAGE  KNOB 1: ACTION" : "SELECT: PAGE   OCT-: CLOSE", C_DIM);
+        cv_oy = 0;
+        cv_blit(0, pass * 124u);
     }
 }
 
-/* ------------------------------------------------------------- kept --- */
-#define TR_MAGIC 0x31525254u                          /* "TRR1" */
-typedef struct {
-    uint32_t magic;
-    uint8_t at[TR_NLEVELS], done, seen, lvl, rsv[9 - TR_NLEVELS];
-    uint32_t crc;
-} tr_rec_t;
-_Static_assert(sizeof(tr_rec_t) == 20u, "the TRAINER's record: ui.c side_rec_t trn[]");
-UI_SMALL static void tr_fill(tr_rec_t *r)
-{
-    memset(r, 0, sizeof *r);
-    r->magic = TR_MAGIC;
-    memcpy(r->at, tr.at, sizeof tr.at);
-    r->done = tr.done, r->seen = tr.seen, r->lvl = tr.lvl;
-    r->crc = st_crc32(r, sizeof *r - 4u);
-}
-UI_SMALL static void tr_take(const tr_rec_t *r)
-{
-    uint32_t k;
-    if (r->magic != TR_MAGIC || r->crc != st_crc32(r, sizeof *r - 4u))
-        return;
-    for (k = 0; k < TR_NLEVELS; k++)
-        tr.at[k] = (uint8_t)(r->at[k] < TR_LEVELS[k].n ? r->at[k] : 0u);
-    tr.done = r->done, tr.seen = r->seen;
-    if (r->lvl && r->lvl <= TR_NLEVELS) {             /* a level was running: on where it was */
-        tr.lvl = r->lvl;
-        tr.card = tr.at[r->lvl - 1u];
-        tr.t0 = fm1_ms;
-        tr.sig = 0;
-    }
-}
-UI_SMALL static void tr_fill_b(uint32_t *b) { tr_rec_t r; tr_fill(&r); memcpy(b, &r, sizeof r); }
-UI_SMALL static void tr_take_b(const uint32_t *b) { tr_rec_t r; memcpy(&r, b, sizeof r); tr_take(&r); }
-
-/* power-on: the first start opens the menu's TRAINER section (the levels) */
+/* power-on: the progress log; the first start opens the picker */
 UI_SMALL static void trainer_boot(void)
 {
+    tr_log_boot();
+    if (tr.lvl)
+        tr_resume();
     if (tr.seen)
         return;
     tr.seen = 1;
     tr.dirty = 1;
-    ui.menu = 1;
-    ui.menu_sel = MI_TR0;
-    ui.force = 1;
+    tr_pick_open();
 }

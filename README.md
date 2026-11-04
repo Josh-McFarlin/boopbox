@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.4.0](#whats-new-in-140)
+1. [What's new in 1.4.1](#whats-new-in-141)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,14 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.4.0
+## What's new in 1.4.1
+
+**BoopBox Trainer** is easier to follow: a level picker on HOME held, progress kept even when switched off while
+playing, only the keys to press lit, and steps and hints that say what is wrong and what to do, with values as the
+screen shows them ([all changes](CHANGELOG.md), [the trainer](docs/trainer.md)). BoopBox itself is unchanged.
+
+### 1.4.0
+
 
 **BoopBox Trainer**, a second firmware that teaches you to make three songs on the FM-1 itself, step by step: lo-fi
 hip-hop, synthwave and melodic dubstep. A coach on the screen says what to do and lights the buttons and keys to

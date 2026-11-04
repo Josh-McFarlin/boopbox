@@ -217,7 +217,7 @@ UI_SMALL static uint32_t lights_keys_mask(void)
 }
 
 #if FELUCCA_TRAINER
-static void trainer_leds(uint8_t *nl);
+static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl);
 #endif
 UI_SMALL static void ui_leds(void)
 {
@@ -256,7 +256,7 @@ UI_SMALL static void ui_leds(void)
         for (k = 0; k < NB; k++)
             led_put(bl, panel.btn[k], 1);
 #if FELUCCA_TRAINER
-    trainer_leds(nl);                              /* the lesson: its button blinks, its keys lit (trainer.c) */
+    trainer_leds(nl, dl, bl);                           /* the lesson: its button blinks, its keys lit (trainer.c) */
 #endif
     for (c = 0; c < FM1_NCOL; c++) {
         fm1_led[c] = nl[c];
@@ -1191,7 +1191,11 @@ UI_SMALL static void ui_input(void)
             menu_close();
         } else {
             layer_unlock();
+#if FELUCCA_TRAINER
+            ui.menu = 3;                                /* (the TRAINER: its level picker; the menu is its last page) */
+#else
             ui.menu = 1;
+#endif
             ui.menu_sel = 0;
             ui.confirm = 0;
             ui.force = 1;
