@@ -25,6 +25,8 @@ that song.
   held it has two lines: the step's number and headline (or what is still wrong, in amber), then the action. On the
   pages it has one line, which shows them in turn. The coloured bar under it is the level's progress.
   - The button to press **blinks**; the keys to play, or the step keys to press, are **lit**.
+  - In the sound browser, a dot fading in and out marks the group and the sound (or kit) to pick; an arrow at the top
+    or bottom of a list shows the way to turn when it is out of sight.
   - Hints say what is off: *STEP 8: KICK MISSING*, *STEP 3: PRESS OCT-*, *NOW 90 BPM*, *TRACK 6: MUTE*.
   - The coach checks the result, not the buttons: any way of getting there counts.
   - When the step is right it says **NICE!** and the next step comes.
@@ -41,7 +43,7 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 528,880 B of the 581,564 B app slot (about 52 KB free); the coach and the lessons take about
+The trainer image is 529,360 B of the 581,564 B app slot (about 51 KB free); the coach and the lessons take about
 17 KB, and under 100 B of RAM. The normal build is unchanged, byte for byte.
 
 ## Building and testing

@@ -682,6 +682,25 @@ UI_SMALL static void trainer_leds(uint8_t *nl)
             led_put(nl, 14u + k, 1);
 }
 
+/* the sound browser (ui_draw.c graph_browse): the sound or kit the step asks for, to mark it */
+UI_SMALL static int tr_browse_target(uint32_t *kit, uint32_t *e, uint32_t *k)
+{
+    const tr_card_t *c = tr_card();
+    if (!c || tr.ok || (c->goal != TG_SOUND && c->goal != TG_KIT) || song.sel != c->trk)
+        return 0;
+    *kit = c->goal == TG_KIT;
+    *e = c->p;
+    *k = (uint32_t)c->v;
+    return 1;
+}
+UI_SMALL static uint32_t tr_pulse(void)                 /* 3..8..3 over 1.2 s (never gone), 0 with nothing to mark */
+{
+    uint32_t kit, e, k, ph = (fm1_ms / 100u) % 12u;
+    if (!tr_browse_target(&kit, &e, &k))
+        return 0;
+    return ph < 6u ? ph + 3u : 14u - ph;
+}
+
 /* ------------------------------------------------------------- the menu --- */
 /* the TRAINER section's four rows: the levels (none running), or the level's controls */
 UI_SMALL static const char *tr_row_name(uint32_t r)
