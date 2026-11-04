@@ -50,7 +50,7 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 532,748 B of the 581,564 B app slot (about 48 KB free); the coach and the lessons take about
+The trainer image is 532,728 B of the 581,564 B app slot (about 48 KB free); the coach and the lessons take about
 21 KB, and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
