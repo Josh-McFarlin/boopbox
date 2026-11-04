@@ -43,7 +43,10 @@ def main(fw, host):
     os.environ.setdefault("AC79_SDK", os.path.expanduser("~/fw-AC79_AIoT_SDK"))   # (as build.sh: the package's SDK files)
     app = open(os.path.join(fw, "felucca.bin"), "rb").read()
     ota = open(os.path.join(fw, "loader", "ota.bin"), "rb").read()
-    pkg = open(os.path.join(fw, "felucca-trainer.fwsc"), "rb").read()
+    import glob                                       # (the package of this app: a release build names it -X.Y.Z)
+    pkgs = sorted(glob.glob(os.path.join(fw, "felucca-trainer*.fwsc")), key=os.path.getmtime, reverse=True)
+    pkg_path = next((p for p in pkgs if slot.app_of(open(p, "rb").read())[:len(app)] == app), pkgs[0] if pkgs else None)
+    pkg = open(pkg_path, "rb").read()
     song = open(os.path.join(host, "trainer-song.bin"), "rb").read()
     product = "".join(chr((pkg[i * 0x30 + 0x2F] - i - 1) & 0xFF) for i in range(20) if pkg[i * 0x30 + 0x2F] != 0x7D)
     at = slot.find(app)
@@ -70,7 +73,7 @@ const cards = JSON.parse(readFileSync(json, "utf8")).cards;
 if (cards[cards.length - 1].goal !== S.TG_DONE) throw new Error("TG_DONE is not the firmware's");
 const clear = S.patchPackage(p, S.emptySong()), orig = readFileSync(pkg);
 if (clear.length !== orig.length || clear.some((x, i) => x !== orig[i])) throw new Error("clear");
-""", os.path.join(host, "trainer-song.json"), os.path.join(fw, "felucca-trainer.fwsc"), out_js, area_js)
+""", os.path.join(host, "trainer-song.json"), pkg_path, out_js, area_js)
     check(ok, "web/trslot.js: encode, patch, read back, clear (the package as it was)")
     if ok:
         check(open(area_js, "rb").read() == song, "web/trslot.js encodeSong(the song's fields) is the C test's song area")
@@ -85,7 +88,7 @@ if (clear.length !== orig.length || clear.some((x, i) => x !== orig[i])) throw n
     # the CLI
     cli = os.path.join(tmp, "cli.fwsc")
     r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "trainer", "slot.py"), "patch",
-                        os.path.join(fw, "felucca-trainer.fwsc"), os.path.join(host, "trainer-song.bin"), cli],
+                        pkg_path, os.path.join(host, "trainer-song.bin"), cli],
                        capture_output=True, text=True)
     check(r.returncode == 0 and open(cli, "rb").read() == mine, "slot.py patch (the command line)")
     # a BoopBox package (no song area): refused
