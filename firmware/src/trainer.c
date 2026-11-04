@@ -8,7 +8,7 @@
  *   what to do ("@" in it: the value wanted, as the screen shows it), and, when something is off, what is wrong and what
  *   fixes it ("STEP 5: NO KICK HERE (KEY 5)"). It blinks the button to press; while a card is about keys it takes the
  *   keys' lights over: only the keys to press are lit, all of them (every step of the page to fix). In the sound browser a
- *   fading dot marks the group and the sound; a sound or kit card is done when the browser closes on it.
+ *   fading dot marks the group and the sound; a sound or kit card is done when SAVE closes the browser on it.
  *   HOME held: the level picker (one level a page, SELECT turns them, OCT+ does the action picked with KNOB 1; its last
  *   page opens BoopBox's menu). Progress is a log in its own flash sector (TR_LOG: a few bytes a card, written while the
  *   music plays too; erased when full, stopped). One level is in progress at a time: starting one (from a new project)
@@ -98,6 +98,27 @@ UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a 
             str_cpy(b + str_len(b), " ", 2);
         str_cpy(b + str_len(b), unit, 16 - str_len(b));
     }
+}
+/* a card's value as the screen the card is on shows it: the parameter's own format (since 1.4.2 HOME's LEVEL and PAN too:
+ * ui_studio.c mix_value), but SEQ held shows LEN as a number (not "4 STEP") */
+UI_SMALL static void tr_card_value(char *b, const tr_card_t *c, int32_t v)
+{
+    if (c->goal == TG_PARAM && c->btn == B_HOME && (c->p == P_LEVEL || c->p == P_PAN)) {
+        mix_fmt(b, &trk[c->trk % NTRK], c->p, v);      /* (HOME's dials: ui_studio.c, "-7.0dB") */
+    } else if (c->goal == TG_PARAM && c->btn == B_SEQ && !c->data && c->p == P_SLEN)
+        fmt_int(b, v);                                  /* (SEQ held: "steps 4", ui_layers.c) */
+    else
+        tr_value(b, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), v);
+}
+UI_SMALL static void tr_now_c(const tr_card_t *c, int32_t v)   /* "NOW 30% (WANT 24%)", as the card's screen shows them */
+{
+    char b[16];
+    tr_card_value(b, c, v);
+    tr_say("NOW ", b);
+    tr_card_value(b, c, c->v);
+    tr_cat(" (WANT ");
+    tr_cat(b);
+    tr_cat(")");
 }
 UI_SMALL static void tr_now(const param_desc_t *d, int32_t v, int32_t want)   /* "NOW 30% (WANT 24%)" */
 {
@@ -261,7 +282,32 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     }
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
+        uint32_t pen = 0, first = NSTEP;
         page = ui.step_page;
+        /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
+         * first step wrong may want another note: going there would put out the keys of this one) */
+        for (i = page * 16u; i < page * 16u + 16u && i < len; i++) {
+            tr_st(c, i, &x);
+            if (x.kind == 1u && tr_st_off(t, i, &x) == 1u && !(t->step[i].time == ST_NOTE && t->step[i].n) &&
+                tr_pen_is(&x)) {
+                pen |= 1u << key_of_white(i % 16u);
+                if (first == NSTEP)
+                    first = i;
+            }
+        }
+        if (pen) {
+            tr_st(c, first, &x);
+            note_name(nb, x.note[0]);
+            if (!held) {
+                tr_step(first, "HOLD SEQ, TAP KEY ", "");
+                tr_num((int32_t)(first % 16u) + 1);
+                tr.btn = B_SEQ;
+            } else {
+                tr_say(x.n > 1u ? "THE CHORD" : nb, ": TAP THE LIT KEYS");
+                tr.keys = pen;
+            }
+            return 0;
+        }
         if (w.kind != 1u || (t->step[bad].time == ST_NOTE && t->step[bad].n)) {   /* a note to take out first */
             if (!held) {
                 tr_step(bad, "HOLD SEQ, TAP KEY ", "");
@@ -393,6 +439,15 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
     }
     if (bad == NSTEP)
         return 1;
+    if (!layer && !(on_drum_page() && !drum_page)) {   /* the DRUMS grid first (SEQ held: its keys are the steps anywhere) */
+        if (on_drum_page())
+            tr_say("TAP SEQ UNTIL THE GRID", ""), tr.btn = B_SEQ;
+        else if (ui.home && !ui.menu)
+            tr_say("TAP SEQ: THE DRUM GRID", ""), tr.btn = B_SEQ;
+        else
+            tr_say("TAP HOME, THEN SEQ: THE GRID", ""), tr.btn = B_HOME;
+        return 0;
+    }
     if (pen_lane != lane) {                         /* the sound to work on: KNOB 1 (or its black key) */
         tr_say("KNOB 1 TO ", LANE_NAME[lane]);
         tr.keys = 1u << drum_black_key(lane);
@@ -448,12 +503,56 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
 /* ---------------------------------------------------------------- the goals --- */
 static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
 UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
+/* ALGORITHM picks the track here (ui_input.c; the DRUMS screen too since 1.4.2): not on the SONG screen (its loop), not
+ * while a button is held, nor in a take; there HOME comes first */
+UI_SMALL static int tr_algo_ok(void)
+{
+    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page();
+}
+UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first */
+{
+    tr_say(tr_algo_ok() ? "TURN ALGORITHM TO TRACK " : "TAP HOME, ALGORITHM TO ", "");
+    tr_num((int32_t)k + 1);
+    if (!tr_algo_ok() && ui.layer == LY_PLAY)
+        tr.btn = B_HOME;
+}
+/* the way to the PATTERNS screen: SEQ, from any track (1.4.2: a drum track's DRUMS screen goes on to it after SOUND) */
+UI_SMALL static int tr_to_pats(void)
+{
+    if (tr_quiet || on_pats_page())
+        return 1;
+    tr_say("TAP SEQ UNTIL PATTERNS", "");
+    tr.btn = B_SEQ;
+    return 0;
+}
+/* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
+UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
+{
+    if (tr_quiet)
+        return;
+    if (!tr_to_pats())
+        return;
+    if (song.sel != k) {
+        tr_algo_say(k);
+        return;
+    }
+    if (pats_cursor != p) {
+        tr_say("KNOB 1 TO PATTERN ", "");
+        tr_num((int32_t)p + 1);
+        return;
+    }
+    if (copy)
+        tr_say(pats_arm == 1u ? "KNOB 4 RIGHT AGAIN: COPY" : "KNOB 4 RIGHT TWICE: COPY", "");
+    else if (song.playing && trk[k].pat_req)
+        tr_say("WAIT FOR THE BAR", "");
+    else
+        tr_say("PRESS OCT+ TO PLAY IT", ""), tr.btn = B_OCTUP;
+}
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
     if (tr_quiet || song.sel == c->trk)
         return 1;
-    tr_say("TURN ALGORITHM TO TRACK ", "");
-    tr_num(c->trk + 1);
+    tr_algo_say(c->trk);
     return 0;
 }
 /* a parameter card's page (data: 1 + its PAGES index, 0: any, a held button's knobs): off it, the hint says where */
@@ -476,8 +575,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_TRACK:
         if (song.sel == c->trk)
             return 1;
-        tr_say("NOW TRACK ", "");
-        tr_num(song.sel + 1);
+        tr_algo_say(c->trk);
         return 0;
     case TG_KIT:
     case TG_SOUND: {
@@ -488,7 +586,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         if (!tr_sel(c))
             return 0;
         if (on)
-            tr_say("THAT'S IT! TAP HOME TO KEEP IT", ""), tr.btn = B_HOME;
+            tr_say("THAT'S IT! TAP SAVE TO KEEP IT", ""), tr.btn = B_SAVE;
         else if (tr_browsing())
             tr_say("FOLLOW THE DOTS: KNOB 2, 3", "");
         else
@@ -510,14 +608,14 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             return 0;
         if (!tr_on_page(c))
             return 0;
-        tr_now(track_desc(t, c->p), t->p[c->p], c->v);
+        tr_now_c(c, t->p[c->p]);
         return 0;
     case TG_GLOBAL:
         if (tr_near(song.g[c->p], c->v, c->tol))
             return 1;
         if (!tr_on_page(c))
             return 0;
-        tr_now(&GP[c->p], song.g[c->p], c->v);
+        tr_now_c(c, song.g[c->p]);
         return 0;
     case TG_PLAY:
         return (song.playing != 0) == (c->v != 0);
@@ -528,8 +626,12 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
                  !ui.home && ui.page == c->p;
         if (at)
             return 1;
-        if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
-            tr_say("TAP SEQ: BACK TO THE GRID", "");
+        if (PAGES[c->p].scope == SC_PATS) {
+            tr_to_pats();
+            if (str_eq(tr.hint, c->act))
+                tr.hint[0] = 0;                         /* (what the action says already) */
+        } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
+            tr_say("TAP SEQ UNTIL THE GRID", "");
         else if (!ui.home && !on_drum_page() && !on_pats_page() && !on_song_page())
             tr_say("NOW ON ", cur_page()->title);
         return 0;
@@ -557,7 +659,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
                 tr_num((int32_t)(k % 4u) + 1);
                 tr_cat(")");
                 if (k / 4u != song.sel / 4u) {          /* (GLO's keys 1-4: the bank of the selected track) */
-                    tr_say(k < 4u ? "ALGORITHM TO A TRACK 1-4" : "ALGORITHM TO A TRACK 5-8", "");
+                    tr_algo_say(k);
                 }
                 return 0;
             }
@@ -596,40 +698,47 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             tr_say("ON ADD: TAP OCT+", ""), tr.btn = B_OCTUP;
         return 0;
     }
-    case TG_PATSEL:
-        if (t->pat == c->v && (!(c->flags & 1u) || !pat_empty(t)))
+    case TG_PATSEL: {
+        uint32_t k = c->trk % NTRK, has = pb_find(k, c->v) >= 0 || (t->pat == c->v && !pat_empty(t));
+        if (t->pat == c->v && (!(c->flags & 1u) || has))
             return 1;
-        if (t->pat == c->v)
-            tr_say("EMPTY: COPY INTO IT FIRST", "");
-        else if (tr_sel(c)) {
-            tr_say("NOW PATTERN ", "");
-            tr_num(t->pat + 1);
-        }
+        if ((c->flags & 1u) && !has)                    /* to play a pattern that holds something: the copy first */
+            tr_pat_way(k, t->pat == c->v ? 0u : (uint32_t)c->v, t->pat != c->v);
+        else
+            tr_pat_way(k, (uint32_t)c->v, 0);
         return 0;
+    }
     case TG_PATS: {
-        uint32_t k;
+        uint32_t k, w0 = 255u, same = 1, bad = NTRK;
         for (k = 0; k < NTRK; k++) {
             uint32_t w = TR_DATA[c->data + k];
-            if (w != 255u && trk[k].pat != w) {
-                tr_say("TRACK ", "");
-                tr_num((int32_t)k + 1);
-                tr_cat(": PATTERN ");
-                tr_num((int32_t)w + 1);
-                return 0;
-            }
+            if (w == 255u)
+                continue;
+            same &= w0 == 255u || w == w0;
+            w0 = w;
+            if (trk[k].pat != w && (bad == NTRK || k == song.sel))
+                bad = k;                                /* (the track selected first) */
         }
-        return 1;
+        if (bad == NTRK)
+            return 1;
+        if (same && on_pats_page() && pats_cursor == w0) {   /* one pattern for all: OCT- asks every track */
+            tr_say(song.playing && trk[bad].pat_req ? "WAIT FOR THE BAR" : "PRESS OCT-: EVERY TRACK", "");
+            tr.btn = B_OCTDN;
+            return 0;
+        }
+        tr_pat_way(bad, TR_DATA[c->data + bad], 0);
+        return 0;
     }
     case TG_PATHAS: {
-        uint32_t k;
+        uint32_t k, bad = NTRK;
         for (k = 0; k < NTRK; k++)
-            if ((((uint32_t)c->v >> k) & 1u) && pb_find(k, c->p) < 0 && !(trk[k].pat == c->p && !pat_empty(&trk[k]))) {
-                tr_say("TRACK ", "");
-                tr_num((int32_t)k + 1);
-                tr_cat(": NOT COPIED YET");
-                return 0;
-            }
-        return 1;
+            if ((((uint32_t)c->v >> k) & 1u) && pb_find(k, c->p) < 0 && !(trk[k].pat == c->p && !pat_empty(&trk[k])) &&
+                (bad == NTRK || k == song.sel))
+                bad = k;                                /* (the track selected first) */
+        if (bad == NTRK)
+            return 1;
+        tr_pat_way(bad, c->p, 1);
+        return 0;
     }
     case TG_SAVED:
         return proj_ok(&proj_slot[c->v & 3]) && proj_slot[c->v & 3].sum != tr.base;
@@ -848,15 +957,26 @@ UI_SMALL static void trainer_tick(void)
     }
 }
 
+UI_SMALL static int tr_prefix(const char *a, const char *p)
+{
+    while (*p && *a == *p)
+        a++, p++;
+    return !*p;
+}
 /* the card's action as shown: "@" the value wanted, as the screen shows it ("KNOB 4 (GATE) TO 79%") */
 UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 {
     const char *a = c->act;
     uint32_t o = 0;
+    if (!tr_algo_ok() && tr_prefix(a, "TURN ALGORITHM TO TRACK ")) {   /* (ALGORITHM does nothing here: HOME first) */
+        str_cpy(b, "TAP HOME, ALGORITHM TO ", n);
+        o = str_len(b);
+        a += 24;
+    }
     for (; *a && o + 1u < n; a++) {
         if (*a == '@' && (c->goal == TG_PARAM || c->goal == TG_GLOBAL)) {
             char v[16];
-            tr_value(v, c->goal == TG_GLOBAL ? &GP[c->p] : track_desc(&trk[c->trk % NTRK], c->p), c->v);
+            tr_card_value(v, c, c->v);
             str_cpy(b + o, v, n - o);
             o = str_len(b);
         } else

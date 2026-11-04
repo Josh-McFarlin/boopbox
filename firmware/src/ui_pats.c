@@ -54,7 +54,7 @@ UI_SMALL static void pats_screen_draw(void)
     if (!ui.force && !ui.msg_t && sig == previous)
         return;
     previous = ui.msg_t ? ~sig : sig;
-    cv_begin(240, 40, C_BLACK);                  /* the head */
+    cv_begin(240, 42, C_BLACK);                  /* the head (and the two rows over the grid: never left from another screen) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "PATTERNS", C_WHITE);
     str_cpy(b, "q ", 3);
@@ -139,7 +139,11 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             if (!ft_owns_press())
                 transport_req = song.playing ? 2 : 1;
         } else if (b == B_SEQ) {
-            open_family(FAM_SEQ);                    /* (the next SEQ screen: SONG) */
+            if (is_drum(t)) {                        /* a drum track: back to its grid (1.4.2: GRID KIT SOUND PATTERNS) */
+                drum_page = 0;
+                studio_open(SC_DRUM);
+            } else
+                open_family(FAM_SEQ);                /* (the next SEQ screen: SONG) */
             return;
         } else if (b == B_OCTUP) {
             pats_ask(sel, pats_cursor);
@@ -246,7 +250,7 @@ UI_SMALL static void chords_screen_draw(void)
     if (!ui.force && !ui.msg_t && sig == previous)
         return;
     previous = ui.msg_t ? ~sig : sig;
-    cv_begin(240, 40, C_BLACK);                  /* the head: the key and scale asked for, when */
+    cv_begin(240, 42, C_BLACK);                  /* the head: the key and scale asked for, when (42 rows: the two over the list too) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "CHORDS", C_WHITE);
     str_cpy(b, N_HKEY[(uint32_t)clamp(song.g[G_HKEY], 0, 11)], 4);

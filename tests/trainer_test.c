@@ -134,14 +134,14 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
-static uint32_t browse_seen, keyed_cards;
+static uint32_t pats_from_drum, hint_tries, browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
 static int on_target(const tr_card_t *c)
 {
     const track_t *t = &trk[c->trk];
     return c->goal == TG_KIT ? is_drum(t) && t->p[P_E0] == c->v :
            !is_drum(t) && t->eng_req == c->p && t->preset == (uint8_t)c->v && user_of(t) >= UP_SLOTS;
 }
-static void do_browse(const tr_card_t *c)
+static void browse_find(const tr_card_t *c)
 {
     uint32_t g, s;
     home();
@@ -160,11 +160,35 @@ static void do_browse(const tr_card_t *c)
             slow(EN_K2, 1);
     }
     frames(10);
-    if (!browse_seen++)
-        check(on_target(c) && !tr.ok && tr_browsing() && !strcmp(tr.hint, "THAT'S IT! TAP HOME TO KEEP IT"),
-              "a sound card: on the sound in the browser, not done yet (HOME closes it on it)");
-    tap(B_HOME);                                         /* "THAT'S IT! TAP HOME TO KEEP IT" */
+}
+static void do_browse(const tr_card_t *c)
+{
+    static uint8_t seen_kind[2];
+    browse_seen++;
+    if (!seen_kind[c->goal == TG_SOUND]++) {             /* the first kit, the first sound: the browser stays; HOME puts
+                                                         * the sound back */
+        const track_t *t = &trk[c->trk];
+        uint8_t kind, eng, pre;
+        int16_t e0;
+        home();
+        algo_to(c->trk);
+        kind = t->kind, eng = t->eng_req, pre = t->preset, e0 = t->p[P_E0];
+        browse_find(c);
+        frames(300);                                     /* (4.8 s untouched: before 1.4.2 it went back by itself) */
+        check(on_target(c) && !tr.ok && tr_browsing() && !strcmp(tr.hint, "THAT'S IT! TAP SAVE TO KEEP IT"),
+              "the sound browser stays open untouched; on the sound: not done yet (SAVE keeps it)");
+        tap(B_HOME);
+        frames(5);
+        check(!tr_browsing() && t->kind == kind && t->p[P_E0] == e0 &&
+              (kind == TK_DRUM || (t->eng_req == eng && t->preset == pre)) && !on_target(c),
+              c->goal == TG_SOUND ? "HOME closes the browser and puts back the synth sound it opened on" :
+              "HOME closes the browser and puts back the kit it opened on");
+    }
+    browse_find(c);
+    tap(B_SAVE);                                         /* "THAT'S IT! TAP SAVE TO KEEP IT" */
     frames(5);
+    if (seen_kind[c->goal == TG_SOUND] == 1u)
+        check(!tr_browsing() && on_target(c), "SAVE closes the browser and keeps the sound");
 }
 /* a synth pattern, as the card says: the SEQ layer (play the note, hold SEQ, the step key) or the NOTES page */
 static void do_notes(const tr_card_t *c)
@@ -198,7 +222,27 @@ static void do_notes(const tr_card_t *c)
             hold_layer(B_SEQ);
             while (ui.step_page != i / 16u)
                 tap(B_OCTUP);
-            key(key_of_white(i % 16u));
+            {   /* as a person does: every step of the page wanting this note, one tap at a time; the ones left stay lit */
+                uint32_t j, m, left = 0;
+                for (j = i; j < len && j / 16u == i / 16u; j++)
+                    if (kind[j] == 1u && want[j][4] == want[i][4] && !memcmp(want[j], want[i], want[i][4]) &&
+                        !(t->step[j].time == ST_NOTE && t->step[j].n))
+                        left |= 1u << (j % 16u);
+                for (j = 0; j < 16u; j++) {
+                    if (!((left >> j) & 1u))
+                        continue;
+                    key(key_of_white(j));
+                    frames(2);
+                    left &= ~(1u << j);
+                    for (m = 0; m < 16u; m++)
+                        if (((left >> m) & 1u) && !((tr.keys >> key_of_white(m)) & 1u)) {
+                            printf("trainer: card %s: step %u wants the same note, no longer lit\n", c->head,
+                                   (i / 16u) * 16u + m + 1u);
+                            seq_unlit++;
+                        }
+                    seq_taps++;
+                }
+            }
             let_go(B_SEQ);
         }
         return;
@@ -235,11 +279,34 @@ static void do_notes(const tr_card_t *c)
 }
 /* drum lanes on the DRUMS grid: KNOB 1 the sound, the keys the steps, KNOB 2 the step, KNOB 4 its level, OCT+ held:
  * the sheet (RATCHET) */
+static uint32_t grid_hints, grid_lost;
+static int hint_num(const char *h, const char *after);
 static void do_lanes(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
     const uint8_t *d = &TR_DATA[c->data];
-    uint32_t len = d[0], nl = d[1], l, i;
+    uint32_t len = d[0], nl = d[1], l, i, g;
+    for (g = 0; g < 12u && !(on_drum_page() && !drum_page) && t->p[P_SLEN] == (int16_t)len; g++) {
+        int n;                                           /* to the grid as the hints say, from where the step before left */
+        frames(2);
+        if (tr_goal(c))
+            return;
+        grid_hints++;
+        if ((n = hint_num(tr.hint, "ALGORITHM TO TRACK ")) > 0 || (n = hint_num(tr.hint, "ALGORITHM TO ")) > 0) {
+            if (tr_prefix(tr.hint, "TAP HOME"))
+                tap(B_HOME);
+            else
+                slow(EN_ALGO, song.sel < (uint32_t)n - 1u ? 1 : -1);
+        } else if (tr_prefix(tr.hint, "TAP HOME"))
+            tap(B_HOME);
+        else if (tr_prefix(tr.hint, "TAP SEQ"))
+            tap(B_SEQ);
+        else {
+            printf("trainer: %s: off the grid, the hint says: \"%s\"\n", c->head, tr.hint);
+            grid_lost++;
+            break;
+        }
+    }
     home();
     algo_to(c->trk);
     if (t->p[P_SLEN] != (int16_t)len) {
@@ -250,8 +317,8 @@ static void do_lanes(const tr_card_t *c)
     if (!(on_drum_page() && !drum_page)) {
         home();
         tap(B_SEQ);
-        while (on_drum_page() && drum_page)
-            tap(B_SEQ);
+        for (g = 0; g < 6u && !(on_drum_page() && !drum_page); g++)
+            tap(B_SEQ);                                  /* (GRID KIT SOUND PATTERNS, round) */
     }
     for (l = 0; l < nl; l++) {
         const uint8_t *h = &d[2u + l * (len + 1u)];
@@ -367,6 +434,57 @@ static void do_lock(const tr_card_t *c)
     tap(B_OCTDN);
     tap(B_OCTDN);
 }
+/* the PATTERNS steps done as the hints say, from where the step before left the FM-1 (nothing else known): each hint
+ * read, the one press it asks for */
+static uint32_t hint_steps, hint_lost;
+static int hint_num(const char *h, const char *after)
+{
+    const char *p = strstr(h, after);
+    return p ? atoi(p + strlen(after)) : -1;
+}
+static void follow_hints(const tr_card_t *c)
+{
+    uint32_t g;
+    for (g = 0; g < 120u; g++) {
+        static char act[40];
+        const char *h = tr.hint;
+        int n;
+        frames(2);
+        if (tr.card != (uint32_t)(c - TR_LEVELS[tr.lvl - 1u].cards) || tr.ok || tr_goal(c))
+            return;
+        if (!h[0]) {                                     /* (no hint: the action says it) */
+            tr_act(c, act, sizeof act);
+            h = act;
+        }
+        hint_steps++;
+        if (!strcmp(h, "TAP SEQ UNTIL PATTERNS"))
+            tap(B_SEQ);
+        else if (tr_prefix(h, "TAP HOME"))
+            tap(B_HOME);
+        else if ((n = hint_num(h, "ALGORITHM TO TRACK ")) > 0 || (n = hint_num(h, "ALGORITHM TO ")) > 0) {
+            if (song.sel != (uint32_t)n - 1u)
+                slow(EN_ALGO, song.sel < (uint32_t)n - 1u ? 1 : -1);
+            else if (strstr(h, "THEN SEQ"))
+                tap(B_SEQ);
+        } else if ((n = hint_num(h, "KNOB 1 TO PATTERN ")) > 0)
+            slow(EN_K1, pats_cursor < (uint32_t)n - 1u ? 1 : -1);
+        else if (tr_prefix(h, "KNOB 4 RIGHT"))
+            slow(EN_K4, 1);
+        else if (tr_prefix(h, "PRESS OCT+"))
+            tap(B_OCTUP);
+        else if (tr_prefix(h, "PRESS OCT-"))
+            tap(B_OCTDN);
+        else if (!strcmp(h, "WAIT FOR THE BAR"))
+            frames(20);
+        else {
+            printf("trainer: %s: a hint that says no press: \"%s\"\n", c->head, h);
+            hint_lost++;
+            return;
+        }
+    }
+    printf("trainer: %s: the hints went round\n", c->head);
+    hint_lost++;
+}
 static void do_card(const tr_card_t *c)
 {
     switch (c->goal) {
@@ -375,10 +493,22 @@ static void do_card(const tr_card_t *c)
     case TG_PARAM: case TG_GLOBAL: do_param(c); break;
     case TG_PLAY: if ((song.playing != 0) != (c->v != 0)) tap(B_PLAY); break;
     case TG_PAGE:
+        if (PAGES[c->p].scope == SC_PATS && hint_tries++ == 0u) {   /* (as the step and its hints say, from anywhere) */
+            if (pats_from_drum++ == 0u && !is_drum(TSEL) && !on_pats_page()) {
+                home();                                  /* (once: from a drum track, where SEQ has no way there) */
+                algo_to(3);
+                tap(B_SEQ);
+                check(is_drum(TSEL) && on_drum_page() && !tr_goal(c) && (!tr.hint[0] || !strcmp(tr.hint, "TAP SEQ UNTIL PATTERNS")),
+                      "PATTERNS from a drum track's grid: TAP SEQ UNTIL PATTERNS (GRID, KIT, SOUND, PATTERNS)");
+            }
+            follow_hints(c);
+            break;
+        }
         home();
         if (PAGES[c->p].scope == SC_DRUM) {
             tap(B_SEQ);
-            while (on_drum_page() && drum_page)
+            uint32_t g;
+            for (g = 0; g < 6u && !(on_drum_page() && !drum_page); g++)
                 tap(B_SEQ);
         } else if (PAGES[c->p].scope == SC_PATS)
             pats_screen();
@@ -397,12 +527,18 @@ static void do_card(const tr_card_t *c)
     case TG_LANES: do_lanes(c); break;
     case TG_MUTES: do_mutes(c); break;
     case TG_LOCK: do_lock(c); break;
-    case TG_PATSEL:
+    case TG_PATSEL: case TG_PATS: case TG_PATHAS:
+        if (hint_tries++ == 0u) {                        /* (the first try: the hints alone) */
+            follow_hints(c);
+            break;
+        }
+        if (c->goal == TG_PATS) goto pats;
+        if (c->goal == TG_PATHAS) goto pathas;
         if (c->flags & 1u)                               /* a pattern to play that holds something: copy into it first */
             pat_copy_to(c->trk, (uint32_t)c->v);
         pat_select(c->trk, (uint32_t)c->v);
         break;
-    case TG_PATS: {
+    pats: {
         uint32_t k, all = 1, w0 = TR_DATA[c->data];
         for (k = 0; k < NTRK; k++)
             all &= TR_DATA[c->data + k] == 255u || TR_DATA[c->data + k] == w0;
@@ -420,7 +556,7 @@ static void do_card(const tr_card_t *c)
                     pat_select(k, TR_DATA[c->data + k]);
         break;
     }
-    case TG_PATHAS: {
+    pathas: {
         uint32_t k;
         for (k = 0; k < NTRK; k++)
             if (((uint32_t)c->v >> k) & 1u)
@@ -523,8 +659,9 @@ static int play_level(uint32_t l, const char *shots)
         {   /* the card's text fits the screen; a card about keys: only its keys lit */
             char act[40];
             tr_act(c, act, sizeof act);
-            if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8) {
-                printf("trainer: level %u card %u: too wide: %s / %s\n", l + 1u, at + 1u, c->head, act);
+            if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8 ||
+                (tr_goal(c), text_w(&FONT_S, tr.hint) > 236)) {
+                printf("trainer: level %u card %u: too wide: %s / %s / %s\n", l + 1u, at + 1u, c->head, act, tr.hint);
                 fails++;
             }
             if ((c->goal == TG_LANES || c->goal == TG_NOTES) && song.sel == c->trk) {
@@ -537,7 +674,40 @@ static int play_level(uint32_t l, const char *shots)
                 }
             }
         }
+        if (c->trk < NTRK && song.sel != c->trk) {   /* "TURN ALGORITHM": a detent changes the track (else HOME first) */
+            char act[40];
+            int turn, home_first;
+            tr_act(c, act, sizeof act);
+            tr_goal(c);
+            turn = tr_prefix(act, "TURN ALGORITHM") || tr_prefix(tr.hint, "TURN ALGORITHM");
+            home_first = tr_prefix(act, "TAP HOME, ALGORITHM") || tr_prefix(tr.hint, "TAP HOME, ALGORITHM");
+            if (turn) {
+                uint32_t was = song.sel;
+                slow(EN_ALGO, song.sel < c->trk ? 1 : -1);
+                algo_said++;
+                if (song.sel == was) {
+                    printf("trainer: level %u card %u: says TURN ALGORITHM, the track stays (%s)\n", l + 1u, at + 1u,
+                           cur_page()->title);
+                    fails++;
+                }
+            } else if (home_first) {
+                algo_home++;
+                tap(B_HOME);
+                frames(2);
+                if (!tr_algo_ok()) {
+                    printf("trainer: level %u card %u: HOME tapped, ALGORITHM still does nothing\n", l + 1u, at + 1u);
+                    fails++;
+                }
+            }
+        }
+        hint_tries = 0;
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
+            if (hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS ||
+                                                    c->goal == TG_PAGE)) {
+                printf("trainer: level %u card %u (%s): the hints alone did not get there: %s\n", l + 1u, at + 1u,
+                       c->head, tr.hint);
+                hint_lost++;
+            }
             do_card(c);
             frames(70);                                  /* (NICE, then the next card) */
         }
@@ -571,6 +741,67 @@ int main(int argc, char **argv)
     ui.force = 1; frame(); ppm(outdir, "trainer-picker");
     tap(B_OCTDN);
     check(!ui.menu, "OCT- closes the picker");
+    {   /* the studio screens' head covers the two rows over their list: nothing left there from HOME (its labels) */
+        uint32_t x, y, bad = 0, w;
+        for (w = 0; w < 3u; w++) {
+            home();
+            frames(5);
+            if (w == 0u) pats_screen();
+            else if (w == 1u) tap(B_SAVE);
+            else open_page(B_SCL, "CHORDS");
+            frames(10);
+            for (y = 40; y < 42u; y++)
+                for (x = 0; x < 240u; x++)
+                    bad += screen[y * 240 + x] != screen[y * 240];   /* (each row one colour: no text) */
+        }
+        check(!bad, "PATTERNS, SONG, CHORDS: nothing left over the list from the screen before (rows 40-41)");
+        home();
+    }
+    {   /* (1.4.2) a drum track: ALGORITHM on its grid, SEQ on to PATTERNS and round */
+        uint32_t g, ok;
+        home();
+        algo_to(3);
+        tap(B_SEQ);
+        ok = on_drum_page() && !drum_page;
+        slow(EN_ALGO, 1);
+        ok = ok && song.sel == 4u && on_notes_page();
+        check(ok, "the DRUMS grid: ALGORITHM changes the track (a synth track: its NOTES)");
+        slow(EN_ALGO, -1);
+        check(song.sel == 3u && on_drum_page() && !drum_page, "NOTES: ALGORITHM onto a drum track opens its grid");
+        for (g = 0; g < 3u; g++)
+            tap(B_SEQ);
+        ok = on_pats_page() && song.sel == 3u;
+        tap(B_SEQ);
+        check(ok && on_drum_page() && !drum_page, "a drum track: SEQ walks GRID, KIT, SOUND, PATTERNS and back to the GRID");
+        home();
+    }
+    {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */
+        static const struct { uint32_t lvl; const char *head, *act; } V[] = {
+            {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO "}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO "},
+            {2, "A BIT QUIETER", "ON HOME: KNOB 2 TO "}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
+            {1, "LONGER NOTES", "TURN KNOB 4 (GATE) TO 79%"}, {1, "LAID BACK: 86 BPM", "TAP HOME, SELECT TO 86 BPM"},
+        };
+        uint32_t i, j, bad = 0;
+        char act[40], want[48];
+        for (i = 0; i < NELEM(V); i++) {
+            const tr_level_t *L = &TR_LEVELS[V[i].lvl - 1u];
+            for (j = 0; j < L->n && !(!strcmp(L->cards[j].head, V[i].head) &&
+                                      (L->cards[j].goal == TG_PARAM || L->cards[j].goal == TG_GLOBAL)); j++)
+                ;
+            act[0] = 0;
+            if (j < L->n)
+                tr_act(&L->cards[j], act, sizeof act);
+            strcpy(want, V[i].act);
+            if (j < L->n && L->cards[j].btn == B_HOME && L->cards[j].goal == TG_PARAM) {   /* HOME's dial (ui_studio.c) */
+                mix_fmt(want + strlen(want), &trk[L->cards[j].trk], L->cards[j].p, L->cards[j].v);
+            }
+            if (strcmp(act, want)) {
+                printf("  level %u %s: \"%s\", the screen shows \"%s\"\n", V[i].lvl, V[i].head, act, want);
+                bad++;
+            }
+        }
+        check(!bad, "a value to turn to reads as its screen shows it (HOME's LEVEL and PAN as their pages)");
+    }
     for (l = 0; l < TR_NLEVELS; l++) {
         char what[96];
         snprintf(what, sizeof what, "level %u (%s): every card reached with the panel, DONE", l + 1u, TR_LEVELS[l].name);
@@ -600,6 +831,16 @@ int main(int argc, char **argv)
         char what[96];
         snprintf(what, sizeof what, "the cards about keys (%u): only their keys lit, no landmarks, no old steps", keyed_cards);
         check(keyed_cards > 20u, what);
+        snprintf(what, sizeof what, "SEQ held, a note in hand: its steps stay lit until all are in (%u taps)", seq_taps);
+        check(!seq_unlit && seq_taps > 10u, what);
+        snprintf(what, sizeof what, "PATTERNS steps done by their hints alone (%u presses), from the track left on",
+                 hint_steps);
+        check(!hint_lost && hint_steps > 20u, what);
+        snprintf(what, sizeof what, "drum steps: to the grid by their hints (%u presses)", grid_hints);
+        check(!grid_lost && grid_hints > 3u, what);
+        snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
+                 algo_said, algo_home);
+        check(algo_said > 5u, what);
     }
     {   /* level 3's song as the lessons built it, from its start in song mode, to DIR/trainer-l3-song.wav (to compare with
          * the approved render, build/trainer/3-*.wav: tests/trainer_song_compare.py) */

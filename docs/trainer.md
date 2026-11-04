@@ -35,7 +35,8 @@ that song.
   - The button to press **blinks**. On a step about keys the coach owns the keys' lights: only the keys to press are
     lit (every step of the page still to fix, blinking), not BoopBox's beat markers or the steps already there.
   - In the sound browser, a dot fading in and out marks the group and the sound (or kit) to pick, whichever is
-    highlighted, and stays until the step is done. The step is done when you tap **HOME** with that sound chosen.
+    highlighted, and stays until the step is done. The step is done when you tap **SAVE** on that sound (HOME puts
+    the sound back).
   - The coach checks the result, not the buttons: any way of getting there counts.
   - When the step is right it says **NICE!** and the next step comes.
 - **Progress** is written to its own flash sector a few bytes at a time, after every step, while the music plays too:
@@ -50,14 +51,14 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 532,728 B of the 581,564 B app slot (about 48 KB free); the coach and the lessons take about
+The trainer image is 534,820 B of the 581,564 B app slot (about 46 KB free); the coach and the lessons take about
 21 KB, and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
 
 ```
 ./build.sh --trainer                    # build/trainer-fw/felucca-trainer.fwsc (version BOOPBOX TRAINER X.Y.Z)
-./build.sh --trainer --release 1.4.1    # build/trainer-fw/felucca-trainer-1.4.1.fwsc
+./build.sh --trainer --release 1.4.2    # build/trainer-fw/felucca-trainer-1.4.2.fwsc
 tests/run_tests.sh                      # includes the trainer test
 python3 tools/trainer/render.py         # the songs to build/trainer/*.wav and .mp3
 ```

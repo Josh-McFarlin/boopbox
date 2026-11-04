@@ -792,8 +792,10 @@ UI_SMALL static void layer_screen_draw(void)
             const char *u;
             param_format(&GP[G_FILT], song.g[G_FILT], v[0], &u);
             ui_lower(v[0], v[0], 8);
-            fmt_int(v[1], song.g[G_DUST] * 100 / 127);
-            fmt_int(v[2], song.g[G_DUCK] * 100 / 127);
+            param_format(&GP[G_DUST], song.g[G_DUST], v[1], &u);   /* (1.4.2: as GLO > MASTER shows them) */
+            str_cpy(v[1] + str_len(v[1]), u, 8 - str_len(v[1]));
+            param_format(&GP[G_DUCK], song.g[G_DUCK], v[2], &u);
+            str_cpy(v[2] + str_len(v[2]), u, 8 - str_len(v[2]));
             param_format(&TP[P_TFLT], t->p[P_TFLT], v[3], &u);
             ui_lower(v[3], v[3], 8);
         }
@@ -1038,7 +1040,7 @@ UI_SMALL static void layer_screen_draw(void)
             uint32_t lv = trk_level(base + i);
             static const char *const L[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
             lab[i] = L[(base + i) % NTRK];
-            fmt_int(v[i], (int32_t)lv * 100 / 127);
+            mix_value(v[i], &trk[(base + i) % NTRK], P_LEVEL);   /* (1.4.2: as its page shows it) */
             ratio[i] = (int32_t)lv * 1000 / 127;
         }
         break;

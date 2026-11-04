@@ -13,6 +13,35 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.4.2
+
+**The sound browser stays open until you close it** (BoopBox and BoopBox Trainer):
+
+- **SAVE** keeps the sound you are on and closes it (*SOUND KEPT*). **HOME** closes it and puts back the sound the
+  track had when it opened (*SOUND PUT BACK*). It no longer goes back by itself after 4 s.
+- SAVE tapped elsewhere opens the SAVE pages at USER (USER, SECTION, TOOLS); the browser is the PRESETS knob's.
+- PATTERNS, SONG and CHORDS no longer show the bottom of the screen before's labels under their title.
+- **A drum track reaches PATTERNS:** on the DRUMS screen SEQ goes GRID, KIT, SOUND, then **PATTERNS**, and SEQ there
+  back to the grid (before, only a synth track's SEQ got there).
+- **ALGORITHM on the DRUMS screen** changes the track, as on the other screens (a synth track: its NOTES page; from
+  NOTES, a drum track: its DRUMS grid). The SONG screen keeps it for the loop's start.
+- **LEVEL and PAN read the same everywhere:** HOME's dials, the DRUMS screen and GLO's faders show them as their pages
+  do (a synth's LEVEL in dB, PAN in %, the drum track's LEVEL and REV 0-127), not 0-100 on one screen and dB on
+  another. GLO's DUST and DUCK show their % as GLO > MASTER does.
+
+**BoopBox Trainer**, from levels 1 and 2 played on the FM-1 ([the trainer](docs/trainer.md)):
+
+- A sound step is done when you tap **SAVE** on the sound.
+- With a note in hand on the SEQ layer, every step that wants it stays lit until all are in.
+- Where ALGORITHM does not change the track (the DRUMS grid, the SONG screen, a button held) the step says *TAP HOME*
+  first.
+- Values read as their screen shows them (LEVEL *-7.0dB*, PAN *-31%*, LEN *4* with SEQ held).
+- The PATTERNS steps say the next press from any track: which track, *KNOB 1 TO PATTERN 2*, *KNOB 4 RIGHT TWICE:
+  COPY*, *PRESS OCT+ TO PLAY IT*, from a drum track too (*TAP SEQ UNTIL PATTERNS*).
+- Drum steps off the drum grid say how to get there (*TAP SEQ: THE DRUM GRID*).
+
+Projects, songs, presets, settings and the trainer's progress from 1.4.1 open as they are.
+
 ## 1.4.1
 
 **BoopBox Trainer** after its first player went through level 1 ([the trainer](docs/trainer.md)):
