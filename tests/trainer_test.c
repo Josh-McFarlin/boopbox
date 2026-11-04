@@ -134,7 +134,7 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
-static uint32_t browse_seen, keyed_cards, seq_unlit, seq_taps;
+static uint32_t browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
 static int on_target(const tr_card_t *c)
 {
     const track_t *t = &trk[c->trk];
@@ -543,8 +543,9 @@ static int play_level(uint32_t l, const char *shots)
         {   /* the card's text fits the screen; a card about keys: only its keys lit */
             char act[40];
             tr_act(c, act, sizeof act);
-            if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8) {
-                printf("trainer: level %u card %u: too wide: %s / %s\n", l + 1u, at + 1u, c->head, act);
+            if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8 ||
+                (tr_goal(c), text_w(&FONT_S, tr.hint) > 236)) {
+                printf("trainer: level %u card %u: too wide: %s / %s / %s\n", l + 1u, at + 1u, c->head, act, tr.hint);
                 fails++;
             }
             if ((c->goal == TG_LANES || c->goal == TG_NOTES) && song.sel == c->trk) {
@@ -553,6 +554,32 @@ static int play_level(uint32_t l, const char *shots)
                 if (tr.keys && (keys_lit_now() & ~tr.keys)) {
                     printf("trainer: level %u card %u: keys lit %07x, the card's %07x\n", l + 1u, at + 1u,
                            keys_lit_now(), tr.keys);
+                    fails++;
+                }
+            }
+        }
+        if (c->trk < NTRK && song.sel != c->trk) {   /* "TURN ALGORITHM": a detent changes the track (else HOME first) */
+            char act[40];
+            int turn, home_first;
+            tr_act(c, act, sizeof act);
+            tr_goal(c);
+            turn = tr_prefix(act, "TURN ALGORITHM") || tr_prefix(tr.hint, "TURN ALGORITHM");
+            home_first = tr_prefix(act, "TAP HOME, ALGORITHM") || tr_prefix(tr.hint, "TAP HOME, ALGORITHM");
+            if (turn) {
+                uint32_t was = song.sel;
+                slow(EN_ALGO, song.sel < c->trk ? 1 : -1);
+                algo_said++;
+                if (song.sel == was) {
+                    printf("trainer: level %u card %u: says TURN ALGORITHM, the track stays (%s)\n", l + 1u, at + 1u,
+                           cur_page()->title);
+                    fails++;
+                }
+            } else if (home_first) {
+                algo_home++;
+                tap(B_HOME);
+                frames(2);
+                if (!tr_algo_ok()) {
+                    printf("trainer: level %u card %u: HOME tapped, ALGORITHM still does nothing\n", l + 1u, at + 1u);
                     fails++;
                 }
             }
@@ -622,6 +649,9 @@ int main(int argc, char **argv)
         check(keyed_cards > 20u, what);
         snprintf(what, sizeof what, "SEQ held, a note in hand: its steps stay lit until all are in (%u taps)", seq_taps);
         check(!seq_unlit && seq_taps > 10u, what);
+        snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
+                 algo_said, algo_home);
+        check(algo_said > 5u && algo_home > 0u, what);
     }
     {   /* level 3's song as the lessons built it, from its start in song mode, to DIR/trainer-l3-song.wav (to compare with
          * the approved render, build/trainer/3-*.wav: tests/trainer_song_compare.py) */

@@ -473,12 +473,25 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
 /* ---------------------------------------------------------------- the goals --- */
 static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
 UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
+/* ALGORITHM picks the track here (ui_input.c): not on the DRUMS grid or the SONG screen (theirs), not while a button is
+ * held, nor in a take; there HOME comes first */
+UI_SMALL static int tr_algo_ok(void)
+{
+    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_drum_page() &&
+           !on_song_page();
+}
+UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first */
+{
+    tr_say(tr_algo_ok() ? "TURN ALGORITHM TO TRACK " : "TAP HOME, ALGORITHM TO ", "");
+    tr_num((int32_t)k + 1);
+    if (!tr_algo_ok() && ui.layer == LY_PLAY)
+        tr.btn = B_HOME;
+}
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
     if (tr_quiet || song.sel == c->trk)
         return 1;
-    tr_say("TURN ALGORITHM TO TRACK ", "");
-    tr_num(c->trk + 1);
+    tr_algo_say(c->trk);
     return 0;
 }
 /* a parameter card's page (data: 1 + its PAGES index, 0: any, a held button's knobs): off it, the hint says where */
@@ -501,8 +514,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_TRACK:
         if (song.sel == c->trk)
             return 1;
-        tr_say("NOW TRACK ", "");
-        tr_num(song.sel + 1);
+        tr_algo_say(c->trk);
         return 0;
     case TG_KIT:
     case TG_SOUND: {
@@ -582,7 +594,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
                 tr_num((int32_t)(k % 4u) + 1);
                 tr_cat(")");
                 if (k / 4u != song.sel / 4u) {          /* (GLO's keys 1-4: the bank of the selected track) */
-                    tr_say(k < 4u ? "ALGORITHM TO A TRACK 1-4" : "ALGORITHM TO A TRACK 5-8", "");
+                    tr_algo_say(k);
                 }
                 return 0;
             }
@@ -873,11 +885,22 @@ UI_SMALL static void trainer_tick(void)
     }
 }
 
+UI_SMALL static int tr_prefix(const char *a, const char *p)
+{
+    while (*p && *a == *p)
+        a++, p++;
+    return !*p;
+}
 /* the card's action as shown: "@" the value wanted, as the screen shows it ("KNOB 4 (GATE) TO 79%") */
 UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 {
     const char *a = c->act;
     uint32_t o = 0;
+    if (!tr_algo_ok() && tr_prefix(a, "TURN ALGORITHM TO TRACK ")) {   /* (ALGORITHM does nothing here: HOME first) */
+        str_cpy(b, "TAP HOME, ALGORITHM TO ", n);
+        o = str_len(b);
+        a += 24;
+    }
     for (; *a && o + 1u < n; a++) {
         if (*a == '@' && (c->goal == TG_PARAM || c->goal == TG_GLOBAL)) {
             char v[16];
