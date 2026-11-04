@@ -106,8 +106,16 @@ if [ ! -f "$TGEN/trainer_lessons.h" ] || [ "$TGEN/trainer_lessons.h" -ot tools/t
 fi
 mkdir -p "$OUT/trainer"
 $CC -O2 -w -I$TGEN -Ifirmware/src -Ifirmware/hal -Itests -o "$OUT/trainer_test" tests/trainer_test.c -lm
-run "TRAINER: the three levels played to DONE with the panel alone, the songs' settings, progress, level 3's song" \
+run "TRAINER: the three levels and a song in the song area (level 4) played to DONE with the panel alone, the songs' settings, progress" \
     "$OUT/trainer_test" "$OUT/trainer"
+# level 4 on the way to the FM-1: a trainer package with a song written in (web/trslot.js, tools/trainer/slot.py) is the
+# package the build makes with that song, the browser and slot.py byte for byte (needs the trainer build and Node.js)
+if [ -f build/trainer-fw/felucca-trainer.fwsc ] && command -v node >/dev/null; then
+    run "TRAINER song area: web/trslot.js and slot.py write the package the build would make" \
+        python3 tests/trainer_slot_test.py build/trainer-fw "$OUT/trainer"
+else
+    echo "(skipped: the trainer song area test needs ./build.sh --trainer and Node.js)"
+fi
 # no divide by 0 (the FM-1 runs with the div0 trap off, hal/fm1_irq.h: a real one would give a wrong value
 # silently): the UI fuzz, the sequencer, the projects and a minute of random live use, with UBSan
 UBSAN="${CC_UB:-cc} -O1 -w -fsanitize=integer-divide-by-zero -fno-sanitize-recover=integer-divide-by-zero -Ibuild/gen -Ifirmware/src -Ifirmware/hal"

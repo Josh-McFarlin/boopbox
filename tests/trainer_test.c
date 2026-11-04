@@ -194,7 +194,7 @@ static void do_browse(const tr_card_t *c)
 static void do_notes(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
-    const uint8_t *d = &TR_DATA[c->data];
+    const uint8_t *d = &TR_D[c->data];
     uint32_t len = *d++, i, j;
     uint8_t want[NSTEP][5], kind[NSTEP], fl[NSTEP];
     algo_to(c->trk);
@@ -284,7 +284,7 @@ static int hint_num(const char *h, const char *after);
 static void do_lanes(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
-    const uint8_t *d = &TR_DATA[c->data];
+    const uint8_t *d = &TR_D[c->data];
     uint32_t len = d[0], nl = d[1], l, i, g;
     for (g = 0; g < 12u && !(on_drum_page() && !drum_page) && t->p[P_SLEN] == (int16_t)len; g++) {
         int n;                                           /* to the grid as the hints say, from where the step before left */
@@ -403,7 +403,7 @@ static void pat_copy_to(uint32_t k, uint32_t pat)          /* KNOB 4 right twice
 static void do_lock(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
-    uint32_t step = TR_DATA[c->data], g = 60;
+    uint32_t step = TR_D[c->data], g = 60;
     int k;
     algo_to(c->trk);
     open_page(B_SEQ, "NOTES");
@@ -450,7 +450,7 @@ static void follow_hints(const tr_card_t *c)
         const char *h = tr.hint;
         int n;
         frames(2);
-        if (tr.card != (uint32_t)(c - TR_LEVELS[tr.lvl - 1u].cards) || tr.ok || tr_goal(c))
+        if (tr.card != (uint32_t)(c - tr_level(tr.lvl - 1u)->cards) || tr.ok || tr_goal(c))
             return;
         if (!h[0]) {                                     /* (no hint: the action says it) */
             tr_act(c, act, sizeof act);
@@ -539,11 +539,11 @@ static void do_card(const tr_card_t *c)
         pat_select(c->trk, (uint32_t)c->v);
         break;
     pats: {
-        uint32_t k, all = 1, w0 = TR_DATA[c->data];
+        uint32_t k, all = 1, w0 = TR_D[c->data];
         for (k = 0; k < NTRK; k++)
-            all &= TR_DATA[c->data + k] == 255u || TR_DATA[c->data + k] == w0;
+            all &= TR_D[c->data + k] == 255u || TR_D[c->data + k] == w0;
         for (k = 0; k < 5u; k++)
-            all &= TR_DATA[c->data + k] != 255u;
+            all &= TR_D[c->data + k] != 255u;
         if (all && song.playing) {                       /* playing, every track: OCT- on the PATTERNS screen */
             pats_screen();
             while (pats_cursor != w0)
@@ -552,8 +552,8 @@ static void do_card(const tr_card_t *c)
             frames(300);
         } else
             for (k = 0; k < NTRK; k++)
-                if (TR_DATA[c->data + k] != 255u && trk[k].pat != TR_DATA[c->data + k])
-                    pat_select(k, TR_DATA[c->data + k]);
+                if (TR_D[c->data + k] != 255u && trk[k].pat != TR_D[c->data + k])
+                    pat_select(k, TR_D[c->data + k]);
         break;
     }
     pathas: {
@@ -572,7 +572,7 @@ static void do_card(const tr_card_t *c)
         let_go(B_SAVE);
         break;
     case TG_SONG: {
-        const uint8_t *d = &TR_DATA[c->data];
+        const uint8_t *d = &TR_D[c->data];
         uint32_t k, g = 40;
         if (!on_song_page()) { home(); tap(B_SAVE); }
         while (arrangement.count != d[0] && g--)
@@ -641,7 +641,7 @@ static uint32_t keys_lit_now(void)                      /* the keys' LEDs on (fu
 }
 static int play_level(uint32_t l, const char *shots)
 {
-    const tr_level_t *L = &TR_LEVELS[l];
+    const tr_level_t *L = tr_level(l);
     uint32_t n = 0, tries;
     char name[64];
     pick(l, (tr.done >> l) & 1u ? TA_AGAIN : tr.at[l] ? TA_OVER : TA_START);
@@ -729,6 +729,126 @@ static int play_level(uint32_t l, const char *shots)
     }
     printf("trainer: level %u: %u cards done by the panel alone\n", l + 1u, n);
     return (tr.done >> l) & 1u;
+}
+
+/* ---------------------------------------------------------------- level 4: a song in the song area --- */
+static uint32_t tg_size(const tr_card_t *c, const uint8_t *d)   /* a card's target in the targets: its bytes */
+{
+    uint32_t n, i;
+    switch (c->goal) {
+    case TG_NOTES:
+        for (n = 1, i = 0; i < d[0]; i++)
+            n += (d[n] & 3u) == 1u ? 2u + d[n + 1u] : 1u;
+        return n;
+    case TG_LANES: return 2u + d[1] * (d[0] + 1u);
+    case TG_LOCK: return 1;
+    case TG_PATS: return NTRK;
+    case TG_SONG: return c->flags & 1u ? 1u : 1u + 2u * d[0];
+    default: return 0;
+    }
+}
+static void put16(uint8_t *b, uint32_t o, uint32_t v) { b[o] = (uint8_t)v, b[o + 1u] = (uint8_t)(v >> 8); }
+static void json_str(FILE *f, const char *k, const char *v, const char *end)
+{
+    fprintf(f, "\"%s\": \"", k);
+    for (; *v; v++)
+        fprintf(f, *v == '"' || *v == '\\' ? "\\%c" : "%c", *v);
+    fprintf(f, "\"%s", end);
+}
+/* level l as a song in the area b (TR_SLOT_SIZE): its cards, the targets they use (each once, in card order), the
+ * strings (each once: the picker's four lines, then each card's headline and action). DIR/trainer-song.json is the
+ * same song for web/trslot.js (tests/run_tests.sh: the two encodings agree) */
+static uint32_t song_of(uint32_t l, uint8_t *b, const char *json)
+{
+    const tr_level_t *L = &TR_LEVELS[l];
+    static uint8_t tg[TR_SLOT_SIZE];
+    static uint16_t dat[TR_C4MAX];
+    static const char *str[2u * TR_C4MAX + 4u];
+    static uint16_t at[2u * TR_C4MAX + 4u];
+    const char *mine[4];
+    uint32_t i, k, ns = 0, nt = 0, o, toff = 32u + 16u * L->n;
+    FILE *f;
+    mine[0] = L->name, mine[1] = L->style, mine[2] = L->learn1, mine[3] = L->learn2;
+    for (i = 0; i < L->n; i++) {
+        const tr_card_t *c = &L->cards[i];
+        uint32_t sz = tg_size(c, &TR_DATA[c->data]);
+        dat[i] = c->data;
+        if (sz) {
+            memcpy(tg + nt, &TR_DATA[c->data], sz);
+            dat[i] = (uint16_t)nt;
+            nt += sz;
+        }
+    }
+    o = toff + nt;
+#define STR(x) do { for (k = 0; k < ns && strcmp(str[k], (x)); k++) ; if (k == ns) { str[ns] = (x); at[ns++] = (uint16_t)o; o += strlen(x) + 1u; } } while (0)
+    for (i = 0; i < 4u; i++)
+        STR(mine[i]);
+    for (i = 0; i < L->n; i++) {
+        STR(L->cards[i].head);
+        STR(L->cards[i].act);
+    }
+    memset(b, 0xFF, TR_SLOT_SIZE);
+    memcpy(b, "BOOPSONG", 8);
+    memset(b + 16, 0, o - 16u);
+    b[16] = L->n;
+    put16(b, 18, toff), put16(b, 20, nt);
+#define AT(x) ({ uint32_t j_; for (j_ = 0; strcmp(str[j_], (x)); j_++) ; at[j_]; })
+    for (i = 0; i < 4u; i++)
+        put16(b, 22u + 2u * i, AT(mine[i]));
+    for (i = 0; i < L->n; i++) {
+        const tr_card_t *c = &L->cards[i];
+        uint8_t *q = b + 32u + 16u * i;
+        put16(q, 0, AT(c->head)), put16(q, 2, AT(c->act));
+        q[4] = c->goal, q[5] = c->trk, q[6] = c->p, q[7] = c->btn;
+        put16(q, 8, (uint16_t)c->v);
+        q[10] = c->tol, q[11] = c->flags;
+        put16(q, 12, dat[i]);
+        q[14] = c->why;
+    }
+    memcpy(b + toff, tg, nt);
+    for (k = 0; k < ns; k++)
+        memcpy(b + at[k], str[k], strlen(str[k]));
+    put16(b, 8, o), put16(b, 10, 1);
+    {
+        uint32_t crc = st_crc32(b + 16, o - 16u);
+        put16(b, 12, crc), put16(b, 14, crc >> 16);
+    }
+    if (json && (f = fopen(json, "w"))) {
+        fprintf(f, "{");
+        json_str(f, "name", mine[0], ", "), json_str(f, "style", mine[1], ", ");
+        json_str(f, "learn1", mine[2], ", "), json_str(f, "learn2", mine[3], ",\n");
+        fprintf(f, "\"targets\": [");
+        for (i = 0; i < nt; i++)
+            fprintf(f, "%s%u", i ? "," : "", tg[i]);
+        fprintf(f, "],\n\"cards\": [\n");
+        for (i = 0; i < L->n; i++) {
+            const tr_card_t *c = &L->cards[i];
+            fprintf(f, " {");
+            json_str(f, "head", c->head, ", "), json_str(f, "act", c->act, ", ");
+            fprintf(f, "\"goal\": %u, \"trk\": %u, \"p\": %u, \"btn\": %u, \"v\": %d, \"tol\": %u, \"flags\": %u, "
+                       "\"data\": %u, \"why\": %u}%s\n", c->goal, c->trk, c->p, c->btn, c->v, c->tol, c->flags, dat[i],
+                    c->why, i + 1u < L->n ? "," : "");
+        }
+        fprintf(f, "]}\n");
+        fclose(f);
+    }
+    return o;
+#undef STR
+#undef AT
+}
+static void reseal(uint8_t *b)                            /* the CRC again after a change */
+{
+    uint32_t used = b[8] | b[9] << 8, crc = st_crc32(b + 16, used - 16u);
+    put16(b, 12, crc), put16(b, 14, crc >> 16);
+}
+static int damaged(const uint8_t *good, uint32_t at, uint8_t v, int crc)   /* one byte changed: refused? */
+{
+    static uint8_t b[TR_SLOT_SIZE];
+    memcpy(b, good, sizeof b);
+    b[at] = v;
+    if (crc)
+        reseal(b);
+    return !tr_slot_load(b) && tr_nlv == TR_NLEVELS && tr_l4.n == 0;
 }
 
 #ifndef TRAINER_NO_MAIN
@@ -957,6 +1077,114 @@ int main(int argc, char **argv)
         pick(TR_NLEVELS, TA_MENU);
         check(ui.menu == 1u, "the picker's last page: BoopBox's menu");
         menu_close();
+    }
+    {   /* level 4: the image's song area is empty; a song written there (level 2, as the web page writes one) is level 4,
+         * played to DONE with the panel like the others; a damaged area is refused; the progress is its song's */
+        static uint8_t slot[TR_SLOT_SIZE], other[TR_SLOT_SIZE];
+        char path[512], what[128];
+        uint32_t used, i, bad = 0, ok, want, done3;
+        uint8_t a[8];
+        FILE *f;
+        check(!tr_slot_load(tr_slot()) && tr_nlv == TR_NLEVELS && !memcmp(tr_slot(), "BOOPSONG", 8),
+              "the image's song area: the magic, no song (three levels)");
+        snprintf(path, sizeof path, "%s/trainer-song.json", outdir);
+        used = song_of(1, slot, path);
+        snprintf(path, sizeof path, "%s/trainer-song.bin", outdir);
+        if ((f = fopen(path, "wb")))
+            fwrite(slot, 1, sizeof slot, f), fclose(f);
+        snprintf(what, sizeof what, "level 2 as a song: %u cards in %u of %u B", TR_LEVELS[1].n, used, TR_SLOT_SIZE);
+        check(used <= TR_SLOT_SIZE, what);
+        check(tr_slot_load(slot) && tr_nlv == TR_NLV && tr_l4.n == TR_LEVELS[1].n && !strcmp(tr_l4.name, "NEON AVENUE"),
+              "the song area with a song: level 4");
+        {   /* the three levels built in, as songs: the biggest fits */
+            static uint8_t b[TR_SLOT_SIZE];
+            for (i = 0, ok = 1; i < TR_NLEVELS; i++) {
+                uint32_t u = song_of(i, b, 0);
+                printf("trainer: level %u as a song: %u B\n", i + 1u, u);
+                ok &= u <= TR_SLOT_SIZE;
+            }
+            check(ok, "each level built in fits the song area as a song");
+            tr_slot_load(slot);
+        }
+        ok = 1;
+        ok &= damaged(slot, 0, 'X', 0);                         /* the magic */
+        ok &= damaged(slot, 40, slot[40] ^ 1u, 0);               /* a byte: the CRC */
+        ok &= damaged(slot, 10, 2, 1);                           /* another format */
+        ok &= damaged(slot, 16, 1, 1);                           /* one card */
+        ok &= damaged(slot, 16, 200, 1);                         /* more cards than RAM for them */
+        ok &= damaged(slot, 32u + 4u, TG_DONE + 1u, 1);          /* a goal */
+        ok &= damaged(slot, 32u + 5u, 9, 1);                     /* a track */
+        ok &= damaged(slot, 32u + 14u, TR_NWHY, 1);              /* a topic */
+        ok &= damaged(slot, 32u + 16u * (TR_LEVELS[1].n - 1u) + 4u, TG_PLAY, 1);   /* the last card not DONE */
+        for (i = 0, want = 0; i < TR_LEVELS[1].n; i++)           /* the kinds of target the song has */
+            want |= tr_c4[i].goal == TG_LANES ? 1u : tr_c4[i].goal == TG_NOTES ? 2u : tr_c4[i].goal == TG_PATS ? 4u :
+                    tr_c4[i].goal == TG_PARAM ? 8u : 0u;
+        for (i = 0; i < TR_LEVELS[1].n; i++) {                   /* a target out of range, each kind */
+            const tr_card_t *c = &tr_c4[i];
+            uint32_t t = (slot[18] | slot[19] << 8) + c->data;
+            if (c->goal == TG_LANES && !(bad & 1))
+                ok &= damaged(slot, t, NSTEP + 1u, 1) && damaged(slot, t + 2u, DRUM_LANES, 1), bad |= 1;
+            if (c->goal == TG_NOTES && !(bad & 2))
+                ok &= damaged(slot, t, 0, 1) && damaged(slot, t + 1u, 3, 1), bad |= 2;
+            if (c->goal == TG_PATS && !(bad & 4))
+                ok &= damaged(slot, t, NPAT, 1), bad |= 4;
+            if (c->goal == TG_PARAM && !(bad & 8))
+                ok &= damaged(slot, 32u + 16u * i + 6u, 255, 1), bad |= 8;
+        }
+        ok &= damaged(slot, slot[22] | slot[23] << 8, 0x80, 1);  /* a string not printable */
+        {   /* a string with no end within the song */
+            static uint8_t b[TR_SLOT_SIZE];
+            memcpy(b, slot, sizeof b);
+            put16(b, 32, used);
+            reseal(b);
+            ok &= !tr_slot_load(b);
+        }
+        check(ok && bad == want && want >= 11u, "a damaged song area is refused field by field (no level 4)");
+        check(tr_slot_load(slot) && tr_nlv == TR_NLV, "the song again: level 4");
+        snprintf(what, sizeof what, "level 4 (%s, the song area): every card reached with the panel, DONE", tr_l4.name);
+        check(play_level(TR_NLEVELS, "trainer-l4"), what);
+        for (i = 0, bad = 0; i < NELEM(TR_CHECK); i++) {
+            int32_t have;
+            if (TR_CHECK[i].lvl != 2u)
+                continue;
+            have = TR_CHECK[i].trk == 255u ? song.g[TR_CHECK[i].id] : trk[TR_CHECK[i].trk].p[TR_CHECK[i].id];
+            bad += have - TR_CHECK[i].v > 4 || TR_CHECK[i].v - have > 4;
+        }
+        check(!bad && trk[3].pat == 1u && trk[2].pat == 1u, "level 4: every setting of its song (level 2's) is on the FM-1");
+        done3 = tr.done & 7u;
+        check(((tr.done >> TR_NLEVELS) & 1u) && tr_actions(TR_NLEVELS, a) == 1u && a[0] == TA_AGAIN,
+              "the picker: level 4 done, PLAY IT AGAIN");
+        pick(TR_NLEVELS, TA_AGAIN);
+        frames(30);
+        pick(TR_NLEVELS, TA_SKIP);
+        pick(TR_NLEVELS, TA_SKIP);
+        frames(3);
+        {
+            uint8_t at = tr.card;
+            memset(&tr, 0, sizeof tr);                         /* power off, the same song: level 4 where it was */
+            tr_slot_load(slot);
+            tr_log_boot();
+            check(tr.lvl == TR_NLV && tr.card == at && tr.at[TR_NLEVELS] == at, "after a power cycle: level 4, its card");
+            memcpy(other, slot, sizeof other);                 /* another song installed: level 4 from its start */
+            other[(other[22] | other[23] << 8)] = 'M';
+            reseal(other);
+            memset(&tr, 0, sizeof tr);
+            tr_slot_load(other);
+            tr_log_boot();
+            check(tr.lvl == 0u && tr.at[TR_NLEVELS] == 0u && !((tr.done >> TR_NLEVELS) & 1u) && (tr.done & 7u) == done3,
+                  "another song in the area: its progress from the start (the other levels' kept)");
+            memset(&tr, 0, sizeof tr);                         /* no song: three levels, level 4's progress gone */
+            tr_slot_load(tr_slot());
+            tr_log_boot();
+            check(tr_nlv == TR_NLEVELS && tr.lvl == 0u && tr.at[TR_NLEVELS] == 0u, "the song area emptied: three levels");
+            tr_actions(TR_NLEVELS, a);
+            check(a[0] == TA_MENU, "no song: the picker's fourth page is BoopBox's menu");
+        }
+        tr_slot_load(slot);
+        pick(TR_NLEVELS + 1u, TA_MENU);
+        check(ui.menu == 1u, "with a song: the menu is the fifth page");
+        menu_close();
+        ui.force = 1;
     }
     printf("trainer: %s\n", fails ? "FAIL" : "PASS");
     return fails != 0;

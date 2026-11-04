@@ -8,3 +8,12 @@
 #pragma once
 
 #define FM1_INLINE static inline __attribute__((always_inline))
+
+/* fm1_opaque(p): p, with the compiler no longer knowing what it points at: reads through it are reads of the memory
+ * (trainer.c: the song area, a const array in the image whose bytes the package changes; the old clang folds reads of
+ * a const array, even a weak one, into its initializer) */
+FM1_INLINE const void *fm1_opaque(const void *p)
+{
+    __asm__("" : "+r"(p));
+    return p;
+}

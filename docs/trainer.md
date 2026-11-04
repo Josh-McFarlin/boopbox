@@ -11,6 +11,8 @@ works on BoopBox too.
 | 2 | **Neon Avenue** | synthwave, 104 BPM, D minor, 5 tracks | the NOTES page (typing a line, chords, LEN, accents); drum levels and a ratchet; track 5; the sound browser; the delay; pan and level; patterns for a verse and a chorus |
 | 3 | **Lanterns** | melodic dubstep, 150 BPM, D minor, 7 tracks | an 8-track drop; envelopes; the DUCK pump; patterns per section; a 64-step roll with ratchets; a lock with SLIDE; mutes and sections A–D; the SONG screen and song mode |
 
+| 4 | **Your song** | any | a song made elsewhere and written into the trainer package before it is installed (below: [Level 4](#level-4-the-song-area)) |
+
 The songs were rendered for approval with the firmware's own engines on a computer (`tools/trainer/render.py`); the
 lessons' targets are taken from the same score, and `tests/trainer_test.c` checks that the song the lessons build is
 that song.
@@ -47,6 +49,42 @@ that song.
   switching off never loses more than the step you were on. A finished level shows *DONE* on its page. Levels can be
   taken in any order.
 
+## Level 4: the song area
+
+The trainer image keeps an 8 KiB **song area** (`TR_SLOT`, `firmware/src/trainer.c`) for one more level, a song made
+somewhere else: the trainer's web page will turn an audio file into steps (planned). The song is written into the area
+of the trainer package before it is installed, so it needs no new flash and no change to the update loader: installing
+it again with another song replaces it, and the loader rewrites only the sectors that changed. Projects, samples and
+settings are not touched.
+
+- **On the FM-1.** With a song in the area the picker has four levels (the song is *LEVEL 4: YOUR SONG*) and its last
+  page, BoopBox's menu, is the fifth. The song's coach is the same as the others': the same goals and hints, the same
+  why pages (a song's steps name a topic of `tools/trainer/theory.py`). Without a song (or with an area that does not
+  check out) there are three levels, as before.
+- **Checked at power-on.** The area is checked field by field before it is used: the magic, the format, a CRC-32, every
+  string (printable, short enough for the screen), every card's goal, track, button, topic and parameter, and every
+  target (notes, drum lanes, locks, patterns, song entries) against the sizes the coach indexes; the last step, and only
+  that one, is the DONE. A damaged area is no level 4, never a crash.
+- **Progress** of level 4 is kept like the others' and belongs to its song (the record keeps a tag from the song's
+  CRC): another song starts from its first step; the other levels' progress stays.
+- **Size.** A song is a header, 16 bytes a step (up to 128 steps), the targets and the strings; the three built-in
+  levels as songs take 2,166, 4,048 and 5,825 B, so a song as long as level 3 fits.
+
+The format is in `tools/trainer/slot.py`. Two tools write it:
+
+```
+python3 tools/trainer/slot.py show build/trainer-fw/felucca-trainer.fwsc       # what the package's area holds
+python3 tools/trainer/slot.py patch IN.fwsc SONG.bin OUT.fwsc                    # a song into a trainer package
+python3 tools/trainer/slot.py clear IN.fwsc OUT.fwsc                             # the area emptied
+```
+
+and `web/trslot.js` in the browser (`encodeSong` from the steps' fields, `patchPackage`, `songAreaOf`). Both find the
+area by its magic in the app, write it, and make every CRC on the way out again (app.bin's entry, the app area's head,
+flash.bin's, the UFW list and header). `tests/trainer_slot_test.py` checks that a patched package is byte for byte the
+package `fm1pkg_make.py` builds from the app with the song in it, and that the browser and `slot.py` agree.
+`tests/trainer_test.c` writes level 2 as a song, plays it as level 4 from the picker to DONE with the panel alone, and
+checks that damaged areas are refused and that the progress follows the song.
+
 ## What the trainer build leaves out
 
 To make room for the lessons (the app slot is full in the normal build), the trainer build has:
@@ -55,8 +93,9 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 552,656 B of the 581,564 B app slot (about 29 KB free); the coach and the lessons take about
-39 KB with the why pages (about 18 KB of them), and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
+The trainer image is 562,396 B of the 581,564 B app slot (about 19 KB free); the coach and the lessons take about
+39 KB with the why pages (about 18 KB of them), the song area 8 KiB and its checks about 1.5 KB; RAM: level 4's cards
+(2.5 KB) and under 120 B more. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
 
