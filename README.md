@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.4.1](#whats-new-in-141)
+1. [What's new in 1.4.2](#whats-new-in-142)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,14 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.4.1
+## What's new in 1.4.2
+
+The **sound browser** stays open until you close it: **SAVE** keeps the sound, **HOME** puts back the one you had. A drum
+track reaches **PATTERNS** (SEQ after SOUND on the DRUMS screen), **ALGORITHM** changes the track on the DRUMS screen,
+and LEVEL and PAN read the same on every screen. BoopBox Trainer is easier to follow on levels 1 and 2 ([all
+changes](CHANGELOG.md)).
+
+### 1.4.1
 
 **BoopBox Trainer** is easier to follow: a level picker on HOME held, progress kept even when switched off while
 playing, only the keys to press lit, and steps and hints that say what is wrong and what to do, with values as the
