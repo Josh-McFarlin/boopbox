@@ -134,7 +134,7 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
-static uint32_t hint_tries, browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
+static uint32_t pats_from_drum, hint_tries, browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
 static int on_target(const tr_card_t *c)
 {
     const track_t *t = &trk[c->trk];
@@ -399,11 +399,16 @@ static void follow_hints(const tr_card_t *c)
 {
     uint32_t g;
     for (g = 0; g < 120u; g++) {
+        static char act[40];
         const char *h = tr.hint;
         int n;
         frames(2);
         if (tr.card != (uint32_t)(c - TR_LEVELS[tr.lvl - 1u].cards) || tr.ok || tr_goal(c))
             return;
+        if (!h[0]) {                                     /* (no hint: the action says it) */
+            tr_act(c, act, sizeof act);
+            h = act;
+        }
         hint_steps++;
         if (!strcmp(h, "TAP SEQ UNTIL PATTERNS"))
             tap(B_SEQ);
@@ -441,6 +446,17 @@ static void do_card(const tr_card_t *c)
     case TG_PARAM: case TG_GLOBAL: do_param(c); break;
     case TG_PLAY: if ((song.playing != 0) != (c->v != 0)) tap(B_PLAY); break;
     case TG_PAGE:
+        if (PAGES[c->p].scope == SC_PATS && hint_tries++ == 0u) {   /* (as the step and its hints say, from anywhere) */
+            if (pats_from_drum++ == 0u && !is_drum(TSEL) && !on_pats_page()) {
+                home();                                  /* (once: from a drum track, where SEQ has no way there) */
+                algo_to(3);
+                tap(B_SEQ);
+                check(is_drum(TSEL) && !tr_goal(c) && !strcmp(tr.hint, "TAP HOME, THEN A SYNTH TRACK"),
+                      "PATTERNS asked on a drum track's DRUMS screen: TAP HOME, THEN A SYNTH TRACK");
+            }
+            follow_hints(c);
+            break;
+        }
         home();
         if (PAGES[c->p].scope == SC_DRUM) {
             tap(B_SEQ);
@@ -638,7 +654,8 @@ static int play_level(uint32_t l, const char *shots)
         }
         hint_tries = 0;
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
-            if (hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS)) {
+            if (hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS ||
+                                                    c->goal == TG_PAGE)) {
                 printf("trainer: level %u card %u (%s): the hints alone did not get there: %s\n", l + 1u, at + 1u,
                        c->head, tr.hint);
                 hint_lost++;

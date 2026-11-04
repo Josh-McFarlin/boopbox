@@ -508,25 +508,38 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     if (!tr_algo_ok() && ui.layer == LY_PLAY)
         tr.btn = B_HOME;
 }
+/* the way to the PATTERNS screen: SEQ from a synth track (on a drum track SEQ opens its DRUMS screen, which has no
+ * way there; ALGORITHM picks any track on PATTERNS after); 0 and the hint while not on it */
+UI_SMALL static void tr_to_pats_text(char *b, uint32_t n)
+{
+    uint32_t s;
+    for (s = 0; s < NTRK && is_drum(&trk[s]); s++)
+        ;
+    if (!is_drum(TSEL))
+        str_cpy(b, "TAP SEQ UNTIL PATTERNS", n);
+    else if (!tr_algo_ok())
+        str_cpy(b, "TAP HOME, THEN A SYNTH TRACK", n);
+    else {                                              /* "ALGORITHM TO 1, THEN SEQ" */
+        str_cpy(b, "ALGORITHM TO ", n);
+        fmt_int(b + str_len(b), (int32_t)(s % NTRK) + 1);
+        str_cpy(b + str_len(b), ", THEN SEQ", n - str_len(b));
+    }
+}
+UI_SMALL static int tr_to_pats(void)
+{
+    if (tr_quiet || on_pats_page())
+        return 1;
+    tr_to_pats_text(tr.hint, sizeof tr.hint);
+    tr.btn = !is_drum(TSEL) ? B_SEQ : !tr_algo_ok() ? B_HOME : NB;
+    return 0;
+}
 /* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
 UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
 {
     if (tr_quiet)
         return;
-    if (!on_pats_page()) {
-        if (is_drum(TSEL) && !on_drum_page()) {         /* (a drum track: SEQ opens its DRUMS screen) */
-            uint32_t s;
-            for (s = 0; s < NTRK && is_drum(&trk[s]); s++)
-                ;
-            tr_say("ALGORITHM TO ", "");               /* "ALGORITHM TO 1, THEN SEQ" */
-            tr_num((int32_t)(s % NTRK) + 1);
-            tr_cat(", THEN SEQ");
-        } else if (on_drum_page())
-            tr_say("TAP HOME, THEN A SYNTH TRACK", ""), tr.btn = B_HOME;
-        else
-            tr_say("TAP SEQ UNTIL PATTERNS", ""), tr.btn = B_SEQ;
+    if (!tr_to_pats())
         return;
-    }
     if (song.sel != k) {
         tr_algo_say(k);
         return;
@@ -621,7 +634,11 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
                  !ui.home && ui.page == c->p;
         if (at)
             return 1;
-        if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
+        if (PAGES[c->p].scope == SC_PATS) {
+            tr_to_pats();
+            if (str_eq(tr.hint, c->act))
+                tr.hint[0] = 0;                         /* (what the action says already) */
+        } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
             tr_say("TAP SEQ: BACK TO THE GRID", "");
         else if (!ui.home && !on_drum_page() && !on_pats_page() && !on_song_page())
             tr_say("NOW ON ", cur_page()->title);
@@ -959,6 +976,10 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 {
     const char *a = c->act;
     uint32_t o = 0;
+    if (c->goal == TG_PAGE && PAGES[c->p].scope == SC_PATS && is_drum(TSEL)) {   /* (a drum track: SEQ no way there) */
+        tr_to_pats_text(b, n);
+        return;
+    }
     if (!tr_algo_ok() && tr_prefix(a, "TURN ALGORITHM TO TRACK ")) {   /* (ALGORITHM does nothing here: HOME first) */
         str_cpy(b, "TAP HOME, ALGORITHM TO ", n);
         o = str_len(b);
