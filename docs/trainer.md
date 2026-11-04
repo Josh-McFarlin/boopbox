@@ -50,7 +50,7 @@ The trainer image is 529,360 B of the 581,564 B app slot (about 51 KB free); the
 
 ```
 ./build.sh --trainer                    # build/trainer-fw/felucca-trainer.fwsc (version BOOPBOX TRAINER X.Y.Z)
-./build.sh --trainer --release 1.3.1    # build/trainer-fw/felucca-trainer-1.3.1.fwsc
+./build.sh --trainer --release 1.4.0    # build/trainer-fw/felucca-trainer-1.4.0.fwsc
 tests/run_tests.sh                      # includes the trainer test
 python3 tools/trainer/render.py         # the songs to build/trainer/*.wav and .mp3
 ```

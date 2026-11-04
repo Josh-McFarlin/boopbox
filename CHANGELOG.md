@@ -13,6 +13,29 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.4.0
+
+**BoopBox Trainer**, a second firmware that teaches you to make three songs on the FM-1 itself, step by step, with no
+manual ([the trainer](docs/trainer.md)):
+
+- **Pick it in the installer.** The installer now offers **BoopBox** or **BoopBox Trainer**. Installing the other one
+  switches back at any time.
+- **Three levels, three songs:** *First Light* (lo-fi hip-hop: tracks, kits, drum steps, notes on steps, key and scale,
+  chords), *Neon Avenue* (synthwave: the NOTES page, drum levels and ratchets, the sound browser, the delay, patterns
+  for a verse and a chorus) and *Lanterns* (melodic dubstep: eight tracks, envelopes, the pump, a lock that slides, a
+  roll with ratchets, sections and the song). Take them in any order, and again whenever you like.
+- **A coach on the screen:** the title line says what the step is about and what to do, and what is still off
+  (*STEP 8: KICK MISSING*). The button to press blinks, and the keys to play or the steps to press are lit. In the
+  sound browser, a fading dot marks the sound to pick. It checks what the FM-1 does, not which buttons you pressed, so
+  any way of getting there counts. Every button, knob and key works as in BoopBox.
+- **Hold HOME** for the menu's **TRAIN** section: the levels with your progress, and in a level SKIP, BACK, RESTART and
+  QUIT. Progress is kept when the FM-1 is switched off. A level starts from a new project.
+- To make room, the trainer has **no web editor** and **three sample sets fewer** (HORNS, STRGS, SCRCH: HORN STAB,
+  STRING STB, SCRATCH, STR CLOUD and HORN CLOUD; GRAIN's DRONE plays on the piano).
+
+BoopBox itself is unchanged in this release (only its version number). Projects, songs, presets and settings from
+1.3.1 open as they are.
+
 ## 1.3.1
 
 A tuning fix for TANPURA, and room in the firmware:

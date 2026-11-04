@@ -4,8 +4,9 @@
 # The version comes from the binary's filename. The release is tagged vX.Y.Z on
 # the merge commit, its notes are the "## X.Y.Z" section of CHANGELOG.md
 # (tools/changelog_section.py; checked on the PR by changelog-check.yml), and it carries
-# the binary, the offline editor (docs/webapp/editor/boopbox-editor.html) as
-# boopbox-editor-X.Y.Z.html, and SHA256SUMS.txt for both; the notes also give
+# the binary, BoopBox Trainer's binary when the site has it (docs/firmware/boopbox-trainer-X.Y.Z.fwsc), the
+# offline editor (docs/webapp/editor/boopbox-editor.html) as boopbox-editor-X.Y.Z.html, and SHA256SUMS.txt for
+# them; the notes also give
 # the binary's SHA-256 and how to install (.github/release-install.md).
 # A version with a suffix (1.3.0-beta) is published as a pre-release. A PR
 # without a new binary publishes nothing, and neither does a binary whose
@@ -91,6 +92,10 @@ jobs:
           dir="$RUNNER_TEMP/assets"
           mkdir -p "$dir"
           cp "$FILE" "$dir/"
+          trainer="docs/firmware/boopbox-trainer-$VER.fwsc"
+          if [ -f "$trainer" ]; then
+            cp "$trainer" "$dir/"
+          fi
           editor="docs/webapp/editor/boopbox-editor.html"
           if [ -f "$editor" ]; then
             cp "$editor" "$dir/boopbox-editor-$VER.html"
