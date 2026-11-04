@@ -3,7 +3,7 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "BOOPBOX 1.4.0"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
+#define FELUCCA_VERSION "BOOPBOX 1.4.1"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
@@ -1290,15 +1290,7 @@ typedef struct {
     uint32_t fmagic;
     uint16_t fav[FAV_N];
     uint32_t fcrc;
-#if FELUCCA_TRAINER
-    uint32_t trn[5];                                 /* the TRAINER's progress (trainer.c tr_rec_t); after the 80 bytes a
-                                                      * BoopBox reads, so going back and forth keeps both */
-#endif
 } side_rec_t;
-#if FELUCCA_TRAINER
-static void tr_fill_b(uint32_t *b);
-static void tr_take_b(const uint32_t *b);
-#endif
 UI_SMALL static void side_fill(side_rec_t *r)                /* what the settings' side record holds now */
 {
     memset(r, 0, sizeof *r);
@@ -1307,9 +1299,6 @@ UI_SMALL static void side_fill(side_rec_t *r)                /* what the setting
     r->fmagic = FAVS_MAGIC;
     memcpy(r->fav, fav, sizeof fav);
     r->fcrc = st_crc32(&r->fmagic, 4u + sizeof r->fav);
-#if FELUCCA_TRAINER
-    tr_fill_b(r->trn);
-#endif
 }
 UI_SMALL static void side_take(side_rec_t *r)                /* a side record read back: what checks out (theme, favourites) */
 {
@@ -1319,9 +1308,6 @@ UI_SMALL static void side_take(side_rec_t *r)                /* a side record re
     }
     if (r->fmagic == FAVS_MAGIC && r->fcrc == st_crc32(&r->fmagic, 4u + sizeof r->fav))
         memcpy(fav, r->fav, sizeof fav);
-#if FELUCCA_TRAINER
-    tr_take_b(r->trn);
-#endif
 }
 /* the PRESETS list: the favourites, then every factory sound by kind, then the user presets */
 UI_SMALL static uint32_t preset_pos(uint32_t *total)

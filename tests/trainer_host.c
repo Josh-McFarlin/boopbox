@@ -93,9 +93,36 @@ static void project_erase(uint32_t i);
 #include "../firmware/src/ui_layers.c"
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
-static int st_read(uint32_t off, void *dst, uint32_t n) { (void)off, (void)dst, (void)n; return -1; }
-static int st_erase(uint32_t off) { (void)off; return -1; }
-static int st_prog(uint32_t off, const void *src, uint32_t n) { (void)off, (void)src, (void)n; return -1; }
+/* the flash: the trainer's progress log sector only (0xFB000, NOR: erased to 0xFF, programming clears bits), in RAM;
+ * the rest fails (no projects kept, as before) */
+static uint8_t flash_ok = 1, tr_flash[0x1000];
+static uint32_t tr_erases, tr_progs;
+#define TR_IN(off, n) ((off) >= 0xFB000u && (off) + (n) <= 0xFC000u)
+static int st_read(uint32_t off, void *dst, uint32_t n)
+{
+    if (!TR_IN(off, n))
+        return -1;
+    memcpy(dst, &tr_flash[off - 0xFB000u], n);
+    return 0;
+}
+static int st_erase(uint32_t off)
+{
+    if (!TR_IN(off, 0x1000u))
+        return -1;
+    memset(tr_flash, 0xFF, sizeof tr_flash);
+    tr_erases++;
+    return 0;
+}
+static int st_prog(uint32_t off, const void *src, uint32_t n)
+{
+    uint32_t i;
+    if (!TR_IN(off, n))
+        return -1;
+    for (i = 0; i < n; i++)
+        tr_flash[off - 0xFB000u + i] &= ((const uint8_t *)src)[i];
+    tr_progs++;
+    return 0;
+}
 #include "../firmware/src/storage.c"
 #include "../firmware/src/project.c"
 #include "../firmware/src/trainer.c"
@@ -144,6 +171,7 @@ static void ppm(const char *dir, const char *name)
 static void host_boot(void)
 {
     uint32_t i;
+    memset(tr_flash, 0xFF, sizeof tr_flash);       /* (a new FM-1: the log sector erased) */
     panel = PANEL_DEFAULT;
     layers_init();
     settings.palette = PAL_SYNTH;

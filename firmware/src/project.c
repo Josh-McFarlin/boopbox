@@ -568,8 +568,7 @@ typedef struct {
 #endif
     uint32_t lights;                               /* the backlight and the menu's switches (panel.c lights_word) */
 } persist_t;
-_Static_assert(sizeof(side_rec_t) == 80u + 20u * FELUCCA_TRAINER && sizeof(side_rec_t) <= ST_SIDE_MAX,
-               "the side record: theme, favourites (the TRAINER: its progress after them)");
+_Static_assert(sizeof(side_rec_t) == 80u && sizeof(side_rec_t) <= ST_SIDE_MAX, "the side record: theme, favourites");
 static side_rec_t side_out;
 #if FELUCCA_ARRANGER
 _Static_assert(__builtin_offsetof(persist_t, arrangement) == 48u && sizeof(arr_config_t) == 36u,

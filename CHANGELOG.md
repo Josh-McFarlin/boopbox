@@ -13,6 +13,28 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.4.1
+
+**BoopBox Trainer** after its first player went through level 1 ([the trainer](docs/trainer.md)):
+
+- **A level picker.** Hold **HOME**: one level a page (the song, its style, what it teaches, your progress). **SELECT**
+  turns the pages and **OCT+** starts or continues; KNOB 1 picks SKIP, GO BACK, START OVER or QUIT. The last page opens
+  BoopBox's menu.
+- **Progress is never lost.** It was kept only while stopped, so switching off while playing lost it. It now goes to
+  its own flash sector after every step, playing or not.
+- **Only the keys to press are lit.** BoopBox's beat markers and the steps already placed no longer light up on a step
+  about keys, and every step still to fix on the page is lit, not one.
+- **Hints say what is wrong and what to do:** *STEP 5: NO KICK HERE (KEY 5)*, *STEP 9: PLAY F4 (KEY 7)*, *STEP 3:
+  PRESS OCT+*, *KNOB 1 TO SNARE*, *OPEN THE TIMING PAGE*.
+- **Values as the screen shows them.** *TURN KNOB 4 TO 30* while the screen said *30%* for another value: the steps now
+  show the value as the page does (*24%*, *1/8*, *86 BPM*) and the hint shows both (*NOW 30% (WANT 24%)*).
+- **The way there, spelled out:** steps say which button opens the page (*TAP SEQ UNTIL YOU SEE TIMING*) and which knob
+  does what, with no words such as "SEQ PAGES".
+- **The sound browser's dot stays** on the group and the sound to pick, highlighted or not, until you tap HOME on it.
+
+BoopBox itself is unchanged in this release (only its version number). Projects, songs, presets and settings from
+1.4.0 open as they are; the trainer's progress from 1.4.0 starts again.
+
 ## 1.4.0
 
 **BoopBox Trainer**, a second firmware that teaches you to make three songs on the FM-1 itself, step by step, with no

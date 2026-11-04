@@ -2,8 +2,8 @@
 /* The TRAINER, end to end: each level played from the menu to its last card by a "person" who only uses the panel
  * (buttons pressed and held, knobs turned a detent at a time, keys played), doing what each card's action says, on the
  * real UI and sequencer (tests/trainer_host.c). Checks that every card's goal can be reached that way and that the coach
- * moves on, that the level ends on DONE with the menu showing it, that a level can be done again, that progress is kept
- * (the side record) and that the song the lessons build is the approved one (tools/trainer/songs.py, as the lessons'
+ * moves on, that the level ends on DONE with the picker showing it, that a level can be done again, that progress is kept
+ * (the log, written while playing too, back after a power cycle), that a card about keys lights only its keys, and that the song the lessons build is the approved one (tools/trainer/songs.py, as the lessons'
  * targets: the sections and the song play in song mode). Writes the coach's line on some cards for review (DIR/*.ppm).
  *   cc -O1 -w -Ibuild/trainer-fw/gen -Ifirmware/src -Ifirmware/hal -Itests tests/trainer_test.c -lm   (after
  *   tools/build.py --trainer, or HOST_ONLY: tools/trainer/lessons.py into build/trainer-fw/gen) */
@@ -65,6 +65,20 @@ static void do_param(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk];
     uint32_t id = c->p;
+    if (c->data) {                                       /* a card with its page: open it (its button), its knob */
+        const page_t *pg = &PAGES[c->data - 1u];
+        uint32_t k;
+        if (c->goal == TG_PARAM)
+            algo_to(c->trk);
+        if (!(!ui.home && ui.page == c->data - 1u)) {
+            home();
+            open_page(c->btn, pg->title);
+        }
+        for (k = 0; k < 4u && pg->id[k] != id; k++)
+            ;
+        knob_to(EN_K1 + k, c->goal == TG_GLOBAL ? &song.g[id] : &t->p[id], c->v);
+        return;
+    }
     if (c->goal == TG_GLOBAL) {
         if (id == G_BPM) {
             home();
@@ -120,6 +134,13 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
+static uint32_t browse_seen, keyed_cards;
+static int on_target(const tr_card_t *c)
+{
+    const track_t *t = &trk[c->trk];
+    return c->goal == TG_KIT ? is_drum(t) && t->p[P_E0] == c->v :
+           !is_drum(t) && t->eng_req == c->p && t->preset == (uint8_t)c->v && user_of(t) >= UP_SLOTS;
+}
 static void do_browse(const tr_card_t *c)
 {
     uint32_t g, s;
@@ -127,17 +148,22 @@ static void do_browse(const tr_card_t *c)
     algo_to(c->trk);
     home();
     slow(EN_PRESET, 1);                                  /* (the first click opens the browser) */
-    for (g = 0; g < 30u && !tr_goal(c); g++) {
+    for (g = 0; g < 30u && !on_target(c); g++) {
         slow(EN_K2, -1);
     }
-    for (g = 0; g < 40u && !tr_goal(c); g++) {
-        for (s = 0; s < 40u && !tr_goal(c); s++)
+    for (g = 0; g < 40u && !on_target(c); g++) {
+        for (s = 0; s < 40u && !on_target(c); s++)
             slow(EN_K3, -1);
-        for (s = 0; s < 40u && !tr_goal(c); s++)
+        for (s = 0; s < 40u && !on_target(c); s++)
             slow(EN_K3, 1);
-        if (!tr_goal(c))
+        if (!on_target(c))
             slow(EN_K2, 1);
     }
+    frames(10);
+    if (!browse_seen++)
+        check(on_target(c) && !tr.ok && tr_browsing() && !strcmp(tr.hint, "THAT'S IT! TAP HOME TO KEEP IT"),
+              "a sound card: on the sound in the browser, not done yet (HOME closes it on it)");
+    tap(B_HOME);                                         /* "THAT'S IT! TAP HOME TO KEEP IT" */
     frames(5);
 }
 /* a synth pattern, as the card says: the SEQ layer (play the note, hold SEQ, the step key) or the NOTES page */
@@ -350,9 +376,16 @@ static void do_card(const tr_card_t *c)
     case TG_PLAY: if ((song.playing != 0) != (c->v != 0)) tap(B_PLAY); break;
     case TG_PAGE:
         home();
-        if (c->p == PG_DRUMS) tap(B_SEQ);
-        else if (c->p == PG_PATTERNS) pats_screen();
-        else tap(B_SAVE);
+        if (PAGES[c->p].scope == SC_DRUM) {
+            tap(B_SEQ);
+            while (on_drum_page() && drum_page)
+                tap(B_SEQ);
+        } else if (PAGES[c->p].scope == SC_PATS)
+            pats_screen();
+        else if (PAGES[c->p].scope == SC_SONG)
+            tap(B_SAVE);
+        else
+            open_page(c->btn, PAGES[c->p].title);
         break;
     case TG_OCT: {
         uint32_t g = 8;
@@ -437,29 +470,45 @@ static void do_card(const tr_card_t *c)
 }
 
 /* ---------------------------------------------------------------- a level --- */
-static int menu_row(uint32_t row)                         /* the menu's TRAINER section, OCT+ on a row */
+static void pick(uint32_t page, uint32_t act)              /* HOME held: the picker; SELECT to the page, KNOB 1 to the
+                                                         * action, OCT+ */
 {
-    uint32_t g = 20;
-    if (!ui.menu) {
+    uint8_t a[8];
+    uint32_t n, i, g = 20;
+    if (ui.menu != 3u) {
         down(B_HOME);
-        frames(60);                                      /* (held 0.7 s: the menu) */
+        frames(60);                                      /* (held 0.7 s) */
         up(B_HOME);
     }
-    while (mi_sec(ui.menu_sel) != MS_TRAIN && g--)
-        slow(EN_SELECT, -1);
-    while (ui.menu_sel != MI_TR0 + row && g--)
-        slow(EN_PRESET, ui.menu_sel < MI_TR0 + row ? 1 : -1);
+    while (tr.page != page && g--)
+        slow(EN_SELECT, tr.page < page ? 1 : -1);
+    n = tr_actions(tr.page, a);
+    for (i = 0; i < n && a[i] != act; i++)
+        ;
+    g = 10;
+    while (tr.sel != i && g--)
+        slow(EN_K1, tr.sel < i ? 1 : -1);
     tap(B_OCTUP);
-    return ui.menu == 0;
+}
+static uint32_t keys_lit_now(void)                      /* the keys' LEDs on (full or dim) */
+{
+    uint32_t k, m = 0;
+    for (k = 0; k < 27u; k++) {
+        uint32_t id = 14u + k, col = led_pos[id] >> 3, bit = 1u << (led_pos[id] & 7u);
+        if (led_pos[id] != 0xFFu && (fm1_led[col] | fm1_led_dim[col] | fm1_led_bg[col]) & bit)
+            m |= 1u << k;
+    }
+    return m;
 }
 static int play_level(uint32_t l, const char *shots)
 {
     const tr_level_t *L = &TR_LEVELS[l];
     uint32_t n = 0, tries;
     char name[64];
-    menu_row(l);
+    pick(l, (tr.done >> l) & 1u ? TA_AGAIN : tr.at[l] ? TA_OVER : TA_START);
+    frames(30);
     if (!tr_on() || tr.lvl != l + 1u) {
-        check(0, "the level starts from the menu");
+        check(0, "the level starts from the picker");
         return 0;
     }
     while (tr.card < L->n - 1u) {
@@ -470,6 +519,23 @@ static int play_level(uint32_t l, const char *shots)
             frames(5);
             snprintf(name, sizeof name, "%s-%02u-head", shots, at + 1u);
             ppm(outdir, name);
+        }
+        {   /* the card's text fits the screen; a card about keys: only its keys lit */
+            char act[40];
+            tr_act(c, act, sizeof act);
+            if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8) {
+                printf("trainer: level %u card %u: too wide: %s / %s\n", l + 1u, at + 1u, c->head, act);
+                fails++;
+            }
+            if ((c->goal == TG_LANES || c->goal == TG_NOTES) && song.sel == c->trk) {
+                frames(2);
+                keyed_cards += tr.keys != 0;
+                if (tr.keys && (keys_lit_now() & ~tr.keys)) {
+                    printf("trainer: level %u card %u: keys lit %07x, the card's %07x\n", l + 1u, at + 1u,
+                           keys_lit_now(), tr.keys);
+                    fails++;
+                }
+            }
         }
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
             do_card(c);
@@ -501,9 +567,10 @@ int main(int argc, char **argv)
     host_boot();
     trainer_boot();
     frames(5);
-    check(ui.menu == 1u && mi_sec(ui.menu_sel) == MS_TRAIN, "first start: the menu opens on TRAIN (the levels)");
-    ui.force = 1; frame(); ppm(outdir, "trainer-menu");
+    check(ui.menu == 3u && tr.page == 0u, "first start: the level picker opens on level 1");
+    ui.force = 1; frame(); ppm(outdir, "trainer-picker");
     tap(B_OCTDN);
+    check(!ui.menu, "OCT- closes the picker");
     for (l = 0; l < TR_NLEVELS; l++) {
         char what[96];
         snprintf(what, sizeof what, "level %u (%s): every card reached with the panel, DONE", l + 1u, TR_LEVELS[l].name);
@@ -528,6 +595,11 @@ int main(int argc, char **argv)
         if (l == 1u) {                                   /* the verse and the chorus as the score has them */
             check(trk[3].pat == 1u && trk[2].pat == 1u && song.playing, "level 2 ends in the chorus (pattern 2), playing");
         }
+    }
+    {
+        char what[96];
+        snprintf(what, sizeof what, "the cards about keys (%u): only their keys lit, no landmarks, no old steps", keyed_cards);
+        check(keyed_cards > 20u, what);
     }
     {   /* level 3's song as the lessons built it, from its start in song mode, to DIR/trainer-l3-song.wav (to compare with
          * the approved render, build/trainer/3-*.wav: tests/trainer_song_compare.py) */
@@ -558,26 +630,47 @@ int main(int argc, char **argv)
             ok &= proj_ok(&proj_slot[k]);
         check(ok && arrangement.count == 7u && arrangement_enabled, "level 3: sections A-D saved, a song of 7 entries, song mode");
     }
-    {   /* the menu: three levels DONE; one again from the start (the loop there: OCT+ twice), progress kept */
-        uint16_t c;
-        tr_rec_t r;
-        check(!strcmp(tr_row_value(0, &c), "DONE: OCT+ AGAIN") && !strcmp(tr_row_value(2, &c), "DONE: OCT+ AGAIN"),
-              "the menu shows the levels done");
-        tr_fill(&r);
-        menu_row(0);
+    {   /* the picker: the levels done; one again from the start, progress in the log, back after a power cycle */
+        uint8_t a[8];
+        check(tr.done == 7u && tr_actions(0, a) == 1u && a[0] == TA_AGAIN, "the picker: three levels done, PLAY IT AGAIN");
+        pick(0, TA_AGAIN);
         frames(30);                                      /* (the song stops, then the new project) */
-        check(tr_on() && tr.lvl == 1u && tr.card == 0u && track_empty(&trk[3]), "a finished level, OCT+: from its first card, a new project (no question)");
-        tr_go(1); tr_go(1);
+        check(tr_on() && tr.lvl == 1u && tr.card == 0u && track_empty(&trk[3]),
+              "a finished level, again: from its first card, a new project (no question)");
+        pick(0, TA_SKIP);
+        pick(0, TA_SKIP);
+        frames(3);
+        transport_req = 1;                               /* playing: progress is written all the same */
+        frames(10);
+        pick(0, TA_SKIP);
+        frames(3);
         {
-            tr_rec_t r2;
-            uint8_t at = tr.card;
-            tr_fill(&r2);
-            memset(&tr, 0, sizeof tr);
-            tr_take(&r2);
-            check(tr.lvl == 1u && tr.card == at && tr.seen, "the progress comes back from the settings' side record");
+            uint8_t at = tr.card, done = tr.done;
+            check(at == 3u && song.playing && !tr.dirty, "skipped to card 4 while playing: written to the log");
+            memset(&tr, 0, sizeof tr);                   /* power off, power on */
+            tr_log_boot();
+            check(tr.lvl == 1u && tr.card == at && tr.done == done && tr.seen,
+                  "after a power cycle: the level, its card, the levels done");
+            tr_resume();
+            check(tr.lvl == 1u, "resume keeps the level running");
         }
-        menu_row(3);
+        {   /* the log filling its sector: erased once stopped, then written again */
+            uint32_t e0 = tr_erases, i, at = tr.card;
+            transport_req = 2;
+            frames(5);
+            for (i = 0; i < 300u; i++) {
+                tr.dirty = 1;
+                trainer_tick();
+            }
+            memset(&tr, 0, sizeof tr);
+            tr_log_boot();
+            check(tr_erases > e0 && tr.lvl == 1u && tr.card == at, "the log full: erased (stopped), the last record kept");
+        }
+        pick(0, TA_QUIT);
         check(!tr_on(), "QUIT THE LEVEL: the coach goes, the header is the page's again");
+        pick(TR_NLEVELS, TA_MENU);
+        check(ui.menu == 1u, "the picker's last page: BoopBox's menu");
+        menu_close();
     }
     printf("trainer: %s\n", fails ? "FAIL" : "PASS");
     return fails != 0;
