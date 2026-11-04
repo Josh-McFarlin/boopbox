@@ -65,9 +65,20 @@ static void lcd_window(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 
 static uint16_t lcd_fillbuf[240];
 
+#if FELUCCA_TRAINER
+static uint8_t lcd_clip_y;                 /* trainer.c: the rows above it are the coach's line, no page draws there */
+#endif
 static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 {
     uint32_t i, n, k, sw = (uint16_t)((c >> 8) | (c << 8));
+#if FELUCCA_TRAINER
+    if (y < lcd_clip_y) {
+        if (y + h <= lcd_clip_y)
+            return;
+        h -= lcd_clip_y - y;
+        y = lcd_clip_y;
+    }
+#endif
     if (!w || !h || x >= 240u || y >= 240u)
         return;
     if (x + w > 240u)
@@ -88,6 +99,15 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
 
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *px)
 {
+#if FELUCCA_TRAINER
+    if (y < lcd_clip_y) {                  /* (the canvas rows under the coach's line: skipped) */
+        if (y + h <= lcd_clip_y)
+            return;
+        px += (lcd_clip_y - y) * w;
+        h -= lcd_clip_y - y;
+        y = lcd_clip_y;
+    }
+#endif
     if (!w || !h)
         return;
     lcd_window(x, y, x + w - 1u, y + h - 1u);

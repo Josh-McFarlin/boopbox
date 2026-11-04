@@ -147,6 +147,9 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 #endif
 #include "upreset.c"          /* user presets (read in the XIP window; the host test keeps a RAM mirror) */
 #include "project.c"
+#if FELUCCA_TRAINER
+#include "trainer.c"          /* the lessons (FELUCCA_TRAINER builds): the coach over the UI */
+#endif
 #if FELUCCA_OTA
 static uint8_t recovery_active;
 #define OTA_IDENTITY (recovery_active ? "FM-1_000" : FELUCCA_ID)

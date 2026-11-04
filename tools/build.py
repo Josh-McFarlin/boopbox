@@ -113,6 +113,8 @@ def generate():
             failed.append(c[0].name)
     if failed:
         raise SystemExit(f"build: {', '.join(failed)} failed")
+    if os.environ.get("FELUCCA_TRAINER") == "1":   # the lessons, from the approved songs (after the drum kits' header)
+        subprocess.check_call([sys.executable, str(tools / "trainer" / "lessons.py"), str(GEN / "trainer_lessons.h")])
 
 
 # ---- update loader

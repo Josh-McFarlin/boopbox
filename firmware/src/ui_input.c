@@ -216,6 +216,9 @@ UI_SMALL static uint32_t lights_keys_mask(void)
     return m;
 }
 
+#if FELUCCA_TRAINER
+static void trainer_leds(uint8_t *nl);
+#endif
 UI_SMALL static void ui_leds(void)
 {
     uint8_t nl[FM1_NCOL] = {0}, dl[FM1_NCOL] = {0}, bl[FM1_NCOL] = {0};
@@ -252,6 +255,9 @@ UI_SMALL static void ui_leds(void)
     if (lights_lvl)                                /* menu LIGHTS: every button glows, the lit ones stay full */
         for (k = 0; k < NB; k++)
             led_put(bl, panel.btn[k], 1);
+#if FELUCCA_TRAINER
+    trainer_leds(nl);                              /* the lesson: its button blinks, its keys lit (trainer.c) */
+#endif
     for (c = 0; c < FM1_NCOL; c++) {
         fm1_led[c] = nl[c];
         fm1_led_dim[c] = dl[c];

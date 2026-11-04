@@ -7,19 +7,36 @@
  * OCT- closes (from ABOUT: back to the section). */
 /* ------------------------------------------------------------ menu --- */
 /* (2.7: USB SERIAL only in a build with the serial console, FELUCCA_CDC=1: the FM-1's build has none) */
-enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_USB,
+enum {
+#if FELUCCA_TRAINER                                  /* the TRAINER section first: the levels, or the level's controls */
+       MI_TR0, MI_TR1, MI_TR2, MI_TR3,
+#endif
+       MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_USB,
 #if FELUCCA_CDC
        MI_SERIAL,
 #endif
        MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_RECLK, MI_MIDI, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_COUNT };
-static const char *const MI_NAME[MI_COUNT] = {"COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
+static const char *const MI_NAME[MI_COUNT] = {
+#if FELUCCA_TRAINER
+                                              "", "", "", "",   /* (trainer.c tr_row_name) */
+#endif
+                                              "COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
 #if FELUCCA_CDC
                                               "USB SERIAL",
 #endif
                                               "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "REC KNOBS", "MIDI SETTINGS", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT"};
+#if FELUCCA_TRAINER                                  /* (six tabs: shorter names, to fit the line) */
+enum { MS_TRAIN, MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_COUNT };
+static const char *const MS_NAME[MS_COUNT] = {"TRAIN", "SCRN", "LIGHT", "AUDIO", "SEQ", "SYS"};
+static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_TR0, MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_COUNT};
+static const char *tr_row_name(uint32_t r);         /* trainer.c */
+static const char *tr_row_value(uint32_t r, uint16_t *c);
+static void tr_row_do(uint32_t r);
+#else
 enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_COUNT };   /* (2.7.1: SEQ) */
 static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM"};   /* (AUDIO: and USB) */
 static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_COUNT};   /* rows of each */
+#endif
 
 UI_SMALL static int mi_cpu1_have(void)                      /* the second core is running (cpu1.c; the host tests have no cpu1.c) */
 {
@@ -47,6 +64,10 @@ UI_SMALL static uint32_t mi_row(uint32_t i) { return i - MS_FIRST[mi_sec(i)]; } 
 UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
 {
     *c = C_HI;
+#if FELUCCA_TRAINER
+    if (i <= MI_TR3)
+        return tr_row_value(i - MI_TR0, c);
+#endif
     switch (i) {
     case MI_COLOR:                                    /* (2.7) your theme, by its name */
         if (theme_shown()) {
@@ -184,7 +205,11 @@ UI_SMALL static void draw_menu(void)
                 char k[4] = {'K', (char)('1' + r), 0, 0};
                 cv_rect(4, y + 2, 4, MI_DY - 8, cur ? C_WHITE : UI_COL[r & 3u]);   /* the knob's colour */
                 xv = cv_text(14, y, &FONT_S, k, UI_COL[r & 3u]);
-                cv_text(xv + 6, y, &FONT_S, MI_NAME[i], cur ? C_WHITE : C_GRAY);
+    #if FELUCCA_TRAINER
+            cv_text(xv + 6, y, &FONT_S, i <= MI_TR3 ? tr_row_name(i - MI_TR0) : MI_NAME[i], cur ? C_WHITE : C_GRAY);
+#else
+            cv_text(xv + 6, y, &FONT_S, MI_NAME[i], cur ? C_WHITE : C_GRAY);
+#endif
                 if (v[0] && text_w(&FONT_L, v) <= 222) {
                     xv = cv_text(14, y + 16, &FONT_L, v, cur && vc == C_HI ? C_WHITE : vc);
                 } else if (v[0]) {                      /* (too wide for the large type: WHITE KEYS) */
@@ -238,6 +263,14 @@ UI_SMALL static void menu_close(void)
 /* item i: a knob turned s (> 0 right, < 0 left), or 0: OCT+ (steps round, toggles, or opens) */
 UI_SMALL static void mi_set(uint32_t i, int32_t s)
 {
+#if FELUCCA_TRAINER
+    if (i <= MI_TR3) {                                 /* OCT+: the row's level or control (a knob does nothing) */
+        if (!s)
+            tr_row_do(i - MI_TR0);
+        ui.force = 1;
+        return;
+    }
+#endif
     switch (i) {
     case MI_COLOR: {                                   /* both ways round; OCT+ the next. 2.7: your theme after MONO
                                                         * (the palette number stays the last built-in one: an older

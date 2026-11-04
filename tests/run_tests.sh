@@ -95,6 +95,19 @@ run "after Felucca 1.4 / 1.5: INSERT, filter TYPE, ENV SYNC, LFO 2, drum mutes, 
 
 $CC -O2 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/ui_pages_test" tests/ui_pages_test.c -lm
 run "live UI: pages, layers (punch, steps, erase, roll, key, mix), holds, drums, REC, fuzz" "$OUT/ui_pages_test" "$OUT"
+
+# the TRAINER (tools/build.py --trainer): its own generated headers (three sample sets fewer, the lessons), then every level
+# played from the menu to DONE with the panel alone, the songs' settings, the progress kept, level 3's song (tests/trainer_test.c)
+TGEN=build/trainer-fw/gen
+if [ ! -f "$TGEN/trainer_lessons.h" ] || [ "$TGEN/trainer_lessons.h" -ot tools/trainer/lessons.py ] ||
+   [ "$TGEN/trainer_lessons.h" -ot tools/trainer/songs.py ]; then
+    FELUCCA_TRAINER=1 python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.GEN = build.SRC / '$TGEN'; build.generate()" >/dev/null ||
+        { echo "generating $TGEN failed"; fail=1; }
+fi
+mkdir -p "$OUT/trainer"
+$CC -O2 -w -I$TGEN -Ifirmware/src -Ifirmware/hal -Itests -o "$OUT/trainer_test" tests/trainer_test.c -lm
+run "TRAINER: the three levels played to DONE with the panel alone, the songs' settings, progress, level 3's song" \
+    "$OUT/trainer_test" "$OUT/trainer"
 # no divide by 0 (the FM-1 runs with the div0 trap off, hal/fm1_irq.h: a real one would give a wrong value
 # silently): the UI fuzz, the sequencer, the projects and a minute of random live use, with UBSan
 UBSAN="${CC_UB:-cc} -O1 -w -fsanitize=integer-divide-by-zero -fno-sanitize-recover=integer-divide-by-zero -Ibuild/gen -Ifirmware/src -Ifirmware/hal"
