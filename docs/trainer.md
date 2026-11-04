@@ -22,6 +22,10 @@ that song.
   action on the bar (**START**, **CONTINUE**, **PLAY IT AGAIN**), and **KNOB 1** picks another one when there are
   several (in a level: **SKIP THIS STEP**, **GO BACK A STEP**, **START OVER**, **QUIT THE LEVEL**). **OCT-** closes it.
   Its last page opens BoopBox's menu (screen, lights, audio, MIDI...).
+- **Why (1.4.3).** Holding HOME during a level opens, before the picker, the music behind the step you are on: what
+  it does and why it sounds that way (the backbeat, syncopation, the minor scale, seventh chords, voice leading,
+  half-time, the side-chain pump, song form...), two screens a topic. SELECT turns the pages, then on to the levels;
+  OCT- closes. The text is `tools/trainer/theory.py`; `tools/trainer/lessons.py` says which topic each step has.
 - **A level** starts from a new project, replacing the loop there without asking (level 3 also replaces the sections
   A–D when you save them). A level left half way goes on where it was left; the steps since its last change of pattern
   or section are checked again, so one the loop lost (BoopBox keeps the loop only while stopped) comes back.
@@ -51,14 +55,14 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 534,820 B of the 581,564 B app slot (about 46 KB free); the coach and the lessons take about
+The trainer image is 552,656 B of the 581,564 B app slot (about 29 KB free); the coach and the lessons take about
 21 KB, and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
 
 ```
 ./build.sh --trainer                    # build/trainer-fw/felucca-trainer.fwsc (version BOOPBOX TRAINER X.Y.Z)
-./build.sh --trainer --release 1.4.2    # build/trainer-fw/felucca-trainer-1.4.2.fwsc
+./build.sh --trainer --release 1.4.3    # build/trainer-fw/felucca-trainer-1.4.3.fwsc
 tests/run_tests.sh                      # includes the trainer test
 python3 tools/trainer/render.py         # the songs to build/trainer/*.wav and .mp3
 ```
