@@ -56,7 +56,7 @@ To make room for the lessons (the app slot is full in the normal build), the tra
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
 The trainer image is 552,656 B of the 581,564 B app slot (about 29 KB free); the coach and the lessons take about
-21 KB, and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
+39 KB with the why pages (about 18 KB of them), and under 120 B of RAM. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 
 ## Building and testing
 
