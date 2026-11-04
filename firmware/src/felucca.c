@@ -13,6 +13,10 @@
 #include "fm1_lcd_hw.h"
 #include "fm1_cpu1.h"      /* the second core (X0X): started in main.c, used by the render later */
 #include "felucca_tables.h"
+#ifndef FELUCCA_TRAINER
+#define FELUCCA_TRAINER 0       /* the TRAINER build (tools/build.py --trainer): lessons that teach three songs (trainer.c);
+                                 * no web editor, three sample sets fewer (tools/gen_samples.py TRAINER_DROP) */
+#endif
 
 #include "libc.c"
 #include "lcd.c"
@@ -143,6 +147,9 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 #endif
 #include "upreset.c"          /* user presets (read in the XIP window; the host test keeps a RAM mirror) */
 #include "project.c"
+#if FELUCCA_TRAINER
+#include "trainer.c"          /* the lessons (FELUCCA_TRAINER builds): the coach over the UI */
+#endif
 #if FELUCCA_OTA
 static uint8_t recovery_active;
 #define OTA_IDENTITY (recovery_active ? "FM-1_000" : FELUCCA_ID)

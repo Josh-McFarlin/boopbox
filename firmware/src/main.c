@@ -250,6 +250,9 @@ UI_SMALL static void fm1_main(void)
     lcd_clear();
 
     healthy_since = fm1_ms;
+#if FELUCCA_TRAINER
+    trainer_boot();                                     /* the first start: the TRAINER menu */
+#endif
     for (;;) {
         uint32_t m = fm1_ms;
         fm1_wdt_feed();
@@ -346,8 +349,14 @@ UI_SMALL static void fm1_main(void)
         felucca_dbg.stage = 1;
         ui_input();
         felucca_dbg.stage = 2;
+#if FELUCCA_TRAINER
+        trainer_tick();                                 /* the lesson's goal (trainer.c) */
+#endif
         ui_leds();
         ui_draw();
+#if FELUCCA_TRAINER
+        trainer_draw();                                 /* the coach's line, over the header */
+#endif
         felucca_dbg.stage = 8;
         autosave_tick();                                /* the working project into flash, when quiet */
 #if FELUCCA_ARRANGER

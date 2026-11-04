@@ -72,6 +72,13 @@ visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the
 says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes, and
 `docs/memory-savings-analysis.md` for where the flash and the RAM go and what can still be saved (measured, ranked).
 
+## The trainer build
+
+`./build.sh --trainer` builds BoopBox Trainer, a separate firmware that teaches three songs on the FM-1 itself
+(`docs/trainer.md`). It has no web editor and three sample sets fewer (HORNS, STRGS, SCRCH), and it writes everything,
+generated headers included, to `build/trainer-fw/`. Its package is `felucca-trainer.fwsc` (`felucca-trainer-X.Y.Z.fwsc`
+with `--release X.Y.Z`; version string `BOOPBOX TRAINER X.Y.Z`). The normal build is unchanged by it, byte for byte.
+
 ## Samples
 
 The CC0 instrument samples that the SAMPLE engine uses are in `assets/samples-cc0/`

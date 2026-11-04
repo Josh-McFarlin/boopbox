@@ -113,6 +113,8 @@ def generate():
             failed.append(c[0].name)
     if failed:
         raise SystemExit(f"build: {', '.join(failed)} failed")
+    if os.environ.get("FELUCCA_TRAINER") == "1":   # the lessons, from the approved songs (after the drum kits' header)
+        subprocess.check_call([sys.executable, str(tools / "trainer" / "lessons.py"), str(GEN / "trainer_lessons.h")])
 
 
 # ---- update loader
@@ -178,10 +180,10 @@ def build_loader():
 # ---- app
 
 def build_app():
-    flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
+    flags = [*CFLAGS, "-Ifirmware/hal", "-Ifirmware/src", "-I" + str(GEN.relative_to(SRC))]
     for flag in ("FELUCCA_FLASH", "FELUCCA_OTA", "FELUCCA_OTA_DRYRUN", "FELUCCA_CDC", "FELUCCA_UART",
                  "FELUCCA_ICONS", "FELUCCA_SLICE", "FELUCCA_CPU1", "FELUCCA_LOGO_TEXT", "FELUCCA_VIS",
-                 "FELUCCA_EDITOR"):
+                 "FELUCCA_EDITOR", "FELUCCA_TRAINER"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/felucca.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
@@ -316,9 +318,12 @@ def mmio_check():
 
 
 def main():
-    global PRODUCT, VERSION
+    global PRODUCT, VERSION, OUT, GEN, LDR
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", metavar="X.Y.Z", help="release build: identity FM-1_9XY, version string BOOPBOX X.Y.Z")
+    ap.add_argument("--trainer", action="store_true",
+                    help="the TRAINER build (FELUCCA_TRAINER=1: the lessons; no web editor, three sample sets fewer), "
+                         "into build/trainer-fw/, its package felucca-trainer[-X.Y.Z].fwsc")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "felucca.fwsc"
@@ -329,6 +334,15 @@ def main():
         PRODUCT = "FM-1_9" + m[1] + m[2]
         VERSION = "BOOPBOX " + a.release.upper()    # (the splash shows what follows "BOOPBOX ")
         name = f"felucca-{a.release}.fwsc"
+    if a.trainer:                   # its own folder, generated headers included: the normal build and its tests untouched
+        os.environ["FELUCCA_TRAINER"] = "1"
+        os.environ.setdefault("FELUCCA_EDITOR", "0")
+        OUT = SRC / "build" / "trainer-fw"
+        GEN, LDR = OUT / "gen", OUT / "loader"
+        ver = VERSION or "BOOPBOX " + re.search(r'#define FELUCCA_VERSION "BOOPBOX ([^"]+)"',
+                                                (FW / "src" / "ui.c").read_text())[1]
+        VERSION = ver.replace("BOOPBOX ", "BOOPBOX TRAINER ", 1)
+        name = name.replace("felucca", "felucca-trainer", 1)
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

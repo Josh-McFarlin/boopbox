@@ -76,6 +76,30 @@ try:
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site2")
     other = (tmp / "site2" / "webapp" / "sw.js").read_text(encoding="utf-8").split('const STAMP = "')[1].split('"')[0]
     check("sw.js: the same site, the same stamp; a file changed, a new one", stamp == same and stamp != other)
+    # BoopBox Trainer as the installer's second choice (make_site.py --trainer): its package in firmware/, its version,
+    # path and SHA-256 in the installer's meta, kept offline; tools/check_site.py accepts the site with both
+    (tmp / "t.fwsc").write_bytes(bytes(pkg[:4000]) + b"trainer" + bytes(pkg[4007:]))
+    make_site.main(tmp / "p.fwsc", "9.9", tmp / "site3", trainer=tmp / "t.fwsc")
+    inst = (tmp / "site3" / "webapp" / "installer" / "index.html").read_text(encoding="utf-8")
+    meta = json.loads(re.search(r"^const meta = (\{.*\});$", inst, re.M).group(1))
+    sw3 = (tmp / "site3" / "webapp" / "sw.js").read_text(encoding="utf-8")
+    import hashlib
+    sys.path.insert(0, str(ROOT / "tools"))
+    import check_site
+    check("trainer: its package beside BoopBox's, in the installer's meta (version, path, SHA-256), kept offline",
+          (tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").is_file() and
+          meta["trainer"]["pkg"] == "../../firmware/boopbox-trainer-9.9.fwsc" and meta["trainer"]["version"] == "9.9" and
+          meta["trainer"]["sha256"] == hashlib.sha256((tmp / "t.fwsc").read_bytes()).hexdigest() and
+          "../firmware/boopbox-trainer-9.9.fwsc" in sw3 and 'id="pick"' in inst)
+    check("trainer: tools/check_site.py passes the site with both packages, fails it with the trainer's changed",
+          not check_site.problems(tmp / "site3" / "firmware" / "boopbox-9.9.fwsc", tmp / "site3") and
+          ((tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").write_bytes(b"x") or True) and
+          bool(check_site.problems(tmp / "site3" / "firmware" / "boopbox-9.9.fwsc", tmp / "site3")))
+    make_site.main(tmp / "p.fwsc", "9.9", tmp / "site3")
+    check("trainer: a site made without it again leaves no trainer package or choice",
+          not (tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").exists() and
+          "trainer" not in json.loads(re.search(r"^const meta = (\{.*\});$", (tmp / "site3" / "webapp" / "installer" /
+                                                 "index.html").read_text(encoding="utf-8"), re.M).group(1)))
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 print("site:", "FAILED" if bad else "offline editor and offline site test passed")

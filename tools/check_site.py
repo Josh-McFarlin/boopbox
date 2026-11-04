@@ -8,9 +8,10 @@ The site is built by web/make_site.py and committed: the installer and the offli
 cache (webapp/sw.js) name the package they install. A binary copied into
 docs/firmware/ without rebuilding the site would be released while the website still
 installs the old one. This checks, for the given binary:
-  - it is the only package in docs/firmware/ (make_site.py removes the old ones),
-  - the installer's meta names it, with its version and its SHA-256,
-  - sw.js keeps it offline, under a stamp for its version.
+  - it is the only package in docs/firmware/ (make_site.py removes the old ones), but for BoopBox Trainer's package of
+    the same version (boopbox-trainer-X.Y.Z.fwsc, the installer's second choice),
+  - the installer's meta names it, with its version and its SHA-256 (and the trainer's, when there is one),
+  - sw.js keeps it (and the trainer's) offline, under a stamp for its version.
 Prints each problem as a GitHub error annotation and exits 1 if there is any.
 """
 import argparse
@@ -26,7 +27,9 @@ def problems(fw, site):
     ver = name[len("boopbox-"):-len(".fwsc")]
     out = []
 
-    others = sorted(p.name for p in (site / "firmware").glob("*.fwsc") if p.name != name)
+    tname = f"boopbox-trainer-{ver}.fwsc"
+    tpath = site / "firmware" / tname
+    others = sorted(p.name for p in (site / "firmware").glob("*.fwsc") if p.name not in (name, tname))
     if others:
         out.append((site / "firmware", f"old packages still in {site}/firmware/: {', '.join(others)}"))
 
@@ -42,6 +45,14 @@ def problems(fw, site):
             out.append((inst, f"installer installs {meta.get('pkg')!r}, not {name}"))
         if meta.get("sha256") != hashlib.sha256(fw.read_bytes()).hexdigest():
             out.append((inst, f"installer's SHA-256 is not the SHA-256 of {name}"))
+        tm = meta.get("trainer")
+        if tpath.exists() != bool(tm):
+            out.append((inst, f"the trainer's package and the installer's trainer choice do not go together ({tname})"))
+        elif tm:
+            if tm.get("pkg") != "../../firmware/" + tname or str(tm.get("version")) != str(meta.get("version")):
+                out.append((inst, f"installer's trainer choice is {tm.get('pkg')!r}, not {tname}"))
+            if tm.get("sha256") != hashlib.sha256(tpath.read_bytes()).hexdigest():
+                out.append((inst, f"installer's trainer SHA-256 is not the SHA-256 of {tname}"))
 
     sw = site / "webapp" / "sw.js"
     text = sw.read_text(encoding="utf-8")
@@ -51,6 +62,8 @@ def problems(fw, site):
     m = re.search(r"^const FILES = (\[.*?\]);", text, re.M)
     if not m or "../firmware/" + name not in json.loads(m.group(1)):
         out.append((sw, f"FILES does not keep ../firmware/{name}"))
+    if m and tpath.exists() and "../firmware/" + tname not in json.loads(m.group(1)):
+        out.append((sw, f"FILES does not keep ../firmware/{tname}"))
     return out
 
 

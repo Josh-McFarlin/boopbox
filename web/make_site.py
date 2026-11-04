@@ -4,7 +4,9 @@
 """Make the site (GitHub Pages):
 
   index.html                  redirect to the installer
-  firmware/felucca-VER.fwsc   the package
+  firmware/boopbox-VER.fwsc   the package
+  firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (tools/build.py --trainer), offered as a
+                              second choice in the installer
   webapp/installer/index.html index_pkg.html with fm1pkg.js, fm1ota.js and the metadata inlined
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
   webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6): its icon font inlined,
@@ -16,7 +18,7 @@
                               as content://, where Chrome refuses Web MIDI)
   src/                        not touched
 
-  web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta]
+  web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta] [--trainer build/trainer-fw/felucca-trainer-X.Y.fwsc]
   (--beta: web/beta_banner.html at the top of the installer: the beta channel, docs/beta)
 
 The package identity (FM-1_9xx) is read from the package; the device reports it
@@ -56,7 +58,7 @@ def offline_editor(html):
 ICONS = ("icon-192.png", "icon-512.png", "icon-maskable-512.png")
 
 
-def app_files(out, version, fw_name):
+def app_files(out, version, fw_name, more=()):
     """webapp/: the manifest, the icons and sw.js with the list of what it keeps (relative to webapp/) and a
     stamp of their contents, so any change makes a new sw.js and the browser takes the new site"""
     app = out / "webapp"
@@ -73,6 +75,8 @@ def app_files(out, version, fw_name):
     (app / "boopbox.webmanifest").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
     keep = {"installer/": app / "installer" / "index.html", "editor/": app / "editor" / "index.html",
             "../firmware/" + fw_name: out / "firmware" / fw_name, "boopbox.webmanifest": app / "boopbox.webmanifest"}
+    for f in more:                                   # (the trainer's package)
+        keep["../firmware/" + f] = out / "firmware" / f
     for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt"):
         if (app / "editor" / f).exists():
             keep["editor/" + f] = app / "editor" / f
@@ -104,20 +108,32 @@ def product_of(raw):
     return "".join(chr((m - i - 1) & 0xFF) for i in range(BLOCKS) if (m := raw[i * BLK + KEEP]) != 0x7D)
 
 
-def main(pkg, version, out):
-    pkg, out = Path(pkg), Path(out)
-    raw = pkg.read_bytes()
+def check_pkg(pkg):
+    raw = Path(pkg).read_bytes()
     product = product_of(raw)
     if not re.fullmatch(r"FM-1_9\d\d", product):
         raise SystemExit(f"{pkg}: identity {product!r} is not a Felucca package (FM-1_9xx)")
     if b"FELUCCA-LOADER-1" not in raw:              # marker of firmware/loader
         raise SystemExit(f"{pkg}: no Felucca update loader in it")
+    return raw, product
+
+
+def main(pkg, version, out, trainer=None):
+    pkg, out = Path(pkg), Path(out)
+    raw, product = check_pkg(pkg)
     html = (HERE / "index_pkg.html").read_text(encoding="utf-8")
     lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8"))
     name = f"boopbox-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
-    meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + name,
-                       "sha256": hashlib.sha256(raw).hexdigest()})   # the page checks the download against it
+    meta = {"version": version, "product": product, "pkg": "../../firmware/" + name,
+            "sha256": hashlib.sha256(raw).hexdigest()}   # the page checks the download against it
+    tname = None
+    if trainer:                                     # BoopBox Trainer: a second choice, the same version
+        traw, tproduct = check_pkg(trainer)
+        tname = f"boopbox-trainer-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
+        meta["trainer"] = {"version": version, "product": tproduct, "pkg": "../../firmware/" + tname,
+                           "sha256": hashlib.sha256(traw).hexdigest()}
+    meta = json.dumps(meta)
     for mark in ("/*LIB*/", "/*META*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"index_pkg.html must contain {mark} once; update make_site.py")
@@ -141,6 +157,8 @@ def main(pkg, version, out):
     for old in list(fw.glob("felucca-*.fwsc")) + list(fw.glob("sloop-*.fwsc")) + list(fw.glob("boopbox-*.fwsc")):   # one package: the current one
         old.unlink()
     shutil.copy(pkg, fw / name)
+    if tname:
+        shutil.copy(trainer, fw / tname)
     ed_html = (HERE / "editor.html").read_text(encoding="utf-8")
     dl = f'download="boopbox-editor-{re.sub(r"[^A-Za-z0-9.-]", "-", version)}.html"'
     if ed_html.count('download="boopbox-editor.html"') != 1 or html.count('download="boopbox-editor.html"') != 1:
@@ -159,16 +177,24 @@ def main(pkg, version, out):
         shutil.copy(dsp, ed / dsp.name)
     elif (ed / dsp.name).exists():
         (ed / dsp.name).unlink()  # never serve an old audio build as the current one
-    app_files(out, version, name)
+    app_files(out, version, name, (tname,) if tname else ())
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>BoopBox</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
         '<a href="webapp/installer/">BoopBox installer</a>\n', encoding="utf-8")
-    print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})")
+    print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})"
+          + (f", firmware/{tname}" if tname else ""))
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if a not in ("--studio-guide", "--beta")]
+    argv, trainer = sys.argv[1:], None
+    if "--trainer" in argv:
+        i = argv.index("--trainer")
+        if i + 1 >= len(argv):
+            sys.exit(__doc__)
+        trainer = argv[i + 1]
+        del argv[i:i + 2]
+    args = [a for a in argv if a not in ("--studio-guide", "--beta")]
     if len(args) != 3:
         sys.exit(__doc__)
-    main(*args)
+    main(*args, trainer=trainer)

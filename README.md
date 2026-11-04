@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.3.1](#whats-new-in-131)
+1. [What's new in 1.4.0](#whats-new-in-140)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,15 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.3.1
+## What's new in 1.4.0
+
+**BoopBox Trainer**, a second firmware that teaches you to make three songs on the FM-1 itself, step by step: lo-fi
+hip-hop, synthwave and melodic dubstep. A coach on the screen says what to do and lights the buttons and keys to
+press; every button, knob and key works as in BoopBox. Choose it in [the installer](https://josh-mcfarlin.github.io/boopbox/webapp/installer/#trainer)
+(**BoopBox Trainer**), and install BoopBox again to switch back. It has no web editor and a few sounds fewer. See
+[the trainer](docs/trainer.md). BoopBox itself is unchanged in 1.4.0.
+
+### 1.3.1
 
 A tuning fix for TANPURA, and room for what comes next ([all changes](CHANGELOG.md)):
 

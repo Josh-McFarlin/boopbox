@@ -47,6 +47,13 @@ TR = 22050                                   # stored sample rate
 CC0_SETS = [("PIANO", "piano"), ("BASS", "oneshot"), ("VIBES", "oneshot"), ("HORNS", "oneshot"),
             ("STRGS", "oneshot"), ("FLUTE", "sus"), ("SCRCH", "oneshot"), ("KIT", "kit")]
 MEASURED_TUNING = ()                         # sets recorded off A440 (measured near the named note)
+# the TRAINER build (FELUCCA_TRAINER=1): these sets are left out to make room for the lessons; the sets after them move
+# down (the header's SMPS_* defines say where each set is, SMP_PRESET_* where its preset is)
+TRAINER_DROP = ("HORNS", "STRGS", "SCRCH")
+
+
+def trainer():
+    return os.environ.get("FELUCCA_TRAINER") == "1"
 
 # the preset of each set: name, {SET (filled in), TUNE, BITS, LOOP (filled in), CUT, -, DRV, -}, env, mono,
 # sends (DIST, CHORUS, DELAY, REVERB), more (track parameter, value) pairs (preset_t.x)
@@ -406,6 +413,10 @@ class Builder:
             if i is not None:
                 L.append(preset(i, self.kinds.get(setname, "wave"), *rest))
         L.append("};")
+        for i, (name, _, _) in enumerate(named):             # where each set and its preset are (they move in the TRAINER)
+            L.append(f"#define SMPS_{name} {i}")
+            pname = SET_PRESETS[name][0] if name in SET_PRESETS else name
+            L.append(f"#define SMP_PRESET_{''.join(c if c.isalnum() else '_' for c in pname)} {i}")
         names = ", ".join(f'"{n}"' for n, _, _ in named)
         L.append("#define SMP_SET_NAMES_INIT " + names)
         L.append("static const char *const SMP_SET_NAMES[] = {" + names + "};")
@@ -439,7 +450,7 @@ def input_key(have_cc0):
     here = Path(__file__).resolve().parent
     for p in (here / "gen_samples.py", here / "sampleio.py"):
         h.update(p.read_bytes())
-    h.update(repr((sys.version_info[:2], have_cc0, os.environ.get("FELUCCA_SLICE") == "1")).encode())   # sum() differs across versions
+    h.update(repr((sys.version_info[:2], have_cc0, os.environ.get("FELUCCA_SLICE") == "1", trainer())).encode())   # sum() differs across versions
     files = sorted(GENDIR.glob("D *.wav"))
     if have_cc0:
         files += sorted(CC0.glob("*/*.wav"))
@@ -466,7 +477,7 @@ def main(out):
     b = Builder()
     if have_cc0:
         for name, kind in CC0_SETS:
-            if kind != "kit":                       # the CC0 KIT feeds the GM kit
+            if kind != "kit" and not (trainer() and name in TRAINER_DROP):   # the CC0 KIT feeds the GM kit
                 b.cc0_set(name, kind)
     b.gm_kit(have_cc0)
     if os.environ.get("FELUCCA_SLICE") == "1":       # SLICE's BREAK: only when that engine is built

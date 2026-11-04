@@ -282,7 +282,7 @@ CTL_SMALL static const param_desc_t *track_desc(const track_t *t, uint32_t id)
 static const uint8_t TRK_DEF[NTRK][3] = {
     {TK_SYNTH, 0, 0},                    /* ANALOG 808 BOOM */
     {TK_SYNTH, 1, 0},                    /* DIGITAL RHODES */
-    {TK_SYNTH, 4, 5},                    /* SAMPLE LOFI FLUTE */
+    {TK_SYNTH, 4, SMP_PRESET_LOFI_FLUTE},   /* SAMPLE LOFI FLUTE (its index: tools/gen_samples.py, the TRAINER moves it) */
     {TK_DRUM, DRUM_DEFAULT_KIT, 0},      /* the 808 kit */
     {TK_SYNTH, 0, 12},                   /* ANALOG WARM PAD */
     {TK_SYNTH, 1, 9},                    /* DIGITAL KALIMBA */

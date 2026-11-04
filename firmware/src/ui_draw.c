@@ -498,6 +498,10 @@ UI_SMALL static int big_page(const page_t *pg)            /* (2.6: the INSERT pa
     return (pg->graph == GR_NONE || pg->graph == GR_INS) && pg->scope != SC_SONG && pg->scope != SC_DRUM && pg->scope != SC_PATS &&
            pg->scope != SC_HARM;
 }
+#if FELUCCA_TRAINER
+static int tr_browse_target(uint32_t *kit, uint32_t *e, uint32_t *k);   /* trainer.c: the sound or kit a step asks for */
+static uint32_t tr_pulse(void);                                         /* its marker's brightness now, 1..8 */
+#endif
 UI_SMALL static uint32_t graph_signature(void)
 {
     const page_t *pg = cur_page();
@@ -519,6 +523,10 @@ UI_SMALL static uint32_t graph_signature(void)
         uint32_t q;
         for (q = 0; q < FAV_N; q++) h = h * 31u + fav[q];
     }
+#if FELUCCA_TRAINER
+    if (pg->graph == GR_BROWSE)                      /* (the trainer's markers fade in and out: redrawn as they do) */
+        h ^= tr_pulse() * 2246822519u;
+#endif
     if (pg->graph == GR_SLCR && t->p[P_SLCR])        /* the SLICER's step playing */
         h ^= (sl[song.sel].idx + 1u) * 2654435761u;
     if (pg->graph == GR_SLOTS)                       /* (a checksum over each slot) */
@@ -577,6 +585,43 @@ UI_SMALL static void graph_browse(void)
     }
     if (n > 7u)                                          /* where the seven rows are in the group */
         cv_rect(237, 3 + first * 118 / (int32_t)n, 2, 7 * 118 / (int32_t)n, C_GRAY);
+#if FELUCCA_TRAINER
+    {   /* the TRAINER: a dot fading in and out beside the group and the sound the step asks for (an arrow at the top or
+         * the bottom of a list when it is out of sight, the way to turn) */
+        uint32_t kit, te, tk, p, pt = total, gt = 0;
+        int32_t gfirst = clamp((int32_t)cg - 3, (int32_t)g0, (int32_t)g1 > (int32_t)g0 + 7 ? (int32_t)g1 - 7 : (int32_t)g0);
+        uint16_t c;
+        if (tr_browse_target(&kit, &te, &tk)) {
+            c = rgb565_over(C_WHITE, tr_pulse(), 8u);
+            for (p = nf; p < total && pt == total; p++) {   /* (its place in the view, not among the favourites) */
+                uint32_t q = br_n(p, nf), qk;
+                if ((q & BR_KIT) ? kit && (q & ~BR_KIT) == tk : !kit && preset_at(q, &qk) == te && qk == tk)
+                    pt = p;
+            }
+            if (pt < total) {
+                uint32_t i;
+                gt = br_gid(pt, nf);
+                for (i = 0; i < ng && gid[i] != gt; i++)
+                    ;
+                if ((int32_t)i < gfirst)
+                    cv_line(68, 6, 71, 3, c), cv_line(71, 3, 74, 6, c);
+                else if ((int32_t)i >= gfirst + 7)
+                    cv_line(68, 116, 71, 119, c), cv_line(71, 119, 74, 116, c);
+                else
+                    ui_disc(70, 4 + ((int32_t)i - gfirst) * 17 + 7, 4, c);
+                if (gt == gid[cg]) {                     /* the sound, in the group shown */
+                    int32_t r = (int32_t)(pt - lo) - first;
+                    if (r < 0)
+                        cv_line(226, 6, 229, 3, c), cv_line(229, 3, 232, 6, c);
+                    else if (r >= 7)
+                        cv_line(226, 116, 229, 119, c), cv_line(229, 119, 232, 116, c);
+                    else
+                        ui_disc(229, 4 + r * 17 + 7, 4, c);
+                }
+            }
+        }
+    }
+#endif
 }
 
 /* user preset slots around the selected one: "U07  NAME" / EMPTY, the selected one in white */
