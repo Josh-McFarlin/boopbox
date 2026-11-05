@@ -13,27 +13,37 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## The song page: whole songs (website, after 1.5.0)
+
+[The song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) makes **the whole song** a trainer level, not a
+loop of a few bars. No new firmware: BoopBox Trainer 1.5.0 plays it as it is.
+
+- It listens to the **whole file** (up to 6 minutes): the song's **sections** (up to four, A to D) and the order they
+  come in (A8 B8 A8 B16 C8...), then each section closely: its drums, bass, chords and lead. A part a section has not
+  (no drums in the intro) is muted there.
+- **Compare** the whole song, its sections in turn as song mode plays them, or one section on a loop, the original and
+  your FM-1 version side by side; a tab for each section to fix its drums or take a part out.
+- On the FM-1, **level 4 teaches it as level 3 does**: section A first, a pattern for each new part of the other
+  sections, each section saved (SAVE + keys 5-8), then the song on the SONG screen and song mode. A song is 50 to 80
+  steps; one too big for the FM-1 is made smaller, and the page says how.
+- Songs with a steady tempo and clear sections work best. Install a new song to replace the one in level 4.
+
 ## 1.5.0
 
 **BoopBox Trainer: your song as level 4** ([the trainer](docs/trainer.md)):
 
 - **A new page, [Your song](https://josh-mcfarlin.github.io/boopbox/webapp/song/)** (also linked from the installer).
-  Drop in an audio file (MP3, WAV, OGG, M4A, FLAC, up to 6 minutes). The page listens to the **whole song**, in your
-  browser: the file is not uploaded anywhere. It finds the tempo, the key and the song's **sections** (up to four, A to
-  D, and the order they come in: A8 B8 A8 B16 C8...), then listens closely to each: a bar of drums (kick, snare, hats),
-  a bass line, a chord a bar and a lead. The notes are found by Basic Pitch, Spotify's note model, served from the site.
-- **Compare** the original with **your FM-1 version**, played by BoopBox's own sound engines in the browser: the whole
-  song, its sections in turn as song mode plays them, or one section on a loop (the original's drums, bass or the rest
-  alone too). Fix a drum hit with a click, pick another key, style, kit or sound, or take a part out of a section. The
-  steps the trainer will show are listed as you go.
+  Drop in an audio file (MP3, WAV, OGG, M4A, FLAC). The page listens to 30 seconds of it, in your browser: the file is
+  not uploaded anywhere. It finds the tempo, the key, a bar of drums (kick, snare, hats), a bass line, a chord a bar and
+  a lead; the notes are found by Basic Pitch, Spotify's note model, served from the site.
+- **Compare** the original (or its drums, bass or the rest alone) with **your FM-1 version**, played by BoopBox's own
+  sound engines in the browser, part by part. Fix a drum hit with a click, pick another key, style, kit or sound, or
+  leave a part out. The steps the trainer will show are listed as you go.
 - **Install** it: the page installs BoopBox Trainer 1.5.0 with your song in it (Chrome or Edge on a computer, as the
   installer). On the FM-1, hold HOME: the picker has **LEVEL 4: YOUR SONG**, taught like the others, with the same
-  hints, lights and why pages. It teaches the whole song as level 3 does: section A first, a pattern for each new part
-  of the other sections, each section saved (SAVE + keys 5-8), then the song on the SONG screen and song mode. Another
-  song replaces it; its progress starts again, the other levels' stays.
-- It is an approximation, not a transcription: four parts, each section's most typical four bars, the song in blocks of
-  four bars. Songs with a clear beat and a steady tempo work best; in a dense mix a bass can sound like a kick (fix it
-  on the drum grid). A song too big for the FM-1 (128 steps, 8 KiB) is simplified, and the page says how.
+  hints, lights and why pages. Another song replaces it; its progress starts again, the other levels' stays.
+- It is an approximation, not a transcription: four parts and a loop of a few bars. Songs with a clear beat work best;
+  in a dense mix a bass can sound like a kick (fix it on the drum grid).
 
 The trainer keeps an 8 KiB song area for level 4 (about 1.5 KB of code more); without a song it has its three levels as
 before. The editor's sound preview plays the drum track again (its track 4 was not a drum track in the browser).
