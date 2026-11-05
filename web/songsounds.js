@@ -9,17 +9,22 @@ export const STYLES = [
   { name: "SYNTHWAVE", upto: 115, kit: "SYNTHWV", bass: "SAW BASS", chords: "SAW PAD", lead: "PWM LEAD" },
   { name: "HOUSE", upto: 130, kit: "HOUSE", bass: "FM BASS", chords: "HOUSE ORGN", lead: "FM PLUCK" },
   { name: "TECHNO", upto: 145, kit: "TECHNO", bass: "REESE", chords: "WARM PAD", lead: "SQR LEAD" },
+  // half-time, 130-160 BPM (the snare on beat 3): chosen for a song heard so, and in the menu for any (level 3's sounds)
+  { name: "DUBSTEP", halftime: [125, 165], kit: "DUBSTEP", bass: "WOBBLE", chords: "DARK STR", lead: "SUPERSAW" },
   { name: "DRUM AND BASS", upto: 999, kit: "JUNGLE", bass: "REESE", chords: "GLASS PAD", lead: "SUPERSAW" },
 ];
 export const CHOICES = {
   bass: ["808 BOOM", "SUB BASS", "SAW BASS", "FM BASS", "REESE", "PLUCK BASS", "ROUND BASS", "FUNK BASS", "MONO BASS",
          "ACID 303", "BASS GTR", "WOBBLE"],
   chords: ["RHODES", "WURLI", "SAW PAD", "WARM PAD", "GLASS PAD", "SOFT KEYS", "HOUSE ORGN", "DX RHODES", "M1 PIANO",
-           "80S POLY", "STR PLUCK", "CHOIR AAH"],
+           "80S POLY", "STR PLUCK", "CHOIR AAH", "DARK STR"],
   lead: ["KALIMBA", "PWM LEAD", "FM PLUCK", "SQR LEAD", "SUPERSAW", "FLUTE DUST", "MARIMBA", "MUSIC BOX", "SYNC LEAD",
          "GLOCKEN", "PAN FLUTE", "TRAP BELL"],
 };
-export const styleFor = (bpm) => STYLES.find((s) => bpm <= s.upto);
+// the style for a song's tempo, or for a half-time song in its range (dubstep)
+export const styleFor = (bpm, halftime = false) =>
+  (halftime && STYLES.find((s) => s.halftime && bpm >= s.halftime[0] && bpm <= s.halftime[1])) ||
+  STYLES.find((s) => s.upto && bpm <= s.upto);
 
 // the score with its sounds: { kit, bass, chords, lead } (each part with its sound; a part not heard stays null)
 export function defaultSounds(score, C, style = styleFor(score.bpm)) {

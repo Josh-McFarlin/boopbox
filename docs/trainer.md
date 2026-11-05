@@ -98,8 +98,10 @@ level 4 from an audio file, in the browser: nothing is uploaded, and there is no
      entries, 64 bars each). Quiet blocks at the ends (silence, a fade) are left out.
    - **Each section, closely** (`analyzeSong`): its most typical block (the group's medoid), four bars, with the bar line
      found again there. The drums are split from the rest (harmonic / percussive separation: median filters on the
-     spectrogram) and each lane's hits taken on the sixteenths, folded into one bar (the snare on the backbeat when it
-     stands out there: its body is in the kick's band too).
+     spectrogram) and each lane's hits taken on the sixteenths, folded into one bar. The snare is taken on beat 3 alone
+     (half-time: dubstep, trap) when its body (150 Hz-1 kHz) and crack (1.5-5 kHz) there are well above the backbeat's
+     (by 1.4: on the renders half-time sections come out 1.6-10, backbeats 0.7-1.25), else on the backbeat when it stands
+     out there (its body is in the kick's band too).
      [Basic Pitch](https://github.com/spotify/basic-pitch-ts) (Spotify's note model, Apache-2.0; `web/vendor/`, served
      from the site with TensorFlow.js) finds the notes of the part without drums. A song of three or four sections takes
      a minute or two on a laptop.
@@ -111,8 +113,8 @@ level 4 from an audio file, in the browser: nothing is uploaded, and there is no
    section on a loop (the original's drums, bass or the rest of it alone, too), played by BoopBox's engines in the
    browser (the editor's WebAssembly, `firmware/host/preview.c`; `web/songplay.js` replays the lesson's own steps,
    patterns, saved sections and song, so what plays is what the steps build). A section's drum grid takes clicks and
-   its parts can be taken out; the key, a style (a kit and three sounds by tempo, `web/songsounds.js`) and each part's
-   sound are the song's. The steps are listed as they will be on the FM-1.
+   its parts can be taken out; the key, a style (a kit and three sounds by tempo, `web/songsounds.js`; DUBSTEP for a
+   half-time song between 125 and 165 BPM, and in the menu for any) and each part's sound are the song's. The steps are listed as they will be on the FM-1.
 3. **Install**: the page fetches the trainer package of the site, checks its SHA-256, writes the song into its song
    area (`web/trslot.js`) and installs it as the installer does (`web/fm1ota.js`).
 

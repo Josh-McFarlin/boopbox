@@ -51,6 +51,8 @@ if (WANT) {
 }
 check(facts.steps > 10 && facts.list === facts.steps, `the steps listed: ${facts.list}`);
 check(facts.go, "Install is ready");
+const styles = await page.evaluate(() => [...document.querySelectorAll("#style option")].map((o) => o.textContent));
+check(styles.includes("dubstep"), `the styles offered: ${styles.join(", ")}`);
 const form = await page.evaluate(() => ({ parts: [...document.querySelectorAll("#song div")].map((d) => d.textContent),
                                           tabs: [...document.querySelectorAll("#tabs button")].map((b) => b.textContent),
                                           sections: window.trainerSong.base.sections.length }));

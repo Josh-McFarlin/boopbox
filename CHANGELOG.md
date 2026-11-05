@@ -13,6 +13,15 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## The song page: dubstep (website, after 1.5.0)
+
+- A **dubstep** style on [the song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/): the DUBSTEP kit, WOBBLE
+  bass, DARK STR chords and a SUPERSAW lead. It is in the style menu for any song, and chosen by itself for a song the
+  page hears as **half-time** (the snare on beat 3) between 125 and 165 BPM.
+- The page hears half-time: a snare on beat 3 alone is taken as it is, not moved to the backbeat. On the FM-1 that step
+  is **HALF-TIME: SNARE ON 9**, with the trainer's half-time why page.
+- No new firmware: BoopBox Trainer 1.5.0 plays it as it is.
+
 ## The song page: whole songs (website, after 1.5.0)
 
 [The song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) makes **the whole song** a trainer level, not a
