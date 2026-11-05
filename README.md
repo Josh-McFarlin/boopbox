@@ -44,7 +44,14 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.5.0
+## What's new in 1.5.1
+
+**BoopBox Trainer**: a line of the coach wider than the screen now scrolls like a ticker, and the hint for a black key
+is shorter (LIT KEY), so nothing is cut off, in your own songs (level 4) too. The song page hears busy songs better:
+half-time drops and kick patterns are judged over a whole section. BoopBox itself is unchanged ([all
+changes](CHANGELOG.md)).
+
+### 1.5.0
 
 **Your song as a trainer level.** [A new page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) listens to an
 audio file (MP3, WAV, OGG, M4A...) in your browser, nothing uploaded, and writes a version the FM-1 can play: the

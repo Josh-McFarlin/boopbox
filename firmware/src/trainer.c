@@ -198,7 +198,8 @@ static struct {
     uint32_t sig, psig;                            /* the band, the picker as last drawn */
     uint32_t keys;                                 /* the keys lit */
     uint32_t log_at;                               /* the log's next free record (offset in TR_LOG) */
-    char hint[32];
+    uint32_t mq_t0, mq_sig;                        /* (1.5.1) a line too wide scrolls: since when, for which text */
+    char hint[48];                                 /* (1.5.1: 48, a hint may be wider than the screen: it scrolls) */
 } tr;
 
 UI_SMALL static const tr_card_t *tr_card(void)
@@ -281,7 +282,7 @@ UI_SMALL static uint32_t tr_white_of(uint32_t k)       /* key k's number among t
             return w + 1u;
     return 0;
 }
-UI_SMALL static void tr_key_text(char *b, uint32_t keys)   /* "KEY 6", "THE LIT KEYS", "THE LIT BLACK KEY" */
+UI_SMALL static void tr_key_text(char *b, uint32_t keys)   /* "KEY 6", "LIT KEYS", "LIT KEY" (a black key) */
 {
     uint32_t k, n = 0, at = 0;
     for (k = 0; k < 27u; k++)
@@ -291,7 +292,7 @@ UI_SMALL static void tr_key_text(char *b, uint32_t keys)   /* "KEY 6", "THE LIT 
         str_cpy(b, "KEY ", 8);
         fmt_int(b + 4, (int32_t)tr_white_of(at));
     } else
-        str_cpy(b, n == 1u ? "LIT BLACK KEY" : "LIT KEYS", 16);
+        str_cpy(b, n == 1u ? "LIT KEY" : "LIT KEYS", 16);   /* (1.5.1: "LIT BLACK KEY" was wider than the screen) */
 }
 
 /* the keys (bit k: key k, F3 = 0) that play notes c[0..n) on track t as it is now (chord mode: the key of that chord);
@@ -1133,13 +1134,40 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
     }
     b[o] = 0;
 }
+/* (1.5.1) a line wider than the screen scrolls, as a ticker: still for a moment (its start read), to the left a
+ * pixel each TR_MQ_PX ms until its end shows, still again, then from its start once more. tr_mq_len: how long that
+ * takes (0: it fits); tr_marquee: how far it has gone after el ms (2 px at a time: a redraw each 50 ms at most) */
+#define TR_MQ_W 236
+#define TR_MQ_HOLD 1200u
+#define TR_MQ_PX 25u
+UI_SMALL static int32_t tr_mq_over(const char *s) { return text_w(&FONT_S, s) + 2 - TR_MQ_W; }
+UI_SMALL static uint32_t tr_mq_len(const char *s)
+{
+    int32_t over = tr_mq_over(s);
+    return over > 0 ? 2u * TR_MQ_HOLD + (uint32_t)over * TR_MQ_PX : 0u;
+}
+UI_SMALL static int32_t tr_marquee(const char *s, uint32_t el)
+{
+    int32_t over = tr_mq_over(s);
+    uint32_t run, t;
+    if (over <= 0)
+        return 0;
+    run = (uint32_t)over * TR_MQ_PX;
+    t = el % (2u * TR_MQ_HOLD + run);
+    if (t < TR_MQ_HOLD)
+        return 0;
+    if (t >= TR_MQ_HOLD + run)
+        return over;
+    return (int32_t)((t - TR_MQ_HOLD) / TR_MQ_PX) & ~1;
+}
 /* the band: the card's number and headline, or what is wrong (amber); the action; a UI message; NICE; a progress bar */
 UI_SMALL static void trainer_draw(void)
 {
     const tr_card_t *c = tr_card();
     const tr_level_t *L;
-    uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD;
-    char b[40], act[40];
+    uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD, mel = 0, own = 0;
+    int32_t o1, o2;
+    char b[48], act[48];
     uint16_t col;
     if (!c || ui.menu || !h)
         return;
@@ -1150,18 +1178,23 @@ UI_SMALL static void trainer_draw(void)
      * Two lines: what is wrong stays on line 1 (the action under it); one line: the action and it take turns */
     if (two)
         phase = tr.hint[0] && el >= TR_HEAD_MS / 2u ? 2u : 0u;
-    else
-        phase = el < TR_HEAD_MS ? 0u : !tr.hint[0] ? 1u : ((el - TR_HEAD_MS) / TR_ALT_MS) & 1u ? 1u : 2u;
+    else if (el < TR_HEAD_MS || !tr.hint[0])
+        phase = el < TR_HEAD_MS ? 0u : 1u;
+    else {                                          /* the action, then the hint, each its turn (a scroll: its whole) */
+        uint32_t d1 = tr_mq_len(act), d2 = tr_mq_len(tr.hint), t;
+        d1 = d1 > TR_ALT_MS ? d1 : TR_ALT_MS;
+        d2 = d2 > TR_ALT_MS ? d2 : TR_ALT_MS;
+        t = (el - TR_HEAD_MS) % (d1 + d2);
+        phase = t < d1 ? 1u : 2u;
+        mel = t < d1 ? t : t - d1;                  /* (the turn's own time: its scroll from its start) */
+        own = 1;
+    }
     if (c->goal == TG_DONE)
         phase = two || el < TR_HEAD_MS ? 0u : 1u;
     if (tr.ok)
         phase = 3u;
     if (ui.msg_t && !tr.ok)
         phase = 4u;                                     /* a message of the UI (on a page its place is this line) */
-    sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, phase == 2u ? tr.hint : phase == 4u ? ui.msg : act);
-    if (sig == tr.sig)
-        return;
-    tr.sig = sig;
     if (phase == 0u) {                              /* "4/31 THE KICK DRUM" */
         fmt_int(b, tr.card + 1);
         str_cpy(b + str_len(b), "/", 2);
@@ -1182,11 +1215,22 @@ UI_SMALL static void trainer_draw(void)
         str_cpy(b, "NICE!", sizeof b);
         col = RGB(90, 240, 150);
     }
+    sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, b);
+    if (two)
+        sig = str_hash(sig, act);
+    if (sig != tr.mq_sig)                           /* (other text: a scroll from its start) */
+        tr.mq_sig = sig, tr.mq_t0 = fm1_ms;
+    o1 = tr_marquee(b, own ? mel : fm1_ms - tr.mq_t0);
+    o2 = two ? tr_marquee(act, fm1_ms - tr.mq_t0) : 0;
+    sig += (uint32_t)o1 * 2654435761u + (uint32_t)o2 * 40503u;
+    if (sig == tr.sig)
+        return;
+    tr.sig = sig;
     lcd_clip_y = 0;
     cv_begin(240, h, C_BLACK);
-    cv_text(2, 1, &FONT_S, b, col);
+    cv_text(2 - o1, 1, &FONT_S, b, col);
     if (two)
-        cv_text(2, 19, &FONT_S, act, tr.ok ? C_DIM : C_HI);
+        cv_text(2 - o2, 19, &FONT_S, act, tr.ok ? C_DIM : C_HI);
     cv_rect(0, (int32_t)h - 2, 240, 2, C_LINE);
     cv_rect(0, (int32_t)h - 2, (int32_t)(240u * (tr.card + (tr.ok ? 1u : 0u)) / L->n), 2, UI_COL[(tr.lvl + 1u) & 7u]);
     cv_blit(0, 0);

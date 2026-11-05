@@ -36,6 +36,8 @@ that song.
   pages it has one line, which shows them in turn. The coloured bar under it is the level's progress.
   - Actions say where to go and what to turn, with the value as the screen shows it: *TAP SEQ UNTIL YOU SEE TIMING*,
     then *TURN KNOB 4 (GATE) TO 79%*.
+  - (1.5.1) A line wider than the screen scrolls like a ticker: still for 1.2 s, a pixel every 25 ms to its end, still
+    again, then from its start; on one line a scrolling line keeps its turn until all of it has shown.
   - When something is off, the hint says what and how to fix it: *STEP 5: NO KICK HERE (KEY 5)*, *STEP 9: PLAY F4
     (KEY 7)*, *STEP 3: PRESS OCT+*, *NOW 30% (WANT 24%)*, *OPEN THE FX PAGE*, *TRACK 6: MUTE (GLO + KEY 2)*.
   - The button to press **blinks**. On a step about keys the coach owns the keys' lights: only the keys to press are
@@ -151,7 +153,7 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
 
-The trainer image is 562,396 B of the 581,564 B app slot (about 19 KB free); the coach and the lessons take about
+The trainer image is 562,892 B of the 581,564 B app slot (about 18 KB free); the coach and the lessons take about
 39 KB with the why pages (about 18 KB of them), the song area 8 KiB and its checks about 1.5 KB; RAM: level 4's cards
 (2.5 KB) and under 120 B more. Its progress uses the free flash sector at 0xFB000. The normal build is unchanged, byte for byte.
 

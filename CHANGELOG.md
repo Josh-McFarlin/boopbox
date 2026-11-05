@@ -13,6 +13,29 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.5.1
+
+**BoopBox Trainer: the coach's text always fits** ([the trainer](docs/trainer.md)):
+
+- A line of the coach that is wider than the screen now **scrolls like a ticker**: it waits a moment so you can read its
+  start, moves to the left until its end shows, waits again, then starts over. Lines that fit stay still, as before.
+  On the screens with one line, where the step and the hint take turns, a scrolling line keeps its turn until it has
+  shown all of itself.
+- A note on a black key is now hinted as **LIT KEY** (it was LIT BLACK KEY): the hint fits without scrolling. Before,
+  in songs with sharps or flats (your own songs from the song page, level 4), its end was cut off.
+- No hint is cut short any more (they have room for 47 characters).
+
+**The song page** ([webapp/song/](https://josh-mcfarlin.github.io/boopbox/webapp/song/)) hears dense songs better:
+
+- **Half-time over a whole section:** in a busy drop the snare on beat 3 can hide in any four bars; a section of 16 bars
+  or more is now also judged over all of its bars.
+- **Kicks over a whole section:** in four bars of a full mix the bass's notes can sound like kicks (a kick on almost
+  every step). A section of 16 bars or more now takes its kick pattern from all of its bars.
+
+BoopBox itself is unchanged in this release (only its version number). Projects, songs, presets, settings and the
+trainer's progress from 1.5.0 open as they are. Level 4's song lives in the trainer's package: installing 1.5.1 from
+the installer empties level 4, so to keep your song, install 1.5.1 from the song page with it.
+
 ## The song page: dubstep (website, after 1.5.0)
 
 - A **dubstep** style on [the song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/): the DUBSTEP kit, WOBBLE
