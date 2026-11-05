@@ -106,9 +106,10 @@ if [ ! -f "$TGEN/trainer_lessons.h" ] || [ "$TGEN/trainer_lessons.h" -ot tools/t
 fi
 mkdir -p "$OUT/trainer"
 $CC -O2 -w -I$TGEN -Ifirmware/src -Ifirmware/hal -Itests -o "$OUT/trainer_test" tests/trainer_test.c -lm
-# the web page's songs (webapp/song/: web/songgen.js), each played as level 4 by the trainer test below (TR_SONGS): three
-# written scores; with the trainer's renders (python3 tools/trainer/render.py), levels 1 and 2 as the page hears them
-# (web/songanalyze.js and Basic Pitch: the tempo, the key, the drums against their scores). Needs Node.js
+# the web page's songs (webapp/song/: web/songgen.js), each played as level 4 by the trainer test below (TR_SONGS): four
+# written scores (one a whole song: sections, patterns, song mode); with the trainer's renders (python3
+# tools/trainer/render.py), the three songs as the page hears them, whole (web/songanalyze.js and Basic Pitch: the
+# tempo, the key, the sections and the song, level 1's beat). Needs Node.js
 TR_SONGS=""
 if command -v node >/dev/null; then
     python3 tools/trainer/consts.py "$OUT/trainer/consts.json" >/dev/null || fail=1
@@ -118,9 +119,10 @@ if command -v node >/dev/null; then
     grep -v '^SONGS=' "$OUT/trainer/songs.log"
     TR_SONGS=$(sed -n 's/^SONGS=//p' "$OUT/trainer/songs.log")
     if [ -f build/trainer/1-first-light.wav ] && [ -f build/trainer/2-neon-avenue.wav ]; then
-        echo "== TRAINER song page: levels 1 and 2 as the page hears them (Basic Pitch on the CPU: a few minutes)"
+        echo "== TRAINER song page: the three songs, whole, as the page hears them (Basic Pitch on the CPU: a few minutes)"
         node tests/trainer_analyze_test.mjs "$OUT/trainer/consts.json" "$OUT/trainer/heard" build/trainer/1-first-light.wav \
-            build/trainer/2-neon-avenue.wav 2>/dev/null | grep -v '^SONGS=' | grep -v '^$' > "$OUT/trainer/heard.log" || fail=1
+            build/trainer/2-neon-avenue.wav build/trainer/3-lanterns-cinematic-dm-one-chord.wav 2>/dev/null |
+            grep -v '^SONGS=' | grep -v '^$' > "$OUT/trainer/heard.log" || fail=1
         cat "$OUT/trainer/heard.log"
         grep -q '^analyze: PASS' "$OUT/trainer/heard.log" || fail=1
         TR_SONGS="$TR_SONGS:$(ls "$OUT"/trainer/heard/heard-*.bin | tr '\n' ':')"

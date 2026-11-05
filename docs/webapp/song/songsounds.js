@@ -28,6 +28,9 @@ export function defaultSounds(score, C, style = styleFor(score.bpm)) {
   const part = (k) => (score[k] ? { ...score[k], sound: style[k] } : null);
   return { kit: style.kit, style: style.name, bass: part("bass"), chords: part("chords"), lead: part("lead") };
 }
+// a whole song's sounds (web/songgen.js sections): the style's kit and one sound a part
+export const styleSounds = (style) => ({ kit: style.kit, style: style.name,
+                                         sounds: { bass: style.bass, chords: style.chords, lead: style.lead } });
 export function checkPalettes(C) {                     // (tests: every name is a sound or a kit of the trainer)
   const bad = [];
   for (const s of STYLES) {

@@ -13,6 +13,21 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## The song page: whole songs (website, after 1.5.0)
+
+[The song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) makes **the whole song** a trainer level, not a
+loop of a few bars. No new firmware: BoopBox Trainer 1.5.0 plays it as it is.
+
+- It listens to the **whole file** (up to 6 minutes): the song's **sections** (up to four, A to D) and the order they
+  come in (A8 B8 A8 B16 C8...), then each section closely: its drums, bass, chords and lead. A part a section has not
+  (no drums in the intro) is muted there.
+- **Compare** the whole song, its sections in turn as song mode plays them, or one section on a loop, the original and
+  your FM-1 version side by side; a tab for each section to fix its drums or take a part out.
+- On the FM-1, **level 4 teaches it as level 3 does**: section A first, a pattern for each new part of the other
+  sections, each section saved (SAVE + keys 5-8), then the song on the SONG screen and song mode. A song is 50 to 80
+  steps; one too big for the FM-1 is made smaller, and the page says how.
+- Songs with a steady tempo and clear sections work best. Install a new song to replace the one in level 4.
+
 ## 1.5.0
 
 **BoopBox Trainer: your song as level 4** ([the trainer](docs/trainer.md)):
