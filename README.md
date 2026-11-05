@@ -48,9 +48,10 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 **Your song as a trainer level.** [A new page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) listens to an
 audio file (MP3, WAV, OGG, M4A...) in your browser, nothing uploaded, and writes a version the FM-1 can play: the
-tempo, the key, a drum beat, a bass line, chords and a lead. Play it next to the original on BoopBox's own sound
-engines, fix what it heard wrong, then install BoopBox Trainer with it as **level 4**: the coach teaches you to build
-it, step by step, like the three songs built in. BoopBox itself is unchanged ([all changes](CHANGELOG.md),
+tempo, the key, the song's sections (up to four) and their order, and in each a drum beat, a bass line, chords and a
+lead. Play it next to the original on BoopBox's own sound engines, fix what it heard wrong, then install BoopBox
+Trainer with it as **level 4**: the coach teaches you to build the whole song, section by section, and play it in song
+mode, like the three songs built in. BoopBox itself is unchanged ([all changes](CHANGELOG.md),
 [the trainer](docs/trainer.md)).
 
 ### 1.4.3

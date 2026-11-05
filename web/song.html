@@ -71,6 +71,12 @@
   .meter { height: 6px; background: var(--line); margin: 8px 0 2px; } .meter i { display: block; height: 100%; background: var(--green); }
   pre { color: var(--dim); font-size: 11px; white-space: pre-wrap; margin-top: 12px; max-height: 160px; overflow: auto; }
   .warn { color: var(--yellow); }
+  .song { display: flex; gap: 2px; margin: 4px 0 10px; }
+  .song div { background: var(--c); color: #000; font-size: 12px; font-weight: 600; padding: 4px 0 4px 6px; min-width: 0;
+              overflow: hidden; white-space: nowrap; opacity: .55; }
+  .song div.now { opacity: 1; outline: 2px solid var(--fg); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  .tabs button.on { border-color: var(--c, var(--orange)); color: var(--c, var(--orange)); }
   @media (max-width: 600px) { .players { grid-template-columns: 1fr; } .facts { grid-template-columns: repeat(2, 1fr); }
                               .grid { grid-template-columns: 52px repeat(16, 1fr); } }
 </style>
@@ -82,39 +88,41 @@
   <h1>Level 4: your song</h1>
   <p class="lead">Drop in a song. The page listens to it, writes a version the FM-1 can play, and turns it into a level of
     the trainer that teaches you to build it, step by step.</p>
-  <p class="small">Everything happens in this browser: the file is not uploaded anywhere. The result is an approximation
-    (four parts, a loop of a few bars), not a transcription: you can correct it before you install it.</p>
+  <p class="small">Everything happens in this browser: the file is not uploaded anywhere. The page finds the song's
+    sections (up to four: A, B, C, D) and the order they come in, and listens closely to each: its drums, bass, chords and
+    lead. It is an approximation, not a transcription: you can correct it before you install it.</p>
 
   <h2 style="--c: var(--blue)"><span>1</span>Choose a song</h2>
   <label class="drop" id="drop"><b>Drop an audio file here, or click to choose one</b>
-    <span class="small">MP3, WAV, OGG, M4A or FLAC</span><input type="file" id="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"></label>
+    <span class="small">MP3, WAV, OGG, M4A or FLAC, up to 6 minutes</span><input type="file" id="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac"></label>
   <div class="row" id="where" hidden>
     <span id="fname"></span>
-    <label>Listen from <input type="range" id="start" min="0" max="1" step="1" value="0"> <span id="startv"></span></label>
-    <button id="listen" class="go" style="width:auto;padding:10px 20px">Listen</button>
+    <button id="listen" class="go" style="width:auto;padding:10px 20px">Listen to the whole song</button>
   </div>
   <p class="small warn" id="ferr"></p>
 
   <section id="s2" hidden>
     <h2 style="--c: var(--green)"><span>2</span>Listening</h2>
     <ol class="stages" id="stages">
-      <li data-k="split"><span>Drums apart</span><progress max="1" value="0"></progress></li>
-      <li data-k="tempo"><span>Tempo and bars</span><progress max="1" value="0"></progress></li>
-      <li data-k="notes"><span>Notes (Basic Pitch)</span><progress max="1" value="0"></progress></li>
+      <li data-k="form"><span>The song's form</span><progress max="1" value="0"></progress></li>
+      <li data-k="section"><span>Each section, closely</span><progress max="1" value="0"></progress></li>
       <li data-k="done"><span>Your FM-1 version</span><progress max="1" value="0"></progress></li>
     </ol>
+    <p class="small" id="stagewhat"></p>
   </section>
 
   <section id="s3" hidden>
     <h2 style="--c: var(--yellow)"><span>3</span>Compare</h2>
+    <div class="song" id="song"></div>
+    <div class="tabs" id="tabs"></div>
     <div class="players">
       <div class="player" style="--c: var(--blue)">
-        <h3>The original</h3><p class="small" id="origwhat">The bars the page listened to, on a loop.</p>
+        <h3>The original</h3><p class="small" id="origwhat"></p>
         <button class="play" id="pOrig">Play</button>
         <div class="row" id="stems"></div>
       </div>
       <div class="player" style="--c: var(--orange)">
-        <h3>Your FM-1 version</h3><p class="small">BoopBox's own sound engines: what the FM-1 will play.</p>
+        <h3>Your FM-1 version</h3><p class="small" id="fm1what">BoopBox's own sound engines: what the FM-1 will play.</p>
         <button class="play" id="pFm1">Play</button>
         <div class="row" id="mutes"></div>
       </div>
@@ -130,8 +138,9 @@
       <label>Style <select id="style"></select></label>
       <label>Lead <select id="leaddiv"><option value="1/8">eighths</option><option value="1/16">sixteenths (closer)</option></select></label>
     </div>
+    <p class="small warn" id="fitnote"></p>
     <div id="parts"></div>
-    <p class="small">Click the drum grid to fix a hit. A part's box takes it out of the song (and out of the lesson).</p>
+    <p class="small" id="partshelp"></p>
     <h3 style="margin:18px 0 0;font-size:15px">The steps the trainer will show</h3>
     <ol class="steps" id="steps"></ol>
   </section>
@@ -157,8 +166,8 @@
 <script type="application/json" id="meta">/*META*/</script>
 <script type="module">
 import * as A from "./songanalyze.js";
-import { makeLesson, checkScore, NOTE_NAMES, DRUM_LANES } from "./songgen.js";
-import { STYLES, CHOICES, defaultSounds, styleFor } from "./songsounds.js";
+import { fitLesson, checkScore, NOTE_NAMES, DRUM_LANES } from "./songgen.js";
+import { STYLES, CHOICES, styleFor } from "./songsounds.js";
 import { encodeSong, patchPackage, SLOT_SIZE } from "./trslot.js";
 import { programOf, PART_TRACK } from "./songplay.js";
 import { productOf, logicalImage } from "./fm1pkg.js";
@@ -168,11 +177,13 @@ const $ = (id) => document.getElementById(id);
 const C = JSON.parse($("consts").textContent), meta = JSON.parse($("meta").textContent);
 const PARTS = [["drums", "Drums", "var(--blue)"], ["bass", "Bass", "var(--green)"], ["chords", "Chords", "var(--yellow)"],
                ["lead", "Lead", "var(--orange)"]];
+const SEC = "ABCD", SEC_COL = ["var(--blue)", "var(--green)", "var(--yellow)", "var(--orange)"];
 const LANE_LABEL = { KICK: "Kick", SNARE: "Snare", CLAP: "Clap", HAT: "Hat", OHAT: "Open hat" };
+const MAX_SEC = 6 * 60;
 const nn = (n) => NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
-const S = { file: null, buf: null, x: null, r: null, score: null, lesson: null, sounds: null, off: {}, ctx: null,
-            src: null, fm1: null, playing: null };
-window.trainerSong = S;                                   // (tests/trainer_page_test.py)
+const S = { file: null, buf: null, r: null, base: null, edit: [], off: [], sounds: null, tab: -1, ctx: null, src: null,
+            fm1: null, playing: null, mute: {} };
+window.trainerSong = S;                                   // (tests/trainer_page_test.mjs)
 
 // ---- 1. the file
 function chosen(f) {
@@ -185,11 +196,9 @@ function chosen(f) {
       audio();
       S.buf = await S.ctx.decodeAudioData(bytes);
     } catch (e) { $("ferr").textContent = `This browser cannot read that file (${e.message || e}). Try an MP3 or WAV.`; return; }
-    const d = Math.floor(S.buf.duration), st = $("start");
-    st.max = Math.max(0, d - 10);
-    st.value = d > 60 ? Math.round(d * 0.25) : 0;      // (past the intro, most often)
-    st.oninput = () => { $("startv").textContent = `${st.value} s (of ${d} s)`; };
-    st.oninput();
+    const d = Math.round(S.buf.duration);
+    $("fname").textContent = `${f.name}, ${Math.floor(d / 60)}:${String(d % 60).padStart(2, "0")}`;
+    if (S.buf.duration > MAX_SEC) $("ferr").textContent = "Longer than 6 minutes: the page listens to its first 6.";
     $("where").hidden = false;
   });
 }
@@ -203,12 +212,12 @@ function audio() {                                       // one context at 44.1 
   if (!S.ctx) S.ctx = new AudioContext({ sampleRate: 44100 });
   return S.ctx;
 }
-async function window22050(buf, from, secs) {          // the stretch listened to, mono at 22050 Hz
-  const n = Math.min(buf.length - Math.floor(from * buf.sampleRate), Math.floor(secs * buf.sampleRate));
+async function at22050(buf, secs) {                      // the song, mono at 22050 Hz
+  const n = Math.min(buf.length, Math.floor(secs * buf.sampleRate));
   const off = new OfflineAudioContext(1, Math.ceil((n / buf.sampleRate) * A.RATE), A.RATE), s = off.createBufferSource();
   s.buffer = buf;
   s.connect(off.destination);
-  s.start(0, from, n / buf.sampleRate);
+  s.start(0, 0, n / buf.sampleRate);
   return (await off.startRendering()).getChannelData(0);
 }
 let tfReady = null;
@@ -227,36 +236,40 @@ function loadModel() {                                   // TensorFlow.js and th
   return tfReady;
 }
 
-// ---- 2. listening
+// ---- 2. listening: the form of the whole song, then each section up close
 $("listen").addEventListener("click", async () => {
   if (!S.buf) return;
   stopAll();
   $("listen").disabled = true;
   $("s2").hidden = false;
-  document.querySelectorAll("#stages li").forEach((li) => { li.className = ""; li.querySelector("progress").value = 0; });
+  const order = ["form", "section", "done"];
   const stage = (k, p) => {
     for (const li of document.querySelectorAll("#stages li")) {
-      const order = ["split", "tempo", "notes", "done"], at = order.indexOf(li.dataset.k), now = order.indexOf(k);
+      const at = order.indexOf(li.dataset.k), now = order.indexOf(k);
       li.className = at < now ? "done" : at === now ? "now" : "";
       li.querySelector("progress").value = at < now ? 1 : at === now ? p : 0;
     }
+    if (k === "section" && S.form) $("stagewhat").textContent =
+      `${S.form.sections.length} section${S.form.sections.length > 1 ? "s" : ""} found: listening to section ${SEC[Math.min(S.form.sections.length - 1, Math.floor(p * S.form.sections.length))]}…`;
   };
   try {
-    S.start = +$("start").value;
-    S.x = await window22050(S.buf, S.start, 30);
-    const bp = await loadModel();
-    const t = performance.now();
-    S.r = await A.analyze(S.x, bp, stage);
+    const x = await at22050(S.buf, MAX_SEC), bp = await loadModel(), t = performance.now();
+    S.form = null;
+    S.r = await A.analyzeSong(x, bp, (k, p, st) => { if (st) S.form = st; stage(k, p); });
     S.secs = (performance.now() - t) / 1000;
     S.key = S.r.key;
     S.style = styleFor(S.r.bpm);
-    S.off = {};
-    rescore(true);
+    S.sounds = { kit: S.style.kit, bass: S.style.bass, chords: S.style.chords, lead: S.style.lead };
+    rescore();
+    S.edit = S.base.sections.map(() => ({}));
+    S.off = S.base.sections.map(() => ({}));
+    S.tab = S.base.sections.length > 1 ? -1 : 0;
     $("name").value = S.file.name.replace(/\.[^.]+$/, "").toUpperCase().replace(/[^ -~]/g, "").slice(0, 16);
-    stems();
+    controls();
     await fm1Player();
     update();
     stage("done", 1);
+    $("stagewhat").textContent = `Listened in ${Math.round(S.secs)} s.`;
     $("s3").hidden = $("s4").hidden = false;
     $("s3").scrollIntoView({ behavior: "smooth" });
   } catch (e) {
@@ -267,38 +280,50 @@ $("listen").addEventListener("click", async () => {
 });
 
 // ---- 3. the score, the lesson, the players
-function rescore(fresh) {                                // the score from the analysis, with the choices made
-  const base = A.scoreOf({ ...S.r, key: S.key }, { leadDiv: $("leaddiv").value });
-  const snd = defaultSounds(base, C, S.style);
-  if (!fresh && S.score) {                               // (the drum grid as clicked, the sounds as picked)
-    base.drums.lanes = S.score.drums.lanes;
-    for (const k of ["bass", "chords", "lead"]) if (snd[k] && S.sounds?.[k]) snd[k].sound = S.sounds[k];
-  }
-  S.sounds = { kit: (!fresh && S.sounds?.kit) || snd.kit, bass: snd.bass?.sound, chords: snd.chords?.sound, lead: snd.lead?.sound };
-  S.score = { ...base, drums: { ...base.drums, kit: S.sounds.kit }, bass: snd.bass, chords: snd.chords, lead: snd.lead };
-  if (fresh) controls();
+function rescore() {                                     // the sections' parts from the analysis, in the key chosen
+  S.base = A.songScoreOf(S.r, { key: S.key, leadDiv: $("leaddiv").value });
+  S.form = S.r.structure;
 }
-function playable() {                                    // the score as it will be taught: the parts kept
-  const s = { ...S.score, name: $("name").value || "YOUR SONG" };
-  for (const [k] of PARTS) if (S.off[k]) s[k] = null;
-  return s;
+function playable() {                                    // the score as it will be taught: the edits, the parts kept
+  const b = S.base;
+  return {
+    name: $("name").value || "YOUR SONG", bpm: b.bpm, root: b.root, scale: b.scale, kit: S.sounds.kit,
+    sounds: { bass: S.sounds.bass, chords: S.sounds.chords, lead: S.sounds.lead }, bassDiv: "1/4", leadDiv: $("leaddiv").value,
+    sections: b.sections.map((sec, i) => {
+      const o = {};
+      for (const [k] of PARTS) {
+        let part = sec[k];
+        if (k === "drums" && part && S.edit[i].lanes) part = { lanes: S.edit[i].lanes };
+        o[k] = S.off[i][k] || !part ? null : part;
+      }
+      return o;
+    }),
+    song: b.song,
+  };
 }
 function update() {
   const s = playable(), bad = checkScore(s, C);
-  try { S.lesson = makeLesson(s, C); S.area = encodeSong(S.lesson); }
-  catch (e) { S.lesson = null; $("status").textContent = e.message; }
+  try {
+    const fit = fitLesson(s, C, encodeSong);
+    S.lesson = fit.lesson; S.area = fit.area;
+    $("fitnote").textContent = fit.notes.length ? `To fit the FM-1: ${fit.notes.join("; ")}.` : "";
+  } catch (e) { S.lesson = null; S.area = null; $("fitnote").textContent = e.message; }
+  if (bad.length) $("fitnote").textContent += ` ${bad.join("; ")}`;
   $("fTempo").textContent = `${s.bpm} BPM`;
   $("fKey").textContent = `${NOTE_NAMES[s.root]} ${s.scale === "MIN" ? "minor" : "major"}`;
   const used = S.area ? S.area[8] | (S.area[9] << 8) : 0;
   $("fSteps").textContent = S.lesson ? S.lesson.cards.length : "-";
   $("fSize").textContent = `${((100 * used) / SLOT_SIZE).toFixed(0)} %`;
   $("go").disabled = !S.lesson || bad.length > 0 || !meta.pkg;
+  songBar();
+  tabs();
   parts();
   stepsList();
   if (S.fm1 && S.lesson) {
-    S.fm1.port.postMessage({ type: "load", ops: programOf(S.lesson, C) });
-    for (const [k] of PARTS) S.fm1.port.postMessage({ type: "mute", track: PART_TRACK[k], on: !!S.mute?.[k] });
-    if (S.playing === "fm1") S.fm1.port.postMessage({ type: "play", on: true });
+    S.prog = programOf(S.lesson, C);
+    S.fm1.port.postMessage({ type: "load", prog: S.prog });
+    S.fm1.port.postMessage({ type: "mode", song: S.tab < 0, section: Math.max(0, S.tab) });
+    for (const [k] of PARTS) S.fm1.port.postMessage({ type: "mute", track: PART_TRACK[k], on: !!S.mute[k] });
   }
 }
 function controls() {
@@ -308,42 +333,94 @@ function controls() {
   $("style").innerHTML = STYLES.map((s, i) => `<option value="${i}">${s.name.toLowerCase()}</option>`).join("");
   $("style").value = STYLES.indexOf(S.style);
 }
-$("root").onchange = $("scale").onchange = () => { S.key = { root: +$("root").value, scale: $("scale").value }; rescore(false); update(); };
-$("style").onchange = () => { S.style = STYLES[+$("style").value]; S.sounds = null; rescore(false); S.sounds.kit = S.style.kit; S.score.drums.kit = S.style.kit; update(); };
-$("leaddiv").onchange = () => { rescore(false); update(); };
+$("root").onchange = $("scale").onchange = () => { S.key = { root: +$("root").value, scale: $("scale").value }; rescore(); update(); };
+$("style").onchange = () => {
+  S.style = STYLES[+$("style").value];
+  S.sounds = { kit: S.style.kit, bass: S.style.bass, chords: S.style.chords, lead: S.style.lead };
+  update();
+};
+$("leaddiv").onchange = () => { rescore(); update(); };
 $("name").oninput = () => update();
 
+function songBar() {                                     // the song: its parts in order, as long as their bars
+  const el = $("song"), song = S.base.song.length ? S.base.song : [[0, 4]];
+  const total = song.reduce((a, [, n]) => a + n, 0);
+  el.innerHTML = "";
+  song.forEach(([g, n], i) => {
+    const d = document.createElement("div");
+    d.style.setProperty("--c", SEC_COL[g]);
+    d.style.flex = `${n} 1 0`;
+    d.textContent = `${SEC[g]}${n}`;
+    d.title = `Section ${SEC[g]}, ${n} bars`;
+    d.dataset.i = i;
+    el.appendChild(d);
+  });
+  el.title = `${total} bars`;
+}
+function tabs() {
+  const el = $("tabs"), n = S.base.sections.length;
+  el.innerHTML = "";
+  const tab = (i, label, col) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.style.setProperty("--c", col);
+    b.className = S.tab === i ? "on" : "";
+    b.onclick = () => { S.tab = i; if (S.playing) { const was = S.playing; stopAll(); was === "orig" ? playOrig() : playFm1(); } update(); };
+    el.appendChild(b);
+  };
+  if (n > 1) tab(-1, `The whole song (${S.base.song.reduce((a, [, b]) => a + b, 0)} bars)`, "var(--fg)");
+  for (let i = 0; i < n; i++) tab(i, `Section ${SEC[i]}`, SEC_COL[i]);
+  $("origwhat").textContent = S.tab < 0 ? "The song from its first section to its last." :
+    `Section ${SEC[S.tab]}: its four bars the page listened to, on a loop.`;
+  $("fm1what").textContent = S.tab < 0 ? "BoopBox's own engines, the sections in turn as the FM-1's song mode plays them." :
+    `Section ${SEC[S.tab]} on a loop, on BoopBox's own engines.`;
+  $("stems").hidden = S.tab < 0;
+  if (S.tab >= 0) stems();
+}
 function parts() {
-  const box = $("parts"), s = S.score;
+  const box = $("parts");
   box.innerHTML = "";
+  if (S.tab < 0) {
+    $("partshelp").textContent = "Pick a section to see and fix its parts. Sounds are the song's: they are the same in every section.";
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const [k, label] of PARTS) {
+      const opts = (k === "drums" ? C.KITS.slice(5) : CHOICES[k]).map((n) => `<option${n === S.sounds[k === "drums" ? "kit" : k] ? " selected" : ""}>${n}</option>`).join("");
+      const l = document.createElement("label");
+      l.innerHTML = `${label} <select>${opts}</select>`;
+      l.querySelector("select").onchange = (e) => { S.sounds[k === "drums" ? "kit" : k] = e.target.value; update(); };
+      row.appendChild(l);
+    }
+    box.appendChild(row);
+    return;
+  }
+  $("partshelp").textContent = "Click the drum grid to fix a hit. A part's box takes it out of this section (it is muted there).";
+  const i = S.tab, sec = S.base.sections[i];
   for (const [k, label, col] of PARTS) {
-    const part = s[k], el = document.createElement("div");
+    let part = sec[k];
+    if (k === "drums" && part && S.edit[i].lanes) part = { lanes: S.edit[i].lanes };
+    const el = document.createElement("div");
     el.className = "part";
     el.style.setProperty("--c", col);
-    if (!part || (k === "drums" && !part.lanes)) {
-      el.innerHTML = `<header><b>${label}</b><span class="small">not heard in these bars</span></header>`;
+    if (!part) {
+      el.innerHTML = `<header><b>${label}</b><span class="small">not in this section</span></header>`;
       box.appendChild(el);
       continue;
     }
-    const opts = (k === "drums" ? C.KITS.slice(5) : CHOICES[k]).map((n) => `<option${n === (k === "drums" ? S.sounds.kit : S.sounds[k]) ? " selected" : ""}>${n}</option>`).join("");
-    el.innerHTML = `<header><label><input type="checkbox" ${S.off[k] ? "" : "checked"}> <b>${label}</b></label>
-      <label>${k === "drums" ? "Kit" : "Sound"} <select>${opts}</select></label><span class="small">${desc(k, part)}</span></header>`;
-    el.querySelector("input").onchange = (e) => { S.off[k] = !e.target.checked; update(); };
-    el.querySelector("select").onchange = (e) => {
-      if (k === "drums") { S.sounds.kit = e.target.value; S.score.drums.kit = e.target.value; }
-      else { S.sounds[k] = e.target.value; S.score[k].sound = e.target.value; }
-      update();
-    };
+    const sound = k === "drums" ? S.sounds.kit : S.sounds[k];
+    el.innerHTML = `<header><label><input type="checkbox" ${S.off[i][k] ? "" : "checked"}> <b>${label}</b></label>
+      <span class="small">${sound} · ${desc(k, part)}</span></header>`;
+    el.querySelector("input").onchange = (e) => { S.off[i][k] = !e.target.checked; update(); };
     if (k === "drums") {
-      const g = document.createElement("div");
+      const g = document.createElement("div"), lanes = S.edit[i].lanes || JSON.parse(JSON.stringify(part.lanes));
       g.className = "grid";
       for (const lane of DRUM_LANES) {
         g.insertAdjacentHTML("beforeend", `<span>${LANE_LABEL[lane]}</span>`);
-        for (let i = 0; i < 16; i++) {
+        for (let st = 0; st < 16; st++) {
           const b = document.createElement("button");
-          b.title = `${LANE_LABEL[lane]}, step ${i + 1}`;
-          if (part.lanes[lane][i]) b.className = "hit";
-          b.onclick = () => { part.lanes[lane][i] = part.lanes[lane][i] ? 0 : 1; update(); };
+          b.title = `${LANE_LABEL[lane]}, step ${st + 1}`;
+          if (lanes[lane][st]) b.className = "hit";
+          b.onclick = () => { lanes[lane][st] = lanes[lane][st] ? 0 : 1; S.edit[i].lanes = lanes; update(); };
           g.appendChild(b);
         }
       }
@@ -352,7 +429,7 @@ function parts() {
       const n = document.createElement("div");
       n.className = "notes";
       n.textContent = k === "chords" ? part.steps.map((c) => c.map(nn).join("+")).join("  |  ")
-        : part.steps.map((x, i) => (i && i % 4 === 0 ? "| " : "") + (x == null ? "." : nn(x))).join(" ");
+        : part.steps.map((x, j) => (j && j % 4 === 0 ? "| " : "") + (x == null ? "." : nn(x))).join(" ");
       el.appendChild(n);
     }
     box.appendChild(el);
@@ -361,7 +438,7 @@ function parts() {
 function desc(k, p) {
   if (k === "drums") return "a bar of sixteenths";
   if (k === "chords") return `a chord a bar, ${p.steps.length} bars`;
-  return k === "bass" ? "a note a beat, four bars" : p.div === "1/16" ? "sixteenths, one bar" : "eighths, two bars";
+  return k === "bass" ? "a note a beat, four bars" : $("leaddiv").value === "1/16" ? "sixteenths, one bar" : "eighths, two bars";
 }
 function stepsList() {
   const ol = $("steps");
@@ -377,20 +454,12 @@ function stepsList() {
   }
 }
 
-// the original: the bars listened to, on a loop; or one of its parts
+// the original: the song from its first section; or a section's four bars on a loop (or one of its parts)
 function stems() {
-  const r = S.r, sc = S.score, rate = A.RATE;
-  const from = Math.max(0, sc.t0), len = Math.min(r.sep.harmonic.length / rate - from, sc.barSec * 4);
-  S.loop = { from, len };
-  $("origwhat").textContent = `Bars from ${(S.start + from).toFixed(1)} s, on a loop.`;
-  const mk = (data) => {
-    const b = S.ctx.createBuffer(1, data.length, rate);
-    b.copyToChannel(data, 0);
-    return b;
-  };
-  S.parts = { drums: mk(r.sep.percussive), music: mk(r.sep.harmonic) };
-  S.stem = "full";
-  const row = $("stems");
+  const i = S.tab, sec = S.r.sections[i], row = $("stems"), rate = A.RATE;
+  const mk = (data) => { const b = S.ctx.createBuffer(1, data.length, rate); b.copyToChannel(data, 0); return b; };
+  if (!sec.buffers) sec.buffers = { drums: mk(sec.sep.percussive), music: mk(sec.sep.harmonic) };
+  S.stem ??= "full";
   row.innerHTML = "";
   for (const [k, label] of [["full", "Full"], ["drums", "Drums"], ["bass", "Bass"], ["other", "Other"]]) {
     const b = document.createElement("button");
@@ -408,22 +477,30 @@ function playOrig() {
   ctx.resume();
   const s = ctx.createBufferSource();
   let node = s;
-  if (S.stem === "full") { s.buffer = S.buf; s.loopStart = S.start + S.loop.from; }
-  else {
-    s.buffer = S.stem === "drums" ? S.parts.drums : S.parts.music;
-    s.loopStart = S.loop.from;
-    if (S.stem !== "drums") {
-      const f = ctx.createBiquadFilter();
-      f.type = S.stem === "bass" ? "lowpass" : "highpass";
-      f.frequency.value = 220;
-      s.connect(f);
-      node = f;
+  if (S.tab < 0) {                                       // the whole song, from its first section
+    s.buffer = S.buf;
+    s.connect(ctx.destination);
+    s.start(0, Math.max(0, S.base.songStart));
+    s.onended = () => { if (S.src === s) stopAll(); };
+  } else {
+    const sec = S.r.sections[S.tab], len = 4 * S.base.barSec;
+    if (S.stem === "full" || !S.stem) { s.buffer = S.buf; s.loopStart = sec.at; }
+    else {
+      s.buffer = S.stem === "drums" ? sec.buffers.drums : sec.buffers.music;
+      s.loopStart = sec.at - sec.from;
+      if (S.stem !== "drums") {
+        const f = ctx.createBiquadFilter();
+        f.type = S.stem === "bass" ? "lowpass" : "highpass";
+        f.frequency.value = 220;
+        s.connect(f);
+        node = f;
+      }
     }
+    s.loop = true;
+    s.loopEnd = s.loopStart + len;
+    node.connect(ctx.destination);
+    s.start(0, s.loopStart);
   }
-  s.loop = true;
-  s.loopEnd = s.loopStart + S.loop.len;
-  node.connect(ctx.destination);
-  s.start(0, s.loopStart);
   S.src = s;
   S.playing = "orig";
   $("pOrig").textContent = "Stop";
@@ -437,8 +514,11 @@ async function fm1Player() {
   S.fm1 = new AudioWorkletNode(ctx, "boopbox-song", { numberOfInputs: 0, outputChannelCount: [2], processorOptions: { module, C } });
   S.fm1.onprocessorerror = (e) => { S.fm1Error = String(e.message || e); say(`The FM-1 player stopped: ${S.fm1Error}`); };
   S.fm1.connect(ctx.destination);
-  S.mute = {};
-  S.fm1.port.onmessage = ({ data }) => { if (data.error) console.error(data.error); };
+  S.fm1.port.onmessage = ({ data }) => {
+    if (data.error) console.error(data.error);
+    if ("at" in data) document.querySelectorAll("#song div").forEach((d) => d.classList.toggle("now", !!data.at && +d.dataset.i === data.at[0]));
+    if (data.ended && S.playing === "fm1") stopAll();
+  };
   const row = $("mutes");
   row.innerHTML = "";
   for (const [k, label, col] of PARTS) {
@@ -452,22 +532,23 @@ async function fm1Player() {
     row.appendChild(b);
   }
 }
-function stopAll() {
-  if (S.src) { try { S.src.stop(); } catch {} S.src = null; }
-  if (S.fm1) S.fm1.port.postMessage({ type: "play", on: false });
-  S.playing = null;
-  $("pOrig").textContent = $("pFm1").textContent = "Play";
-}
-$("pOrig").onclick = () => (S.playing === "orig" ? stopAll() : playOrig());
-$("pFm1").onclick = () => {
-  if (S.playing === "fm1") return stopAll();
+function playFm1() {
   stopAll();
   audio().resume();
+  S.fm1.port.postMessage({ type: "mode", song: S.tab < 0, section: Math.max(0, S.tab) });
   S.fm1.port.postMessage({ type: "play", on: true });
   S.playing = "fm1";
   $("pFm1").textContent = "Stop";
-};
-
+}
+function stopAll() {
+  if (S.src) { const s = S.src; S.src = null; try { s.stop(); } catch {} }
+  if (S.fm1) S.fm1.port.postMessage({ type: "play", on: false });
+  S.playing = null;
+  $("pOrig").textContent = $("pFm1").textContent = "Play";
+  document.querySelectorAll("#song div").forEach((d) => d.classList.remove("now"));
+}
+$("pOrig").onclick = () => (S.playing === "orig" ? stopAll() : playOrig());
+$("pFm1").onclick = () => (S.playing === "fm1" ? stopAll() : playFm1());
 // ---- 4. install: the trainer package with the song in its song area
 $("ver").textContent = meta.version || "";
 const say = (t) => { $("status").textContent = t; };
