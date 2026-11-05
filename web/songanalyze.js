@@ -376,7 +376,7 @@ export async function structureOf(x, onProgress = () => {}) {
   const form = formOf(blocks);
   // each section's snare body on the sixteenths, folded over all its bars (a long section: many bars, a sure pattern)
   form.sections.forEach((sec, g) => {
-    const v = new Array(16).fill(0);
+    const v = new Array(16).fill(0), kv = new Array(16).fill(0);
     let bars = 0;
     form.label.forEach((lab, i) => {
       if (lab !== g || blocks[form.firstBlock + i]?.quiet) return;
@@ -384,14 +384,15 @@ export async function structureOf(x, onProgress = () => {}) {
         const t0 = grid.first + ((form.firstBlock + i) * 4 + j) * barF;
         for (let k = 0; k < 16; k++) {
           const t = t0 + (k * barF) / 16;
-          let m = 0;
-          for (let q = Math.floor(t - 1); q <= t + (barF / 16) * 0.45; q++) m = Math.max(m, body[q] || 0);
+          let m = 0, km = 0;
+          for (let q = Math.floor(t - 1); q <= t + (barF / 16) * 0.45; q++) { m = Math.max(m, body[q] || 0); km = Math.max(km, low[q] || 0); }
           v[k] += m;
+          kv[k] += km;
         }
       }
     });
-    const mx = Math.max(...v) || 1;
-    sec.fold = { bars, M: v.map((x) => x / mx) };
+    const mx = Math.max(...v) || 1, kx = Math.max(...kv) || 1;
+    sec.fold = { bars, M: v.map((x) => x / mx), K: kv.map((x) => x / kx) };
   });
   return { bpm, fps, first: grid.first, barF, barSec: barF / fps, blocks, nbars, ...form };
 }
@@ -481,6 +482,11 @@ export function songScoreOf(r, opts = {}) {
     // half-time over all the section's bars too: the snare body on beat 3 the strongest beat and 1.8 times the
     // backbeat's (a dense drop: four bars are too few; on the renders the backbeats stay at 1.0 and under)
     const fold = r.structure.sections[r.sections.indexOf(s)]?.fold, M = fold?.M;
+    if (drums && fold && fold.bars >= 16) {             // (16 bars and more: the kick from all of them)
+      const K = fold.K, med = [...K].sort((a, b) => a - b)[8];
+      const KICK = K.map((k, i) => (k >= 0.6 && k >= 1.5 * med && !(drums.lanes.SNARE[i] && k < 0.8) ? 1 : 0));
+      if (KICK.some(Boolean)) drums = { ...drums, lanes: { ...drums.lanes, KICK } };
+    }
     if (drums && !drums.halftime && fold && fold.bars >= 16 && M[8] >= Math.max(M[0], M[4], M[12]) && M[8] >= 1.8 * (M[4] + M[12]) / 2) {
       const lanes = { ...drums.lanes, SNARE: new Array(16).fill(0) };
       lanes.SNARE[8] = 1;
