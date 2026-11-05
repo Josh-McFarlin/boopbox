@@ -178,9 +178,11 @@ export function makeLesson(score0, C) {
         const lanes = have.slice(0, j + 1), b = [16, lanes.length];
         for (const x of lanes) { b.push(C.LANES.indexOf(x)); for (let s = 0; s < 16; s++) b.push(part.lanes[x][s] ? 0x10 : 0); }
         const keys = part.lanes[l].map((h, s) => (h ? s + 1 : 0)).filter(Boolean);
-        const pre = `${of.trim()}: ${LANE_HEAD[l][0]}`;
-        const head = of && pre.length <= C.HEAD_MAX && width(pre, C) <= C.HEAD_W ? pre : LANE_HEAD[l][0];
-        add(head, keyList(keys, C), TG("LANES"), LANE_HEAD[l][1], { trk: 3, data: target(b) });
+        const half = l === "SNARE" && keys.length === 1 && keys[0] === 9;   // (half-time: the snare on beat 3 alone)
+        const own = half ? "HALF-TIME: SNARE ON 9" : LANE_HEAD[l][0], pre = `${of.trim()}: ${own}`;
+        const head = of && pre.length <= C.HEAD_MAX && width(pre, C) <= C.HEAD_W ? pre : own;
+        add(head, half ? "KNOB 1 TO SNARE, PRESS KEY 9" : keyList(keys, C), TG("LANES"), half ? "HALFTIME" : LANE_HEAD[l][1],
+            { trk: 3, data: target(b) });
       });
       if (!heard && have.length) { add("HEAR IT", "PRESS PLAY", TG("PLAY"), "GRID", { v: 1, btn: B("PLAY") }); heard = true; }
     } else if (k === "chords") {

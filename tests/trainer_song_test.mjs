@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { makeLesson, checkScore } from "../web/songgen.js";
 import { encodeSong, describeSong } from "../web/trslot.js";
 import { programOf, SongEngine, PART_TRACK } from "../web/songplay.js";
+import { checkPalettes, styleFor } from "../web/songsounds.js";
 
 const [consts, out] = process.argv.slice(2);
 const C = JSON.parse(readFileSync(consts, "utf8"));
@@ -60,8 +61,23 @@ const whole = {
   song: [[0, 4], [1, 8], [2, 8], [1, 8], [2, 8], [2, 8], [0, 4]],
 };
 
+// dubstep: half-time (the snare on beat 3, step 9), the DUBSTEP style's sounds (web/songsounds.js), an intro and a drop
+const half = (s) => lane(s);
+const dub = {
+  name: "HALF TIME", bpm: 140, root: 5, scale: "MIN", kit: "DUBSTEP",
+  sounds: { bass: "WOBBLE", chords: "DARK STR", lead: "SUPERSAW" }, bassDiv: "1/4", leadDiv: "1/8",
+  sections: [
+    { drums: null, bass: null, chords: { steps: [[53, 56, 60], [49, 53, 56], [56, 60, 63], [51, 55, 58]] }, lead: null },
+    { drums: { lanes: { KICK: half("x.........x....."), SNARE: half("........x......."), CLAP: off, HAT: half("..x...x...x...x."), OHAT: off } },
+      bass: { steps: [53, null, null, null, 49, null, null, null, 56, null, null, null, 51, null, null, null] },
+      chords: { steps: [[53, 56, 60], [49, 53, 56], [56, 60, 63], [51, 55, 58]] },
+      lead: { steps: [72, null, 75, null, 77, null, 75, 72, 70, null, 68, null, 70, null, null, null] } },
+  ],
+  song: [[0, 8], [1, 16], [0, 4], [1, 16]],
+};
+
 const paths = [];
-for (const [i, s] of [first, bright, sparse, whole].entries()) {
+for (const [i, s] of [first, bright, sparse, whole, dub].entries()) {
   const bad = checkScore(s, C);
   check(!bad.length, `score ${s.name}: playable on the FM-1 ${bad.join("; ")}`);
   const song = makeLesson(s, C), area = encodeSong(song), d = describeSong(area);
@@ -70,7 +86,12 @@ for (const [i, s] of [first, bright, sparse, whole].entries()) {
   const kinds = new Set(song.cards.map((c) => c.goal));
   const kindsOk = s.sections ? [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18] : [0, 1, 2, 3, 4, 5, 6, 8, 9, 18];
   check([...kinds].every((g) => kindsOk.includes(g)), `${song.name}: only the kinds of step the built-in levels have`);
-  if (s.sections) {
+  if (s === dub) {
+    const h = song.cards.find((c) => c.head === "HALF-TIME: SNARE ON 9");
+    check(!!h && C.TOPICS[h.why] === "HALFTIME" && checkPalettes(C).length === 0 && styleFor(140, true).name === "DUBSTEP" &&
+          styleFor(140).name !== "DUBSTEP", `${song.name}: the half-time snare step (why: HALFTIME); DUBSTEP for a half-time 140`);
+  }
+  if (s.sections && s !== dub) {
     const n = (g) => song.cards.filter((c) => c.goal === C.TG[g]).length;
     check(n("TG_SAVED") === 3 && n("TG_SONG") === 2 && n("TG_SONGMODE") === 1 && n("TG_PATSEL") >= 2,
           `${song.name}: ${n("TG_PATSEL")} patterns chosen, 3 sections saved, the song, song mode`);

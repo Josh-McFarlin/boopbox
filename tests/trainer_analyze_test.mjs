@@ -43,9 +43,9 @@ function wav(path) {                                   // 16-bit PCM
 }
 // what the trainer's songs are (tools/trainer/songs.py): the tempo, the key, level 1's beat, the sections at least
 const TRUTH = {
-  "1-first-light": { bpm: 86, root: 9, scale: "MIN", KICK: [0, 7, 10], SNARE: [4, 12], sections: 1 },
-  "2-neon-avenue": { bpm: 104, root: 2, scale: "MIN", sections: 2 },            // VERSE 4, CHORUS 8, VERSE 4, CHORUS 8
-  "3-lanterns-cinematic-dm-one-chord": { bpm: 150, root: 2, scale: "MIN", sections: 3 },   // A4 B4 C8 D8 B4 C8 A4
+  "1-first-light": { bpm: 86, root: 9, scale: "MIN", KICK: [0, 7, 10], SNARE: [4, 12], sections: 1, halftime: false },
+  "2-neon-avenue": { bpm: 104, root: 2, scale: "MIN", sections: 2, halftime: false },   // VERSE 4, CHORUS 8, VERSE 4, CHORUS 8
+  "3-lanterns-cinematic-dm-one-chord": { bpm: 150, root: 2, scale: "MIN", sections: 3, halftime: true },   // melodic dubstep
 };
 const bp = { BasicPitch: BP.BasicPitch, outputToNotesPoly: TM.outputToNotesPoly, noteFramesToTime: TM.noteFramesToTime };
 const m = model();
@@ -69,6 +69,9 @@ for (const path of wavs) {
     check(Math.abs(score.bpm - truth.bpm) <= 1, `${name}: the tempo (${score.bpm}, the song ${truth.bpm})`);
     check(score.root === truth.root && score.scale === truth.scale, `${name}: the key (${score.root} ${score.scale})`);
     check(score.sections.length >= truth.sections, `${name}: ${score.sections.length} sections (at least ${truth.sections}): ${form}`);
+    const style = styleFor(score.bpm, score.halftime).name;
+    check(score.halftime === truth.halftime && (style === "DUBSTEP") === truth.halftime,
+          `${name}: ${score.halftime ? "half-time" : "a backbeat"}, the style ${style}`);
     if (truth.KICK) {                                   // (the best section's beat: level 1 opens without drums)
       const f1 = (got, want) => (2 * got.filter((i) => want.includes(i)).length) / (got.length + want.length || 1);
       const hits = (d, l) => d.lanes[l].flatMap((h, i) => (h ? [i] : []));
@@ -77,7 +80,7 @@ for (const path of wavs) {
       check(best >= 0.7, `${name}: the kick and the snare (the best section: F1 ${best.toFixed(2)})`);
     }
   }
-  const full = { ...score, name, ...styleSounds(styleFor(score.bpm)), bassDiv: "1/4", leadDiv: "1/8" };
+  const full = { ...score, name, ...styleSounds(styleFor(score.bpm, score.halftime)), bassDiv: "1/4", leadDiv: "1/8" };
   const bad = checkScore(full, C);
   check(!bad.length, `${name}: a score the FM-1 can play ${bad.join("; ")}`);
   const fit = fitLesson(full, C, encodeSong), p = `${out}/heard-${name}.bin`;

@@ -258,9 +258,9 @@ $("listen").addEventListener("click", async () => {
     S.r = await A.analyzeSong(x, bp, (k, p, st) => { if (st) S.form = st; stage(k, p); });
     S.secs = (performance.now() - t) / 1000;
     S.key = S.r.key;
-    S.style = styleFor(S.r.bpm);
-    S.sounds = { kit: S.style.kit, bass: S.style.bass, chords: S.style.chords, lead: S.style.lead };
     rescore();
+    S.style = styleFor(S.r.bpm, S.base.halftime);       // (half-time near 140: dubstep)
+    S.sounds = { kit: S.style.kit, bass: S.style.bass, chords: S.style.chords, lead: S.style.lead };
     S.edit = S.base.sections.map(() => ({}));
     S.off = S.base.sections.map(() => ({}));
     S.tab = S.base.sections.length > 1 ? -1 : 0;

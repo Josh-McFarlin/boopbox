@@ -172,7 +172,7 @@ export function gridOf(env, kick, bpm, frames, fps = RATE / HOP) {   // the firs
 // each lane's strength on the sixteenths of the bars, folded into one bar (a step's window looks ahead almost half a
 // step: a swung sixteenth comes late); then the lanes from their strengths and what most songs do: the snare on the
 // backbeat when it stands out there (its body is in the kick's band too), a kick there only when it is far the strongest
-function stepStrength(env, grid, bars, frames) {
+export function stepStrength(env, grid, bars, frames) {
   const v = new Float32Array(16);
   for (let b = 0; b < bars; b++) {
     const t0 = grid.first + b * 16 * grid.step;
@@ -192,14 +192,18 @@ export function drumsOf(sep, grid, bars) {
   const K = stepStrength(bandFlux(mag, mp, frames, bins, 30, 140), grid, bars, frames);
   const M = stepStrength(bandFlux(mag, mp, frames, bins, 150, 1000), grid, bars, frames);
   const H = stepStrength(bandFlux(mag, mp, frames, bins, 7000, 10500), grid, bars, frames);
+  const CR = stepStrength(bandFlux(mag, mp, frames, bins, 1500, 5000), grid, bars, frames);   // (the snare's crack)
   const others = [0, 2, 6, 8, 10, 14].map((s) => M[s]), mean = others.reduce((a, b) => a + b) / others.length;
   const back = (M[4] + M[12]) / 2 > mean * 1.15 || Math.min(M[4], M[12]) >= 0.7;   // (or strong there at least)
+  // half-time (dubstep, trap): the snare on beat 3 (step 9) alone, its body and crack above the backbeat's
+  const hs = (M[8] + CR[8]) / 2, bs = (M[4] + M[12] + CR[4] + CR[12]) / 4, halftime = hs >= 0.5 && hs > bs * 1.4;   // (on the renders: half-time 1.6-10, a backbeat 0.7-1.25)
   const SNARE = new Array(16).fill(0);
-  if (back) SNARE[4] = SNARE[12] = 1;
+  if (halftime) SNARE[8] = 1;
+  else if (back) SNARE[4] = SNARE[12] = 1;
   const KICK = K.map((k, s) => (k >= 0.42 && (!SNARE[s] || k >= 0.8) ? 1 : 0));
   const HAT = H.map((h, s) => (h >= 0.45 && !(SNARE[s] && h < 0.7) ? 1 : 0));
   if (!KICK.some(Boolean)) KICK[0] = 1;
-  return { KICK, SNARE, HAT, strength: { K, M, H } };
+  return { KICK, SNARE, HAT, halftime, strength: { K, M, H, CR } };
 }
 
 // ---- notes: Basic Pitch
@@ -282,7 +286,7 @@ export function scoreOf({ notes, sep, frames, bpm, grid, key }, opts = {}) {
   const chords = chordsOf(notes, t0, barSec, opts.chordBars || 4, key);
   return {
     bpm, root: key.root, scale: key.scale,
-    drums: { lanes: Object.fromEntries(DRUM_LANES.map((l) => [l, drums[l] || new Array(16).fill(0)])) },
+    drums: { lanes: Object.fromEntries(DRUM_LANES.map((l) => [l, drums[l] || new Array(16).fill(0)])), halftime: drums.halftime },
     bass: bass.some((x) => x != null) ? { div: "1/4", steps: bass } : null,
     chords: { steps: chords },
     lead: lead.filter((x) => x != null).length >= 3 ? { div: leadDiv, steps: lead } : null,
@@ -431,8 +435,9 @@ export function songScoreOf(r, opts = {}) {
     const chordNotes = s.notes.filter((n) => n.p >= 45 && n.p <= 84).length;
     return { drums, bass: sc.bass, chords: chordNotes >= 4 ? sc.chords : null, lead: sc.lead, t0: s.from + sc.t0 };
   });
+  const withDrums = sections.filter((s) => s.drums), half = withDrums.filter((s) => s.drums.halftime).length;
   return { bpm: r.bpm, root: (opts.key || r.key).root, scale: (opts.key || r.key).scale, sections, song: r.entries,
-           barSec: r.barSec, songStart: r.songStart };
+           barSec: r.barSec, songStart: r.songStart, halftime: withDrums.length > 0 && half * 2 >= withDrums.length };
 }
 
 // the whole analysis of one stretch of a song (x: mono at RATE)
