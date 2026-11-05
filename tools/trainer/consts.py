@@ -45,6 +45,16 @@ def kits():
     return ["ACOUSTIC", "DEEP", "TIGHT", "BRIGHT", "DUST"] + [x.strip().strip('"') for x in line.split(" ", 2)[2].split(",")]
 
 
+def font_s():
+    """FONT_S's first character and each character's advance (tools/gen_font.py's felucca_font.h)"""
+    with tempfile.TemporaryDirectory() as d:
+        h = os.path.join(d, "felucca_font.h")
+        subprocess.run([sys.executable, os.path.join(ROOT, "tools", "gen_font.py"), h], check=True, stdout=subprocess.DEVNULL)
+        text = open(h).read()
+    adv = [int(x) for x in re.search(r"FONT_S_ADV\[\d+\] = \{([^}]*)\}", text).group(1).split(",") if x.strip()]
+    return {"first": int(re.search(r"FONT_S = \{ \d+, \d+, (\d+),", text).group(1)), "adv": adv}
+
+
 def main(out):
     src = os.path.join(ROOT, "firmware", "src")
     core = open(os.path.join(src, "core.h")).read()
@@ -75,6 +85,8 @@ def main(out):
         "TOPICS": list(T.TOPICS),
         "HEAD_MAX": LS.HEAD_MAX, "ACT_MAX": LS.ACT_MAX, "VAL_MAX": LS.VAL_MAX,
         "NSTEP": int(re.search(r"#define NSTEP (\d+)", core).group(1)),
+        "FONT_S": font_s(),                          # the screen's small font: what a step's text takes (pixels)
+        "TEXT_W": 236, "HEAD_W": 236 - 6 * 8,        # (the band's width; a headline after its step's number)
     }
     for k in ("TG_DONE", "TG_NOTES", "TG_LANES"):
         assert k in C["TG"], k

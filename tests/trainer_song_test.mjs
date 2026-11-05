@@ -41,15 +41,40 @@ const sparse = {
   bass: { sound: "SUB BASS", div: "1/8", steps: [50, null, null, 50, null, null, 53, null, 50, null, null, 57, null, 55, 53, null] },
 };
 
+// a whole song: three sections (an intro without drums or bass, a verse, a chorus with its own beat, bass and lead), a song
+// of seven parts (patterns per section, the sections saved, the song in song mode: as level 3)
+const L = (s) => lane(s), off = new Array(16).fill(0);
+const whole = {
+  name: "THREE PARTS", bpm: 100, root: 9, scale: "MIN", kit: "SYNTHWV",
+  sounds: { bass: "SAW BASS", chords: "SAW PAD", lead: "PWM LEAD" }, bassDiv: "1/4", leadDiv: "1/8",
+  sections: [
+    { drums: null, bass: null, chords: { steps: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]] }, lead: null },
+    { drums: { lanes: { KICK: L("x...x...x...x..."), SNARE: L("....x.......x..."), CLAP: off, HAT: L("..x...x...x...x."), OHAT: off } },
+      bass: { steps: [57, null, null, null, 53, null, null, null, 55, null, null, null, 52, null, null, null] },
+      chords: { steps: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]] }, lead: null },
+    { drums: { lanes: { KICK: L("x...x...x...x..."), SNARE: L("....x.......x..."), CLAP: L("....x.......x..."), HAT: L("x.x.x.x.x.x.x.x."), OHAT: off } },
+      bass: { steps: [57, null, 57, null, 53, null, 53, null, 55, null, 55, null, 52, null, 52, null] },
+      chords: { steps: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]] },
+      lead: { steps: [76, null, 79, null, 81, null, 79, 76, 74, null, 72, null, 74, null, null, null] } },
+  ],
+  song: [[0, 4], [1, 8], [2, 8], [1, 8], [2, 8], [2, 8], [0, 4]],
+};
+
 const paths = [];
-for (const [i, s] of [first, bright, sparse].entries()) {
+for (const [i, s] of [first, bright, sparse, whole].entries()) {
   const bad = checkScore(s, C);
   check(!bad.length, `score ${s.name}: playable on the FM-1 ${bad.join("; ")}`);
   const song = makeLesson(s, C), area = encodeSong(song), d = describeSong(area);
   check(d && d.cards === song.cards.length && d.used <= 8192,
         `${song.name}: ${song.cards.length} steps, ${d && d.used} of 8192 B`);
   const kinds = new Set(song.cards.map((c) => c.goal));
-  check([...kinds].every((g) => [0, 1, 2, 3, 4, 5, 6, 8, 9, 18].includes(g)), `${song.name}: only the kinds of step levels 1 and 2 have`);
+  const kindsOk = s.sections ? [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 15, 16, 17, 18] : [0, 1, 2, 3, 4, 5, 6, 8, 9, 18];
+  check([...kinds].every((g) => kindsOk.includes(g)), `${song.name}: only the kinds of step the built-in levels have`);
+  if (s.sections) {
+    const n = (g) => song.cards.filter((c) => c.goal === C.TG[g]).length;
+    check(n("TG_SAVED") === 3 && n("TG_SONG") === 2 && n("TG_SONGMODE") === 1 && n("TG_PATSEL") >= 2,
+          `${song.name}: ${n("TG_PATSEL")} patterns chosen, 3 sections saved, the song, song mode`);
+  }
   const p = `${out}/song-${i + 1}.bin`;
   writeFileSync(p, area);
   paths.push(p);
@@ -87,6 +112,23 @@ if (wasm) {
   for (const part of Object.keys(PART_TRACK)) {
     const v = rms(part);
     check(v > -50 && v < all + 1, `  ${part} on its own (the others muted): ${v.toFixed(1)} dBFS`);
+  }
+  {   // the whole song in song mode: no drums in the intro (section A), drums in the verse (B); the song ends
+    const e = new SongEngine(mod, C), prog = programOf(makeLesson(whole, C), C);
+    check(prog.sections.length === 3 && prog.song.length === 7, `the FM-1 player: ${prog.sections.length} sections, a song of ${prog.song.length} parts`);
+    e.load(prog);
+    e.setMode(true);
+    for (const k of [0, 1, 2]) e.mute(k, true);          // (the drums alone)
+    e.play(true);
+    const bar = Math.round((240 / 100) * 44100), part = (bars) => {
+      const L = new Float32Array(bar * bars), R = new Float32Array(L.length);
+      e.render(L, R);
+      return 20 * Math.log10(Math.sqrt(L.reduce((a, x) => a + x * x, 0) / L.length) + 1e-9);
+    };
+    const intro = part(4), verse = part(4);
+    check(intro < -60 && verse > -40, `  the intro without drums (${intro.toFixed(0)} dBFS), then the verse with them (${verse.toFixed(0)} dBFS)`);
+    part(48 - 8 + 2);                                    // (to the end: 48 bars)
+    check(!e.want, "  the song ends after its 48 bars");
   }
 } else console.log("song: (the player not checked: PREVIEW_WASM unset)");
 console.log(`song: ${fails ? "FAIL" : "PASS"}`);

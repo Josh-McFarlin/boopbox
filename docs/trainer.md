@@ -90,39 +90,56 @@ checks that damaged areas are refused and that the progress follows the song.
 [webapp/song/](https://josh-mcfarlin.github.io/boopbox/webapp/song/) (`web/song.html`, linked from the installer) makes
 level 4 from an audio file, in the browser: nothing is uploaded, and there is no server.
 
-1. **Listen** to 30 seconds of the file (from where the slider says; a quarter in by default, past most intros):
-   - `web/songanalyze.js` splits the drums from the rest (harmonic / percussive separation: median filters on the
-     spectrogram), finds the tempo (the onsets' autocorrelation, near 110 BPM preferred), the beat and the bar (the
-     kick), and each drum lane's hits on the sixteenths, folded into one bar. The snare is taken on the backbeat when
-     it stands out there (its body is in the kick's band too).
-   - [Basic Pitch](https://github.com/spotify/basic-pitch-ts) (Spotify's note model, Apache-2.0; `web/vendor/`, served
-     from the site with TensorFlow.js) finds the notes of the part without drums: about a minute for 30 s on a laptop.
-   - The key from the notes (Krumhansl's profiles); a bass line (the lowest note on each beat, four bars), a chord a
-     bar (the scale's triad that holds most of the bar's notes), a lead (the highest note on each eighth, two bars, or
-     sixteenths). Every note is moved into the keys' range and onto the key: the keys play the scale.
-2. **Compare**: the original (the bars heard, on a loop; or its drums, its bass or the rest) and the FM-1 version,
-   played by BoopBox's engines in the browser (the editor's WebAssembly, `firmware/host/preview.c`;
-   `web/songplay.js` replays the lesson's own steps, so what plays is what the steps build). The drum grid takes clicks;
-   the key, a style (a kit and three sounds by tempo, `web/songsounds.js`), each part's sound and the parts kept can be
-   changed. The steps are listed as they will be on the FM-1.
+1. **Listen** to the whole song (up to 6 minutes), in two passes:
+   - **The form** (`structureOf`, a second or two): the whole file's tempo (the onsets' autocorrelation, near 110 BPM
+     preferred), beat and bar (the kick), then each block of four bars as a fingerprint (its harmony, loudness, low end,
+     highs, onsets). Similar blocks are grouped (average linkage, at most four groups, none closer than `TAU`, tuned on
+     the trainer's renders) into sections A-D, named in the order they come; the song is their runs (at most 16
+     entries, 64 bars each). Quiet blocks at the ends (silence, a fade) are left out.
+   - **Each section, closely** (`analyzeSong`): its most typical block (the group's medoid), four bars, with the bar line
+     found again there. The drums are split from the rest (harmonic / percussive separation: median filters on the
+     spectrogram) and each lane's hits taken on the sixteenths, folded into one bar (the snare on the backbeat when it
+     stands out there: its body is in the kick's band too).
+     [Basic Pitch](https://github.com/spotify/basic-pitch-ts) (Spotify's note model, Apache-2.0; `web/vendor/`, served
+     from the site with TensorFlow.js) finds the notes of the part without drums. A song of three or four sections takes
+     a minute or two on a laptop.
+   - One key for the song from all the notes (Krumhansl's profiles); in each section a bass line (the lowest note on
+     each beat, four bars), a chord a bar (the scale's triad that holds most of the bar's notes), a lead (the highest
+     note on each eighth, two bars, or sixteenths). A part a section has not (no drums in an intro) is muted there. Every
+     note is moved onto the key and each line into one window of the keys (27 notes, F to G, an octave at a time).
+2. **Compare**: the original and the FM-1 version, the whole song (its sections in turn, as song mode plays them) or a
+   section on a loop (the original's drums, bass or the rest of it alone, too), played by BoopBox's engines in the
+   browser (the editor's WebAssembly, `firmware/host/preview.c`; `web/songplay.js` replays the lesson's own steps,
+   patterns, saved sections and song, so what plays is what the steps build). A section's drum grid takes clicks and
+   its parts can be taken out; the key, a style (a kit and three sounds by tempo, `web/songsounds.js`) and each part's
+   sound are the song's. The steps are listed as they will be on the FM-1.
 3. **Install**: the page fetches the trainer package of the site, checks its SHA-256, writes the song into its song
    area (`web/trslot.js`) and installs it as the installer does (`web/fm1ota.js`).
 
-`web/songgen.js` writes the steps the way `tools/trainer/lessons.py` writes levels 1 and 2 (the same kinds of step,
-buttons, pages and why topics): the tempo, the key, the drums lane by lane, then the bass (the SEQ layer), the chords
-(typed on the NOTES page, a step a bar), the lead and an echo, and DONE. A song is 14 to 30 steps and 1-2 KB.
+`web/songgen.js` writes the steps the way `tools/trainer/lessons.py` writes the built-in levels (the same kinds of
+step, buttons, pages and why topics). The tempo and the key; section A as a loop: the drums lane by lane, the bass
+(the SEQ layer), the chords (typed on the NOTES page, a step a bar), the lead and an echo. Then, as level 3 does, the
+other sections' new parts, each a pattern of its track (PATTERNS, the pattern's number, the notes typed on the NOTES
+page; the same part again is the same pattern); then, stopped, each section: its patterns, its mutes, saved as A-D;
+then the song on the SONG screen, song mode, and DONE. A whole song is 50 to 80 steps and about 4 KB; one that does not
+fit (128 steps, 8 KiB) is made smaller (`fitLesson`: the later sections take section A's lead, then its chords, then
+the last section is played as A), and the page says so. Every text is measured in the screen's font.
 The firmware's numbers (goals, parameters, buttons, pages, kits, sounds as the trainer and as BoopBox number them, the
-topics) come from `tools/trainer/consts.py`, which `web/make_site.py` runs.
+topics, the font's widths) come from `tools/trainer/consts.py`, which `web/make_site.py` runs.
 
-Tests (`tests/run_tests.sh`): `tests/trainer_song_test.mjs` makes songs from three scores and checks the FM-1 player
-plays each part; with the renders (`python3 tools/trainer/render.py`), `tests/trainer_analyze_test.mjs` listens to
-levels 1 and 2 as the page does (the tempo and the key of both, level 1's drums, against their scores); the trainer
-test then plays every one of those songs as level 4 to DONE with the panel alone; `tests/trainer_page_test.mjs` uses
-the page in Chromium (level 1's MP3 in, both players, the package it installs).
+Tests (`tests/run_tests.sh`): `tests/trainer_song_test.mjs` makes songs from four scores (one a whole song of three
+sections and seven parts) and checks the FM-1 player plays each part, the sections in turn and the song's end; with
+the renders (`python3 tools/trainer/render.py`), `tests/trainer_analyze_test.mjs` listens to the three songs whole, as
+the page does (the tempo and the key of each, the sections found, level 1's beat, against their scores); the trainer
+test then plays every one of those songs as level 4 to DONE with the panel alone (song mode included);
+`tests/trainer_page_test.mjs` uses the page in Chromium (level 1's MP3 in, the song and a section on both players, the
+package it installs).
 
-It is an approximation: four parts, a loop of a few bars, a bar of drums. Songs with a clear beat and few parts work
-best. In a dense mix a bass on eighths can look like a kick (level 2's render: its kick comes out on every eighth),
-and a sub bass two octaves down is often missed; the drum grid and the parts' boxes are there to fix it.
+On the renders: level 2 (verse 4, chorus 8, verse 4, chorus 8) comes out A4 B8 A4 B4 C4 (its last bars fade), level 3
+(A4 B4 C8 D8 B4 C8 A4) A4 B4 C16 B4 C8 D4 (its second drop is heard as the first). It is an approximation: four parts,
+each section's most typical four bars, the song in blocks of four bars, a steady tempo assumed. In a dense mix a bass on
+eighths can look like a kick (level 2's render: its kick comes out on every eighth), and a sub bass two octaves down is
+often missed; the drum grid and the parts' boxes are there to fix it.
 
 ## What the trainer build leaves out
 
