@@ -294,36 +294,62 @@ export function scoreOf({ notes, sep, frames, bpm, grid, key }, opts = {}) {
   };
 }
 
+// the bar's downbeat among the four beats of the grid: where the kick is strongest (gridOf) and where the harmony
+// changes (chords change on bar lines: the chroma of the half bar before a line against the half bar after it), each
+// as a z-score over the four, summed (in a dense mix the bass muddies the kick's band; the harmony does not)
+function downbeatOf(grid, kick, chroma, frames, fps) {
+  const beat = 4 * grid.step, bar = 4 * beat, base = grid.first % bar, K = [], H = [];
+  const mean = (a, z) => { const c = new Array(12).fill(0); for (let f = Math.max(0, Math.floor(a)); f < Math.min(frames, Math.floor(z)); f++) for (let j = 0; j < 12; j++) c[j] += chroma[f * 12 + j]; return c; };
+  const cd = (a, b) => { let s = 0, x = 0, y = 0; for (let j = 0; j < 12; j++) { s += a[j] * b[j]; x += a[j] * a[j]; y += b[j] * b[j]; } return 1 - s / Math.sqrt(x * y || 1); };
+  for (let k = 0; k < 4; k++) {
+    let ks = 0, hs = 0;
+    for (let t = base + k * beat; t + bar / 2 < frames; t += bar) {
+      ks += Math.max(at(kick, t - 1), at(kick, t), at(kick, t + 1));
+      if (t - bar / 2 >= 0) hs += cd(mean(t - bar / 2, t), mean(t, t + bar / 2));
+    }
+    K.push(ks); H.push(hs);
+  }
+  const z = (v) => { const m = v.reduce((a, b) => a + b) / 4, sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / 4) || 1; return v.map((x) => (x - m) / sd); };
+  const zk = z(K), zh = z(H), sc = zk.map((x, k) => x + zh[k]), k = sc.indexOf(Math.max(...sc));
+  return base + k * beat;
+}
+
 // ---- the song's form: the whole file, cheaply (no separation, no notes): its tempo and bars, then each block of four
 // bars as a fingerprint (its harmony, loudness, low end, highs, onsets), similar blocks grouped into up to four sections
 const SH = 512;                                       // (the structure's hop: 23 ms)
 export async function structureOf(x, onProgress = () => {}) {
   const fps = RATE / SH, frames = Math.max(1, Math.floor((x.length - N) / SH) + 1), bins = N / 2 + 1;
   const env = new Float32Array(frames), low = new Float32Array(frames), chroma = new Float32Array(frames * 12);
-  const loud = new Float32Array(frames), lowE = new Float32Array(frames), highE = new Float32Array(frames);
+  const loud = new Float32Array(frames), lowE = new Float32Array(frames), highE = new Float32Array(frames), body = new Float32Array(frames);
   const pc = new Int8Array(bins).fill(-1), fr = new Float64Array(N), fi = new Float64Array(N);
   for (let b = 1; b < bins; b++) { const f = hz(b); if (f >= 55 && f <= 2000) pc[b] = ((Math.round(12 * Math.log2(f / 440) + 69) % 12) + 12) % 12; }
   const b150 = Math.round((150 * N) / RATE), b5k = Math.round((5000 * N) / RATE), b10k = Math.round((10000 * N) / RATE);
-  let prev = new Float32Array(bins), lowPrev = 0;
+  let prev = new Float32Array(bins), lowPrev = 0, bodyPrev = 0;
+  const b1k = Math.round((1000 * N) / RATE);
   for (let f = 0; f < frames; f++) {
     if (f % 512 === 0) { onProgress(f / frames); await tick(); }
     for (let i = 0; i < N; i++) { fr[i] = (x[f * SH + i] || 0) * HANN[i]; fi[i] = 0; }
     fft(fr, fi);
-    let flux = 0, e = 0, le = 0, he = 0;
+    let flux = 0, e = 0, le = 0, he = 0, me = 0;
     for (let b = 1; b < bins; b++) {
       const m = Math.hypot(fr[b], fi[b]), l = Math.log1p(m);
       if (b <= b10k) flux += Math.max(0, l - prev[b]);
       prev[b] = l;
       e += m * m;
       if (b <= b150) le += m * m; else if (b >= b5k) he += m * m;
+      if (b > b150 && b <= b1k) me += m * m;
       if (pc[b] >= 0) chroma[f * 12 + pc[b]] += m;
     }
     env[f] = flux; loud[f] = e; lowE[f] = le; highE[f] = he;
     const ll = Math.log1p(le * 1e3);
     low[f] = Math.max(0, ll - lowPrev); lowPrev = ll;
+    const ml = Math.log1p(me * 1e3);
+    body[f] = Math.max(0, ml - bodyPrev); bodyPrev = ml;    // (the snare's body, 150 Hz - 1 kHz: its rise)
   }
   onProgress(1);
-  const bpm = tempoOf(env, 70, 170, fps), grid = gridOf(env, low, bpm, frames, fps), barF = 16 * grid.step;
+  const bpm = tempoOf(env, 70, 170, fps), grid = gridOf(env, low, bpm, frames, fps);
+  grid.first = downbeatOf(grid, low, chroma, frames, fps);   // (the bar: the kick and where the harmony changes)
+  const barF = 16 * grid.step;
   const nbars = Math.floor((frames - grid.first) / barF), nblocks = Math.floor(nbars / 4);
   // a block's fingerprint: its mean chroma (shape only), then loudness, low end, highs, onsets (as z-scores)
   const raw = [];
@@ -347,7 +373,28 @@ export async function structureOf(x, onProgress = () => {}) {
   const ze = zs("e"), zl = zs("le"), zh = zs("he"), zo = zs("on"), emax = Math.max(...raw.map((r) => r.e));
   const blocks = raw.map((r, k) => ({ k, quiet: r.e < emax - 1.5,   // (more than 15 dB under the loudest: a fade, silence)
                                       v: [...r.c.map((x) => x * 3), ze[k] * 0.6, zl[k] * 0.8, zh[k] * 0.8, zo[k] * 0.8] }));
-  return { bpm, fps, first: grid.first, barF, barSec: barF / fps, blocks, nbars, ...formOf(blocks) };
+  const form = formOf(blocks);
+  // each section's snare body on the sixteenths, folded over all its bars (a long section: many bars, a sure pattern)
+  form.sections.forEach((sec, g) => {
+    const v = new Array(16).fill(0), kv = new Array(16).fill(0);
+    let bars = 0;
+    form.label.forEach((lab, i) => {
+      if (lab !== g || blocks[form.firstBlock + i]?.quiet) return;
+      for (let j = 0; j < 4; j++, bars++) {
+        const t0 = grid.first + ((form.firstBlock + i) * 4 + j) * barF;
+        for (let k = 0; k < 16; k++) {
+          const t = t0 + (k * barF) / 16;
+          let m = 0, km = 0;
+          for (let q = Math.floor(t - 1); q <= t + (barF / 16) * 0.45; q++) { m = Math.max(m, body[q] || 0); km = Math.max(km, low[q] || 0); }
+          v[k] += m;
+          kv[k] += km;
+        }
+      }
+    });
+    const mx = Math.max(...v) || 1, kx = Math.max(...kv) || 1;
+    sec.fold = { bars, M: v.map((x) => x / mx), K: kv.map((x) => x / kx) };
+  });
+  return { bpm, fps, first: grid.first, barF, barSec: barF / fps, blocks, nbars, ...form };
 }
 const dist = (a, b) => Math.sqrt(a.reduce((s, x, i) => s + (x - b[i]) ** 2, 0));
 // the blocks grouped (average linkage, at most four groups, none closer than TAU), the song as its runs of groups
@@ -414,10 +461,10 @@ export async function analyzeSong(x, bp, onStage = () => {}) {
     // the downbeat nearest the form's
     const env = bandFlux(sep.mag, null, sep.frames, sep.bins, 30, 10000), kick = bandFlux(sep.mag, sep.mp, sep.frames, sep.bins, 30, 150);
     const g = gridOf(env, kick, st.bpm, sep.frames), beat = 4 * g.step, want = (at - from) * fps;
-    let first = g.first;
-    while (first + 2 * beat <= want) first += 4 * beat;   // (a bar at a time: the same downbeat)
-    while (first - 2 * beat > want) first -= 4 * beat;
-    if (Math.abs(first - want) > beat / 2) first = want;  // (not near: the form's)
+    // (the beat's phase only, finer: the beat of this grid nearest the form's downbeat; the bar stays the form's)
+    const b = g.step * 4, ph = ((g.first % b) + b) % b;
+    let first = want + ((((ph - want) % b) + b + b / 2) % b) - b / 2;
+    if (Math.abs(first - want) > b / 4) first = want;  // (not near: the form's)
     out.push({ at: from + first / fps, from, sep, notes, frames: sep.frames, perc: Math.sqrt(pe / w.length),
                grid: { first, step: g.step } });
   }
@@ -431,7 +478,20 @@ export function songScoreOf(r, opts = {}) {
   const pmax = Math.max(...r.sections.map((s) => s.perc)) || 1;
   const sections = r.sections.map((s) => {
     const sc = scoreOf({ notes: s.notes, sep: s.sep, frames: s.frames, bpm: r.bpm, grid: s.grid, key: opts.key || r.key }, opts);
-    const drums = s.perc / pmax > 0.3 ? sc.drums : null;
+    let drums = s.perc / pmax > 0.3 ? sc.drums : null;
+    // half-time over all the section's bars too: the snare body on beat 3 the strongest beat and 1.8 times the
+    // backbeat's (a dense drop: four bars are too few; on the renders the backbeats stay at 1.0 and under)
+    const fold = r.structure.sections[r.sections.indexOf(s)]?.fold, M = fold?.M;
+    if (drums && fold && fold.bars >= 16) {             // (16 bars and more: the kick from all of them)
+      const K = fold.K, med = [...K].sort((a, b) => a - b)[8];
+      const KICK = K.map((k, i) => (k >= 0.6 && k >= 1.5 * med && !(drums.lanes.SNARE[i] && k < 0.8) ? 1 : 0));
+      if (KICK.some(Boolean)) drums = { ...drums, lanes: { ...drums.lanes, KICK } };
+    }
+    if (drums && !drums.halftime && fold && fold.bars >= 16 && M[8] >= Math.max(M[0], M[4], M[12]) && M[8] >= 1.8 * (M[4] + M[12]) / 2) {
+      const lanes = { ...drums.lanes, SNARE: new Array(16).fill(0) };
+      lanes.SNARE[8] = 1;
+      drums = { ...drums, lanes, halftime: true };
+    }
     const chordNotes = s.notes.filter((n) => n.p >= 45 && n.p <= 84).length;
     return { drums, bass: sc.bass, chords: chordNotes >= 4 ? sc.chords : null, lead: sc.lead, t0: s.from + sc.t0 };
   });

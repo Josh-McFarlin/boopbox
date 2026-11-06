@@ -134,6 +134,7 @@ static void do_param(const tr_card_t *c)
     }
 }
 /* PRESETS: the browser, scanned a detent at a time (KNOB 2 the group, KNOB 3 the sound) until the goal holds */
+static uint32_t hints_scrolled;
 static uint32_t pats_from_drum, hint_tries, browse_seen, keyed_cards, seq_unlit, seq_taps, algo_said, algo_home;
 static int on_target(const tr_card_t *c)
 {
@@ -662,11 +663,15 @@ static int play_level(uint32_t l, const char *shots)
         {   /* the card's text fits the screen; a card about keys: only its keys lit */
             char act[40];
             tr_act(c, act, sizeof act);
+            /* (1.5.1) a line wider than the screen scrolls (tr_marquee): the headline and the action still fit (the
+             * lessons are written so), a hint may not, but none is cut short (it fits its buffer) */
             if (text_w(&FONT_S, act) > 236 || text_w(&FONT_S, c->head) > 236 - 6 * 8 ||
-                (tr_goal(c), text_w(&FONT_S, tr.hint) > 236)) {
-                printf("trainer: level %u card %u: too wide: %s / %s / %s\n", l + 1u, at + 1u, c->head, act, tr.hint);
+                (tr_goal(c), str_len(tr.hint) + 1u >= sizeof tr.hint)) {
+                printf("trainer: level %u card %u: too wide or cut short: %s / %s / %s\n", l + 1u, at + 1u, c->head, act, tr.hint);
                 fails++;
             }
+            if (tr.hint[0] && tr_mq_over(tr.hint) > 0)
+                hints_scrolled++;
             if ((c->goal == TG_LANES || c->goal == TG_NOTES) && song.sel == c->trk) {
                 frames(2);
                 keyed_cards += tr.keys != 0;
@@ -1207,6 +1212,27 @@ int main(int argc, char **argv)
             check(play_level(TR_NLEVELS, 0), what);
         }
         tr_slot_load(tr_slot());
+    }
+    {   /* (1.5.1) a line wider than the screen scrolls as a ticker: still first, to its end, still, then again; the band
+         * redrawn as it moves, its last character on the screen at the end */
+        static const char *const T = "STEP 12: PLAY F#5 (LIT KEY), THEN HOLD SEQ";
+        int32_t over = tr_mq_over(T), w = text_w(&FONT_S, T);
+        uint32_t len = tr_mq_len(T), run = (uint32_t)over * TR_MQ_PX, t, moves = 0, back = 0;
+        int32_t last = 0, o;
+        int ok = over > 0 && tr_marquee(T, 0) == 0 && tr_marquee(T, TR_MQ_HOLD - 1u) == 0 &&
+                 tr_marquee(T, TR_MQ_HOLD + run) == over && 2 - over + w <= 238 && 2 - over + w >= 234 &&
+                 tr_marquee(T, len) == 0 && tr_mq_len("A SHORT LINE") == 0 && tr_marquee("A SHORT LINE", 5000) == 0;
+        for (t = 0; t < len; t += 10) {
+            o = tr_marquee(T, t);
+            moves += o != last && o > last, back += o < last;
+            ok &= o >= 0 && o <= over && (o & 1) == 0;
+            last = o;
+        }
+        ok &= moves >= (uint32_t)over / 2u - 1u && !back;
+        char what[160];
+        snprintf(what, sizeof what, "a line too wide scrolls: %d px over, %u ms a turn, its end on the screen (%u hints scrolled)",
+                 over, len, hints_scrolled);
+        check(ok, what);
     }
     printf("trainer: %s\n", fails ? "FAIL" : "PASS");
     return fails != 0;
