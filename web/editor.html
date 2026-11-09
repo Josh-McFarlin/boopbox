@@ -393,7 +393,11 @@
   .patcells button.empty { color: var(--dim); }
   .patcells button.play { border-color: var(--trk); box-shadow: inset 0 0 0 1px var(--trk); }
   .patcells button[aria-pressed=true] { background: var(--s3); }
-  .patchain b { display: inline-block; min-width: 26px; text-align: center; border: 1px solid var(--line); margin-right: 4px; cursor: pointer; }
+  .patchain .slot { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); margin: 0 4px 4px 0; padding: 0 2px 0 6px; }
+  .patchain .slot.now { border-color: var(--trk); }
+  .patchain .slot select { padding: 0 2px; }
+  table.scenes td, table.scenes th { padding: 2px 4px; text-align: center; }
+  table.scenes select { padding: 0 2px; }
   .patsteps { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; margin: 8px 0; max-width: 720px; }
   .patsteps button { height: 26px; padding: 0; border: 1px solid var(--line); background: var(--bg); font-size: 11px; position: relative; }
   .patsteps button.on { background: color-mix(in srgb, var(--trk) 60%, var(--bg)); }
@@ -1073,6 +1077,12 @@
           <p class="bar"><span data-t="patChain"></span> <span id="patchain" class="patchain"></span></p>
           <p class="bar" id="patchainadd"></p>
           <p class="dim" data-t="patChainHelp"></p>
+        </div>
+        <div class="card">
+          <h2 data-t="scnTitle" data-ic="symbol_grid"></h2>
+          <p class="dim" data-t="scnHelp"></p>
+          <table class="song scenes" id="scntab"></table>
+          <p class="bar"><button type="button" id="scnreset" data-t="scnReset"></button></p>
         </div>
         <div class="card">
           <h2 id="patdh"></h2>
@@ -3300,8 +3310,8 @@ function makeMockDevice(opt = {}) {
         p: t.p.slice(0, P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, k)),
         e: t.p.slice(P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, P_E0 + k)),
         dtw: t.drum ? (o && o.dtw) || new Array(16).fill(0) : null, pat: p7Pat(t, o && o.pat), cur: o ? o.cur : 0, chain: o ? o.chain.slice() : [],
-        hfol: o ? o.hfol : 0, tail: 2 };
-    }) });
+        coff: o ? o.coff | 0 : 0, hfol: o ? o.hfol : 0, tail: 2 };
+    }), scenes: B.scenes || null });
   }
   function p7Apply(P) {
     for (const x of P.tracks) {
@@ -4496,7 +4506,9 @@ const ARR = {
    the editor wrote as the same bytes again (tests/proj7_tool.c, web/test_web.mjs). A value is one byte (-127..127) or
    0x80 and two (pw_v). Every value is put in range by the firmware when it loads. */
 const PROJ7 = {
-  MAGIC: 0x46554E37, HDR: 12, MAX: 3840, NSTEP: 64, NPAT: 8, NCOMP: 16, NLOCK: 32, NHPROG: 8, PB_SIZE: 3072,
+  MAGIC: 0x46554E37, HDR: 12, MAX: 3840, NSTEP: 64, NPAT: 8, NCOMP: 16, NLOCK: 32, NHPROG: 8, PB_SIZE: 3072, NCHAIN: 16, NSCENE: 8,
+  SCN_KEEP: 8, SCN_NAMES: ["-", "INTRO", "VERSE", "PRE", "CHORUS", "BRIDGE", "BREAK", "BUILD", "DROP", "OUTRO", "FILL", "HOOK", "SOLO",
+    "ALT", "A", "B", "C", "D", "END"],                 /* (patbank.c N_SCN) */
   SYNTH: 0, DRUM: 1, ST_REST: 2, CP_PARAM: 12,
   /* comp.c CP_NAME / CP_RANGE: a's range, b's range, a new one's a and b (PARAM's a: a lockable parameter) */
   CP: [null, ["PULSE", 1, 8, 0, 0, 1, 0], ["HOLD", 1, 16, 0, 0, 1, 0], ["MULT", 2, 8, 0, 0, 2, 0], ["VEL", 1, 127, 0, 64, 100, 0],
@@ -4646,7 +4658,7 @@ const PROJ7 = {
   },
   /* ---- a track ('T') */
   trkGet(r) {
-    const t = { i: r.u8(), kind: r.u8(), eng: r.u8(), pre: r.u8(), nc: r.u8(), p: [], e: [], dtw: null, pat: null, cur: 0, chain: [], hfol: 0, tail: 0 };
+    const t = { i: r.u8(), kind: r.u8(), eng: r.u8(), pre: r.u8(), nc: r.u8(), p: [], e: [], dtw: null, pat: null, cur: 0, chain: [], coff: 0, hfol: 0, tail: 0 };
     const map = []; for (let k = 0; k < (t.nc + 7) >> 3; k++) map.push(r.u8());
     for (let k = 0; k < t.nc; k++) if ((map[k >> 3] >> (k & 7)) & 1) t.p.push([k, r.v()]);
     const em = r.u8();
@@ -4656,8 +4668,9 @@ const PROJ7 = {
     if (r.i < r.n && !r.bad) {
       t.tail = 1;
       t.cur = r.u8() % 8;
-      const n = r.u8();
-      for (let k = 0; k < n && k < 8; k++) t.chain.push(r.u8() % 8);
+      const n = r.u8();                              /* (its slots, bit 7: PLAY off; a slot: pattern | repeats - 1 << 4) */
+      t.coff = n >> 7;
+      for (let k = 0; k < (n & 0x7F); k++) { const x = r.u8(); if (k < PROJ7.NCHAIN) t.chain.push(x & 0xF7); }
       if (r.i < r.n) { t.tail = 2; t.hfol = r.u8(); }
     }
     return t;
@@ -4674,7 +4687,7 @@ const PROJ7 = {
     [...t.e].sort((x, y) => x[0] - y[0]).forEach(([, v]) => w.v(v));
     if (t.kind === PROJ7.DRUM) (t.dtw || new Array(16).fill(0)).forEach((x) => w.u8(x));
     PROJ7.patPut(w, t.pat, t.kind === PROJ7.DRUM);
-    if (t.tail >= 1) { w.u8(t.cur); w.u8(t.chain.length); t.chain.forEach((x) => w.u8(x)); }
+    if (t.tail >= 1) { w.u8(t.cur); w.u8(t.chain.length | (t.coff ? 0x80 : 0)); t.chain.forEach((x) => w.u8(x)); }
     if (t.tail >= 2) w.u8(t.hfol);
   },
   /* a common parameter of the track (id < its count): stored only when not its default (def(id) from DESC) */
@@ -4689,7 +4702,7 @@ const PROJ7 = {
     if (b.length < PROJ7.HDR || PROJ7.u32(b, 0) !== PROJ7.MAGIC) return null;
     const size = PROJ7.u32(b, 4);
     if (size < PROJ7.HDR || size > PROJ7.MAX || size > b.length || PROJ7.u32(b, 8) !== PROJ7.sum(b, size)) return null;
-    const P = { g: null, sel: 0, tracks: [], harm: null, bank: [], other: [] }, pend = [];
+    const P = { g: null, sel: 0, tracks: [], harm: null, bank: [], scenes: null, other: [] }, pend = [];
     const r = PROJ7.reader(b, PROJ7.HDR, size);
     while (r.i + 3 <= r.n && !r.bad) {
       const tag = r.u8(), len = r.u8() | (r.u8() << 8);
@@ -4703,6 +4716,15 @@ const PROJ7 = {
       else if (ch === "T") { const t = PROJ7.trkGet(c); if (c.bad || c.i !== c.n) return null; P.tracks.push(t); }
       else if (ch === "H") { const n = c.u8(); P.harm = []; for (let k = 0; k < n; k++) P.harm.push({ deg: c.u8(), bars: c.u8() }); if (c.bad) return null; }
       else if (ch === "P") pend.push(body);
+      else if (ch === "C") {                         /* the scenes: count, then each its name and 4 bytes of nibbles */
+        const n = c.u8(), S = PROJ7.scenesDefault();
+        for (let k = 0; k < n && k < PROJ7.NSCENE; k++) {
+          const nm = c.u8(); S.names[k] = nm < PROJ7.SCN_NAMES.length ? nm : 0;
+          for (let j = 0; j < 8; j += 2) { const x = c.u8(); S.pats[k][j] = Math.min(x & 15, 8); S.pats[k][j + 1] = Math.min(x >> 4, 8); }
+        }
+        if (c.bad || n !== PROJ7.NSCENE || c.i !== c.n) return null;
+        P.scenes = S;
+      }
       else P.other.push([tag, Array.from(body)]);
     }
     for (const body of pend) {                       /* (decoded with the kind of their track: the 'T' chunks come first) */
@@ -4729,6 +4751,10 @@ const PROJ7 = {
       const t = P.tracks.find((x) => x.i === e.trk);
       chunk("P", () => { w.u8(e.trk << 4 | e.pat); w.u8(e.len); PROJ7.patPut(w, e.p, !!t && t.kind === PROJ7.DRUM); });
     }
+    if (P.scenes && !PROJ7.scenesIsDefault(P.scenes)) chunk("C", () => {
+      w.u8(PROJ7.NSCENE);
+      for (let k = 0; k < PROJ7.NSCENE; k++) { w.u8(P.scenes.names[k]); for (let j = 0; j < 8; j += 2) w.u8(P.scenes.pats[k][j] | P.scenes.pats[k][j + 1] << 4); }
+    });
     for (const [tag, body] of P.other) chunk(tag, () => body.forEach((x) => w.u8(x)));
     return w.o;
   },
@@ -4778,8 +4804,13 @@ const PROJ7 = {
     PROJ7.setPat(P, i, was, wp, wl, ctx);
     if (t.tail < 1) t.tail = 1;
   },
-  /* a chain: 2..8 patterns (fewer: none) */
-  setChain(P, i, list) { const t = PROJ7.track(P, i); t.chain = list.length >= 2 ? list.slice(0, 8).map((x) => x & 7) : []; if (t.tail < 1) t.tail = 1; },
+  /* a chain: up to 16 slots, each a pattern and its repeats (slot(p, r): p | r - 1 << 4); it plays with 2 or more, PLAY on */
+  slot: (p, r = 1) => (p & 7) | ((Math.max(1, Math.min(16, r)) - 1) << 4),
+  slotPat: (x) => x & 7, slotRep: (x) => (x >> 4) + 1,
+  setChain(P, i, list) { const t = PROJ7.track(P, i); t.chain = list.slice(0, PROJ7.NCHAIN).map((x) => x & 0xF7); if (t.tail < 1) t.tail = 1; },
+  /* scenes: names (SCN_NAMES index), each track's pattern (0..7, SCN_KEEP: unchanged); by default scene k is pattern k */
+  scenesDefault: () => ({ names: new Array(8).fill(0), pats: Array.from({ length: 8 }, (_, k) => new Array(8).fill(k)) }),
+  scenesIsDefault: (S) => S.names.every((x) => !x) && S.pats.every((r, k) => r.every((x) => x === k)),
 };
 
 /* ------------------------------------- v10 (SLOOP 2.5): the SYN drum kits --- */
@@ -5410,13 +5441,21 @@ const TEXT = {
     songRegionOff: "終わりを「最初に戻る」にすると使われます",
     tabPatterns: "パターン",
     patTitle: "パターン",
-    patHelp: "FM-1 の作業中のプロジェクト：各トラックの 8 つのパターン、チェーン、パターンのステップ・コンポーネント、ソングのコード進行。読み込んでここで変更し、「送る」と FM-1 がすぐに読み込みます（先にソングを止めてください）。送るまで FM-1 は変わりません。",
+    patHelp: "FM-1 の作業中のプロジェクト：各トラックの 8 つのパターン、チェーン、パターンのステップ・コンポーネント、シーン、ソングのコード進行。読み込んでここで変更し、「送る」と FM-1 がすぐに読み込みます（先にソングを止めてください）。送るまで FM-1 は変わりません。",
     patRead: "FM-1 から読む",
     patSend: "FM-1 に送る",
     patPatterns: "パターンとチェーン",
     patChain: "チェーン：",
     patNoChain: "なし（そのパターンだけを再生）",
-    patChainHelp: "チェーンはパターンを順に 1 ループずつ再生します（2〜8）。チェーンのパターンをクリックすると外れます。",
+    patChainHelp: "チェーンはスロットを順に再生します：各スロットのパターンをその回数のループだけ（×1〜×16）、最大 16 スロット、2 つ以上で再生。× でスロットを外します。",
+    patChainPlay: "チェーンを再生",
+    patChainOne: "（1 スロット：2 つ目を足すと再生します）",
+    patRepeat: "繰り返し",
+    scnTitle: "シーン",
+    scnHelp: "シーンはソングの一場面：各トラックのパターン（「そのまま」はトラックが今のパターンを続けます）と名前。FM-1 の SCENES ページや白鍵 9〜16 で、全トラックが一緒に切り替わります。最初はシーン N = 全トラックのパターン N。",
+    scnName: "名前",
+    scnKeep: "そのまま",
+    scnReset: "シーンを最初に戻す",
     patChainClear: "チェーンなし",
     patPlaying: "再生中",
     patSteps: "{n} ステップ",
@@ -5827,13 +5866,21 @@ const TEXT = {
     songRegionOff: "used when the end is set to start again",
     tabPatterns: "Patterns",
     patTitle: "Patterns",
-    patHelp: "The FM-1's working project: each track's eight patterns, its chain, a pattern's step components, and the song's chord progression. Read it, change it here, then Send: the FM-1 loads it at once (stop the song first). Nothing changes on the FM-1 until you send.",
+    patHelp: "The FM-1's working project: each track's eight patterns, its chain, a pattern's step components, the scenes and the song's chord progression. Read it, change it here, then Send: the FM-1 loads it at once (stop the song first). Nothing changes on the FM-1 until you send.",
     patRead: "Read from the FM-1",
     patSend: "Send to the FM-1",
     patPatterns: "Patterns and chains",
     patChain: "Chain:",
     patNoChain: "none (the pattern plays on its own)",
-    patChainHelp: "A chain plays its patterns in turn, one loop each (2 to 8). Click a pattern in the chain to remove it.",
+    patChainHelp: "A chain plays its slots in turn, each its pattern for its repeats (×1 to ×16): up to 16 slots, played with 2 or more. × removes a slot.",
+    patChainPlay: "chain plays",
+    patChainOne: "(one slot: add a second to play it)",
+    patRepeat: "repeats",
+    scnTitle: "Scenes",
+    scnHelp: "A scene is a moment of the song: each track's pattern in it (keep: the track goes on with what it plays) and a name. Launch one on the FM-1's SCENES page or white keys 9 to 16: every track changes together. By default scene N is pattern N on every track.",
+    scnName: "name",
+    scnKeep: "keep",
+    scnReset: "Reset the scenes",
     patChainClear: "No chain",
     patPlaying: "playing",
     patSteps: "{n} steps",
@@ -8218,15 +8265,43 @@ function renderPatterns() {
       f.value = String(tr.hfol | 0);
       return f;
     })()]));
-  /* the chain */
-  $("patchain").replaceChildren(...(tr.chain.length ? tr.chain.map((n, k) => el("b", { title: t("songDel"),
-    onclick: () => ptEdit(() => { const c = tr.chain.slice(); c.splice(k, 1); PROJ7.setChain(P, PT.trk, c); }) }, "P" + (n + 1)))
-    : [el("span", { class: "dim", text: t("patNoChain") })]));
-  $("patchainadd").replaceChildren(...Array.from({ length: 8 }, (_, n) => el("button", { type: "button", disabled: tr.chain.length >= 8,
-    onclick: () => ptEdit(() => { const c = tr.chain.length ? tr.chain.slice() : [tr.cur]; c.push(n); PROJ7.setChain(P, PT.trk, c); }) }, "+P" + (n + 1))),
-    el("button", { type: "button", disabled: !tr.chain.length, onclick: () => ptEdit(() => PROJ7.setChain(P, PT.trk, [])) }, t("patChainClear")));
+  /* the chain: its slots (a pattern, its repeats), PLAY on / off */
+  const setSlot = (k, x) => ptEdit(() => { const c = tr.chain.slice(); c[k] = x; PROJ7.setChain(P, PT.trk, c); });
+  $("patchain").replaceChildren(...(tr.chain.length ? tr.chain.map((x, k) => {
+    const pat = PROJ7.slotPat(x), rep = PROJ7.slotRep(x);
+    const rs = el("select", { "aria-label": t("patRepeat"), onchange: (e) => setSlot(k, PROJ7.slot(pat, +e.target.value)) },
+      ...Array.from({ length: 16 }, (_, r) => el("option", { value: r + 1, text: "×" + (r + 1) })));
+    rs.value = String(rep);
+    return el("span", { class: "slot" + (pat === tr.cur ? " now" : "") }, "P" + (pat + 1) + " ", rs,
+      el("button", { type: "button", class: "small", title: t("songDel"), "aria-label": t("songDel"),
+        onclick: () => ptEdit(() => { const c = tr.chain.slice(); c.splice(k, 1); PROJ7.setChain(P, PT.trk, c); }) }, "×"));
+  }) : [el("span", { class: "dim", text: t("patNoChain") })]));
+  const play = el("input", { type: "checkbox", onchange: (e) => ptEdit(() => { tr.coff = e.target.checked ? 0 : 1; if (tr.tail < 1) tr.tail = 1; }) });
+  play.checked = !tr.coff;
+  $("patchainadd").replaceChildren(...Array.from({ length: 8 }, (_, n) => el("button", { type: "button", disabled: tr.chain.length >= PROJ7.NCHAIN,
+    onclick: () => ptEdit(() => { const c = tr.chain.slice(); c.push(PROJ7.slot(n)); PROJ7.setChain(P, PT.trk, c); }) }, "+P" + (n + 1))),
+    el("button", { type: "button", disabled: !tr.chain.length, onclick: () => ptEdit(() => PROJ7.setChain(P, PT.trk, [])) }, t("patChainClear")),
+    el("label", {}, play, " " + t("patChainPlay")),
+    el("span", { class: "dim", text: tr.chain.length === 1 ? " " + t("patChainOne") : "" }));
+  renderScenes(P);
   renderPatDetail(P, tr, drum, ctx);
   renderChords(P);
+}
+/* the scenes: a row each, its name and each track's pattern in it (- keep) */
+function renderScenes(P) {
+  const S = P.scenes || PROJ7.scenesDefault();
+  const edit = (f) => ptEdit(() => { if (!P.scenes) P.scenes = PROJ7.scenesDefault(); f(P.scenes); });
+  const sel = (opts, v, f, label) => { const x = el("select", { "aria-label": label, onchange: (e) => f(+e.target.value) }, ...opts); x.value = String(v); return x; };
+  $("scntab").replaceChildren(
+    el("thead", {}, el("tr", {}, el("th", { text: "#" }), el("th", { text: t("scnName") }),
+      ...P.tracks.map((x) => el("th", { style: `color:${tcol(x.i)}`, text: String(x.i + 1) })))),
+    el("tbody", {}, ...Array.from({ length: PROJ7.NSCENE }, (_, k) => el("tr", {}, el("td", { text: String(k + 1) }),
+      el("td", {}, sel(PROJ7.SCN_NAMES.map((n, j) => el("option", { value: j, text: n })), S.names[k], (v) => edit((Z) => { Z.names[k] = v; }), t("scnName"))),
+      ...P.tracks.map((x) => el("td", {}, sel([el("option", { value: PROJ7.SCN_KEEP, text: t("scnKeep") }),
+        ...Array.from({ length: 8 }, (_, n) => el("option", { value: n, text: "P" + (n + 1) }))], S.pats[k][x.i],
+        (v) => edit((Z) => { Z.pats[k][x.i] = v; }), `${k + 1} / ${x.i + 1}`)))))));
+  $("scnreset").disabled = !P.scenes || PROJ7.scenesIsDefault(P.scenes);
+  $("scnreset").onclick = () => ptEdit(() => { P.scenes = null; });
 }
 /* the pattern picked: its steps (a dot: a component), direction, seed, components */
 function renderPatDetail(P, tr, drum, ctx) {

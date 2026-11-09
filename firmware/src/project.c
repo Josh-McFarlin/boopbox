@@ -142,9 +142,10 @@ UI_SMALL static __attribute__((noinline)) void trk_put(pw_t *w, uint32_t i)
         for (k = 0; k < DRUM_LANES; k++)
             pw_u8(w, ((uint32_t)drum_tune[i][k] & 15u) | ((uint32_t)drum_dec[i][k] & 7u) << 4);
     pat_put(w, t);
-    pw_u8(w, t->pat);                                   /* (patterns: the one playing, the chain) */
-    pw_u8(w, t->pat_nchain);
-    for (k = 0; k < t->pat_nchain && k < NPAT; k++)
+    pw_u8(w, t->pat);                                   /* (patterns: the one playing, the chain: its slot count, bit 7
+                                                         * PLAY off, then each slot, CH_SLOT: pattern | repeats - 1 << 4) */
+    pw_u8(w, (t->pat_nchain > NCHAIN ? NCHAIN : t->pat_nchain) | (t->pat_coff ? 0x80u : 0u));
+    for (k = 0; k < t->pat_nchain && k < NCHAIN; k++)
         pw_u8(w, t->pat_chain[k]);
     pw_u8(w, (uint32_t)t->hfol);                        /* (harmony: how it follows) */
     pw_close(w, at);
@@ -189,14 +190,19 @@ UI_SMALL static __attribute__((noinline)) void trk_get(pr_t *r)
         }
     pat_get(r, t);
     if (r->i < r->n && !r->bad) {                       /* (patterns: written after the pattern; none before them) */
-        uint8_t ch[NPAT];
-        uint32_t n;
+        uint8_t ch[NCHAIN];
+        uint32_t n, m = 0;
         t->pat = (uint8_t)(pr_u8(r) % NPAT);
         n = pr_u8(r);
-        for (k = 0; k < n && k < NPAT; k++)
-            ch[k] = (uint8_t)(pr_u8(r) % NPAT);
-        if (!r->bad)
-            pat_chain_set(t, ch, k);
+        for (k = 0; k < (n & 0x7Fu); k++) {             /* (every slot read: FOLLOW comes after them) */
+            uint32_t b = pr_u8(r);
+            if (m < NCHAIN)
+                ch[m++] = (uint8_t)b;
+        }
+        if (!r->bad) {
+            pat_chain_set(t, ch, m);
+            t->pat_coff = (uint8_t)(n >> 7);
+        }
         if (r->i < r->n) {
             uint32_t h = pr_u8(r);
             t->hfol = (int16_t)(h < HF_COUNT && !r->bad ? h : HF_OFF);
@@ -247,6 +253,19 @@ UI_SMALL static __attribute__((noinline)) void proj7_put(pw_t *w)
             pw_close(w, at);
             o += sz;
         }
+    }
+    if (!scn_default()) {                               /* the scenes ('C', after the bank: only when not the default):
+                                                         * their count, then each: its name, its eight tracks' patterns
+                                                         * a nibble each (track 2i low, 2i + 1 high; SCN_KEEP: unchanged) */
+        at = pw_open(w, 'C');
+        pw_u8(w, NSCENE);
+        for (i = 0; i < NSCENE; i++) {
+            uint32_t k;
+            pw_u8(w, scn_name[i]);
+            for (k = 0; k < NTRK; k += 2u)
+                pw_u8(w, (scn_pat[i][k] & 15u) | (scn_pat[i][k + 1u] & 15u) << 4);
+        }
+        pw_close(w, at);
     }
 }
 /* the globals a section takes from its project (a load takes all but the FM-1's settings): the TEXTURE */
@@ -301,6 +320,19 @@ UI_SMALL static __attribute__((noinline)) void proj7_apply(const project_t *p, i
             }
         } else if (tag == 'P' && c.n >= 2u) {
             pb_add_raw((uint32_t)c.b[0] >> 4, c.b[0] & 15u, c.b[1], c.b + 2, c.n - 2u);
+        } else if (tag == 'C' && c.n >= 1u) {
+            uint32_t n = pr_u8(&c), s, k;
+            for (s = 0; s < n && s < NSCENE && !c.bad; s++) {
+                uint32_t nm = pr_u8(&c);
+                scn_name[s] = (uint8_t)(nm < NSCN_NAMES ? nm : 0u);
+                for (k = 0; k < NTRK; k += 2u) {
+                    uint32_t b = pr_u8(&c), lo = b & 15u, hi = b >> 4;
+                    scn_pat[s][k] = (uint8_t)(lo < NPAT ? lo : SCN_KEEP);
+                    scn_pat[s][k + 1u] = (uint8_t)(hi < NPAT ? hi : SCN_KEEP);
+                }
+            }
+            if (c.bad)
+                scn_defaults();
         }
     }
     for (i = 0; i < NTRK; i++)

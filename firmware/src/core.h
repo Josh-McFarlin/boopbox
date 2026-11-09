@@ -289,6 +289,10 @@ enum {
 typedef struct { uint8_t step, type; int8_t a, b; } comp_t;
 enum { DIR_FWD, DIR_REV, DIR_PEND, DIR_RAND, DIR_COUNT };   /* a track's play direction (track_t.cp_dir) */
 #define NPAT 8                   /* patterns a track (patbank.c): the one playing in track_t, the others in the bank */
+#define NCHAIN 16                /* slots of a track's chain (patbank.c): a pattern each, played its repeats' loops */
+#define CH_PAT(b) ((uint32_t)(b) & 7u)            /* a chain slot's byte: its pattern (bits 0..2) */
+#define CH_REP(b) (((uint32_t)(b) >> 4) + 1u)     /* .. its repeats, 1..16 (bits 4..7: repeats - 1) */
+#define CH_SLOT(p, r) ((uint8_t)(((p) & 7u) | (((uint32_t)(r) - 1u) & 15u) << 4))
 
 typedef struct track {
     int16_t p[P_COUNT];
@@ -333,8 +337,10 @@ typedef struct track {
     uint8_t pat;                 /* the pattern playing, 0..NPAT-1 (its steps are the ones above) */
     volatile uint8_t pat_req;    /* a change asked for (the UI): pattern + 1, 0 = none (the ISR makes it, clears it) */
     uint8_t pat_arm;             /* (the ISR) that request seen: pat_at its grid step (SEQ_NONE: the track's loop end) */
-    uint8_t pat_nchain, pat_ci;  /* a chain: its patterns (pat_chain, 2 or more; 0 = none), the one playing in it */
-    uint8_t pat_chain[NPAT];
+    uint8_t pat_nchain, pat_ci;  /* a chain: its slots (pat_chain, CH_PAT / CH_REP; 0 = none), the slot playing */
+    uint8_t pat_cr;              /* the loops the slot playing has played (its repeats: then the next slot) */
+    uint8_t pat_coff;            /* 1: the chain is kept but does not play (CHAIN > PLAY OFF); it plays with 2 slots or more */
+    uint8_t pat_chain[NCHAIN];
     uint32_t pat_at;
     uint32_t seq_org;            /* the grid step the pattern started on (its step 1): the step of grid step abs is
                                   * (abs - seq_org) % LEN */

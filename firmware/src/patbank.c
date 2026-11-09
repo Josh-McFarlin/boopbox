@@ -8,7 +8,8 @@
  * length); 1, 2 or 4 BARS, on the first step of the track at or after the next such bar (tracks asked together change
  * together). The audio ISR makes it on that step, before the step plays (seq.c seq_tick: pat_due, pat_swap): the
  * pattern playing into the bank, the new one out of it, the new one from its step 1. Stopped, at once. A chain
- * (pat_chain, 2 to NPAT patterns) plays its patterns in turn, one loop each (an asked change goes first).
+ * (pat_chain, 2 to NCHAIN slots, PLAY on) plays its slots in turn, each its pattern for its repeats' loops (an asked
+ * change goes first; the chain goes on from it). Scenes (below) ask every track for a pattern at once.
  * Bounded work: one encode and one decode a track and step at most, a bank move of PB_SIZE bytes at most. */
 #define PB_SIZE 3072u
 static uint8_t pb_buf[PB_SIZE];
@@ -142,21 +143,25 @@ CTL_SMALL static int pat_swap(uint32_t k, uint32_t pat)
     comp_reset(t);
     return 1;
 }
-/* the chain of track k: n patterns (0 or 1: none). The UI, with the IRQ off */
+/* the chain of track k: n slots (CH_SLOT bytes: a pattern and its repeats; 0: none). It plays with 2 slots or more and
+ * PLAY on (pat_coff 0); fewer are kept (a chain being built). The slot playing: the first of the pattern playing. The UI,
+ * with the IRQ off */
 CTL_SMALL static void pat_chain_set(track_t *t, const uint8_t *p, uint32_t n)
 {
     uint32_t i;
-    n = n > NPAT ? NPAT : n;
+    n = n > NCHAIN ? NCHAIN : n;
     for (i = 0; i < n; i++)
-        t->pat_chain[i] = (uint8_t)(p[i] % NPAT);
-    t->pat_nchain = (uint8_t)(n >= 2u ? n : 0u);
+        t->pat_chain[i] = (uint8_t)(p[i] & 0xF7u);
+    t->pat_nchain = (uint8_t)n;
     t->pat_ci = 0;
-    for (i = 0; i < t->pat_nchain; i++)
-        if (t->pat_chain[i] == t->pat) {
+    t->pat_cr = 0;
+    for (i = 0; i < n; i++)
+        if (CH_PAT(t->pat_chain[i]) == t->pat) {
             t->pat_ci = (uint8_t)i;
             break;
         }
 }
+CTL_SMALL static int chain_on(const track_t *t) { return !t->pat_coff && t->pat_nchain >= 2u; }
 /* the grid step of track t at or after the next n-bar line (a bar: 4 beats from PLAY) */
 CTL_SMALL static uint32_t pat_bar_step(const track_t *t, uint32_t bars)
 {
@@ -203,30 +208,117 @@ CTL_SMALL static int pat_loop_start(const track_t *t, uint32_t nabs, uint32_t le
  * its step 1 (seq_org is this step) */
 CTL_SMALL static int pat_due(track_t *t, uint32_t nabs, uint32_t len, uint32_t start)
 {
-    uint32_t k = trk_index(t), want = NPAT;
+    uint32_t k = trk_index(t), want = NPAT, n = t->pat_nchain;
+    int next = -1;                               /* (the chain's next slot, when the chain makes the change) */
     if (t->pat_arm && t->pat_req == t->pat_arm &&
-        (start || (t->pat_at == SEQ_NONE ? pat_loop_start(t, nabs, len) : (int32_t)(nabs - t->pat_at) >= 0)))
+        (start || (t->pat_at == SEQ_NONE ? pat_loop_start(t, nabs, len) : (int32_t)(nabs - t->pat_at) >= 0))) {
         want = t->pat_arm - 1u;
-    else if (t->pat_nchain >= 2u && !t->pat_req && !start && pat_loop_start(t, nabs, len))
-        want = t->pat_chain[(t->pat_ci + 1u) % t->pat_nchain];
+    } else if (chain_on(t) && !t->pat_req && !start && pat_loop_start(t, nabs, len)) {
+        uint32_t ci = t->pat_ci % n;
+        if (CH_PAT(t->pat_chain[ci]) == t->pat && t->pat_cr + 1u < CH_REP(t->pat_chain[ci])) {
+            t->pat_cr++;                         /* (the slot's repeats: another loop of it) */
+            return 0;
+        }
+        next = (int)((ci + 1u) % n);
+        want = CH_PAT(t->pat_chain[next]);
+    }
     if (want >= NPAT)
         return 0;
     if (want == t->pat_arm - 1u && t->pat_arm) {
         t->pat_req = 0;
         t->pat_arm = 0;
     }
-    if (t->pat_nchain >= 2u) {                   /* (the chain goes on from the pattern playing) */
+    if (next >= 0) {
+        t->pat_ci = (uint8_t)next;
+    } else if (n) {                              /* (asked for: the chain goes on from its next slot of that pattern) */
         uint32_t c;
-        for (c = 0; c < t->pat_nchain; c++)
-            if (t->pat_chain[(t->pat_ci + 1u + c) % t->pat_nchain] == want) {
-                t->pat_ci = (uint8_t)((t->pat_ci + 1u + c) % t->pat_nchain);
+        for (c = 0; c < n; c++)
+            if (CH_PAT(t->pat_chain[(t->pat_ci + 1u + c) % n]) == want) {
+                t->pat_ci = (uint8_t)((t->pat_ci + 1u + c) % n);
                 break;
             }
     }
+    t->pat_cr = 0;
     if (want == t->pat || !pat_swap(k, want))
         return 0;
     t->seq_org = nabs;
     return 1;
+}
+/* ---- scenes: a moment of the song, each track's pattern in it (SCN_KEEP: the track goes on with what it plays) and a
+ * name (N_SCN). Launched, every track of it is asked for its pattern (quantized as any change: G_PATQ); the scene is
+ * the one playing once they all made it. Saved with the project ('C', project.c); by default scene s is pattern s on
+ * every track, no name. The UI's (ui_pats.c); the ISR only makes the changes asked for */
+#define NSCENE 8u
+#define SCN_KEEP 8u
+#define SCN_NONE 0xFFu
+static const char *const N_SCN[] = {"-", "INTRO", "VERSE", "PRE", "CHORUS", "BRIDGE", "BREAK", "BUILD", "DROP",
+                                    "OUTRO", "FILL", "HOOK", "SOLO", "ALT", "A", "B", "C", "D", "END"};
+#define NSCN_NAMES (sizeof N_SCN / sizeof N_SCN[0])
+static uint8_t scn_pat[NSCENE][NTRK] = {      /* (as scn_defaults: at power-on too) */
+    {0, 0, 0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1, 1, 1, 1}, {2, 2, 2, 2, 2, 2, 2, 2}, {3, 3, 3, 3, 3, 3, 3, 3},
+    {4, 4, 4, 4, 4, 4, 4, 4}, {5, 5, 5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6, 6, 6, 6}, {7, 7, 7, 7, 7, 7, 7, 7}};
+static uint8_t scn_name[NSCENE];
+static uint8_t scn_cur = SCN_NONE, scn_ask = SCN_NONE;    /* the scene playing (last made), the one asked for */
+CTL_SMALL static void scn_defaults(void)
+{
+    uint32_t s, k;
+    for (s = 0; s < NSCENE; s++) {
+        scn_name[s] = 0;
+        for (k = 0; k < NTRK; k++)
+            scn_pat[s][k] = (uint8_t)s;
+    }
+    scn_cur = scn_ask = SCN_NONE;
+}
+CTL_SMALL static int scn_default(void)          /* (nothing to save) */
+{
+    uint32_t s, k;
+    for (s = 0; s < NSCENE; s++) {
+        if (scn_name[s])
+            return 0;
+        for (k = 0; k < NTRK; k++)
+            if (scn_pat[s][k] != s)
+                return 0;
+    }
+    return 1;
+}
+/* scene s asked for: each of its tracks its pattern (a track already playing it with nothing else asked: unchanged) */
+CTL_SMALL static void scn_launch(uint32_t s)
+{
+    uint32_t k;
+    s %= NSCENE;
+    for (k = 0; k < NTRK; k++) {
+        uint32_t p = scn_pat[s][k];
+        if (p >= NPAT)
+            continue;
+        if (p != trk[k].pat || trk[k].pat_req)
+            trk[k].pat_req = (uint8_t)(p + 1u);
+    }
+    scn_ask = (uint8_t)s;
+}
+/* (the UI, every frame) the scene asked for is the one playing once none of its tracks waits for its pattern; a track
+ * asked for another pattern meanwhile, or one that could not change (PATTERNS FULL), ends the wait as well */
+CTL_SMALL static void scn_poll(void)
+{
+    uint32_t k, wait = 0;
+    if (scn_ask >= NSCENE)
+        return;
+    for (k = 0; k < NTRK; k++) {
+        uint32_t p = scn_pat[scn_ask][k];
+        if (p < NPAT && trk[k].pat_req == p + 1u)
+            wait = 1;
+    }
+    if (!wait) {
+        scn_cur = scn_ask;
+        scn_ask = SCN_NONE;
+    }
+}
+/* the patterns playing now into scene s (its name kept) */
+CTL_SMALL static void scn_store(uint32_t s)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++)
+        scn_pat[s % NSCENE][k] = trk[k].pat;
+    scn_cur = (uint8_t)(s % NSCENE);
 }
 /* no pattern but each track's playing one (pattern 1), no chain, the bank empty: a NEW project, a load (before its own) */
 CTL_SMALL static void pat_reset_all(void)
@@ -237,9 +329,10 @@ CTL_SMALL static void pat_reset_all(void)
         track_t *t = &trk[i];
         t->pat = 0;
         t->pat_req = t->pat_arm = 0;
-        t->pat_nchain = t->pat_ci = 0;
+        t->pat_nchain = t->pat_ci = t->pat_cr = t->pat_coff = 0;
         t->seq_org = 0;
     }
+    scn_defaults();                              /* (and the scenes: the project's too) */
 }
 /* an entry read from a project (format 7 'P'): track k's pattern pat, LEN len, n bytes. 0: not taken (no room, or
  * not one of this firmware's) */

@@ -1863,7 +1863,8 @@ function editorProj7() {
   const ranges = [...((/CP_RANGE\[CP_COUNT\]\[6\] = \{([\s\S]*?)\n\};/.exec(cp) || [])[1] || "").matchAll(/\[CP_(\w+)\] = \{([^}]*)\}/g)]
     .filter((m) => m[1] !== "NONE").map((m) => m[2].replace("NSTEP", "64").replace("P_E7", "70").replace("P_ED_FLT", "5").split(",").map((x) => +x.trim()));
   const names = [...((/CP_NAME\[CP_COUNT\] = \{([^}]*)\}/.exec(cp) || [])[1] || "").matchAll(/"([^"]*)"/g)].map((m) => m[1]).slice(1);
-  ok(/#define PB_SIZE 3072u/.test(pb) && /'G'/.test(pc) && /'H'/.test(pc) && /'P'/.test(pc) && /if \(sz < sizeof t->step\)/.test(pt)
+  ok(/#define PB_SIZE 3072u/.test(pb) && /#define NCHAIN 16/.test(readFileSync(join(HERE, "../firmware/src/core.h"), "utf8"))
+    && js([...(/N_SCN\[\] = \{([^}]*)\}/.exec(pb) || [])[1].matchAll(/"([^"]*)"/g)].map((m) => m[1])) === js(P.SCN_NAMES) && /'G'/.test(pc) && /'H'/.test(pc) && /'P'/.test(pc) && /'C'/.test(pc) && /if \(sz < sizeof t->step\)/.test(pt)
     && js(ranges) === js(P.CP.slice(1).map((c) => c.slice(1))) && js(names) === js(P.CP.slice(1).map((c) => c[0])),
     "project 7: the editor's codec has the firmware's chunks, bank size, component names and ranges (comp.c)");
   const tool = join(HERE, "../build/host/proj7_tool");
@@ -1893,6 +1894,24 @@ function editorProj7() {
     "project 7: pattern 3 plays (its LEN 8, its notes; pattern 1 and its components in the bank), the chain 3 1 5, a JUMP, RAND, seed 42");
   ok(/ bank 144 /.test(line(5)) && / bank 0 /.test(line(3)) && /^H 2 5:1 3:3$/m.test(r.o),
     "project 7: track 6's pattern 5 copied to 8; track 4's pattern 2 cleared; the progression VI IV");
+  /* chains with repeats and PLAY off, scenes ('C') */
+  ok(A.tracks[5].chain.join() === String(P.slot(4, 3)) + ",0" && A.tracks[5].coff === 1 && !!A.scenes && A.scenes.names[0] === 4
+    && A.scenes.pats[1][0] === 5 && A.scenes.pats[2][3] === P.SCN_KEEP && A.scenes.pats[3][3] === 3,
+    "project 7: the firmware's chain with repeats (P5 x3, P1, PLAY off) and scenes (CHORUS, a track on another pattern, one kept) read");
+  const S = P.decode(a);
+  P.setChain(S, 2, [P.slot(1, 16), P.slot(3), P.slot(0, 2), 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 1, P.slot(2, 4)]);
+  P.track(S, 2).coff = 0;
+  S.scenes.names[7] = 18; S.scenes.pats[7][7] = P.SCN_KEEP; S.scenes.pats[0][2] = 1;
+  const s7 = P.encode(S), rs = load(s7);
+  const lineS = (k) => (rs.o.split("\n").find((x) => x.startsWith(`T${k} `)) || "");
+  ok(eq(rs.b, s7) && /^T2 kind 0 pat 0 chain 241 3 16 5 6 7 0 1 2 3 4 5 6 7 1 50 bank/.test(lineS(2)) && /^C7 END 7 7 7 7 7 7 7 8$/m.test(rs.o)
+    && /^C0 CHORUS 0 0 1 0 0 0 0 0$/m.test(rs.o) && /^C2 - 2 2 2 8 2 2 2 2$/m.test(rs.o) && / off /.test(lineS(5)),
+    "project 7: a chain of 16 slots with repeats and the scenes edited: loaded by the firmware, captured again: the same bytes");
+  const Z = P.decode(a);
+  Z.scenes = null;
+  const z = P.encode(Z), rz = load(z);
+  ok(!String.fromCharCode(...z).includes("C\x29\x00") && String.fromCharCode(...a).includes("C\x29\x00") && eq(rz.b, z) && /^C1 - 1 1 1 1 1 1 1 1$/m.test(rz.o),
+    "project 7: the default scenes: no 'C' chunk, as the firmware writes it");
   const C = P.decode(a);
   C.harm = [{ deg: 0, bars: 4 }];
   const c = P.encode(C), rc = load(c);

@@ -372,7 +372,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | Control | What it does |
 | --- | --- |
 | **MASTER** | volume (and the USB audio level, if USB AUDIO is on MASTER) |
-| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group (the tabs at the bottom name them; SEQ's include PATTERNS) · drums: kit ↔ sound |
+| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group (the tabs at the bottom name them; SEQ's include PATTERNS, CHAIN, SCENES) · drums: kit ↔ sound |
 | **ALGORITHM** | the selected track, 1–8, on every page (1.2.0; the header names it) |
 | **PRESETS** | the selected track's sound, or the drum kit |
 | **KNOB 1–4** | the four values on the screen, each in its colour: on a page of values KNOB 1 top left, 2 top right, 3 bottom left, 4 bottom right; on TRACKS and the other full screens, the dials at the bottom |
@@ -380,7 +380,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | **FX · SEL · ENV · LFO · EDIT · GLO** (top row) | tap: their pages · hold FX, SEL, EDIT, GLO: a layer. **SEL** is the second button of the top row, between FX and ENV (not the SELECT knob) |
 | **HOME** | the TRACKS screen · on it: the full-screen visualiser (SELECT: 6 styles; HOME again closes it) · hold: the menu · tapped while a layer is held: lock it |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages · hold: the song layer |
-| **ARP · SEQ** | tap: their pages (SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS, SONG) · hold: note repeat · steps · hold SEQ + tap SAVE: the PATTERNS screen |
+| **ARP · SEQ** | tap: their pages (SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG) · hold: note repeat · steps · hold SEQ + tap SAVE: the SCENES page |
 | **PLAY** | start / stop all the tracks; its light flashes on every beat |
 | **REC** | playing: record now / stop · stopped: arm (the REC screen) · hold: clear the track |
 | **EDIT + OCT− / OCT+** | undo / redo |
@@ -509,7 +509,7 @@ Audio preview requires the served site, rather than the downloaded single-file e
 
 - **Sound** — every parameter of the selected track, the engines and the presets; on an FM6 track the **FM6** panel: every operator, the bank, **Import / Export SysEx** (DX7 voices and banks).
 - **Sequencer** — the steps, as tiles or as a **piano roll**, and the track's length (1–64 steps); on the drum track a grid of 16 sounds × the steps, with levels and ratchets, and the kit. Click a step for its nudge, parameter locks and fill condition. **Export MIDI / Import MIDI**: the selected track as a MIDI file, and back.
-- **Patterns** (BoopBox) — each track's eight patterns (play one, copy, clear), its chain and FOLLOW; a pattern's step components, direction and seed; the song's chord progression. Read from the FM-1, change, **Send** (the song stopped).
+- **Patterns** (BoopBox) — each track's eight patterns (play one, copy, clear), its chain (slots with repeats) and FOLLOW; the scenes; a pattern's step components, direction and seed; the song's chord progression. Read from the FM-1, change, **Send** (the song stopped).
 - **Tracks** — the eight channel strips.
 - **Song** — the order of the sections A–D (the SONG screen): which section, how many bars, how many times, whether the song starts again at the end, and the entries it loops.
 - **Library** — your user presets and preset files.

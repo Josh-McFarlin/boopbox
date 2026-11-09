@@ -15,6 +15,29 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## Unreleased
 
+**Patterns you can play, chains you can write, scenes for the song** ([the
+details](docs/groovebox-controls.md#patterns)):
+
+- **The PATTERNS screen is now three pages, after PLAY: PATTERNS, CHAIN and SCENES.** SELECT walks them, SEQ taps
+  through them, and **hold SEQ + tap SAVE opens SCENES**.
+- **The keys are pads on those pages.** White keys 1–8 ask for the selected track's patterns 1–8; white keys 9–16
+  launch scenes 1–8. Their lights show what plays and what waits. They play no notes there.
+- **PATTERNS** shows the selected track's eight patterns as tiles with a picture of their steps, *now* and *next*,
+  and *empty*. COPY moved to KNOB 3 and names what it copies (*COPY 1 > 4: AGAIN*); CLEAR is KNOB 4. OCT+ / OCT−
+  still ask for the cursor's pattern on the track / every track.
+- **CHAIN** is a playlist: up to **16 slots**, each a pattern and its **repeats (×1–×16)**, in any order. Type it on
+  the keys, change a slot's pattern and repeats, insert (OCT+), remove (OCT−), and turn PLAY off without losing it.
+  Before, a chain was 2–8 patterns in a row from the cursor, one loop each.
+- **SCENES**: eight named moments of the song (INTRO, VERSE, CHORUS…), each a pattern for every track, or *keep*.
+  Launch one and every track changes together on the quantize; the header counts down to it. OCT− twice stores what
+  plays now into a scene.
+- **The web editor's Patterns page** edits chains with repeats and PLAY, and the scenes.
+- BoopBox Trainer: *KNOB 3* copies; from SCENES the coach says *TURN SELECT LEFT: PATTERNS*.
+
+Projects save the chains' repeats and PLAY, and the scenes (a new `C` chunk; still format 7). Older projects open as
+before (each chain slot plays once, the scenes at their defaults). A project saved by this version may not open
+correctly on an older BoopBox.
+
 **Pages that are easier to find** ([the controls](BOOPBOX.md#the-panel-tap-hold-layers)):
 
 - **PATTERNS is a page like the others.** SELECT walks the SEQ pages NOTES, TIMING, PLAY and **PATTERNS** both ways,

@@ -45,9 +45,10 @@ value is clamped to its parameter's range when it is read.
 | --- | --- | --- |
 | `G` | always | the writer's `G_COUNT`; a bit per global that is not at its default; those values. A reader with fewer globals reads past the extra ones. |
 | `S` | always | the selected track |
-| `T` | one per track (8) | index, kind (synth / drum), engine, preset; the count of common parameters (`P_E0`), a bit map of those not at their default and their values (the track's own values, not a lock that plays now: `trk_base`); the engine's eight parameters in the same way; a drum track's 16 sounds' TUNE / DECAY (16 bytes); the pattern that plays (see below); then, added with the patterns: the number of the pattern that plays, the chain length and the chain; then, added with the harmony: FOLLOW (`hfol`). |
+| `T` | one per track (8) | index, kind (synth / drum), engine, preset; the count of common parameters (`P_E0`), a bit map of those not at their default and their values (the track's own values, not a lock that plays now: `trk_base`); the engine's eight parameters in the same way; a drum track's 16 sounds' TUNE / DECAY (16 bytes); the pattern that plays (see below); then, added with the patterns: the number of the pattern that plays, the chain's slot count (0..16; bit 7: the chain's PLAY is off) and its slots, a byte each: the pattern (bits 0..2) and its repeats − 1 (bits 4..7; a project written before repeats has 0 there: once); then, added with the harmony: FOLLOW (`hfol`). |
 | `H` | only when the progression or the live chord is not the default | the number of chords (1..8), then degree and bars for each |
 | `P` | one per stored pattern in the bank | `track << 4 \| pattern`, the pattern's LEN, the pattern's bytes |
+| `C` | after the bank, only when the scenes are not the default (scene N: pattern N on every track, no name) | the number of scenes (8), then for each: its name (an index into `patbank.c N_SCN`) and 4 bytes, the patterns of tracks 1..8 a nibble each (track 2i in the low nibble, 2i + 1 in the high one; 8: the track keeps what it plays) |
 
 A track without a `T` chunk is set as at power-on. The fields added at the end of `T` are read only when there are
 bytes left in the chunk, so a project written before they existed loads with pattern 1, no chain and FOLLOW OFF.
@@ -77,6 +78,7 @@ audio ISR when it changes patterns.
   same type on one step is dropped; the others are kept.
 - A `P` entry for a track past 8 or a pattern past 8 is dropped; the other entries are loaded.
 - An `H` chunk with a bad count is ignored (the default progression stays).
+- A `C` chunk cut short leaves the default scenes; an unknown name reads as none, a pattern past 8 as *keep*.
 
 Tests: `tests/project_test.c` ("format 7: ..." checks: round trip of eight tracks, identical captures, import only
 at its own size, a flipped bit / wrong size / wrong check word refused, an unknown chunk read past, a chunk longer
