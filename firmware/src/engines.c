@@ -42,12 +42,14 @@ CTL_SMALL static uint32_t uni_turns(uint32_t r, int32_t p16, int32_t d16)
 #include "eng_fm6.c"            /* FM6: 6-operator FM, msfa ported (fm6_core.c, Apache-2.0); SLOOP 2.4 */
 #include "eng_phys.c"           /* PHYS: physical models, from Felucca 1.0 (DaisySP, Rings: MIT); SLOOP 2.5 */
 #include "eng_noise.c"          /* NOISE: from Felucca 1.0; SLOOP 2.5 */
+#include "eng_obv.c"            /* OBERVAVE: OberVave 3.3.2's voice (zvenson, GPL-3.0-only); BoopBox 1.7 */
 
 typedef union {
     gr_part_t grain;
     drw_part_t drawbar;                  /* eng_drawbar.c: the part's wheels, percussion and rotary (sloop-lab) */
     fm6_part_t fm6;                      /* eng_fm6.c: six notes and the operator buses */
     uint32_t phys[PHYS_ARENA / 4u];      /* eng_phys.c: two SYMP slots or three small ones */
+    obv_part_t obv;                      /* eng_obv.c: the program, the LFO, eight voices */
 } eng_arena_t;
 static eng_arena_t eng_arena[NARENA] __attribute__((section(".pool")));
 static uint8_t eng_arena_own[NARENA];           /* the engine + 1 whose state is in it, 0 = none */
@@ -57,7 +59,7 @@ static uint32_t eng_arena_claims, eng_arena_bad;   /* host tests: claims, access
 #endif
 CTL_SMALL static int eng_big(uint32_t eng)                /* the engines that keep their state in an arena */
 {
-    return eng == ENGI_GRAIN || eng == ENGI_DRAWBAR || eng == ENGI_FM6 || eng == ENGI_PHYS;
+    return eng == ENGI_GRAIN || eng == ENGI_DRAWBAR || eng == ENGI_FM6 || eng == ENGI_PHYS || eng == ENGI_OBV;
 }
 /* arena i is lent: to a track that still holds it (both ways: a track cleared or set up by hand gives it back) */
 CTL_SMALL static int eng_arena_lent(uint32_t i)
@@ -169,12 +171,14 @@ static const engine_t *const ENGINES[NENGINES] = {&ENG_ANALOG, &ENG_DIGITAL, &EN
                                                     &ENG_GRAIN,
                                                     &ENG_FM6,    /* 9 (ENGI_FM6): always; SLICE after it (core.h) */
                                                     &ENG_PHYS, &ENG_NOISE,
+                                                    &ENG_OBV,    /* 12 (ENGI_OBV) */
 #if FELUCCA_SLICE
                                                     &ENG_SLICE,
 #endif
 };
 _Static_assert(ENGI_FM6 == 9u, "ENGINES[ENGI_FM6] is FM6");
-_Static_assert(ENGI_GRAIN == 8u && ENGI_PHYS == 10u && ENGI_NOISE == 11u && ENGI_SLICE == 12u, "ENGINES[] order");
+_Static_assert(ENGI_GRAIN == 8u && ENGI_PHYS == 10u && ENGI_NOISE == 11u && ENGI_OBV == 12u && ENGI_SLICE == 13u,
+               "ENGINES[] order");
 
 /* every factory sound as loud as the others: a level trim per preset, 1/2 dB, measured on a phrase
  * that fits the sound (tools/level_presets.py writes preset_trim.h); a track keeps it in P_ED_FX */

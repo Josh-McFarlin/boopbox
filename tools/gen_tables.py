@@ -111,7 +111,28 @@ def main(path):
     # soft clip curve for |x| in 0..2 (Q12 in, Q15 out): tanh
     L += arr("TANH_Q15", "int16_t", [int(32767 * math.tanh(i / 256 * 2)) for i in range(257)])
     L += fm6_tables()
+    L += obv_tables()
     Path(path).write_text("\n".join(L) + "\n")
+
+
+def obv_tables():
+    """OBERVAVE (eng_obv.c): OberVave 3.3.2's own curves (zvenson, its tools/gen_tables.py, GPL-3.0-only), made for
+    this control rate (CTL 32: OberVave's is 16)"""
+    def k_block(tau_s):
+        return max(1, min((1 << 24) - 1, int(round((1 << 24) * (1 - math.exp(-CTL / (tau_s * FS)))))))
+    L = []
+    # SVF g = tan(pi f / fs) at integer semitones 0..136 (8.2 Hz .. 19.9 kHz), Q12, f capped at 0.45 fs
+    fc = [min(440.0 * 2 ** ((n - 69) / 12), 0.45 * FS) for n in range(137)]
+    L += arr("OBV_SVF_G", "uint16_t", [int(round(4096 * math.tan(math.pi * f / FS))) for f in fc])
+    # envelope times 0.5 ms .. 10 s: attack aims at 1.3 and stops at 1.0, decay / release reach 5 % in t (3 tau)
+    ms = [0.5 * (20000 ** (v / 127)) for v in range(128)]
+    L += arr("OBV_ENV_ATT", "uint32_t", [k_block(m / 1000 / 1.466) for m in ms], 8)
+    L += arr("OBV_ENV_DEC", "uint32_t", [k_block(m / 1000 / 3.0) for m in ms], 8)
+    # LFO 0.05 .. 30 Hz per control block; its delay / fade 0 .. 5 s in blocks
+    hz = [0.05 * (600 ** (v / 127)) for v in range(128)]
+    L += arr("OBV_LFO_INC", "uint32_t", [int(h * CTL / FS * 2 ** 32) for h in hz], 8)
+    L += arr("OBV_LFO_DLY", "uint16_t", [int(round((5000 * (v / 127) ** 2) / 1000 * FS / CTL)) for v in range(128)])
+    return L
     print(f"tables: {path}")
 
 

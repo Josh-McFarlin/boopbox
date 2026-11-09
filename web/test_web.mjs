@@ -44,7 +44,7 @@ async function editorMock() {
   inp.onmidimessage = (e) => link.receive(e.data);
   const rq = async (r, o) => link.request(r, o);
   const info = E.parse[E.CMD.INFO](await rq(E.req.info()));
-  ok(info.nengines === 12 && info.engines[9] === "FM6" && info.engines[10] === "PHYS" && info.engines[11] === "NOISE" && info.engines[5] === "VOICE" && info.engines[6] === "TRIO" && info.engines[7] === "WHEEL" && info.engines[8] === "GRAIN" && info.pcount === 71 && info.pe0 === 63 && info.engines[4] === "SAMPLE",
+  ok(info.nengines === 13 && info.engines[12] === "OBERVAVE" && info.engines[9] === "FM6" && info.engines[10] === "PHYS" && info.engines[11] === "NOISE" && info.engines[5] === "VOICE" && info.engines[6] === "TRIO" && info.engines[7] === "WHEEL" && info.engines[8] === "GRAIN" && info.pcount === 71 && info.pe0 === 63 && info.engines[4] === "SAMPLE",
     "editor: INFO");
   let descs = 0;
   for (let i = 0; i < info.pcount; i++) if (E.parse[E.CMD.DESC](await rq(E.req.desc(0, i))).label) descs++;
@@ -226,7 +226,7 @@ async function editorLibrarian() {
   const ctx = { keys, engines: info.engines, firmware: info.version, pe0: info.pe0 };
   const pts = [cap, { ...bass, engineName: info.engines[bass.engine], tags: ["bass", "device"] }];
   const file = JSON.parse(JSON.stringify(E.libraryFile("library", pts, ctx)));
-  ok(file.format === "felucca-library" && file.version === 1 && file.pCount === 71 && file.paramLabels.length === 71 && file.engines.length === 12,
+  ok(file.format === "felucca-library" && file.version === 1 && file.pCount === 71 && file.paramLabels.length === 71 && file.engines.length === 13,
     "library file: versioned, with P_COUNT, labels and engines");
   const back = E.readLibraryFile(file, ctx);
   ok(back.patches.length === 2 && !back.skipped && eq(back.patches[0].p, cap.p) && eq(back.patches[1].p, bass.p)
@@ -570,7 +570,7 @@ async function editorV9() {
   /* the device: FM6_LIST / GET / PUT / ERASE */
   const { m, rq, done } = attachMock({});
   const info = E.parse[C.INFO](await rq(E.req.info()));
-  ok(info.proto === 13 && info.nengines === 12 && info.engines[9] === "FM6", "v9: INFO ends with 13 (v13 includes v9), FM6 is engine 9");
+  ok(info.proto === 13 && info.nengines === 13 && info.engines[9] === "FM6", "v9: INFO ends with 13 (v13 includes v9), FM6 is engine 9");
   const L = E.parse[C.FM6_LIST](await rq(E.req.fm6List()));
   if (!(L.factory === 8 && L.bank === 27 && L.slots.length === 35)) console.log("  FM6_LIST", L.factory, L.bank, L.slots.length, js(L.slots.slice(0, 10)));
   ok(L.factory === 8 && L.bank === 27 && L.slots.length === 35 && L.slots[0].used, "v9: FM6_LIST: 8 factory patches, 27 bank slots");
@@ -1056,8 +1056,14 @@ async function editorDsyn() {
   let hdr = null;
   try { hdr = readFileSync(join(HERE, "../build/gen/felucca_drumkits.h"), "utf8"); } catch (e) { /* (not built) */ }
   if (hdr) {
-    const kits = [...hdr.matchAll(/\{"([^"]*)", "[^"]*", (0x[0-9A-Fa-f]+|\d+), \{([\s\S]*?)\}\},/g)];
-    const bytes = kits.flatMap((k) => [Number(k[2]), ...[...k[3].matchAll(/\{([^{}]*)\},/g)].flatMap((r) => r[1].split(",").map((x) => +x & 255))]);
+    /* (1.7) the sounds once (DS_SND), each kit as 16 indices into them and 16 levels (the sound's last byte) */
+    const sndBody = (/DS_SND\[DS_NSND\] = \{([\s\S]*?)\n\};/.exec(hdr) || [])[1] || "";
+    const snd = [...sndBody.matchAll(/\{([^{}]*)\},/g)].map((r) => r[1].split(",").map((x) => +x & 255));
+    const kits = [...hdr.matchAll(/\{"([^"]*)", "[^"]*", (0x[0-9A-Fa-f]+|\d+),\s*\{([^}]*)\},\s*\{([^}]*)\}\},/g)];
+    const bytes = kits.flatMap((k) => {
+      const idx = k[3].split(",").map((x) => +x), lvl = k[4].split(",").map((x) => +x & 255);
+      return [Number(k[2]), ...idx.flatMap((s, l) => [...snd[s].slice(0, 21), lvl[l]])];
+    });
     ok(kits.length === 32 && js(kits.map((k) => k[1])) === js(E.DSYN_MOCK_NAMES) && js(Array.from(raw)) === js(bytes),
       "dsyn: the mock's 32 kits == build/gen/felucca_drumkits.h");
   }
