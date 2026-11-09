@@ -13,9 +13,9 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## 20 synth voices (firmware, after 1.5.1)
+## 1.6.0
 
-In the next BoopBox firmware the synth tracks **share 20 voices** instead of 8 ([polyphony](GUIDE.md#polyphony)):
+**20 synth voices:** the synth tracks now **share 20 voices** instead of 8 ([polyphony](GUIDE.md#polyphony)):
 
 - Chords on several tracks at once now all sound: three pads of 6 notes and a bass no longer take each other's notes.
   One track still plays at most 8 notes (and each engine keeps its own cap: FM6 6, VOICE 4, GRAIN and PHYS 3).
@@ -25,6 +25,19 @@ In the next BoopBox firmware the synth tracks **share 20 voices** instead of 8 (
   out the quietest voices one at a time, as it already did. SYSTEM (KNOB 4) shows the load.
 - **BoopBox Trainer keeps 8 voices**, the budget its three songs were made and approved with.
 - Projects, presets and settings open as they are; a project with only a few voices sounds exactly the same.
+
+**The web editor's side bar says what each page is for** ([the web editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/)):
+
+- The pages are grouped by what you came to do: **Play**, **Make a loop**, **Song**, **Your sounds** and **FM-1**, with
+  a few words under each page's name and a sentence under the page's title (also before you connect), in English and
+  Japanese.
+- Clearer names: Tracks is now **Mixer**, Song is **Song order**, Song & sections is **Save & load**. Links to a page
+  (`#...`) still work.
+- The Connect card stays at the bottom of the side bar.
+
+Projects, songs, presets, settings and the trainer's progress from 1.5.1 open as they are. Level 4's song lives in the
+trainer's package: installing the trainer 1.6.0 from the installer empties level 4, so to keep your song, install it
+from the song page with it.
 
 ## 1.5.1
 

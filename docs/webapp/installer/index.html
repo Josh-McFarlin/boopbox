@@ -113,7 +113,7 @@
   <pre id="log"></pre>
   <a class="ed" href="../editor/" data-t="editor"></a>
   <a class="ed" href="../song/" id="songlink" hidden data-t="song"></a>
-  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.5.1.html" data-t="edOffline"></a></p>
+  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.6.0.html" data-t="edOffline"></a></p>
   <p><button id="app" class="ed" hidden data-t="appInstall"></button></p>
   <hr>
   <p class="small" data-t="direct"></p>
@@ -566,7 +566,7 @@ const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textCont
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
-const meta = {"version": "1.5.1", "product": "FM-1_915", "pkg": "../../firmware/boopbox-1.5.1.fwsc", "sha256": "728d0e4139ee2a6b5a945d205c66582357b172212cb6b77fbb43337f560c34b1", "trainer": {"version": "1.5.1", "product": "FM-1_915", "pkg": "../../firmware/boopbox-trainer-1.5.1.fwsc", "sha256": "dbcb0df448d2b73fcc467c42cfba83d2b382b8d808f620cefe503c635f582e54"}};
+const meta = {"version": "1.6.0", "product": "FM-1_916", "pkg": "../../firmware/boopbox-1.6.0.fwsc", "sha256": "b563112f36f8895b9044ed58cd13344a60b541baea0871a1e0a324746215e0cf", "trainer": {"version": "1.6.0", "product": "FM-1_916", "pkg": "../../firmware/boopbox-trainer-1.6.0.fwsc", "sha256": "2e13edef770874098ed1fef78fce2b6e7435f86bf950ba6a1744bb0957edf0b7"}};
 
 let writing = false;
 const lockAll = (on) => {

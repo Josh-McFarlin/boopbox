@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.4.3](#whats-new-in-143)
+1. [What's new in 1.6.0](#whats-new-in-160)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,14 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.5.1
+## What's new in 1.6.0
+
+**20 synth voices.** The synth tracks share 20 voices instead of 8, so chords on several tracks at once all sound: three
+pads of 6 notes and a bass no longer take each other's notes. One track still plays at most 8 notes; BoopBox Trainer
+keeps 8 voices. The web editor's side bar now groups its pages by what you came to do and says what each one is for
+([all changes](CHANGELOG.md)).
+
+### 1.5.1
 
 **BoopBox Trainer**: a line of the coach wider than the screen now scrolls like a ticker, and the hint for a black key
 is shorter (LIT KEY), so nothing is cut off, in your own songs (level 4) too. The song page hears busy songs better:
