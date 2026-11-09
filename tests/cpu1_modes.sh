@@ -14,8 +14,9 @@
 set -u
 # run_tests.sh exports CPU_VALGRIND=1 for its own regress run: inherited here, it would count every CPU job under
 # callgrind again in each of the six modes below (about 20 minutes, for a budget this script does not check);
-# BUDGET_UPDATE would rewrite tests/cpu_baseline.txt with the costs of a thread mode
-unset CPU_VALGRIND BUDGET_UPDATE
+# BUDGET_UPDATE would rewrite tests/cpu_baseline.txt with the costs of a thread mode, and GOLDEN_UPDATE
+# tests/golden.txt with each mode's hashes (a mode that differs would pass): the default run rewrites them
+unset CPU_VALGRIND BUDGET_UPDATE GOLDEN_UPDATE
 cd "$(dirname "$0")/.."
 OUT=build/host
 CC="${CC:-cc} -O2 -w -Ibuild/gen -Ifirmware/src"
