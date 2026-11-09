@@ -235,12 +235,12 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEL** | SEL pages (SEL, SEL 2) | key / chord layer |
 | **EDIT** | EDIT pages (EDIT 1, EDIT 2, VOICE, VOICE 2) · with the drum track: the **DRUMS** screen's **kit** page, again: kit ↔ **sound** · on the NOTES page: delete the note | erase layer |
 | **ARP** | ARP pages (ARP, ARP 2) | note-repeat layer |
-| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer · held + **SAVE** tapped: the **PATTERNS** screen |
+| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer · held + **SAVE** tapped: the **SCENES** page |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select the track, on every screen but SONG (its loop start); on DRUMS a synth track goes to its NOTES, on NOTES a drum track to its DRUMS grid (1.4.2). Inside a layer it waits; not during a free take | — |
 | **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it (a drum track: its **kits**) · on the DRUMS screen: the kit | — |
-| **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends; SEQ: NOTES or the DRUMS grid, TIMING, PLAY, PATTERNS) · DRUMS kit / sound: kit ↔ sound · visualiser: the style · menu: the section | — |
+| **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends; SEQ: NOTES or the DRUMS grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES) · DRUMS kit / sound: kit ↔ sound · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
 | **MASTER** | output volume (the visualiser ignores it) | — |
 
@@ -316,13 +316,13 @@ Every kit is level-matched. The kit is saved with projects and song sections. Ch
 It has three pages, grid, kit and (2.7) sound, in two groups, as on a synth track (1.7):
 
 - **SEQ** tapped with the drum track selected opens the **grid**: it is the drum track's first SEQ page, in place of
-  NOTES. SEQ again (or **SELECT** right) goes on through the other SEQ pages, **TIMING**, **PLAY** and **PATTERNS**,
-  then the SONG screen, exactly as from a synth track's NOTES.
+  NOTES. SEQ again (or **SELECT** right) goes on through the other SEQ pages, **TIMING**, **PLAY**, **PATTERNS**,
+  **CHAIN** and **SCENES**, then the SONG screen, exactly as from a synth track's NOTES.
 - **EDIT** tapped with the drum track selected opens the **kit**; EDIT again (or **SELECT**) switches kit ↔ **sound**.
   SEQ from either goes back to the grid.
 
 The top right of the screen names the page you are on and where SEQ or EDIT goes next. Hold **SEQ** and tap **SAVE**
-for the PATTERNS screen from anywhere.
+for the SCENES page from anywhere.
 
 **Grid page** — the 16 sounds × 16 steps, levels as shades, ratchets as notches.
 
@@ -562,7 +562,7 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while recording or 
 
 **The DRUMS grid has the same sheet** (2.7.2): on the grid, **OCT+ held** opens it for the hit of KNOB 1's sound on KNOB 2's step: **RATCHET** (x1 … x4), **NUDGE** and **FILL** (the step's: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step), **DELETE** (OCT+); OCT− closes it. OCT+ tapped still turns the page of steps.
 
-The **TIMING** page (tap SEQ again; called PATTERN before) holds the pattern's **LEN** and the track's **DIV**, **SWG** (swing) and **GATE** (how long each note lasts). Tap SEQ again for the **PLAY** page (the play direction and the random seed), then the **PATTERNS** screen (eight patterns a track) and the **SONG** screen. **SELECT** walks NOTES, TIMING, PLAY and PATTERNS both ways (1.7), and **SEQ held + SAVE** goes straight to PATTERNS. SEQ tapped from any other page always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES; TIMING, PLAY, PATTERNS and SONG work the same.
+The **TIMING** page (tap SEQ again; called PATTERN before) holds the pattern's **LEN** and the track's **DIV**, **SWG** (swing) and **GATE** (how long each note lasts). Tap SEQ again for the **PLAY** page (the play direction and the random seed), then **PATTERNS** (the track's eight patterns as pads), **CHAIN** (the track's playlist of patterns) and **SCENES** (every track's pattern at once, for the song's parts), and the **SONG** screen. On those three pages the keys are pads: white keys 1–8 the track's patterns, 9–16 the scenes ([the details](docs/groovebox-controls.md#patterns)). **SELECT** walks NOTES to SCENES both ways, and **SEQ held + SAVE** goes straight to SCENES. SEQ tapped from any other page always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES; TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
 ### Nudge (micro timing)
 
@@ -757,7 +757,7 @@ The lettering (2.6) is Terminus **Bold**, all in **capitals**: thicker strokes, 
 
 ## 16. Every page, knob by knob
 
-Tap a button to open its first page (or the last one you used); **tap it again** for its next page, or turn **SELECT** to go back and forth. The number after the title (*TIMING 2/3*) counts the pages SELECT goes through; tapping SEQ more also opens the PATTERNS and SONG screens, screens of their own that SELECT does not walk into. On the drum track, pages that do not apply to it show *DRUM TRACK*.
+Tap a button to open its first page (or the last one you used); **tap it again** for its next page, or turn **SELECT** to go back and forth. The number after the title (*TIMING 2/3*) counts the pages SELECT goes through; tapping SEQ more also opens the SONG screen, a screen of its own that SELECT does not walk into. On the drum track, pages that do not apply to it show *DRUM TRACK*.
 
 | Button | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- | --- |
@@ -784,7 +784,9 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | **SEQ** | **NOTES** | NOTE (cursor) | PITCH | LEN (steps the note lasts) | FORCE: GHOST, SOFT, NORM, HARD, ACC (see [the NOTES page](#10-the-step-sequencer-steps-nudge-locks-fills)) |
 | | **TIMING** | LEN 1–64 steps | DIV 1/4 … 2BAR | SWG track swing | GATE note length |
 | | **PLAY** | DIR: FWD, REV, PEND, RAND | SEED 0–255 | — | — |
-| | **PATTERNS** | the PATTERNS screen ([groovebox controls](docs/groovebox-controls.md#patterns)) | | | |
+| | **PATTERNS** | PATTERN (cursor; the keys are pads: [groovebox controls](docs/groovebox-controls.md#patterns)) | QUANT (PAT Q) | COPY the pattern playing here (twice) | CLEAR it (twice) |
+| | **CHAIN** | SLOT (or the end) | its PATTERN | REPEAT ×1–×16 | PLAY on / off |
+| | **SCENES** | SCENE | QUANT (PAT Q) | NAME | the track's PATTERN in it (or keep) |
 | | **SONG** | the SONG screen | | | |
 | **GLO** | **GLOBAL** | BPM 40–240 | SWING (all tracks) | CLICK: OFF, REC, ON | TUNE ±50 cents |
 | | **MASTER** | DUST | DUCK | FILT (DJ filter) | ROLL (note-repeat rate) |
@@ -806,7 +808,7 @@ Notes:
 - **Global** pages (DLY, REV/CHO, GLOBAL, MASTER, DRUMS, TEXTURE and the MIDI pages) are the same whatever track is selected.
 - **1.2.0:** a page of values shows its four values once, large, in the corners of their knobs (KNOB 1 top left … 4 bottom right); the bottom line names the page between the one before and the one after it.
 - **SYNC**, **MIDI** and **IN** are settings of the FM-1, kept when you load a project.
-- On the **drum track**, the pages that work are SLICER, TIMING and PLAY (SEQ), the PATTERNS and SONG screens and the global pages (SEQ opens the DRUMS screen in place of NOTES); its kit, level, reverb and pan are on the DRUMS kit page, and its filter is **FX + KNOB 4**.
+- On the **drum track**, the pages that work are SLICER, TIMING and PLAY (SEQ), the PATTERNS, CHAIN, SCENES and SONG pages and the global pages (SEQ opens the DRUMS screen in place of NOTES); its kit, level, reverb and pan are on the DRUMS kit page, and its filter is **FX + KNOB 4**.
 - FM6 tracks ignore the ENV page and ENV DEST (each operator has its own envelope).
 - <a id="arp-modes"></a>**ARP modes** (2.7, after Felucca 1.4 / 1.5.1). With C, E and G held: **UP** C E G · **DN** G E C · **UPDN** C E G E · **DNUP** G E C E · **RND** at random · **ORD** in the order you pressed them · **REPEAT** the last note you pressed, again and again (OCT ignored) · **UP+8** C E G C' (the first note again an octave above the top) · **CONV** C G E (from the outside in) · **DIVG** E G C (from the inside out) · **PINKY** C G E G (the top note between the others) · **THUMB** C E C G (the bottom note between the others) · **WALK** one step up or down at random, from the bottom · **CHORD** the held notes together (the first four), on every step, an octave higher each step through OCT. OCT spreads the list over 1–4 octaves; ARP 2 ORD PLAY keeps the order you played for the other modes. Until 2.6, ORD played as UP unless ARP 2 ORD was PLAY: now it always follows the order you pressed.
 - <a id="kbd-hold"></a>**KBD HOLD** (2.7): ARP 2 → **HOLD ON** with ARP → **MODE OFF** holds the notes you play, without an arpeggio: let go and they go on sounding (a pad, a drone, a chord to play over with one hand). The next note you play with no key down **replaces** them (a new chord); notes played while keys are still down **join** them. The keys' MIDI note-offs wait too, so gear played from the FM-1 holds with it. **HOLD OFF** (or ARP on, another project, NEW) ends them; loading another sound ends the held notes too, but HOLD stays ON. Projects saved before 2.7 open with HOLD OFF when their arp is OFF (it did nothing then), so nothing hangs by surprise. It works for MIDI notes too. Recorded as you hear it: a held note ends where it is replaced. Up to 2.6, HOLD did nothing with the arp OFF.
@@ -1237,7 +1239,7 @@ Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/), the
 | **LIVE** (2.7) | the whole FM-1 under your hands for a show, from a computer, a tablet or a phone: see [LIVE](#live) |
 | **Sound** | every parameter of the selected track, as on the device: a card per button (ENV, LFO, EDIT, VOICE, FX, SEL, ARP), its pages as rows of four coloured values. **Engine** and **Presets** pickers, **Init sound**, **Copy to library**, **Save to file / Load file** (a sound as a file). On an FM6 track, the **FM6** panel: the six operators, **Read from track**, **Send to track** (*Send while editing* to hear every change), **Store in bank** (B1–B27), **Import SysEx** (or drop a .syx), **Store cartridge in bank** (2.5: the ticked voices of a bank into B1… in one write, and as user presets if you choose), **Export SysEx**, **Export bank as SysEx**. **The drum track** (2.7): **DRUMS** — the kit (‹ ›), level, pan, filter, reverb, delay, the INSERT, and the 16 pads: tap one to hear it, its **tune** and **decay** as the DRUMS screen's SOUND page (**all pads as the kit** puts them back) |
 | **Sequencer** | the pattern settings (LEN, DIV, SWG, GATE) and the steps as the device's tiles; the **step list** takes typed note names (*C4 E4 G4*). On the drum track: a **grid** of the 16 sounds × the steps, with the **kit**: choose a **level** (GHOST, SOFT, NORM, HARD) and a **roll** (x1–x4), then click a cell — a hit; click again (same level and roll) — cleared; **Shift+click** — one level louder. Click a step for its **detail**: **Nudge**, **Parameter locks** (+ lock, pick the parameter, set or delete), **Fill** (normal, fill only, no fill). **Reload**, **Clear sequence**. **Length**: − / + or type 1–64. **Grid / Piano roll** and **Export MIDI / Import MIDI**: see below |
-| **Patterns** (BoopBox) | the working project's patterns: pick a track, then its eight patterns (*playing*, the steps it holds, empty; each one's LEN): **Play P*n*** makes one play, **Copy to** another, **Clear**; **follows the chords** (FOLLOW: OFF, TRANS, SCALE); the **Chain** (2–8 patterns, **+P1…+P8**, click one to take it out, **No chain**). Below, the pattern picked: its 64 steps (a dot: a component; click one to choose where **Add** puts a component), **Direction** (FWD, REV, PEND, RAND) and **seed**, and its **step components** (step, type, A, B, what it does; one the FM-1 would leave out is red, 16 at most). **Chord progression**: up to 8 chords (I–VII, 1–16 bars), **▲ ▼ ✕**, **Add**, **One chord (I)**. **Read from the FM-1**, **Send to the FM-1** (the FM-1 loads it at once; stop the song first). Nothing changes on the FM-1 until you send; the room left (patterns of 3,072 B, the project of 3,840 B) is shown |
+| **Patterns** (BoopBox) | the working project's patterns: pick a track, then its eight patterns (*playing*, the steps it holds, empty; each one's LEN): **Play P*n*** makes one play, **Copy to** another, **Clear**; **follows the chords** (FOLLOW: OFF, TRANS, SCALE); the **Chain** (up to 16 slots, each a pattern and its repeats ×1–×16; **+P1…+P8**, **×** takes a slot out, **No chain**, **chain plays**). **Scenes**: a row per scene, its name and each track's pattern (or *keep*); **Reset the scenes**. Below, the pattern picked: its 64 steps (a dot: a component; click one to choose where **Add** puts a component), **Direction** (FWD, REV, PEND, RAND) and **seed**, and its **step components** (step, type, A, B, what it does; one the FM-1 would leave out is red, 16 at most). **Chord progression**: up to 8 chords (I–VII, 1–16 bars), **▲ ▼ ✕**, **Add**, **One chord (I)**. **Read from the FM-1**, **Send to the FM-1** (the FM-1 loads it at once; stop the song first). Nothing changes on the FM-1 until you send; the room left (patterns of 3,072 B, the project of 3,840 B) is shown |
 | **Mixer** | the eight channel strips: level, pan, mute, select; SOLO and REC shown as on the device |
 | **Song order** | the song order of the [SONG screen](#14-song-mode-sections-chains-songs): a row per section (A–D), its **bars** (1–64) and how many **times** in a row; **▲ ▼** move a row, **✕** removes it, **Add**; **At the end**: stop or start again; **Loop the entries** from … to … (the loop region: with *start again*, the song goes back to its first entry). **Read from the FM-1**, **Send to the FM-1** (16 entries in all; stop the song first). A section whose slot is empty is marked: save it on the FM-1 first (SAVE + key 5–8) |
 | **Library** | your sound library, kept in the browser: **Save current sound**, search by name or tag, filter by engine, sort, **Audition**, **To device slot**, **Rename**, **Tags**, **Duplicate**, **Delete**, **Export** / **Import** / **Export library**; copy factory presets in. Next to it the **32 user presets on the device**: **Load**, **Store current sound**, **To library**, **Erase**, **Export bank**. Drag sounds between the library and the slots |
@@ -1397,8 +1399,9 @@ If the official firmware comes up with odd settings or a scrambled display, it i
 | hold HOME | menu |
 | tap SAVE | on TRACKS: SONG screen · else SAVE pages |
 | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
-| hold SEQ + tap SAVE | PATTERNS screen |
-| tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS) / kit (again: sound) |
+| hold SEQ + tap SAVE | SCENES page |
+| white keys 1–8 / 9–16, on PATTERNS, CHAIN, SCENES | the track's patterns (CHAIN: into the chain) / launch scenes 1–8 |
+| tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS, CHAIN, SCENES) / kit (again: sound) |
 | OCT− / OCT+ | octave (both: 0) · drums: ghost / hard while held |
 | ALGORITHM | track |
 | PRESETS | sound · drum kit |

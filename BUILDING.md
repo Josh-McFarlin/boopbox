@@ -124,6 +124,11 @@ loader, a DSP render, the 8-track mix, project formats, the SLICER, the regressi
 the command-line installer) and, with Node.js, the web page tests. Run it after `./build.sh`
 (it uses `build/` and needs `AC79_SDK` set as for the build).
 
+The tests run in parallel, one job per test (its compile and its run), as many at once as the machine has
+CPUs: about 4 minutes on 4 cores, where one at a time took about 16. `TEST_JOBS=n` sets how many run at once
+(`TEST_JOBS=1`: one at a time). Each job's output is printed whole, in order, with its time, and is kept in
+`build/host/logs/`; the failed jobs are named at the end.
+
 Without the JieLi toolchain, `HOST_ONLY=1 sh tests/run_tests.sh` runs every test that does not need a firmware
 image and names the ones it skips (the update entry, the update loader, the target cost, the offline site).
 `python3 tools/proxy_size.py` estimates the code and RAM size with the host clang (see

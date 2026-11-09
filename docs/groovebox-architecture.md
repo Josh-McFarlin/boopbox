@@ -203,7 +203,9 @@ New modules (all host-testable, no allocation, bounded loops):
     more than one pattern, a chain, or plays a pattern other than 1.
   - The song's loop region: the arranger's two reserved bytes (`arranger.h arr_loop_first / arr_loop_end`), set on
     the SONG screen (PRESETS / ALGORITHM), read at each entry boundary.
-  - The PATTERNS screen (`ui_pats.c`, scope `SC_PATS`, a screen of its own between PLAY and SONG).
+  - The PATTERNS, CHAIN and SCENES pages (`ui_pats.c`, scope `SC_PATS`, three pages of their own between PLAY and SONG;
+    `pats_view` tells them apart by their order in `PAGES`). On them the keys are pads (`seq.c kb_pats`, `KB_PATS`
+    events of `lk_q`). Chains of up to 16 slots with repeats and scenes are in `patbank.c`.
   - The firmware's libc has no `memmove`: the bank closes up with a byte loop (the proxy build caught it; the host
     tests link the system libc).
   - Tests: `tests/pat_test.c`; UI cases in `tests/ui_pages_test.c` and `tests/song_ui_test.c`; the soak test asks

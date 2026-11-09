@@ -289,7 +289,7 @@ def level2():
     L.glob("DTIME", 6, "THE ECHO'S TIMING", "TURN KNOB 1 (TIME) TO @")
     L.glob("DFDBK", 55, "MORE ECHOES", "TURN KNOB 2 (FDBK) TO @", tol=4)
     L.page("PATTERNS", "SEQ", "THE CHORUS: PATTERNS", "HOLD SEQ, TAP SAVE")
-    L.pathas([1, 2, 4, 5], 2, "COPY 1 2 4 5 TO PAT 2", "EACH: KNOB 1 TO 2, KNOB 4 X2")
+    L.pathas([1, 2, 4, 5], 2, "COPY 1 2 4 5 TO PAT 2", "EACH: KNOB 1 TO 2, KNOB 3 X2")
     L.patsel(4, 2, "DRUMS: PLAY PATTERN 2", "TRACK 4: KNOB 1 TO 2, OCT+", filled=True)
     L.lanes(4, "OPEN HATS", "OFFBEAT HATS BECOME OPEN HATS", ["KICK", "SNARE", "CLAP", "HAT", "OHAT"], pat=ch[4])
     L.lanes(4, "A TOM AT THE END", "LOW TOM ON KEY 15, SOFT", ["KICK", "SNARE", "CLAP", "HAT", "OHAT", "LOTOM"],

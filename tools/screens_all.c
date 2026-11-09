@@ -50,6 +50,42 @@ static void layer(uint32_t b, const char *name, const char *title, const char *l
     frames(4);
 }
 
+/* the PATTERNS, CHAIN and SCENES pages with something in them: copies of what plays as other patterns, track 1's
+ * chain (1 x2, 2, 4, 1, 3), named scenes (INTRO playing), track 1's pattern 4 asked for (4 BAR: it waits); undone after
+ * (the other screens as before) */
+static void demo_pats(int on)
+{
+    static const uint8_t CH[5] = {CH_SLOT(0, 2), 1, 3, 0, 2};
+    static const uint8_t NM[4] = {1, 2, 4, 6};   /* INTRO VERSE CHORUS BREAK */
+    uint32_t k, sc;
+    fm1_irq_off();
+    if (on) {
+        for (k = 0; k < NTRK; k++) {
+            pb_store(k, 1);
+            if (k < 6u)
+                pb_store(k, 2);
+            if (k == 0u || k == 3u)
+                pb_store(k, 3);
+        }
+        pat_chain_set(&trk[0], CH, 5);
+        for (sc = 0; sc < 4u; sc++)
+            scn_name[sc] = NM[sc];
+        scn_pat[3][0] = scn_pat[3][1] = SCN_KEEP;
+        scn_pat[3][3] = 1;
+        scn_cur = 0;
+        song.g[G_PATQ] = PQ_4BAR;
+        trk[0].pat_req = 4;
+    } else {
+        trk[0].pat_req = 0;
+        song.g[G_PATQ] = PQ_LOOP;
+        pat_chain_set(&trk[0], CH, 0);
+        for (k = 0; k < NTRK; k++)
+            pb_drop_track(k);
+        scn_defaults();
+    }
+    fm1_irq_on();
+}
+
 int main(int argc, char **argv)
 {
     static const struct { uint8_t style; const char *name, *title; } VIS[6] = {
@@ -88,12 +124,18 @@ int main(int argc, char **argv)
             studio_open(SC_DRUM); frames(10);
             drum_lane = 4; drum_cursor = 6; drum_page = 0;
         } else {
+            if (pg->scope == SC_PATS && (j == 0 || PAGES[j - 1].scope != SC_PATS))
+                demo_pats(1);
             show_page(j);
+            if (PAGES[j].scope == SC_PATS && pats_view() == PV_SCENES)
+                scn_cursor = 2;
         }
         slug(name, FAM_NAME[pg->fam], pg->title);
         snprintf(title, sizeof title, "%s > %s", FAM_NAME[pg->fam], pg->title);
         snprintf(line, sizeof line, "page %u of %u", (unsigned)j + 1u, (unsigned)NPAGES);
         put("pages", name, title, line);
+        if (pg->scope == SC_PATS && (j + 1u == NPAGES || PAGES[j + 1].scope != SC_PATS))
+            demo_pats(0);
     }
 
     /* the drum track's own pages: the shared ones it has (FX > SLICER, SEQ > TIMING ...) and the grid's views */

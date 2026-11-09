@@ -173,6 +173,10 @@ CTL_SMALL static uint32_t layer_now(void)
 #define KB_GRID LY_COUNT
 static volatile uint8_t kb_grid;
 static volatile uint8_t kb_harm;                      /* the CHORDS screen shown (the UI sets it every frame): the keys are chords */
+/* the PATTERNS, CHAIN or SCENES page shown (the UI sets it every frame): with no layer, the keys are its pads (KB_PATS
+ * events of lk_q, ui_pats.c pats_key: white keys 1..8 the track's patterns, 9..16 the scenes) and play nothing */
+#define KB_PATS (LY_COUNT + 1u)
+static volatile uint8_t kb_pats;
 /* the keys of the layers the UI handles (steps, key, mix): key k down / up, in order */
 #define LKQ 16u
 static volatile uint16_t lk_q[LKQ];
@@ -2390,6 +2394,12 @@ CTL_SMALL static void key_down(uint32_t k)
         return;
     default:
         break;
+    }
+    if (layer == LY_PLAY && kb_pats) {                /* PATTERNS / CHAIN / SCENES: the keys are pads (ui_pats.c) */
+        kb_kind[k] = KS_UI;
+        kb_nt[k][0] = (uint8_t)KB_PATS;
+        lk_push(KB_PATS, k, 1);
+        return;
     }
     if (layer == LY_PLAY && kb_harm) {                /* the CHORDS screen: the keys play the song's chord (harmony.c) */
         kb_kind[k] = KS_UI;

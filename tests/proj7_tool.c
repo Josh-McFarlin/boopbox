@@ -3,7 +3,8 @@
  * codec (web/editor.html PROJ7), checked by web/test_web.mjs:
  *   proj7_tool gen OUT        a project of every kind of content the editor reads and writes (eight tracks, patterns in
  *                             the bank, chains, step components, locks, nudges, fill conditions, a dense pattern stored
- *                             whole, drum lanes, a progression, FOLLOW): the bytes the firmware captures
+ *                             whole, drum lanes, a progression, FOLLOW, a chain with repeats and PLAY off, scenes):
+ *                             the bytes the firmware captures
  *   proj7_tool load IN OUT    IN loaded as the firmware loads a project (proj_import, proj7_apply), captured again into
  *                             OUT; stdout: what it holds, a line a track (the pattern playing, the chain, the bank's
  *                             patterns, the components, the direction, LEN) and the progression. Exit 2: not a project.
@@ -112,6 +113,15 @@ static int gen(const char *path)
     pb_store(5, 4);
     steps_clear(&trk[5]);
     trk[5].p[P_SLEN] = 16;
+    {   /* its chain: pattern 5 three times, then pattern 1; PLAY off */
+        uint8_t ch[2] = {CH_SLOT(4, 3), 0};
+        pat_chain_set(&trk[5], ch, 2);
+        trk[5].pat_coff = 1;
+    }
+    /* scenes: scene 1 named CHORUS, scene 2 with track 1 on pattern 6, scene 3 with track 4 kept */
+    scn_name[0] = 4;
+    scn_pat[1][0] = 5;
+    scn_pat[2][3] = SCN_KEEP;
     /* the progression: I (2 bars), IV (2), V (4) */
     harm.n = 3;
     harm.c[0].deg = 0, harm.c[0].bars = 2;
@@ -139,6 +149,8 @@ static int load(const char *in, const char *path)
         printf("T%u kind %u pat %u chain", i, t->kind, t->pat);
         for (k = 0; k < t->pat_nchain; k++)
             printf(" %u", t->pat_chain[k]);
+        if (t->pat_coff)
+            printf(" off");
         printf(" bank %u comps %u dir %u seed %u len %d hfol %d", pb_used(i), comp_count(t, NSTEP), t->cp_dir, t->cp_seed,
                t->p[P_SLEN], t->hfol);
         for (k = 0; k < NCOMP; k++)
@@ -150,6 +162,12 @@ static int load(const char *in, const char *path)
     for (k = 0; k < harm.n; k++)
         printf(" %u:%u", harm.c[k].deg, harm.c[k].bars);
     printf("\nS %u\n", song.sel);
+    for (i = 0; i < NSCENE; i++) {                  /* the scenes: name, the eight patterns (8: kept) */
+        printf("C%u %s", i, N_SCN[scn_name[i] % NSCN_NAMES]);
+        for (k = 0; k < NTRK; k++)
+            printf(" %u", scn_pat[i][k]);
+        printf("\n");
+    }
     return out(path);
 }
 int main(int argc, char **argv)
