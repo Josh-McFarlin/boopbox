@@ -426,6 +426,11 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
         uint32_t pen = 0, first = NSTEP;
+        if (on_notes_page() && !held) {             /* (1.7) NOTES types a key played into its step: leave it first */
+            tr_say("TAP HOME FIRST", "");
+            tr.btn = B_HOME;
+            return 0;
+        }
         page = ui.step_page;
         /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
          * first step wrong may want another note: going there would put out the keys of this one) */
@@ -584,7 +589,7 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
         return 1;
     if (!layer && !(on_drum_page() && !drum_page)) {   /* the DRUMS grid first (SEQ held: its keys are the steps anywhere) */
         if (on_drum_page())
-            tr_say("TAP SEQ UNTIL THE GRID", ""), tr.btn = B_SEQ;
+            tr_say("TAP SEQ: THE GRID", ""), tr.btn = B_SEQ;
         else if (ui.home && !ui.menu)
             tr_say("TAP SEQ: THE DRUM GRID", ""), tr.btn = B_SEQ;
         else
@@ -659,12 +664,12 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     if (!tr_algo_ok() && ui.layer == LY_PLAY)
         tr.btn = B_HOME;
 }
-/* the way to the PATTERNS screen: SEQ, from any track (1.4.2: a drum track's DRUMS screen goes on to it after SOUND) */
+/* the way to the PATTERNS screen: SEQ held + SAVE, from any page and track (1.7) */
 UI_SMALL static int tr_to_pats(void)
 {
     if (tr_quiet || on_pats_page())
         return 1;
-    tr_say("TAP SEQ UNTIL PATTERNS", "");
+    tr_say("HOLD SEQ, TAP SAVE", "");
     tr.btn = B_SEQ;
     return 0;
 }
@@ -774,7 +779,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             if (str_eq(tr.hint, c->act))
                 tr.hint[0] = 0;                         /* (what the action says already) */
         } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
-            tr_say("TAP SEQ UNTIL THE GRID", "");
+            tr_say("TAP SEQ: THE GRID", "");
         else if (!ui.home && !on_drum_page() && !on_pats_page() && !on_song_page())
             tr_say("NOW ON ", cur_page()->title);
         return 0;

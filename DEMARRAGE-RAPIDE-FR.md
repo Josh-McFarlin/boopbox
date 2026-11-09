@@ -65,10 +65,11 @@ Chaque bouton de fonction a deux vies. **Tapé** (appuyé puis relâché sans ri
 | **REC** | en lecture : enregistre tout de suite / arrête · à l'arrêt : arme (la première note démarre) · prise libre : ferme la boucle |
 | **REC maintenu** | efface la piste choisie (un anneau se remplit, ~2 s ; relâche avant et rien ne se passe) |
 | **SAVE** | sur TRACKS : l'écran SONG · ailleurs : les pages SAVE |
+| **SEQ maintenu + SAVE tapé** | l'écran **PATTERNS**, depuis n'importe quelle page et piste |
 | **EDIT + OCT− / OCT+** | annuler / rétablir |
 | **ALGORITHM** | choisit la piste (sur toutes les pages) |
 | **PRESETS** | le son de la piste, ou le kit de batterie |
-| **SELECT** | sur HOME (et dans un calque) : le tempo · sur une page : la page d'avant / d'après du même groupe · écran DRUMS : grid / kit |
+| **SELECT** | sur HOME (et dans un calque) : le tempo · sur une page : la page d'avant / d'après du même groupe (SEQ : NOTES ou la grille, TIMING, PLAY, PATTERNS) · batterie : kit ↔ sound |
 | **OCT− / OCT+** | synthés : octave (les deux : retour à 0) · batterie, maintenus : ghost / fort |
 | **HOME** | l'écran TRACKS · tapé sur l'écran TRACKS : le visualiseur plein écran (SELECT : 6 styles, HOME encore : le ferme) · maintenu : le menu en sections (écran, lumières, audio / USB, système) · tapé pendant qu'un calque est maintenu : le verrouille |
 
@@ -83,7 +84,7 @@ Chaque bouton de fonction a deux vies. **Tapé** (appuyé puis relâché sans ri
 
 Une touche noire joue le son de la touche blanche à sa gauche (deux doigts sur un son pour les roulements rapides). Chaque frappe a un **niveau** — GHOST, SOFT, NORM (comme jouée), HARD — et un **ratchet** x1–x4 (la frappe répétée dans son pas).
 
-**Programmer aux touches (2.4) :** SEQ tapé sur la piste batterie ouvre la page **grid**. KNOB 1 choisit le son (on l'entend). Les touches blanches sont alors les 16 pas de ce son : appuie pour poser un pas (on l'entend), appuie encore pour l'effacer. Les quatre premières touches noires choisissent la page de pas (1–16, 17–32…). KNOB 2 se déplace de pas en pas et fait entendre ce que le pas contient. SELECT passe de grid à kit (sur kit, les touches jouent les pads).
+**Programmer aux touches (2.4) :** SEQ tapé sur la piste batterie ouvre la page **grid**. KNOB 1 choisit le son (on l'entend). Les touches blanches sont alors les 16 pas de ce son : appuie pour poser un pas (on l'entend), appuie encore pour l'effacer. Les quatre premières touches noires choisissent la page de pas (1–16, 17–32…). KNOB 2 se déplace de pas en pas et fait entendre ce que le pas contient. SEQ encore (ou SELECT à droite) passe aux pages TIMING, PLAY puis PATTERNS, comme depuis NOTES sur une piste de synthé. EDIT tapé ouvre la page **kit** (les touches jouent les pads), EDIT encore la page **sound**.
 
 ## Enregistrer
 

@@ -154,6 +154,23 @@ UI_SMALL static void studio_open(uint32_t scope)
         ui.msg_t = 0; ui.entry_open = 0; return;
     }
 }
+/* (1.7) the drum track's DRUMS grid: its SEQ pages' first (in NOTES' place: GRID, TIMING, PLAY, PATTERNS); KIT and
+ * SOUND are its EDIT pages */
+UI_SMALL static void sel_tempo(int32_t s)              /* SELECT as the tempo (the REC screen, a take; 1.7) */
+{
+    song.g[G_BPM] = (int16_t)clamp(song.g[G_BPM] + accel(EN_SELECT, s, 200), GP[G_BPM].min, GP[G_BPM].max);
+    ui.bpm_t = 40;
+}
+UI_SMALL static void drum_grid_open(void)
+{
+    drum_page = 0;
+    studio_open(SC_DRUM);
+}
+UI_SMALL static void drum_kit_open(void)
+{
+    drum_page = 1;
+    studio_open(SC_DRUM);
+}
 /* LIVE: REC, on any page. One record arm, on the selected track (it follows ALGORITHM). No
  * click (seq.c): playing, recording starts at once; stopped, REC arms and the first note
  * starts the loop (or, in an empty project, a free take that REC closes: seq.c ft_close).
@@ -418,10 +435,16 @@ UI_SMALL static void drum_screen_draw(void)
         fmt_int(b, (int32_t)kit + 1);
         cv_text(19 - text_w(&FONT_S, b) / 2, 13, &FONT_S, b, C_BLACK);
         cv_text(44, 6, &FONT_L, DRUM_KIT_NAMES[kit], C_WHITE);
-        cv_text(194, 1, &FONT_S, "grid", drum_page == 0 ? C_WHITE : UI_G3);
-        cv_text(194, 15, &FONT_S, "kit", drum_page == 1 ? C_WHITE : UI_G3);
-        cv_text(194, 29, &FONT_S, "sound", drum_page == 2 ? C_WHITE : UI_G3);
-        cv_rect(188, 5 + (int32_t)drum_page * 14, 3, 9, UI_DRUM);
+        {   /* (1.7) the page and its neighbours: GRID is SEQ's (SEQ again or SELECT right: TIMING), KIT and SOUND EDIT's */
+            static const char *const R[2][3] = {{"grid", "> timing", "edit: kit"}, {"kit", "sound", "seq: grid"}};
+            uint32_t g = drum_page != 0u, lit = drum_page == 2u ? 1u : 0u, r;
+            for (r = 0; r < 3u; r++) {
+                int32_t x = 236 - text_w(&FONT_S, R[g][r]);
+                cv_text(x, 1 + (int32_t)r * 14, &FONT_S, R[g][r], r == lit ? C_WHITE : UI_G3);
+                if (r == lit)
+                    cv_rect(x - 6, 5 + (int32_t)r * 14, 3, 9, UI_DRUM);
+            }
+        }
         cv_blit(0, 40);
     }
     sig = drum_page + drum_lane * 7u + drum_cursor * 101u + song.playing * 71u + len * 3u + ui.sheet * 7919u +
@@ -729,24 +752,24 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
             if (ft_owns_press()) ;
             else if (!song.playing && arrangement_enabled && !arr_valid(&arrangement, arrangement_ready())) ui_message("EMPTY SECTION: REC");
             else transport_req = song.playing ? 2 : 1;
-        } else if (b == B_SEQ && drum_page == 2u) {     /* SOUND -> PATTERNS (1.4.2), as layer_tap */
-            drum_page = 0;
-            studio_open(SC_PATS);
-            return;
-        } else if (b == B_SEQ || b == B_EDIT) {
-            drum_page = (uint8_t)((drum_page + 1u) % 3u);   /* GRID -> KIT -> SOUND (2.7) */
+        }                                              /* (SEQ, EDIT, SAVE: their taps, ui_input.c layer_tap) */
+    }
+    if ((s = panel_enc(EN_SELECT)) != 0) {             /* SELECT (1.7): GRID is the first SEQ page (right: TIMING, the
+                                                        * SEQ pages on), KIT <-> SOUND the EDIT pages */
+        if (rec_wait || ft_on) {
+            sel_tempo(s);                              /* (the REC screen, a take: the tempo, as on every page) */
+        } else if (!drum_page) {
+            if (s > 0) {
+                ui.page = (uint8_t)page_scope(SC_STEP);   /* (NOTES, the grid's place: SELECT walks on from it) */
+                ui.home = 0;
+                page_walk(1);
+                return;
+            }
+        } else if ((uint32_t)clamp((int32_t)drum_page + s, 1, 2) != drum_page) {
+            drum_page = (uint8_t)clamp((int32_t)drum_page + s, 1, 2);
             ui.msg_t = 0;
             ui.force = 1;
-        } else if (b == B_SAVE) {
-            studio_open(SC_SONG);
-            return;
         }
-    }
-    if ((s = panel_enc(EN_SELECT)) && (uint32_t)clamp((int32_t)drum_page + s, 0, 2) != drum_page) {   /* SELECT: grid <-
-                                                                     * kit -> sound (2.7), its pages */
-        drum_page = (uint8_t)clamp((int32_t)drum_page + s, 0, 2);
-        ui.msg_t = 0;
-        ui.force = 1;
     }
     if (drum_page == 2u && notes) {                    /* SOUND (2.7): the key played picks its sound (it is heard
                                                         * as the keys always play it) */
@@ -762,10 +785,8 @@ UI_SMALL static void drum_screen_input(uint32_t pressed, uint32_t home, uint32_t
         track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
         if (song.sel != was) {
             char b[24], pn[16];
-            if (!is_drum(TSEL)) {
-                for (k = 0; k < NPAGES && PAGES[k].scope != SC_STEP; k++)
-                    ;
-                ui.page = (uint8_t)k;
+            if (!is_drum(TSEL)) {                      /* (1.7) the grid: NOTES; KIT / SOUND: EDIT 1, the same group */
+                ui.page = (uint8_t)(drum_page ? page_first(FAM_EDIT) : page_scope(SC_STEP));
                 page_entered();
             }
             str_cpy(b, "TRACK ", sizeof b);

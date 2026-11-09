@@ -48,7 +48,6 @@ static uint8_t sync_reload;                  /* engine / preset / project / user
 static struct {
     uint8_t home;
     uint8_t page;                /* index into PAGES */
-    uint8_t fam_last[FAM_COUNT]; /* last page used per family */
     uint8_t bank;                /* SEQ: 16-step bank (follows the cursor) */
     uint8_t cursor;              /* SEQ: step being edited (STEP page KNOB 1 moves it) */
     uint8_t entry_open;          /* SEQ: keys held since the first press of this entry */
@@ -101,6 +100,7 @@ UI_SMALL static const page_t *cur_page(void) { return &PAGES[ui.page]; }
 static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* ui_input.c */
 static void lock_par_step(int32_t s);                            /* ui_layers.c: the lock parameter, the next lockable one */
 static void layer_screen_draw(void);                            /* ui_layers.c */
+static void drum_grid_open(void);                               /* ui_studio.c: the drum track's GRID */
 static void hold_screen_draw(void);
 static uint8_t layer_shown;
 
@@ -111,6 +111,14 @@ UI_SMALL static uint32_t page_first(uint32_t fam)
         if (PAGES[i].fam == fam)
             return i;
     return 0;
+}
+
+UI_SMALL static uint32_t page_scope(uint32_t scope)   /* (1.7) the first page of that scope (SC_STEP: NOTES) */
+{
+    uint32_t i;
+    for (i = 0; i < NPAGES && PAGES[i].scope != scope; i++)
+        ;
+    return i < NPAGES ? i : 0u;
 }
 
 /* transient message in the top bar: a + b */
@@ -786,6 +794,16 @@ UI_SMALL static void note_name(char *b, uint32_t n)
     fmt_int(b + str_len(b), (int32_t)(n / 12u) - 1);
 }
 
+/* (1.7) the page shown is now ui.page: on the drum track the SEQ pages' NOTES is its DRUMS grid (ui_studio.c) */
+UI_SMALL static void page_show(void)
+{
+    ui.home = 0;
+    if (PAGES[ui.page].scope == SC_STEP && is_drum(TSEL))
+        drum_grid_open();
+    else
+        page_entered();
+}
+
 UI_SMALL static void open_family(uint32_t fam)
 {
     if (!ui.home && cur_page()->fam == fam) {          /* same button again: next page */
@@ -796,29 +814,28 @@ UI_SMALL static void open_family(uint32_t fam)
             i = page_first(fam);
         ui.page = (uint8_t)i;
     } else {
-        ui.page = ui.fam_last[fam] && PAGES[ui.fam_last[fam]].fam == fam && page_shown(&PAGES[ui.fam_last[fam]])
-                      ? ui.fam_last[fam] : (uint8_t)page_first(fam);
+        ui.page = (uint8_t)page_first(fam);           /* (1.7) from another button: always its first page, so the
+                                                        * taps to a page are always the same (not the page last used) */
     }
     if (PAGES[ui.page].graph == GR_BROWSE && ui.page + 1u < NPAGES && PAGES[ui.page + 1u].fam == fam)
         ui.page++;                                      /* (the browser: PRESETS opens it, SAVE closes it) */
-    ui.fam_last[fam] = ui.page;
-    ui.home = 0;
-    page_entered();
+    page_show();
 }
 
 /* SELECT on a page: the previous / next page of its family, as tapping the button again but both ways,
- * stopping at the ends. Not the screens of their own (SONG, DRUMS) nor a family of one page (TRACKS):
- * 0 then, and SELECT is the tempo there */
+ * stopping at the ends. Not the screens of their own (SONG, DRUMS, CHORDS) nor a family of one page (TRACKS):
+ * 0 then, and SELECT is the tempo there. (1.7) PATTERNS is one of the SEQ pages here: NOTES, TIMING, PLAY, PATTERNS
+ * (on the drum track the grid is its NOTES: ui_studio.c drum_screen_input walks on from it) */
 UI_SMALL static int page_walk(int32_t s)
 {
     const page_t *pg = cur_page();
     uint32_t i, fam = pg->fam, n = 0;
     int32_t cur = -1, to;
     uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3) */
-    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM || pg->scope == SC_PATS || pg->scope == SC_HARM)
+    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM || pg->scope == SC_HARM)
         return 0;
     for (i = 0; i < NPAGES && n < 16u; i++) {
-        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM || PAGES[i].scope == SC_PATS ||
+        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM ||
             PAGES[i].scope == SC_HARM || !page_shown(&PAGES[i]))
             continue;
         if (i == ui.page)
@@ -830,8 +847,7 @@ UI_SMALL static int page_walk(int32_t s)
     to = clamp(cur + s, 0, (int32_t)n - 1);
     if (to != cur) {
         ui.page = idx[to];
-        ui.fam_last[fam] = ui.page;
-        page_entered();
+        page_show();
     }
     return 1;
 }
@@ -846,7 +862,6 @@ UI_SMALL static void page_fix(void)
     while (i > 0u && PAGES[i - 1u].fam == fam && !page_shown(&PAGES[i - 1u]))
         i--;
     ui.page = (uint8_t)(i > 0u && PAGES[i - 1u].fam == fam ? i - 1u : page_first(fam));
-    ui.fam_last[fam] = ui.page;
     page_entered();
 }
 
