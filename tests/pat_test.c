@@ -285,7 +285,98 @@ static void t_chain(void)
     c = notes_of(0, n, 256);
     check(c >= 36u && n[28] == 50u && n[32] == 40u, "asked for pattern 2 mid-chain: it plays next, then the chain from it (1)");
     pat_chain_set(t, CH, 1);
-    check(t->pat_nchain == 0u, "a chain of one: none");
+    check(t->pat_nchain == 1u && !chain_on(t), "a chain of one slot: kept, does not play");
+    {   /* repeats: slot 1 pattern 1 x2, slot 2 pattern 3 x1, slot 3 pattern 2 x3 */
+        static const uint8_t CR[3] = {CH_SLOT(0, 2), CH_SLOT(2, 1), CH_SLOT(1, 3)};
+        static const uint32_t P[12] = {40, 40, 60, 50, 50, 50, 40, 40, 60, 50, 50, 50};
+        reset();
+        t = &trk[0];
+        t->p[P_SLEN] = 4;
+        for (i = 0; i < 3u; i++) {
+            ask(0, i);
+            block();
+            fill_pat(t, 40u + 10u * i);
+        }
+        ask(0, 0);
+        block();
+        pat_chain_set(t, CR, 3);
+        play();
+        blocks(step_blocks(4 * 12) - 1u);
+        c = notes_of(0, n, 256);
+        for (i = 0, ok = c >= 48u; i < 48u && ok; i++)
+            ok = n[i] == P[i / 4u] + i % 4u;
+        stop();
+        check(ok, "a chain 1 x2, 3, 2 x3: each slot its repeats' loops, round");
+        ask(0, 0);
+        block();
+        pat_chain_set(t, CR, 3);
+        t->pat_coff = 1;
+        play();
+        blocks(step_blocks(4 * 3) - 1u);
+        c = notes_of(0, n, 256);
+        for (i = 0, ok = c >= 12u; i < 12u && ok; i++)
+            ok = n[i] == 40u + i % 4u;
+        stop();
+        check(ok, "a chain with PLAY off: kept, the pattern playing goes on");
+    }
+}
+
+/* scenes: launched (every track asked, quantized as any change), KEEP tracks untouched, stored, saved with the project */
+static void t_scenes(void)
+{
+    static project_t p;
+    uint32_t i, ok;
+    reset();
+    for (i = 0; i < NTRK; i++) {
+        trk[i].p[P_SLEN] = 4;
+        ask(i, 1);
+        block();
+        fill_pat(&trk[i], 40u + i);
+    }
+    ok = scn_default();
+    scn_pat[3][2] = SCN_KEEP;
+    scn_pat[3][5] = 1;
+    scn_name[3] = 4;
+    scn_launch(3);
+    block();
+    scn_poll();
+    for (i = 0; i < NTRK; i++)
+        ok &= trk[i].pat == (i == 2u ? 1u : i == 5u ? 1u : 3u);
+    ok &= scn_cur == 3u && scn_ask == SCN_NONE;
+    check(ok, "a scene launched stopped: every track at once to its pattern, a KEEP track unchanged");
+    song.g[G_PATQ] = PQ_BAR;
+    play();
+    scn_launch(1);
+    blocks(step_blocks(1));
+    scn_poll();
+    ok = scn_ask == 1u && trk[0].pat == 3u;
+    blocks(step_blocks(16));
+    scn_poll();
+    ok &= scn_ask == SCN_NONE && scn_cur == 1u && trk[0].pat == 1u && trk[2].pat == 1u;
+    stop();
+    check(ok, "a scene launched playing: it waits for the bar, then every track changes together");
+    scn_store(6);
+    ok = scn_pat[6][0] == 1u && scn_pat[6][7] == 1u && scn_cur == 6u;
+    check(ok, "a scene stored: the patterns playing");
+    ok = proj_capture(&p);
+    reset();
+    ok &= scn_default();
+    proj_apply(&p, 1);
+    ok &= !scn_default() && scn_pat[3][2] == SCN_KEEP && scn_pat[3][5] == 1u && scn_name[3] == 4u && scn_pat[6][0] == 1u &&
+          scn_pat[0][0] == 0u && scn_cur == SCN_NONE;
+    check(ok, "scenes saved and loaded with the project ('C'): names, patterns, KEEP");
+    reset();
+    ok = proj_capture(&p);
+    {   /* the default scenes write no 'C' chunk */
+        uint32_t o = 0, has = 0;
+        while (o + 3u <= p.size - PROJ_HDR) {
+            uint32_t len = p.d[o + 1] | p.d[o + 2] << 8;
+            has |= p.d[o] == 'C';
+            o += 3u + len;
+        }
+        check(ok && !has, "the default scenes: no 'C' chunk");
+    }
+    song.g[G_PATQ] = PQ_LOOP;
 }
 
 static void t_full(void)
@@ -331,6 +422,7 @@ static void t_store(void)
     track_t *t;
     uint32_t ok;
     static const uint8_t CH[2] = {2, 0};
+    static const uint8_t CL[NCHAIN] = {CH_SLOT(1, 16), 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, CH_SLOT(0, 3)};
     reset();
     t = &trk[2];
     fill_pat(t, 40);
@@ -342,6 +434,9 @@ static void t_store(void)
     fill_pat(t, 70);
     t->cp_dir = DIR_REV;
     pat_chain_set(t, CH, 2);
+    pat_chain_set(&trk[4], CL, NCHAIN);              /* (16 slots with repeats, PLAY off) */
+    trk[4].pat_coff = 1;
+    trk[4].hfol = HF_SCALE;
     fill_pat(&trk[7], 36);                          /* (a drum track's pattern 1) */
     ask(7, 4);
     block();
@@ -354,6 +449,9 @@ static void t_store(void)
     ok = t->pat == 2u && t->p[P_SLEN] == 6 && t->step[0].note[0] == 70u && t->cp_dir == DIR_REV && t->pat_nchain == 2u &&
          t->pat_chain[0] == 2u && t->pat_chain[1] == 0u && (pb_used(2) == 1u) && trk[7].pat == 4u && (pb_used(7) == 1u);
     check(ok, "loaded: each track's pattern playing (its LEN, direction), the chain, the others in the bank");
+    ok = trk[4].pat_nchain == NCHAIN && trk[4].pat_coff == 1u && !memcmp(trk[4].pat_chain, CL, NCHAIN) &&
+         trk[4].hfol == HF_SCALE;
+    check(ok, "loaded: a chain of 16 slots with repeats, PLAY off (and FOLLOW after it)");
     ask(2, 0);
     block();
     ok = t->pat == 0u && t->step[3].note[0] == 43u && lock_find(t, 3, P_DLY, 0) >= 0 && comp_find(t, 2, CP_TONE) >= 0 &&
@@ -452,7 +550,7 @@ static void t_session(void)
         for (k = 0; k <= m; k++)
             ask(rnd(NTRK), rnd(4));
         if (rnd(6) == 0) {
-            uint8_t ch[3] = {(uint8_t)rnd(3), (uint8_t)rnd(3), (uint8_t)rnd(3)};
+            uint8_t ch[3] = {CH_SLOT(rnd(3), 1u + rnd(3)), (uint8_t)rnd(3), CH_SLOT(rnd(3), 1u + rnd(2))};
             fm1_irq_off();
             pat_chain_set(&trk[rnd(NTRK)], ch, rnd(4));
             fm1_irq_on();
@@ -519,6 +617,7 @@ int main(void)
     t_stopped();
     t_quant();
     t_chain();
+    t_scenes();
     t_full();
     t_store();
     t_song_loop();

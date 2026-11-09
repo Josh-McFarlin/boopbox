@@ -664,11 +664,15 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     if (!tr_algo_ok() && ui.layer == LY_PLAY)
         tr.btn = B_HOME;
 }
-/* the way to the PATTERNS screen: SEQ held + SAVE, from any page and track (1.7) */
+/* the way to the PATTERNS page: SEQ held + SAVE (SCENES), from any page and track; then SELECT left to PATTERNS */
 UI_SMALL static int tr_to_pats(void)
 {
-    if (tr_quiet || on_pats_page())
+    if (tr_quiet || (on_pats_page() && pats_view() == PV_PADS))
         return 1;
+    if (on_pats_page()) {
+        tr_say("TURN SELECT LEFT: PATTERNS", "");
+        return 0;
+    }
     tr_say("HOLD SEQ, TAP SAVE", "");
     tr.btn = B_SEQ;
     return 0;
@@ -690,7 +694,7 @@ UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
         return;
     }
     if (copy)
-        tr_say(pats_arm == 1u ? "KNOB 4 RIGHT AGAIN: COPY" : "KNOB 4 RIGHT TWICE: COPY", "");
+        tr_say(pats_arm == 1u ? "KNOB 3 RIGHT AGAIN: COPY" : "KNOB 3 RIGHT TWICE: COPY", "");
     else if (song.playing && trk[k].pat_req)
         tr_say("WAIT FOR THE BAR", "");
     else
@@ -770,7 +774,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_PAGE: {
         int at = ui.menu || ui.layer != LY_PLAY ? 0 :
                  PAGES[c->p].scope == SC_DRUM ? on_drum_page() && !drum_page :
-                 PAGES[c->p].scope == SC_PATS ? on_pats_page() : PAGES[c->p].scope == SC_SONG ? on_song_page() :
+                 PAGES[c->p].scope == SC_PATS ? on_pats_page() && ui.page == c->p : PAGES[c->p].scope == SC_SONG ? on_song_page() :
                  !ui.home && ui.page == c->p;
         if (at)
             return 1;
@@ -869,7 +873,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         }
         if (bad == NTRK)
             return 1;
-        if (same && on_pats_page() && pats_cursor == w0) {   /* one pattern for all: OCT- asks every track */
+        if (same && on_pats_page() && pats_view() == PV_PADS && pats_cursor == w0) {   /* one for all: OCT- every track */
             tr_say(song.playing && trk[bad].pat_req ? "WAIT FOR THE BAR" : "PRESS OCT-: EVERY TRACK", "");
             tr.btn = B_OCTDN;
             return 0;

@@ -16,7 +16,7 @@ three tables in RAM at power-on (section 2).
 | Eight tracks | 8 tracks, each a synth or a drum track (default: drums on 4 and 8, `SAVE > TOOLS > KIND` changes it); own engine, preset, pattern, length, MIDI channel; a shared budget of 20 synth voices (`NVBUDGET`; the trainer 8) and one pool of drum voices; at most 3 big engines (refused and said for a fourth); render split over two cores | `tracks8_test`, `arena_test`, `mix_split_test`, `cpu1_modes.sh` (TSan), `ui_pages_test` |
 | Step components | 14 types (PULSE, HOLD, MULT, VEL, RAMP+, RAMP−, RAND, PORTA, BEND, TONE, JUMP, PARAM, COND, TRIG); 16 a track, several a step; directions FWD, REV, PEND, RAND; a seed; edited in the step sheet | `comp_test`, `ui_pages_test`, `soak_test` |
 | Parameter locks | 32 a track, several a step (one a parameter); SLIDE (a glide over the step, 4 at once a track); knob moves recorded as locks (`MENU > SEQ > REC KNOBS`); saves keep the track's own values; the sheet's LOCKS strip | `lock_test`, `ui_pages_test` |
-| Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of 2..8; COPY, CLEAR; the PATTERNS screen; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |
+| Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of up to 16 slots with repeats ×1..×16 and PLAY; 8 named scenes (a pattern or KEEP a track); COPY, CLEAR; the PATTERNS, CHAIN and SCENES pages, the keys as pads; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |
 | Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
 | Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
 | Storage | project format 7 (eight tracks, all the above), the only format: SLOOP's formats 1..6 are not read nor written; damage detected, never cut (refused whole) | `project_test` and the feature tests' store checks |
@@ -37,7 +37,7 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
   step components, direction and seed, and the chord progression, by reading the working project (backup object 0,
   format 7), changing it in the browser (`web/editor.html` PROJ7, checked against the firmware's own capture and load by
   `tests/proj7_tool.c`) and sending it back whole: no new command, and only while the song is stopped (the FM-1 loads
-  it at once). The Song page keeps and edits the loop region. The Patterns page edits the working project only: a
+  it at once). The Song page keeps and edits the loop region. The Patterns page (patterns, chains with repeats, scenes) edits the working project only: a
   section A..D is edited by loading it on the FM-1, editing, and saving it into its section again.
 - **Screens** show 4 tracks at a time: the bank (1-4 or 5-8) of the selected track.
 - **Voices:** the 8 synth tracks share 8 sounding voices; 3 big engines (GRAIN, DRAWBAR, FM6, PHYS) at once; 4

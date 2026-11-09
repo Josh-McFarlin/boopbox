@@ -162,37 +162,83 @@ Each track has **8 patterns**. A pattern holds the track's steps with their nudg
 components, its direction and seed (SEQ > PLAY) and its **length** (TIMING > LEN). The sound, DIV, SWG and GATE are
 the track's, the same for all its patterns. A new pattern starts empty, with the length the track has.
 
-### The PATTERNS screen (SEQ, after PLAY)
+### Three pages: PATTERNS, CHAIN, SCENES
 
-Hold **SEQ** and tap **SAVE**, from any page and track (1.7). Or tap **SEQ** until it shows (NOTES, TIMING, PLAY,
-**PATTERNS**, SONG; on a drum track the DRUMS grid in place of NOTES), or **SELECT** right from PLAY. It shows the eight tracks as
-rows and their eight patterns as columns:
+Tap **SEQ** until they show (NOTES, TIMING, PLAY, **PATTERNS**, **CHAIN**, **SCENES**, SONG; on a drum track the
+DRUMS grid in place of NOTES), or turn **SELECT** right from PLAY. Hold **SEQ** and tap **SAVE** to jump to
+**SCENES** from any page and track; SELECT left goes back through CHAIN and PATTERNS.
 
-| Tile | Means |
+On all three pages **the keys are pads**, and they play no notes:
+
+| Keys | Do |
 | --- | --- |
-| lit in the track's colour | the pattern playing |
-| dim | a pattern that holds something |
-| dark | an empty pattern |
-| blinking white frame | the pattern asked for: it waits for its moment (PAT Q) |
-| a dot under it | a pattern of the track's chain |
-| white line under it | the cursor (KNOB 1) on the selected track |
+| white keys **1 … 8** (F3 … F4) | the selected track's patterns 1 … 8: asks for that pattern (on CHAIN: puts it in the chain) |
+| white keys **9 … 16** (G4 … G5) | scenes 1 … 8: launches that scene, on every track |
+| black keys | nothing |
+
+Their lights show what plays (lit) and what is asked for (blinking). The strip near the bottom of each page shows the
+same 16 pads. **ALGORITHM** picks the track; **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** work as
+everywhere.
+
+A change you ask for waits for its moment (**PAT Q**, on PATTERNS and SCENES KNOB 2): **LOOP** (at the end of the
+track's own loop, each track on its own length), **1 BAR**, **2 BAR**, **4 BAR** (on the first step of the track at or
+after the next such bar line: tracks asked together change together). Stopped, a change is made at once. Playing, the
+new pattern starts from its step 1 (a note of the old pattern still sounding ends there).
+
+#### PATTERNS: the track's patterns as pads
+
+Eight tiles, the selected track's patterns 1 … 8. Each shows what it holds (its steps, as bars over its length) or
+*empty*; **now** marks the one playing (lit in the track's colour), **next** and a blinking frame the one asked for. A
+white line marks the cursor. The header shows the track and how full the pattern store is.
 
 | Control | Does |
 | --- | --- |
-| **ALGORITHM** | the track (its row number turns white) |
+| a white key 1 … 8 | asks for that pattern on the track (the cursor goes there) |
 | **KNOB 1** | the cursor: pattern 1 … 8 |
-| **OCT+** | asks for the cursor's pattern on the selected track |
+| **KNOB 2 QUANT** | PAT Q |
+| **KNOB 3 COPY**, twice | copies the pattern playing into the cursor's (the first turn says *COPY 1 > 4: AGAIN*) |
+| **KNOB 4 CLEAR**, twice | clears the cursor's pattern (the first turn says *CLEAR 4: TURN AGAIN*) |
+| **OCT+** | asks for the cursor's pattern on this track |
 | **OCT−** | asks for the cursor's pattern on **every** track |
-| **KNOB 2 QUANT** | when an asked change happens (PAT Q): **LOOP** (at the end of the track's own loop, each track on its own length), **1 BAR**, **2 BAR**, **4 BAR** (on the first step of the track at or after the next such bar line: tracks asked together change together) |
-| **KNOB 3 CHAIN** | the selected track's chain: **OFF**, or the cursor's pattern and the ones after it (2 … 8 patterns); each plays one loop, then the next, round |
-| **KNOB 4** right, twice | **COPY** the pattern playing into the cursor's pattern (*TURN AGAIN: COPY* first) |
-| **KNOB 4** left, twice | **CLEAR** the cursor's pattern (*TURN AGAIN: CLEAR* first) |
-| **PLAY**, the keys | as everywhere; **ENV**, **LFO** and the layer buttons open their pages; **HOME** goes home |
 
-Stopped, a change is made at once. Playing, it waits for its moment, then the new pattern starts from its step 1 (a
-note of the old pattern still sounding ends there). An asked change goes before the chain; the chain then goes on from
-the pattern asked for. Edit the pattern playing as usual (NOTES, the DRUMS grid, the SEQ layer, recording): its
-changes are kept when another pattern plays, and come back with it. The header shows how full the pattern store is.
+#### CHAIN: a playlist
+
+A chain plays its **slots** in order, then starts again. Each slot is a pattern and how many loops it plays (×1 …
+×16), so *1 ×2, 3, 2 ×3* plays pattern 1 twice, pattern 3 once, pattern 2 three times, round. A chain has up to **16
+slots** and plays once it has two. The slots are tiles in order; a `+` tile after the last is the end. The slot playing
+is lit, with a bar for the loops it has played.
+
+| Control | Does |
+| --- | --- |
+| a white key 1 … 8 | puts that pattern in a slot after the cursor. At the end it appends, so typing 1, 3, 2 builds *1 3 2* |
+| **KNOB 1** | the slot, or the end |
+| **KNOB 2** | the slot's pattern |
+| **KNOB 3** | the slot's repeats, ×1 … ×16 |
+| **KNOB 4 PLAY** | right: the chain plays; left: it is kept but does not play |
+| **OCT+** | inserts a copy of the slot after it (at the end: the pattern playing) |
+| **OCT−** | removes the slot |
+
+An asked change goes before the chain; the chain then goes on from the pattern asked for.
+
+#### SCENES: the song's moments
+
+A scene is a pattern for each track, played together: an intro, a verse, a chorus. There are **8 scenes**, a row each:
+its number, its name and the pattern of each track (a `-` means the track **keeps** what it plays). The scene playing
+has a ▶; one asked for has a blinking frame, and the header says when it comes (*in 3 beats*, *at loop end*). At first
+scene N is pattern N on every track, with no name.
+
+| Control | Does |
+| --- | --- |
+| a white key 9 … 16 (on any of the three pages) | launches that scene: every track of it asked for its pattern |
+| **KNOB 1** | the scene |
+| **KNOB 2 QUANT** | PAT Q |
+| **KNOB 3 NAME** | its name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |
+| **KNOB 4** | the selected track's pattern in the scene: 1 … 8, or **keep** |
+| **OCT+** | launches the scene |
+| **OCT−**, twice | stores the patterns playing now into the scene (*OCT- AGAIN: STORE 3* first) |
+
+Edit the pattern playing as usual (NOTES, the DRUMS grid, the SEQ layer, recording): its changes are kept when
+another pattern plays, and come back with it.
 
 ### When the store is full
 
@@ -203,8 +249,8 @@ pattern you do not need, or shorten one.
 
 ### Saved
 
-The patterns, the chains and the pattern each track plays are saved in the project (format 7) and in each song
-section. A project larger than a store
+The patterns, the chains (their repeats and PLAY), the scenes and the pattern each track plays are saved in the
+project (format 7) and in each song section. A project larger than a store
 object is refused whole (*PROJECT FULL: NOT SAVED*).
 
 ## Song: the loop region

@@ -946,10 +946,14 @@ int main(int argc, char **argv)
             k2 = page_pos(&n2);
             open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
             ok &= !strcmp(PAGES[ui.page].title, "PLAY");
-            ok &= page_pos(&n) == 3u && n == 4u;
+            ok &= page_pos(&n) == 3u && n == 6u;
             open_family(FAM_SEQ); frame();            /* SEQ again: PATTERNS (1.7: one of the pages SELECT walks) */
-            ok &= PAGES[ui.page].scope == SC_PATS;
+            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_PADS;
             k4 = page_pos(&n4);
+            open_family(FAM_SEQ); frame();            /* SEQ again: CHAIN, then SCENES */
+            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_CHAIN && page_pos(&n) == 5u;
+            open_family(FAM_SEQ); frame();
+            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_SCENES && page_pos(&n) == 6u;
             open_family(FAM_SEQ); frame();            /* SEQ again: the SONG screen (its own) */
             if (PAGES[ui.page].scope == SC_SONG)
                 k3 = page_pos(&n3);
@@ -959,11 +963,11 @@ int main(int argc, char **argv)
             (void)page_pos(&n);                       /* GLO: its five pages (1.2: the MIDI setup a family of its own) */
             go_home(); frame();
             ui.menu = (uint8_t)menu0, ui.menu_sel = (uint8_t)sel0, ui.force = 1; frame();
-            ok &= k1 == 1u && n1 == 4u && k2 == 2u && n2 == 4u && k4 == 4u && n4 == 4u && k3 == 5u && n3 == 5u && n == 5u;
-                                                      /* (SONG: 5/5, the screen shown counts) */
+            ok &= k1 == 1u && n1 == 6u && k2 == 2u && n2 == 6u && k4 == 4u && n4 == 6u && k3 == 7u && n3 == 7u && n == 5u;
+                                                      /* (SONG: 7/7, the screen shown counts) */
             if (!ok)
                 printf("ui:   counter: NOTES %u/%u TIMING %u/%u PATTERNS %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k4, n4, k3, n3, n);
-            check(ok, "page counter (1.7): as SELECT walks them: NOTES 1/4, TIMING 2/4, PLAY 3/4, PATTERNS 4/4 (SONG not counted)");
+            check(ok, "page counter: as SELECT walks them: NOTES 1/6 .. PATTERNS 4/6, CHAIN 5/6, SCENES 6/6 (SONG not counted)");
         }
         {   /* 2.7: a sound loaded under a running arp keeps it (settings and the notes it holds); arp OFF: the preset's */
             track_t *t = &trk[0];
@@ -1263,9 +1267,9 @@ int main(int argc, char **argv)
         SEL(9);
         check(!strcmp(PT(), "VOICE 2"), "SELECT on EDIT: up to VOICE 2");
         tap(B_SEQ); SEL(9);
-        check(!strcmp(PT(), "PATTERNS"), "SELECT on SEQ (1.7): NOTES <-> TIMING <-> PLAY <-> PATTERNS, not into the SONG screen");
-        SEL(-1);
-        check(!strcmp(PT(), "PLAY"), "SELECT left on PATTERNS (1.7): back to PLAY");
+        check(!strcmp(PT(), "SCENES"), "SELECT on SEQ: NOTES <-> .. PLAY <-> PATTERNS <-> CHAIN <-> SCENES, not into the SONG screen");
+        SEL(-3);
+        check(!strcmp(PT(), "PLAY"), "SELECT left from SCENES: CHAIN, PATTERNS, then PLAY");
         tap(B_ENV);
         check(!strcmp(PT(), "ENV"), "the button still opens its family");
         tap(B_ENV);
@@ -1293,17 +1297,24 @@ int main(int argc, char **argv)
         tap(B_ENV); tap(B_SEQ);
         check(!strcmp(PT(), "NOTES"), "SEQ from another page (1.7): always its first page, NOTES (not PLAY, the last used)");
         tap(B_SEQ); tap(B_SEQ); tap(B_SEQ);
-        check(on_pats_page(), "SEQ tapped four times from HOME on a synth track: PATTERNS");
+        check(on_pats_page() && pats_view() == PV_PADS, "SEQ tapped four times from HOME on a synth track: PATTERNS");
         ui.force = 1; frame(); ppm("live-patterns");
         tap(B_SEQ);
-        check(on_song_page(), "PATTERNS, SEQ again: SONG");
+        check(on_pats_page() && pats_view() == PV_CHAIN, "PATTERNS, SEQ again: CHAIN");
+        ui.force = 1; frame(); ppm("live-chain");
+        tap(B_SEQ);
+        check(on_pats_page() && pats_view() == PV_SCENES, "CHAIN, SEQ again: SCENES");
+        ui.force = 1; frame(); ppm("live-scenes");
+        tap(B_SEQ);
+        check(on_song_page(), "SCENES, SEQ again: SONG");
         tap(B_SEQ);
         check(!strcmp(PT(), "NOTES"), "SONG, SEQ again: round to NOTES");
         tap(B_FX);
         press(B_SEQ); frames(3); tap(B_SAVE); frames(2);
         ok = on_pats_page();
         release(B_SEQ); frames(2);
-        check(ok && on_pats_page() && ui.layer == LY_PLAY, "SEQ held + SAVE tapped (1.7): PATTERNS, from FX; SEQ let go: no SEQ tap");
+        check(ok && on_pats_page() && pats_view() == PV_SCENES && ui.layer == LY_PLAY,
+              "SEQ held + SAVE tapped: SCENES, from FX; SEQ let go: no SEQ tap");
         song.sel = TRK_DRUM; go_home(); frame();
         tap(B_SEQ);
         ok = on_drum_page() && drum_page == 0u && cur_btn() == B_SEQ;
@@ -1326,9 +1337,9 @@ int main(int argc, char **argv)
         check(ok, "drum track, EDIT (1.7): KIT, SOUND, KIT (its light EDIT); SEQ: the grid");
         tap(B_EDIT);
         press(B_SEQ); frames(3); tap(B_SAVE); release(B_SEQ); frames(2);
-        check(on_pats_page(), "drum track: SEQ held + SAVE tapped on KIT: PATTERNS");
-        encs[panel.enc[EN_SELECT]] = -1; frame();
-        check(!strcmp(PT(), "PLAY"), "drum track, PATTERNS: SELECT left: PLAY");
+        check(on_pats_page() && pats_view() == PV_SCENES, "drum track: SEQ held + SAVE tapped on KIT: SCENES");
+        for (i = 0; i < 3u; i++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
+        check(!strcmp(PT(), "PLAY"), "drum track, SCENES: SELECT left three times: CHAIN, PATTERNS, PLAY");
         for (i = 0; i < 2u; i++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
         check(on_drum_page() && drum_page == 0u, "drum track, PLAY: SELECT left twice: TIMING, then the grid");
         tap(B_SAVE);
@@ -2539,23 +2550,34 @@ int main(int argc, char **argv)
         check(ok, "PATTERNS: OCT+ the cursor's pattern on the track (stopped: at once), OCT- on every track");
         encs[panel.enc[EN_K2]] = 1; frame();
         ok = song.g[G_PATQ] == PQ_BAR;
-        encs[panel.enc[EN_K3]] = 3; frame();             /* a chain of 3 from the cursor: 1 2 3 */
-        ok &= t->pat_nchain == 3u && t->pat_chain[0] == 0u && t->pat_chain[2] == 2u;
-        encs[panel.enc[EN_K3]] = -9; frame();
-        ok &= t->pat_nchain == 0u;
-        check(ok, "PATTERNS: KNOB 2 PAT Q (1 BAR), KNOB 3 a chain (3 from the cursor), back to OFF");
+        check(ok, "PATTERNS: KNOB 2 PAT Q (1 BAR)");
         encs[panel.enc[EN_K1]] = 4; frame();             /* the cursor: pattern 5 */
-        encs[panel.enc[EN_K4]] = 1; frame();
-        encs[panel.enc[EN_K4]] = 1; frame();             /* COPY: pattern 1 into 5 */
-        ok = (pb_used(0) & 16u) && !strcmp(ui.msg, "PATTERN COPIED");
+        encs[panel.enc[EN_K3]] = 1; frame();
+        ok = !strcmp(ui.msg, "COPY 1 > 5: AGAIN") && !(pb_used(0) & 16u);
+        encs[panel.enc[EN_K3]] = 1; frame();             /* COPY: pattern 1 into 5 */
+        ok &= (pb_used(0) & 16u) && !strcmp(ui.msg, "PATTERN COPIED");
         ui.force = 1; frame(); ppm("patterns");
         encs[panel.enc[EN_K4]] = -1; frame();
+        ok &= !strcmp(ui.msg, "CLEAR 5: TURN AGAIN") && (pb_used(0) & 16u);
         encs[panel.enc[EN_K4]] = -1; frame();            /* CLEAR pattern 5 */
         ok &= !(pb_used(0) & 16u) && !strcmp(ui.msg, "PATTERN CLEARED");
-        check(ok, "PATTERNS: KNOB 4 right twice COPY the pattern playing into the cursor's, left twice CLEAR it");
+        check(ok, "PATTERNS: KNOB 3 twice COPY the pattern playing into the cursor's (named first), KNOB 4 twice CLEAR it");
+        key(key_of_lane(2)); frames(2);                  /* white key 3: pattern 3 on the track (stopped: at once) */
+        ok = t->pat == 2u && pats_cursor == 2u && trk[5].pat == 0u && !t->pat_req;
+        key(key_of_lane(0)); frames(2);
+        ok &= t->pat == 0u && t->step[0].note[0] == 48u;
+        key(key_of_lane(0) + 1u); frames(2);             /* (a black key: nothing, no note) */
+        ok &= t->pat == 0u;
+        for (j = 0; j < NVOICE; j++)
+            ok &= !t->v[j].active;                       /* (the keys are pads here: no note) */
+        check(ok, "PATTERNS: a white key 1..8 asks for its pattern on the track and plays no note; a black key nothing");
+        {
+            uint32_t lit = pats_keys_lit(1);
+            check((lit >> key_of_lane(0) & 1u) && !(lit >> key_of_lane(2) & 1u), "PATTERNS: the pattern playing's key lit");
+        }
         song.g[G_PATQ] = PQ_LOOP;
         transport_req = 1; frames(2);
-        encs[panel.enc[EN_K1]] = -2; frame();            /* pattern 3 */
+        encs[panel.enc[EN_K1]] = 2; frame();             /* pattern 3 (the cursor on 1 after the keys) */
         tap(B_OCTUP); frames(1);
         ok = t->pat_req == 3u && t->pat == 0u;
         ui.force = 1; frame(); ppm("patterns-asked");
@@ -2568,6 +2590,80 @@ int main(int argc, char **argv)
         check(!on_pats_page() && PAGES[ui.page].fam == FAM_ENV && !ui.home, "PATTERNS: ENV opens its pages (the one last used)");
         fm1_irq_off(); pat_reset_all(); fm1_irq_on();
         go_home(); frame();
+    }
+    {   /* CHAIN (SEQ, after PATTERNS): a playlist typed on the keys, a slot's pattern and repeats, insert, remove, PLAY */
+        track_t *t = &trk[0];
+        uint32_t ok;
+        transport_req = 2; frames(2);
+        song.sel = 0; go_home(); frame();
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+        chain_cursor = 0;
+        while (!(on_pats_page() && pats_view() == PV_CHAIN)) { open_family(FAM_SEQ); frame(); }
+        key(key_of_lane(0)); key(key_of_lane(2)); key(key_of_lane(1)); frames(1);   /* 1, 3, 2: appended in order */
+        ok = t->pat_nchain == 3u && CH_PAT(t->pat_chain[0]) == 0u && CH_PAT(t->pat_chain[1]) == 2u &&
+             CH_PAT(t->pat_chain[2]) == 1u && CH_REP(t->pat_chain[1]) == 1u && chain_cursor == 3u && chain_on(t);
+        check(ok, "CHAIN: white keys 1, 3, 2 at the end: the chain 1 3 2 (x1 each), it plays");
+        encs[panel.enc[EN_K1]] = -2; frame();            /* slot 2 */
+        encs[panel.enc[EN_K3]] = 3; frame();             /* x4 */
+        encs[panel.enc[EN_K2]] = 2; frame();             /* pattern 5 */
+        ok = chain_cursor == 1u && CH_REP(t->pat_chain[1]) == 4u && CH_PAT(t->pat_chain[1]) == 4u;
+        check(ok, "CHAIN: KNOB 1 the slot, KNOB 2 its pattern, KNOB 3 its repeats");
+        tap(B_OCTUP); frames(1);                         /* a copy of slot 2 after it */
+        ok = t->pat_nchain == 4u && CH_PAT(t->pat_chain[2]) == 4u && CH_PAT(t->pat_chain[3]) == 1u && chain_cursor == 2u;
+        key(key_of_lane(7)); frames(1);                  /* pattern 8 after slot 3 */
+        ok &= t->pat_nchain == 5u && CH_PAT(t->pat_chain[3]) == 7u && chain_cursor == 3u;
+        tap(B_OCTDN); frames(1);                         /* slot 4 out */
+        ok &= t->pat_nchain == 4u && CH_PAT(t->pat_chain[3]) == 1u;
+        check(ok, "CHAIN: OCT+ inserts a copy of the slot, a key its pattern after the cursor, OCT- removes the slot");
+        ui.force = 1; frame(); ppm("chain");
+        encs[panel.enc[EN_K4]] = -1; frame();
+        ok = t->pat_coff == 1u && !chain_on(t) && t->pat_nchain == 4u;
+        encs[panel.enc[EN_K4]] = 1; frame();
+        ok &= !t->pat_coff && chain_on(t);
+        check(ok, "CHAIN: KNOB 4 PLAY off keeps the slots, on again");
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+        go_home(); frame();
+    }
+    {   /* SCENES (SEQ, after CHAIN): launch on a key or OCT+, name, a track's pattern in a scene, store (OCT- twice) */
+        uint32_t ok, i;
+        transport_req = 2; frames(2);
+        song.sel = 1; go_home(); frame();
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+        while (!(on_pats_page() && pats_view() == PV_SCENES)) { open_family(FAM_SEQ); frame(); }
+        key(key_of_lane(8 + 2)); frames(2);              /* white key 11: scene 3, every track pattern 3 (stopped: at once) */
+        ok = scn_cur == 2u && scn_ask == SCN_NONE;
+        for (i = 0; i < NTRK; i++)
+            ok &= trk[i].pat == 2u;
+        check(ok, "SCENES: white key 11 launches scene 3: every track plays its pattern 3");
+        scn_cursor = 0;
+        encs[panel.enc[EN_K3]] = 4; frame();             /* scene 1 named CHORUS */
+        encs[panel.enc[EN_K4]] = 1; frame();             /* track 2's pattern in scene 1: 2 */
+        encs[panel.enc[EN_K1]] = 1; frame();             /* scene 2 */
+        encs[panel.enc[EN_K4]] = -5; frame();            /* track 2 in scene 2: KEEP */
+        ok = !strcmp(N_SCN[scn_name[0]], "CHORUS") && scn_pat[0][1] == 1u && scn_pat[1][1] == SCN_KEEP;
+        check(ok, "SCENES: KNOB 3 the name, KNOB 4 the selected track's pattern in the scene (down to KEEP)");
+        ui.force = 1; frame(); ppm("scenes");
+        tap(B_OCTUP); frames(2);                         /* scene 2: track 2 keeps pattern 3, the others 2 */
+        ok = scn_cur == 1u && trk[1].pat == 2u && trk[0].pat == 1u && trk[7].pat == 1u;
+        check(ok, "SCENES: OCT+ launches the cursor's scene; a KEEP track goes on with its pattern");
+        trk[0].pat_req = 6; frames(2);                   /* track 1 on pattern 6 */
+        tap(B_OCTDN); frame();
+        ok = !strcmp(ui.msg, "OCT- AGAIN: STORE 2") && scn_pat[1][0] == 1u;
+        tap(B_OCTDN); frame();
+        ok &= scn_pat[1][0] == 5u && scn_pat[1][1] == 2u && !strcmp(ui.msg, "SCENE STORED");
+        check(ok, "SCENES: OCT- twice stores the patterns playing into the scene");
+        song.g[G_PATQ] = PQ_BAR;
+        transport_req = 1; frames(2);
+        key(key_of_lane(8)); frame();                    /* scene 1, playing: it waits for the bar */
+        ok = scn_ask == 0u && trk[0].pat_req == 1u;
+        for (i = 0; i < 2000u && scn_ask != SCN_NONE; i++)
+            frame();
+        ok &= scn_cur == 0u && trk[0].pat == 0u && trk[1].pat == 1u;
+        transport_req = 2; frames(2);
+        check(ok, "SCENES playing: asked, made on the bar, then the scene playing");
+        song.g[G_PATQ] = PQ_LOOP;
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+        song.sel = 0; go_home(); frame();
     }
     {   /* SCL > HARMONY (key, scale, Q, PROG), FOLLOW, CHORDS (its own screen: the progression, live chords on the keys) */
         track_t *t = &trk[0];
