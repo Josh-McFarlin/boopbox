@@ -31,10 +31,14 @@ INSN = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*(.*)$")
 TARGET = re.compile(r"goto -?\d+ <[^>]*: ([0-9a-f]+) >")
 
 
+TABLE = re.compile(r"^< (\d+) : 0x[0-9A-Fa-f]+ >$")
+
+
 def functions(path):
     """{name: [(addr, text)]}: a function runs to the next label not starting with '.' (the compiler's
-    jump-table labels are inside functions); jump-table data ('< n : 0x.. >') is left out"""
-    out, cur = {}, None
+    jump-table labels are inside functions); jump-table data ('< n : 0x.. >') is left out of the list and kept in
+    TABLES: {address of the tbb / tbh: [the addresses it jumps to]} (table address + 2 x entry)"""
+    out, cur, tb = {}, None, None
     with open(path) as f:
         for line in f:
             m = LABEL.match(line.strip())
@@ -42,21 +46,76 @@ def functions(path):
                 name = m.group(1)
                 if not name.startswith("."):
                     cur = out.setdefault(name, []) if name in FUNCS else None
+                    tb = None
                 continue
             m = INSN.match(line)
-            if cur is not None and m and not m.group(3).lstrip().startswith("<"):
-                cur.append((int(m.group(1), 16), m.group(3).strip()))
+            if cur is None or not m:
+                continue
+            a, t = int(m.group(1), 16), m.group(3).strip()
+            d = TABLE.match(t)
+            if d:
+                if tb is not None:
+                    TABLES[tb[0]].append(tb[1] + 2 * int(d.group(1)))
+                continue
+            cur.append((a, t))
+            tb = None
+            if re.match(r"tb[bh] \[r\d+\]$", t):
+                tb = (a, a + 2)                 # (the table follows the 2-byte tbb / tbh)
+                TABLES[a] = []
     return out
+
+
+TABLES = {}
+RET = re.compile(r"(^|[{ ,])pc\b.*= \[sp\+\+\]$|^rti$|^rts$")
+
+
+def successors(insns):
+    """{addr: [the addresses it can go to next]}: a goto goes to its target, a conditional goto also to the next
+    instruction, a return nowhere, a jump table to its entries, anything else to the next instruction"""
+    nxt = {a: insns[i + 1][0] if i + 1 < len(insns) else None for i, (a, _) in enumerate(insns)}
+    succ = {}
+    for a, t in insns:
+        m = TARGET.search(t)
+        if m and t.startswith("goto"):
+            s = [int(m.group(1), 16)]
+        elif m:
+            s = [int(m.group(1), 16), nxt[a]]
+        elif RET.search(t):
+            s = []
+        elif a in TABLES:
+            s = TABLES[a] or [b for b, _ in insns]   # (a table not read: anywhere, as before)
+        else:
+            s = [nxt[a]]
+        succ[a] = [x for x in s if x is not None]
+    return succ
+
+
+def reaches(succ, frm, to):
+    """can the code at frm get to the instruction at to (without returning)?"""
+    seen, todo = set(), [frm]
+    while todo:
+        a = todo.pop()
+        if a == to:
+            return True
+        if a in seen or a not in succ:
+            continue
+        seen.add(a)
+        todo.extend(succ[a])
+    return False
 
 
 def cost(insns):
     """loops: one span per loop head (the farthest backward branch to it); an instruction inside d
-    spans weighs NEST ** (d - 1) (an inner loop runs several times per pass of the outer one)"""
+    spans weighs NEST ** (d - 1) (an inner loop runs several times per pass of the outer one). A backward branch
+    is a loop only if its target can come back to it: the compiler also jumps back to a shared return (sample_render:
+    every early exit to one 'sp += 48; {pc, ...} = [sp++]') or from a block laid out after the return back into the
+    function (grain_render), and those run once, not per sample"""
     lo = insns[0][0]
+    succ = successors(insns)
     heads = {}
     for a, t in insns:
         m = TARGET.search(t)
-        if m and lo <= int(m.group(1), 16) < a:
+        if m and lo <= int(m.group(1), 16) < a and reaches(succ, int(m.group(1), 16), a):
             h = int(m.group(1), 16)
             heads[h] = max(heads.get(h, a), a)
     n = divs = calls = 0

@@ -10,6 +10,10 @@
 # Groovebox upgrade: rewritten on jieli-linux-toolchains-20260730.1, where the 2.8.3 tree itself gives
 # drums_mix 6811 and fm1_alnk0_irq 268 (both over the old budget); this tree gives 6830 (+0.3 %) and 256
 # (mix_block noinline: out of the ISR as before). The FM6 lines are added.
+# 1.6.0: a backward branch counts as a loop only if its target comes back to it (tests/target_budget.py reaches()).
+# Since SLOOP 2.8.4 the compiler jumps back to sample_render's shared return and into grain_render's inlined
+# gr_spawn; counted as loops, they put the per-sample loops one level deeper (x4): sample_render read 593, grain_render
+# 2363, over budget on every real build. Read right: 125 and 1747, fm6_render 346; the other functions unchanged.
 analog_render 630
 digital_render 333
 phase_render 79
