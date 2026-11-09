@@ -7,7 +7,8 @@
 # thread), CORES=2 CPU1_TIMEOUT_AT=K (a lost job: the fallback, then one core), CPU1_UNITS=0 (no split) and
 # CPU1_UNITS=15 (every unit that may go, goes); and mix_split_test must be clean under ThreadSanitizer.
 # Of regress only the golden renders, health, voices and crashes count here: its CPU budget is the default
-# run's business (tests/run_tests.sh), and a thread's hand-off is not in the baseline.
+# run's business (tests/run_tests.sh), and a thread's hand-off is not in the baseline, so its CPU jobs are not
+# run (NO_CPU=1).
 # From the repo root, after tests/run_tests.sh built build/host/regress (it calls this script), or alone:
 #   sh tests/cpu1_modes.sh
 set -u
@@ -24,7 +25,7 @@ $CC -o "$OUT/mix_split_test" tests/mix_split_test.c -lm || exit 1
 
 golden() {   # $1 = the mode's name, the rest its env: regress's golden renders, health, voices, no crash
     name=$1; shift
-    if env "$@" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt > "$OUT/regress_mode.log" 2>&1; then :; fi
+    if env NO_CPU=1 "$@" "$OUT/regress" tests/golden.txt tests/cpu_baseline.txt > "$OUT/regress_mode.log" 2>&1; then :; fi
     if grep -E "golden renders \(0 changed, 0 gone\), 0 health failures, 0 voice / routing checks failed, [0-9]+ CPU entries over budget \([0-9]+ notes\), 0 crashes" "$OUT/regress_mode.log" >/dev/null; then
         echo "   golden renders, $name: same hashes"
     else

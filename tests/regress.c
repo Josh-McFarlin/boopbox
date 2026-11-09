@@ -25,7 +25,8 @@
  *    no hanging note after the note-offs on any routing (USB channels 1..3, 10, others while the
  *    selected track changes, the keys while the selected track changes, with ARP and the voice modes).
  * env: GOLDEN_UPDATE=1 rewrites GOLDEN_FILE, BUDGET_UPDATE=1 rewrites CPU_FILE (on purpose: review the
- * diff), VERBOSE=1 prints every render's numbers, JOBS=n children at once (default 8). */
+ * diff), VERBOSE=1 prints every render's numbers, JOBS=n children at once (default 8), NO_CPU=1 skips 3. (the
+ * CPU jobs are not run: tests/cpu1_modes.sh, which checks 1., 2. and 4. only). */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -820,6 +821,7 @@ int main(int argc, char **argv)
     const char *gpath = argc > 1 ? argv[1] : "tests/golden.txt";
     const char *cpath = argc > 2 ? argv[2] : "tests/cpu_baseline.txt";
     int gupd = getenv("GOLDEN_UPDATE") != 0, cupd = getenv("BUDGET_UPDATE") != 0, verbose = getenv("VERBOSE") != 0;
+    int no_cpu = getenv("NO_CPU") != 0;            /* the CPU jobs are not run, the budget not checked nor rewritten */
     uint32_t jobs_at_once = getenv("JOBS") ? (uint32_t)atoi(getenv("JOBS")) : 8u;
     static const char *const MN[4] = {"POLY", "MONO", "LEGATO", "UNISON"};
     static const char *const SN[6] = {"dry", "chorus", "delay", "reverb", "all", "dist"};
@@ -836,6 +838,8 @@ int main(int argc, char **argv)
     if (jobs_at_once < 1u || jobs_at_once > 64u)
         jobs_at_once = 8;
     only_cpu = getenv("CPU_JOB") != 0;
+    if (no_cpu)
+        cupd = 0;
 
     /* 1 + 2: the golden renders */
     g0 = nj;
@@ -956,8 +960,9 @@ int main(int argc, char **argv)
             }
         return 2;
     }
-    run_jobs(J + c0, c1 - c0, 1);
-    if (!J[c0].r.ipc && getenv("CPU_VALGRIND") && !system("valgrind --version >/dev/null 2>&1")) {
+    if (!no_cpu)
+        run_jobs(J + c0, c1 - c0, 1);
+    if (!no_cpu && !J[c0].r.ipc && getenv("CPU_VALGRIND") && !system("valgrind --version >/dev/null 2>&1")) {
         printf("regress: CPU: counting instructions under callgrind (%u jobs)...\n", c1 - c0);
         fflush(stdout);
         for (i = c0; i < c1; i++) {
@@ -1056,7 +1061,9 @@ int main(int argc, char **argv)
     /* a preset's own cost: its count less the idle mix's (the mix alone is half of a light preset's),
      * so +25 % means 25 % more engine work; the mixes as they are */
     nc = load_kv(cpath, cpu, MAXJ);
-    {
+    if (no_cpu)
+        printf("regress: CPU: not run (NO_CPU)\n");
+    else {
         /* every cost per mille of the idle + drums mix of this run: comparable across hosts and units */
         double ref = cpu_cost(&J[c1 - 2u]), tol = J[c0].r.ipc ? CPU_TOL : CPU_TOL_NS;
         const char *unit = J[c0].r.ipc ? "instructions" : "time";
@@ -1118,12 +1125,13 @@ int main(int argc, char **argv)
         fclose(f);
         printf("regress: CPU baseline %s rewritten (%u entries)\n", cpath, c1 - c0);
     }
-    printf("regress: CPU, one part with 8 notes held (VOICE 4), heaviest preset per engine (%s / ns per sample):\n",
-           J[c0].r.ipc ? "instructions" : "per mille");
-    for (e = 0; e < NENGINES; e++)
+    if (!no_cpu)
+        printf("regress: CPU, one part with 8 notes held (VOICE 4), heaviest preset per engine (%s / ns per sample):\n",
+               J[c0].r.ipc ? "instructions" : "per mille");
+    for (e = 0; !no_cpu && e < NENGINES; e++)
         printf("regress:   %-8s %-14s %6.0f %s  %6.1f ns\n", ENGINES[e]->name, ENGINES[e]->presets[heavy_p[e]].name,
                J[c0].r.ipc ? heavy[e] : heavy[e] / cpu_cost(&J[c1 - 2u]) * 1000.0, J[c0].r.ipc ? "instr" : "/1000", heavy_ns[e]);
-    for (i = c1 - 3u; i < c1; i++)
+    for (i = c1 - 3u; !no_cpu && i < c1; i++)
         printf("regress:   %-23s %6.0f %s  %6.1f ns\n", J[i].name + 8, J[i].r.ipc ? J[i].r.ipc : J[i].r.rel,
                J[i].r.ipc ? "instr" : "/1000", J[i].r.ns);
 
