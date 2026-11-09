@@ -1124,6 +1124,28 @@
       </div>
     </section>
 
+    <section class="panel" id="p-projects" data-tab="projects" data-dev hidden>
+      <div class="card">
+        <h2 data-t="projects" data-ic="symbol_folder"></h2>
+        <p class="dim" data-t="projHelp"></p>
+        <div class="slots" id="slots"></div>
+      </div>
+      <div class="card" id="bkgroup" hidden>
+        <h2 data-t="bkTitle" data-ic="port_disk"></h2>
+        <p class="dim" data-t="bkHelp"></p>
+        <p class="bar"><button id="bk-save" class="pri" data-t="bkSave"></button> <button id="bk-load" data-t="bkLoad"></button>
+          <input id="bk-file" type="file" accept=".json,application/json" hidden></p>
+        <progress id="bk-prog" max="1" value="0" hidden></progress>
+      </div>
+      <!-- 2.7: a song as one file (the LIVE page's playlist plays them) -->
+      <div class="card" id="sfgroup" hidden>
+        <h2 data-t="sfTitle" data-ic="control_arrow_loop"></h2>
+        <p class="dim" data-t="sfHelp"></p>
+        <p class="bar"><button id="sf-save" class="pri" data-t="sfSave" data-ic="symbol_download"></button> <button id="sf-load" data-t="sfLoad" data-ic="symbol_upload"></button>
+          <input id="sf-file" type="file" accept=".sloopsong,.json,application/json" hidden></p>
+      </div>
+    </section>
+
     <section class="panel" id="p-library" data-tab="library" hidden>
       <div class="libcols" id="libsec">
         <div class="card" id="libpane">
@@ -1208,28 +1230,6 @@
         </div>
       </div>
       <div class="groups" id="dsgroups"></div>
-    </section>
-
-    <section class="panel" id="p-projects" data-tab="projects" data-dev hidden>
-      <div class="card">
-        <h2 data-t="projects" data-ic="symbol_folder"></h2>
-        <p class="dim" data-t="projHelp"></p>
-        <div class="slots" id="slots"></div>
-      </div>
-      <div class="card" id="bkgroup" hidden>
-        <h2 data-t="bkTitle" data-ic="port_disk"></h2>
-        <p class="dim" data-t="bkHelp"></p>
-        <p class="bar"><button id="bk-save" class="pri" data-t="bkSave"></button> <button id="bk-load" data-t="bkLoad"></button>
-          <input id="bk-file" type="file" accept=".json,application/json" hidden></p>
-        <progress id="bk-prog" max="1" value="0" hidden></progress>
-      </div>
-      <!-- 2.7: a song as one file (the LIVE page's playlist plays them) -->
-      <div class="card" id="sfgroup" hidden>
-        <h2 data-t="sfTitle" data-ic="control_arrow_loop"></h2>
-        <p class="dim" data-t="sfHelp"></p>
-        <p class="bar"><button id="sf-save" class="pri" data-t="sfSave" data-ic="symbol_download"></button> <button id="sf-load" data-t="sfLoad" data-ic="symbol_upload"></button>
-          <input id="sf-file" type="file" accept=".sloopsong,.json,application/json" hidden></p>
-      </div>
     </section>
 
     <section class="panel" id="p-settings" data-tab="settings" data-dev hidden>
