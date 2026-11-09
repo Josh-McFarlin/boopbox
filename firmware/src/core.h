@@ -4,7 +4,7 @@
  * NTRK tracks, each of a kind (track_t.kind): a SYNTH track plays an engine (its own preset, parameters, voices
  * and 64-step pattern), a DRUM track a drum kit (drums.c: 16 sounds, its own pattern of lanes). No track index is
  * special: the default project has synths on 1..3 and 5..7, drums on 4 and 8. The synth tracks share one budget
- * of NVOICE sounding voices (voice.c), the drum tracks one pool of NDRUM voices (drums.c). */
+ * of NVBUDGET sounding voices (voice.c), the drum tracks one pool of NDRUM voices (drums.c). */
 #include <stdint.h>
 /* CTL_SMALL: control-rate code (the sequencer, voice allocation, note-on set-up, parameter helpers: it runs a block or an
  * event at a time, never a sample at a time) is compiled for size, clang minsize as -Oz, like gfx.c UI_SMALL for the
@@ -16,7 +16,17 @@
 #define CTL_SMALL
 #endif
 #endif
-#define NVOICE 8                 /* voices per synth track, and the budget shared by all of them */
+#define NVOICE 8                 /* voices per synth track (track_t.v[]): the most one track plays at once */
+/* NVBUDGET: the synth voices that sound at once across all the synth tracks (voice.c voices_busy). BoopBox: 20;
+ * the TRAINER build keeps 8, the budget its three songs were rendered and approved with (tools/trainer/render.py
+ * builds with -DNVBUDGET=8). Overload still sheds voices on the FM-1 (voice.c shed_voice). */
+#ifndef NVBUDGET
+#if defined(FELUCCA_TRAINER) && FELUCCA_TRAINER
+#define NVBUDGET 8
+#else
+#define NVBUDGET 20
+#endif
+#endif
 #define NPOLY 8
 #define NTRK 8                   /* tracks */
 enum { TK_SYNTH, TK_DRUM };      /* track_t.kind */

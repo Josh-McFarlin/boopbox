@@ -284,7 +284,7 @@ static int tracks_demo(const char *dir, const char *name, uint32_t solo)
     }
     fclose(w);
     if (solo)
-        return bmax > NVOICE;
+        return bmax > NVBUDGET;
     {
         const dstep_t *s4 = &td->dstep[4];
         const step_t *l1 = &t3->step[1], *p14 = &t2->step[14];
@@ -301,8 +301,8 @@ static int tracks_demo(const char *dir, const char *name, uint32_t solo)
         printf("tracks: recording: MIDI ch 3 -> lead step 1 = %u (want 84) %s; keys -> pad step 14 = %u notes %u %u %s\n",
                l1->note[0], ok_lead ? "ok" : "FAIL", p14->n, p14->note[0], p14->note[1], ok_keys ? "ok" : "FAIL");
         printf("tracks: voices sounding at most %u (budget %u) %s; given up to another part %u; %u samples near full "
-               "scale\n", bmax, NVOICE, bmax <= NVOICE ? "ok" : "FAIL", voice_kills - kills0, clips);
-        fail = !ok_clap + !ok_lead + !ok_keys + (bmax > NVOICE) + (clips > 0);
+               "scale\n", bmax, NVBUDGET, bmax <= NVBUDGET ? "ok" : "FAIL", voice_kills - kills0, clips);
+        fail = !ok_clap + !ok_lead + !ok_keys + (bmax > NVBUDGET) + (clips > 0);
     }
     return (int)fail;
 }
@@ -366,9 +366,11 @@ static double tracks_cost(const uint8_t parts[NPART][3], uint32_t *busy_max)
     return r[0];
 }
 
+static void host_budget_fill(void);
+
 /* stealing across parts must not click: three parts of plain sines (smooth: the largest sample
- * step is set by the pitches), 7 + 1 notes fill the budget, then notes on parts 2 and 3 take held
- * voices of part 1 (and part 2). Each taken voice fades over one block. Compares the largest sample
+ * step is set by the pitches), 7 + 1 notes fill the budget (host_budget_fill holds the rest of a budget
+ * over 8), then notes on parts 2 and 3 take held voices of part 1 (and part 2, and the held rest). Each taken voice fades over one block. Compares the largest sample
  * step around each take with the largest one in the 0.25 s before it; a hard cut would be several
  * times larger. Writes DIR/steal.wav. */
 static int steal_test(const char *dir)
@@ -401,9 +403,11 @@ static int steal_test(const char *dir)
     for (f = 0; f < frames; f += CTL) {
         int32_t o[2 * CTL];
         uint32_t ms = f * 1000u / FS, k0 = voice_kills;
-        if (f == 0)
+        if (f == 0) {
             for (i = 0; i < 7u; i++)
                 trk_note_on(&trk[0], N1[i], 90);
+            host_budget_fill();                    /* (NVBUDGET over 8: the rest of it held on tracks 5..7) */
+        }
         if (f == FS / 2u / CTL * CTL)
             trk_note_on(&trk[1], 74, 90);          /* 8: the budget is full */
         if (ms >= 1000u && ms % 500u == 0u && f % (FS / 2u) < CTL && ms < 3500u) {
@@ -462,6 +466,23 @@ static void xfade_sine(track_t *t)
     t->p[P_DIST] = t->p[P_CHOR] = t->p[P_DLY] = t->p[P_REV] = 0;
     t->p[P_VOICE] = V_POLY;
     t->p[P_LEVEL] = 100;
+}
+
+/* NVBUDGET over 8: the tests written for a budget of 8 voices (a part fills it, the others take voices) hold the
+ * rest of it on tracks 5..7 (quiet sustained sines, held to the end), so 8 voices are left to fill as before.
+ * Call it after the tests' own set-up; with NVBUDGET 8 (the trainer) it does nothing. */
+static void host_budget_fill(void)
+{
+    uint32_t i;
+    for (i = 0; i + 8u < NVBUDGET && i < 24u; i++) {
+        track_t *t = &trk[4u + i / 8u];
+        if (i % 8u == 0u) {
+            xfade_sine(t);
+            t->p[P_ATK] = 0;
+            t->p[P_LEVEL] = 20;
+        }
+        trk_note_on(t, 36u + 7u * (i % 8u) + i / 8u, 60);
+    }
 }
 static int xfade_test(const char *dir)
 {
@@ -779,7 +800,7 @@ static int tracks_test(const char *dir)
     printf("tracks: one part, 8 notes held + drums (host -O2, ns per sample, heaviest preset per engine):");
     for (e = 0; e < NENGINES; e++)
         printf(" %s %s %.1f%s", ENGINES[e]->name, ENGINES[e]->presets[heavy[e]].name, best_e[e], e + 1u < NENGINES ? "," : "\n");
-    {   /* DIGITAL, PHASE, VOICE (their heaviest presets) at once: 3 + 3 + 2 notes = the budget of 8 */
+    {   /* DIGITAL, PHASE, VOICE (their heaviest presets) at once: 3 + 3 + 2 notes (8 voices) */
         uint8_t parts[NPART][3] = {{1, (uint8_t)heavy[1], 3}, {2, (uint8_t)heavy[2], 3}, {5, (uint8_t)heavy[5], 2}};
         uint8_t full[NPART][3] = {{1, (uint8_t)heavy[1], 8}, {2, (uint8_t)heavy[2], 8}, {5, (uint8_t)heavy[5], 4}};
         uint8_t vv[NPART][3] = {{5, (uint8_t)heavy[5], 4}, {5, (uint8_t)heavy[5], 4}, {0, 0, 0}};
@@ -795,9 +816,9 @@ static int tracks_test(const char *dir)
                "%u voices\n", four, four / worst, bm);
         printf("tracks: the same, 8 + 8 + 4 notes asked for (budget keeps %u): %.1f ns (%.2f x)\n", bm2, four_full,
                four_full / worst);
-        printf("tracks: two VOICE parts, 4 + 4 voices (the heaviest 8 the budget allows): %.1f ns (%.2f x); "
+        printf("tracks: two VOICE parts, 4 + 4 voices (each at the VOICE cap): %.1f ns (%.2f x); "
                "no notes (drums, buses, 3 idle parts): %.1f ns\n", two_voice, two_voice / worst, none);
-        if (bm > NVOICE || bm2 > NVOICE || bm3 > NVOICE)
+        if (bm > NVBUDGET || bm2 > NVBUDGET || bm3 > NVBUDGET)
             fail++;
     }
     printf("tracks: %s\n", fail ? "FAILED" : "all checks ok");

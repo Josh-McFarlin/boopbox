@@ -154,8 +154,8 @@ cpu/NOISE/07_RISER 2063
 cpu/NOISE/08_NZ_SNARE 2042
 cpu/NOISE/09_BITCRUSH 2108
 cpu/NOISE/10_RADIO 2130
-cpu/mix/3parts_heavy_now_drums 2952
-cpu/mix/3parts_phys_noise_drums 3263
+cpu/mix/3parts_heavy_now_drums 4302
+cpu/mix/3parts_phys_noise_drums 4276
 cpu/mix/idle 548
 cpu/mix/idle_drums 1000
-cpu/mix/3parts_full_drums 2833
+cpu/mix/3parts_full_drums 3720

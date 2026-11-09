@@ -13,7 +13,7 @@ three tables in RAM at power-on (section 2).
 
 | Feature | What it does | Tests |
 | --- | --- | --- |
-| Eight tracks | 8 tracks, each a synth or a drum track (default: drums on 4 and 8, `SAVE > TOOLS > KIND` changes it); own engine, preset, pattern, length, MIDI channel; a shared budget of 8 synth voices and one pool of drum voices; at most 3 big engines (refused and said for a fourth); render split over two cores | `tracks8_test`, `arena_test`, `mix_split_test`, `cpu1_modes.sh` (TSan), `ui_pages_test` |
+| Eight tracks | 8 tracks, each a synth or a drum track (default: drums on 4 and 8, `SAVE > TOOLS > KIND` changes it); own engine, preset, pattern, length, MIDI channel; a shared budget of 20 synth voices (`NVBUDGET`; the trainer 8) and one pool of drum voices; at most 3 big engines (refused and said for a fourth); render split over two cores | `tracks8_test`, `arena_test`, `mix_split_test`, `cpu1_modes.sh` (TSan), `ui_pages_test` |
 | Step components | 14 types (PULSE, HOLD, MULT, VEL, RAMP+, RAMP−, RAND, PORTA, BEND, TONE, JUMP, PARAM, COND, TRIG); 16 a track, several a step; directions FWD, REV, PEND, RAND; a seed; edited in the step sheet | `comp_test`, `ui_pages_test`, `soak_test` |
 | Parameter locks | 32 a track, several a step (one a parameter); SLIDE (a glide over the step, 4 at once a track); knob moves recorded as locks (`MENU > SEQ > REC KNOBS`); saves keep the track's own values; the sheet's LOCKS strip | `lock_test`, `ui_pages_test` |
 | Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of 2..8; COPY, CLEAR; the PATTERNS screen; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |

@@ -4,7 +4,7 @@
  * audio ISR.
  *
  * Each synth track (part) has its own NVOICE voices (so MONO / LEGATO / UNISON keep using
- * v[0..]), but only NVOICE of all the parts' voices sound at once (eight tracks or four): a part that starts
+ * v[0..]), but only NVBUDGET of all the parts' voices sound at once (core.h: 20; the trainer 8): a part that starts
  * a voice while the budget is full takes one from any part (voice_victim): the oldest
  * released voice, else the oldest extra UNISON voice, else the oldest held voice of a
  * POLY part that is not its lowest note. A voice taken from another part fades out
@@ -179,11 +179,11 @@ CTL_SMALL static int voice_room(track_t *t, int soft)
 {
     track_t *vp = 0;
     uint32_t k;
-    if (voices_busy() < NVOICE)
+    if (voices_busy() < NVBUDGET)
         return 1;
     k = voice_victim(t, soft, &vp);
     if (k == NVOICE)
-        return !soft;                                   /* hard: over the budget (cannot happen with 3 parts) */
+        return !soft;                                   /* hard: over the budget (only the held basses and leads sound) */
     voice_kill(&vp->v[k]);
     return 1;
 }
@@ -201,14 +201,14 @@ CTL_SMALL static voice_t *voice_alloc(track_t *t, uint32_t note)
     int32_t bd = 0x7FFFFFFF;
     for (i = 0; i < np; i++) {
         if (t->v[i].active && t->v[i].note == note) {
-            if (t->v[i].stage == 4u && voices_busy() >= NVOICE)
+            if (t->v[i].stage == 4u && voices_busy() >= NVBUDGET)
                 voice_room(t, 0);                       /* (2.8.3) a voice fading out (given up) sounds again: within the
-                                                         * budget of NVOICE, as a new one (after Melodee's voice_reuse) */
+                                                         * budget of NVBUDGET, as a new one (after Melodee's voice_reuse) */
             return &t->v[i];
         }
         nfree += !t->v[i].active;
     }
-    if (nfree && voices_busy() >= NVOICE) {
+    if (nfree && voices_busy() >= NVBUDGET) {
         track_t *vp = 0;
         uint32_t k = voice_victim(t, 0, &vp);
         if (k < np && vp == t)
