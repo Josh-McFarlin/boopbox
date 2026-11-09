@@ -287,8 +287,19 @@ CTL_SMALL static void __attribute__((noinline)) drum_synth_on(uint32_t k, uint32
     {
         uint32_t ln = lane_of_note(note);
         tweak = tweak && !DRUM_CLICK(note);
-        ds_on(&drums.ds[i], snd, crush, note, vel, tweak ? drum_tune[k % NTRK][ln] * 16 : 0,
-              tweak ? (uint32_t)(drum_dec[k % NTRK][ln] + 4) : 4u);
+        int32_t semi;
+        uint32_t sl = ds_lane(note, &semi), lev;
+        const dsnd_t *d;
+        if (snd) {                                  /* a SYN kit: 16 sounds with their levels */
+            d = &snd[sl];
+            lev = d->level;
+        } else {                                    /* a factory kit (1.7): the lane's shared sound, the kit's level */
+            const dkit_t *f = &DS_KITS[(kit - DRUM_SAMPLED) % DS_NKITS];
+            d = &DS_SND[f->snd[sl]];
+            lev = f->lvl[sl];
+        }
+        ds_on_snd(&drums.ds[i], d, lev, crush, note, vel, tweak ? drum_tune[k % NTRK][ln] * 16 : 0,
+                  tweak ? (uint32_t)(drum_dec[k % NTRK][ln] + 4) : 4u);
     }
 }
 /* the editor's audition (editor_dsyn.c DSYN_PLAY): queued, played by the audio ISR (drum_audition_poll) */
@@ -336,7 +347,7 @@ static void drum_on(track_t *t, uint32_t note, uint32_t vel)
         if (zid < 0)
             return;                                 /* (an empty slot, or no sound on this lane) */
     } else if (kit >= DRUM_SAMPLED) {               /* synthesised kit */
-        drum_synth_on(k, note, vel, kit, DS_KITS[kit - DRUM_SAMPLED].s, DS_KITS[kit - DRUM_SAMPLED].crush, 1);
+        drum_synth_on(k, note, vel, kit, 0, DS_KITS[kit - DRUM_SAMPLED].crush, 1);   /* (snd 0: a factory kit) */
         return;
     }
     if (zid < 0) {                                  /* the GM sample kit */
