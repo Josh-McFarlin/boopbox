@@ -5917,7 +5917,7 @@ $("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; 
 
 /* ---------------------------------------------------------------- tabs --- */
 /* one panel at a time; the last one is remembered (localStorage) and in the URL hash (#sound ...) */
-const TABS = ["live", "sound", "sequencer", "patterns", "tracks", "song", "library", "samples", "kits", "drumsynth", "projects", "settings", "theme"];
+const TABS = ["live", "sound", "sequencer", "patterns", "tracks", "song", "projects", "library", "samples", "kits", "drumsynth", "settings", "theme"];
 const TAB_KEY = "felucca-editor-tab";
 const TRACK_TABS = new Set(["sound", "sequencer", "tracks"]);
 let tab = (() => {
