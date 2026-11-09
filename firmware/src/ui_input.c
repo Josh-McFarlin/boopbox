@@ -946,8 +946,7 @@ UI_SMALL static void pats_open(void)
     vis_on = 0;
     studio_open(SC_PATS);
     for (i = ui.page; i < NPAGES && PAGES[i].scope == SC_PATS; i++)
-        if (PAGES[i].id[0] == PV_SCENES)
-            ui.page = (uint8_t)i;
+        ui.page = (uint8_t)i;                             /* (the last of them: SCENES) */
 }
 /* the layers, once a frame: which one is held (or locked), the taps on release, its keys and knobs.
  * Returns 1 while one is held or locked (the page does not take the knobs then) */

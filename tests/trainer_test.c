@@ -381,7 +381,7 @@ static void do_mutes(const tr_card_t *c)
 static void pats_screen(void)                           /* (from a synth track: on a drum track SEQ opens the DRUMS screen,
                                                          * whose SEQ walks its own pages; ALGORITHM then picks any track) */
 {
-    if (on_pats_page())
+    if (on_pats_page() && pats_view() == PV_PADS)
         return;
     home();
     if (is_drum(TSEL))
@@ -397,14 +397,14 @@ static void pat_select(uint32_t k, uint32_t pat)
     tap(B_OCTUP);
     frames(3);
 }
-static void pat_copy_to(uint32_t k, uint32_t pat)          /* KNOB 4 right twice: the pattern playing into the cursor's */
+static void pat_copy_to(uint32_t k, uint32_t pat)          /* KNOB 3 right twice: the pattern playing into the cursor's */
 {
     pats_screen();
     algo_to(k);
     while (pats_cursor != pat)
         slow(EN_K1, pats_cursor < pat ? 1 : -1);
-    slow(EN_K4, 1);
-    slow(EN_K4, 1);
+    slow(EN_K3, 1);
+    slow(EN_K3, 1);
 }
 static void do_lock(const tr_card_t *c)
 {
@@ -474,8 +474,10 @@ static void follow_hints(const tr_card_t *c)
                 tap(B_SEQ);
         } else if ((n = hint_num(h, "KNOB 1 TO PATTERN ")) > 0)
             slow(EN_K1, pats_cursor < (uint32_t)n - 1u ? 1 : -1);
-        else if (tr_prefix(h, "KNOB 4 RIGHT"))
-            slow(EN_K4, 1);
+        else if (tr_prefix(h, "KNOB 3 RIGHT"))
+            slow(EN_K3, 1);
+        else if (tr_prefix(h, "TURN SELECT LEFT"))
+            slow(EN_SELECT, -1);
         else if (tr_prefix(h, "PRESS OCT+"))
             tap(B_OCTUP);
         else if (tr_prefix(h, "PRESS OCT-"))
@@ -945,11 +947,16 @@ int main(int argc, char **argv)
         check(song.sel == 3u && on_drum_page() && !drum_page, "NOTES: ALGORITHM onto a drum track opens its grid");
         for (g = 0; g < 3u; g++)
             tap(B_SEQ);
-        ok = on_pats_page() && song.sel == 3u;
+        ok = on_pats_page() && pats_view() == PV_PADS && song.sel == 3u;
+        tap(B_SEQ);
+        ok = ok && on_pats_page() && pats_view() == PV_CHAIN;
+        tap(B_SEQ);
+        ok = ok && on_pats_page() && pats_view() == PV_SCENES;
         tap(B_SEQ);
         ok = ok && on_song_page();
         tap(B_SEQ);
-        check(ok && on_drum_page() && !drum_page, "a drum track (1.7): SEQ walks GRID, TIMING, PLAY, PATTERNS, SONG and back to the GRID");
+        check(ok && on_drum_page() && !drum_page,
+              "a drum track: SEQ walks GRID, TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG and back to the GRID");
         home();
     }
     {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */

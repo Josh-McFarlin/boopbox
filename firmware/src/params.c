@@ -474,7 +474,7 @@ enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE,
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM,
        SC_PATT,                  /* SC_PATT: the selected track's pattern settings that are not parameters (PS_*) */
-       SC_PATS,                  /* the PATTERNS screen (ui_pats.c), a screen of its own as SONG and DRUMS */
+       SC_PATS,                  /* the PATTERNS, CHAIN and SCENES screens (ui_pats.c), screens of their own as SONG */
        SC_HARM };                /* the CHORDS screen (ui_pats.c), the same */
 /* SC_PATT ids: values of the pattern kept in track_t beside p[] (not sound parameters: no lock, no MIDI learn, not in
  * a user preset) */
@@ -544,7 +544,9 @@ static const page_t PAGES[] = {
     {"NOTES", FAM_SEQ, SC_STEP, GR_ROLL, {0, 1, 2, 3}},   /* (2.7.2: the NOTES editor; "STEP" before) */
     {"TIMING", FAM_SEQ, SC_TRACK, GR_STEPS, {P_SLEN, P_SDIV, P_SSWING, P_SGATE}},   /* ("PATTERN" before: too like PATTERNS) */
     {"PLAY", FAM_SEQ, SC_PATT, GR_NONE, {PS_DIR, PS_SEED, 0xFF, 0xFF}},   /* the play direction, the components' seed */
-    {"PATTERNS", FAM_SEQ, SC_PATS, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* the eight tracks' patterns (ui_pats.c) */
+    {"PATTERNS", FAM_SEQ, SC_PATS, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* the track's patterns as pads (ui_pats.c) */
+    {"CHAIN", FAM_SEQ, SC_PATS, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},      /* the track's chain, a playlist (ui_pats.c) */
+    {"SCENES", FAM_SEQ, SC_PATS, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},     /* the song's scenes, every track (ui_pats.c) */
     {"SONG", FAM_SEQ, SC_SONG, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},
     {"TRACKS", FAM_TRK, SC_TRK, GR_TRK, {0, 1, 2, 3}},   /* REC button; TRACK LEVEL LEN PAN */
     {"DRUMS", FAM_TRK, SC_DRUM, GR_NONE, {0xFF,0xFF,0xFF,0xFF}},

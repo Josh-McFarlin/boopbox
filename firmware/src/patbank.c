@@ -254,7 +254,9 @@ CTL_SMALL static int pat_due(track_t *t, uint32_t nabs, uint32_t len, uint32_t s
 static const char *const N_SCN[] = {"-", "INTRO", "VERSE", "PRE", "CHORUS", "BRIDGE", "BREAK", "BUILD", "DROP",
                                     "OUTRO", "FILL", "HOOK", "SOLO", "ALT", "A", "B", "C", "D", "END"};
 #define NSCN_NAMES (sizeof N_SCN / sizeof N_SCN[0])
-static uint8_t scn_pat[NSCENE][NTRK];
+static uint8_t scn_pat[NSCENE][NTRK] = {      /* (as scn_defaults: at power-on too) */
+    {0, 0, 0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1, 1, 1, 1}, {2, 2, 2, 2, 2, 2, 2, 2}, {3, 3, 3, 3, 3, 3, 3, 3},
+    {4, 4, 4, 4, 4, 4, 4, 4}, {5, 5, 5, 5, 5, 5, 5, 5}, {6, 6, 6, 6, 6, 6, 6, 6}, {7, 7, 7, 7, 7, 7, 7, 7}};
 static uint8_t scn_name[NSCENE];
 static uint8_t scn_cur = SCN_NONE, scn_ask = SCN_NONE;    /* the scene playing (last made), the one asked for */
 CTL_SMALL static void scn_defaults(void)
