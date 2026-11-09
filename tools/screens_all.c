@@ -24,7 +24,6 @@ static void show_page(uint32_t j)                   /* page j of PAGES, as the b
 {
     ui.page = (uint8_t)j;
     ui.home = 0;
-    ui.fam_last[PAGES[j].fam] = (uint8_t)j;
     ui.msg_t = 0;
     page_entered();
     frames(6);

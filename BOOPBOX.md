@@ -132,14 +132,19 @@ Every function button has two lives. **Tap** it (press and let go, touching noth
 
 The tiles are four rows of four, keys 1–4, 5–8, 9–12, 13–16. To find them without looking at the screen, the first key of each row (1, 5, 9, 13) glows dimly while a layer is held, and on the drum track; the keys at full light are what is on.
 
+**Finding a page:** a button tapped from another page always opens its first page (SEQ: NOTES, or the drum grid), so the
+same taps always reach the same page. Tap it again for the next page of its group; **SELECT** walks them both ways and
+the bottom of the screen names the pages either side. The **PATTERNS** screen has its own shortcut: hold **SEQ** and
+tap **SAVE**.
+
 **Lock a layer:** hold its button and tap **HOME** — the layer stays open when you let the button go, both hands free for the keys and the knobs (*LOCK* on the screen, the button blinks). Any other button lets it go (HOME, the layer's own button, ENV…) and does only that; PLAY, REC and OCT− / OCT+ keep working inside it.
 
 | Hold | Keys | KNOB 1 · 2 · 3 · 4 | Tap |
 | --- | --- | --- | --- |
 | **FX** — *punch* | a punch-in effect while the key is held | FILTER · DUST · DUCK · TRK FILT (the selected track's filter) | FX pages |
-| **EDIT** — *erase* | erase that sound / note from the pattern | SHIFT · LENGTH ×2 / ½ · TRANSPOSE · — | EDIT pages (drums: grid / kit) |
+| **EDIT** — *erase* | erase that sound / note from the pattern | SHIFT · LENGTH ×2 / ½ · TRANSPOSE · — | EDIT pages (drums: kit ↔ sound) |
 | **ARP** — *roll* | note repeat on the grid | RATE · — · — · — | ARP pages |
-| **SEQ** — *steps* | steps 1–16 of the page — a step held: OCT+ its fill condition (normal · fill only · no fill), OCT− clears its nudge, locks and condition | SOUND / NOTE · DIV · SWING · LENGTH — a step held: SOUND / NOTE · LEVEL · RATCHET · NUDGE (PRESETS: the lock, ALGORITHM: its parameter) | SEQ pages (drums: grid / kit) |
+| **SEQ** — *steps* | steps 1–16 of the page — a step held: OCT+ its fill condition (normal · fill only · no fill), OCT− clears its nudge, locks and condition | SOUND / NOTE · DIV · SWING · LENGTH — a step held: SOUND / NOTE · LEVEL · RATCHET · NUDGE (PRESETS: the lock, ALGORITHM: its parameter) | SEQ pages: NOTES (drums: the grid), TIMING, PLAY, PATTERNS, SONG |
 | **SEL** — *key* (between FX and ENV; not the SELECT knob) | the key of the song | CHORD · SCALE · KEYS · TRANSPOSE | SEL pages |
 | **GLO** — *mix* | 1–4 mute · 5–8 solo · 9 **fill** while held · 10 **fill bar** (the next bar) · 16 tap tempo | level of tracks 1 · 2 · 3 · 4 | GLO pages |
 | **SAVE** — *song* | 1–4 play section A–D (next bar; two or more tapped while SAVE stays held: a **chain** of them, looped) · 5–8 save the loop into A–D · 13 loop / song · 14 SONG REC · 16 the song screen | — | TRACKS: the SONG screen · else the SAVE pages |
@@ -152,10 +157,11 @@ Other controls:
 | **REC** | playing: record now / stop · stopped: arm (the first note starts) · free take: close the loop |
 | hold **REC** | clear the selected track (a ring fills: keep holding ~2 s; let go before and nothing happens) |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
+| hold **SEQ** + tap **SAVE** | the **PATTERNS** screen, from any page and track |
 | **EDIT + OCT− / OCT+** | undo / redo |
 | **ALGORITHM** | select the track, on every page (1.2.0; TRACKS, PATTERNS and CHORDS only before): the header names it |
 | **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
-| **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends) · on the DRUMS screen: grid / kit |
+| **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends; SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS) · drums: kit ↔ sound |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
 | **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, SYSTEM) · tapped while a layer is held: lock it open |
 | **ENV / LFO** | their pages |
@@ -307,7 +313,7 @@ The screen shows the 27 keys as a keyboard: the white keys in four rows of four,
 
 - **TRACKS** (HOME) — the performance view: tempo, swing, transport, bar.beat; each track with its sound, its steps, the playhead, mute / solo / rec badges and its level. Dials: *swing · level · steps · pan* (KNOB 2 on a muted track unmutes it).
 - **Layers** — while a layer button is held: 16 tiles (the white keys) and the knobs' dials, in the layer's colour.
-- **DRUMS** (EDIT or SEQ tapped on TRACKS with the drum track) — **grid**: the 16 sounds × 16 steps, levels as shades, ratchets as notches; dials *sound · step · hit · level* (KNOB 1 plays the sound it picks, KNOB 2 the step it moves to). The **keys** are the steps of the sound: a white key sets its step (heard) or clears it, the first four black keys pick the page of steps (1–16 … 49–64); the keys light the sound's steps. **kit**: 16 pads that flash on every hit; dials *kit · level · reverb · pan*. EDIT / SEQ tapped, or SELECT, switches grid ↔ kit (the kit page: the keys play the pads).
+- **DRUMS** (SEQ tapped with the drum track: the grid; EDIT tapped: the kit) — **grid**: the 16 sounds × 16 steps, levels as shades, ratchets as notches; dials *sound · step · hit · level* (KNOB 1 plays the sound it picks, KNOB 2 the step it moves to). The **keys** are the steps of the sound: a white key sets its step (heard) or clears it, the first four black keys pick the page of steps (1–16 … 49–64); the keys light the sound's steps. **kit**: 16 pads that flash on every hit; dials *kit · level · reverb · pan*. The grid is the first SEQ page (SEQ again or SELECT right: TIMING, PLAY, PATTERNS); kit and **sound** are the drum track's EDIT pages (EDIT again or SELECT: kit ↔ sound; the kit page: the keys play the pads). The top right of the screen names the page and what comes next.
 - **REC READY / FREE TAKE** — while REC is armed: the tracks, then **mode**, **length** and **start** on KNOB 1–3 (4-3-2-1 during a count-in); during a free take: the seconds and the loop it makes.
 - **Holds** — the ring of REC (clear) while held.
 - **SONG** — the section chain.

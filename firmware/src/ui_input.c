@@ -35,7 +35,7 @@ UI_SMALL static uint32_t cur_btn(void)                      /* the button of the
     if (!ui.home && cur_page()->scope == SC_SONG)
         return B_SAVE;
     if (!ui.home && cur_page()->scope == SC_DRUM)
-        return B_SEQ;
+        return drum_page ? B_EDIT : B_SEQ;            /* (1.7: GRID is SEQ's, KIT and SOUND EDIT's) */
     if (!ui.home && cur_page()->scope == SC_PATS)
         return B_SEQ;
     if (!ui.home && cur_page()->scope == SC_HARM)
@@ -851,19 +851,24 @@ UI_SMALL static void layer_tap(uint32_t layer)
         break;
     case LY_ERASE:
     case LY_STEP:
-        if (on_drum_page()) {                             /* DRUMS: GRID -> KIT -> SOUND (2.7) -> PATTERNS (1.4.2: */
-            if (layer == LY_STEP && drum_page == 2u) {     /* a drum track's way there; SEQ there: back to the grid) */
-                drum_page = 0;
-                studio_open(SC_PATS);
-                break;
-            }
-            drum_page = (uint8_t)((drum_page + 1u) % 3u);
-            ui.force = 1;
+        if (is_drum(TSEL) && layer == LY_ERASE) {        /* (1.7) the drum track's EDIT pages: KIT -> SOUND -> KIT */
+            if (on_drum_page() && drum_page) {
+                drum_page = (uint8_t)(drum_page == 1u ? 2u : 1u);
+                ui.msg_t = 0;
+                ui.force = 1;
+            } else
+                drum_kit_open();
             break;
         }
-        if (is_drum(TSEL) && (layer == LY_STEP || (!ui.home && cur_page()->scope == SC_TRK))) {
-            studio_open(SC_DRUM);                         /* (2.7.1: SEQ from any page, ARP's too: up to 2.7 there it
-                                                           * opened the synths' STEP page, not the drum grid) */
+        if (is_drum(TSEL) && on_drum_page()) {           /* (1.7) SEQ on the drum track: GRID -> TIMING -> PLAY -> PATTERNS
+                                                          * -> SONG, as NOTES on a synth track; from KIT / SOUND: GRID */
+            if (drum_page)
+                drum_grid_open();
+            else {
+                ui.page = (uint8_t)page_scope(SC_STEP);  /* (the grid is NOTES' place: SEQ again, the page after it) */
+                ui.home = 0;
+                open_family(FAM_SEQ);
+            }
             break;
         }
         if (layer == LY_ERASE && on_notes_page()) {     /* NOTES (2.7.2): EDIT deletes the note (a chord's others stay) */
@@ -928,6 +933,15 @@ UI_SMALL static int ly_quiet(void)
         ly_quiet_t = 0;
     return ly_quiet_t != 0;
 }
+/* (1.7) SEQ held + SAVE tapped: the PATTERNS screen, from any page and track (SAVE alone: SONG / the SAVE pages) */
+static uint8_t seq_save_held;
+UI_SMALL static void pats_open(void)
+{
+    if (!ui.home && cur_page()->graph == GR_BROWSE)
+        br_close(1);                                      /* (the sound browser: the sound browsed to kept, as SAVE) */
+    vis_on = 0;
+    studio_open(SC_PATS);
+}
 /* the layers, once a frame: which one is held (or locked), the taps on release, its keys and knobs.
  * Returns 1 while one is held or locked (the page does not take the knobs then) */
 UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_t home)
@@ -950,13 +964,23 @@ UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_
         if (d && !down[l]) {
             t0[l] = now;
             used[l] = (uint8_t)((eat & ly_bit[l]) != 0u);  /* (the press that unlocked: not a tap) */
+            if (l == LY_SONG && (fm1_in.buttons & ly_bit[LY_STEP]) && !used[l]) {
+                seq_save_held = 1;                        /* (1.7) SEQ held + SAVE: the PATTERNS screen (SAVE's tap) */
+                used[LY_STEP] = 1;                        /* (SEQ let go is no tap then) */
+            }
         }
         if (d && note_edges)
             used[l] = 1;                                  /* a key while held: not a tap */
-        if (!d && down[l] && !used[l] && now - t0[l] < TAP_MS && !ui.menu && !ui.confirm)
-            layer_tap(l);
-        if (!d && down[l] && l == LY_SONG)
+        if (!d && down[l] && !used[l] && now - t0[l] < TAP_MS && !ui.menu && !ui.confirm) {
+            if (l == LY_SONG && seq_save_held)
+                pats_open();
+            else
+                layer_tap(l);
+        }
+        if (!d && down[l] && l == LY_SONG) {
             chain_release();                              /* SAVE let go: the section taps of the hold (ui_layers.c) */
+            seq_save_held = 0;
+        }
         down[l] = (uint8_t)d;
         if (d && held == LY_PLAY)
             held = l;

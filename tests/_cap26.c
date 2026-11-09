@@ -40,7 +40,7 @@ static void open_page(const char *title)
     uint32_t i;
     for (i = 0; i < NPAGES; i++) if (!strcmp(PAGES[i].title, title)) break;
     if (i == NPAGES) { fprintf(stderr, "? page %s\n", title); exit(1); }
-    open_family(PAGES[i].fam); ui.page = (uint8_t)i; ui.fam_last[PAGES[i].fam] = (uint8_t)i; page_entered(); ui.force = 1; frames(2);
+    open_family(PAGES[i].fam); ui.page = (uint8_t)i; page_entered(); ui.force = 1; frames(2);
 }
 int main(int argc, char **argv)
 {
