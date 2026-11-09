@@ -51,7 +51,7 @@ The 11 black keys are F#3, G#3, A#3, C#4, D#4, F#4, G#4, A#4, C#5, D#5, F#5. The
 14. [Song mode: sections, chains, songs](#14-song-mode-sections-chains-songs)
 15. [The screens](#15-the-screens)
 16. [Every page, knob by knob](#16-every-page-knob-by-knob)
-17. [The sounds and the twelve engines](#17-the-sounds-and-the-twelve-engines)
+17. [The sounds and the thirteen engines](#17-the-sounds-and-the-thirteen-engines)
 18. [Effects: master, punch-in, per track](#18-effects-master-punch-in-per-track)
 19. [The visualiser](#19-the-visualiser)
 20. [The HOME menu and the lights](#20-the-home-menu-and-the-lights)
@@ -774,7 +774,7 @@ Tap a button to open its first page (or the last one you used); **tap it again**
 | | **REV/CHO** (global) | SIZE reverb size | DAMP reverb damping | CRT chorus rate | CDP chorus depth |
 | **SEL** | **SEL** | ROOT (the track's key) | SCL: the track's scale (SEL + KNOB 2 sets all three) | QNT keys: OFF, SNAP, WHITE | CHORD: OFF, TRIAD, 7TH, 9TH, SUS4, POWER |
 | | **SEL 2** | TRN transpose ±24 | STRUM ±60 ms | VLEAD: OFF / ON | — |
-| **EDIT** | **EDIT 1** | engine parameter 1 | 2 | 3 | 4 (see [the engines](#the-twelve-engines)) |
+| **EDIT** | **EDIT 1** | engine parameter 1 | 2 | 3 | 4 (see [the engines](#the-thirteen-engines)) |
 | | **EDIT 2** | engine parameter 5 | 6 | 7 | 8 |
 | | **FILTER** (ANALOG only, 2.6) | TYPE: LP, BP, HP | CUT cutoff | RES resonance | KTR key tracking |
 | | **VOICE** | VCE: POLY, MONO, LEG (legato), UNI (unison) | GLD glide | GLMOD: RATE / TIME | PRIO: LAST, LOW, HIGH (mono note priority) |
@@ -820,11 +820,11 @@ Notes:
 
 ---
 
-## 17. The sounds and the twelve engines
+## 17. The sounds and the thirteen engines
 
 ### The sound bank
 
-**153 factory sounds**, every one a full patch on one of the twelve engines, all level-matched (the same LEVEL gives the same loudness). **PRESETS** browses them **by kind** — basses, keys, organs, pads, leads, plucks and bells, stabs, FX — with the kind shown next to the name; your **32 user presets** come after. A new project starts at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
+**223 factory sounds**, every one a full patch on one of the thirteen engines, all level-matched (the same LEVEL gives the same loudness). **PRESETS** browses them **by kind** — basses, keys, organs, pads, leads, plucks and bells, stabs, FX — with the kind shown next to the name; your **32 user presets** come after. A new project starts at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
 
 | Kind | Sounds (engine) |
 | --- | --- |
@@ -847,7 +847,7 @@ scroll bar shows where you are in a long engine. Each sound loads as you land on
 | **KNOB 1 TYPE** | right **DRUMS**, left **SYNTH**: the track becomes a drum track or a synth track (see below) |
 | **KNOB 2 ENG** | the next / previous engine of the type: its first sound. It stops at the first and last engine |
 | **PRESETS** · **KNOB 3 SOUND** | the next / previous sound of the engine. It stops at the first and last sound: it never scrolls into the next engine |
-| **SELECT** | the VIEW: right **KIND** (basses, keys, organs, pads, leads, plucks and bells, stabs, FX: the order of the list before), left **ENG** (the twelve engines in order, each with its sounds) |
+| **SELECT** | the VIEW: right **KIND** (basses, keys, organs, pads, leads, plucks and bells, stabs, FX: the order of the list before), left **ENG** (the thirteen engines in order, each with its sounds) |
 | **KNOB 4 FAV** | right adds the sound to your favourites, left removes it (synth sounds) |
 
 **SYNTH** starts with your favourites (**FAV**) and ends with your user presets (**USER**), in both views. **DRUMS** has
@@ -869,7 +869,7 @@ the browser is the PRESETS knob's. MIDI Program Change counts the list in the KI
 
 To start from the engine's defaults: SAVE → TOOLS → **INIT**.
 
-### The twelve engines
+### The thirteen engines
 
 Each engine's eight parameters are on **EDIT 1** (KNOB 1–4) and **EDIT 2** (KNOB 1–4), tap EDIT once and twice; the screen shows them under the engine's own page names (for example DIGITAL: *OPS*, *MOD*). A dash is an unused knob.
 
@@ -887,6 +887,7 @@ Each engine's eight parameters are on **EDIT 1** (KNOB 1–4) and **EDIT 2** (KN
 | **FM6** | six-operator FM, DX7 patches | ALG: PAT (the patch's) or 1–32 · FB feedback · MLVL modulator level (brightness) · MRAT modulator ratio | MEG modulator envelopes slower / faster · VMOD velocity → brightness · DTUN carrier spread · PTCH: F1–F8 factory, B1–B27 your bank |
 | **PHYS** | physical models: strings, bars and bells, drum heads, sympathetic strings (DaisySP and Rings, as Felucca 1.0 ported them; 3 voices a track, SYMP 2) | MODEL: MODAL, STRNG, MEMB, SYMP · STRC structure (MEMB: HARM, SYMP: CHRD the sympathetic strings' chord) · BRIT brightness · DAMP | POS strike / pluck position (SYMP: SYMP, how much they ring) · ACC accent · BOW bowing (MEMB: BEND, SYMP: BUZZ) · EXC the exciter in the mix |
 | **NOISE** | noise, from analogue to digital: colours, crackle, shift registers, metallic tones | MODE: ANLG, DUST, LFSR, META · COLR white → pink → brown · FREQ · RES | TRK key tracking · DENS impulses (LFSR, META: LEN, the register) · DRFT drift · CRSH crush (LFSR, META: CLK, the clock above the key) |
+| **OBERVAVE** (1.7) | OberVave's 8-voice analog polysynth (zvenson): two oscillators with sync and cross-mod, noise, drive, a 24 dB ladder or a 12 dB filter (LP, HP, BP, notch, SEM), its own filter envelope, an LFO, vintage drift | PROG (one of its 70 programs) · TYPE (PROG: the program's own, or LP12, HP12, BP12, NOTCH, LP24, SEM) · XMOD · DTN (oscillator 2's fine tune) | CUT · RES · FENV (the filter envelope's amount) · DRV. All but PROG and TYPE move the program's own value: 0 is the program as it was made |
 
 The **SAMPLE** sets are free recordings (CC0: Versilian Studios VSCO-2 CE and VCSL, Sonic Pi), coloured like a record through an old sampler. **GRAND PNO** is a Steinway recorded note by note; long notes fade as on the real one.
 
@@ -1015,13 +1016,14 @@ The visualiser sees the mix **as if MASTER were all the way up**: with MASTER tu
 
 ## 20. The HOME menu and the lights
 
-**Hold HOME** (0.7 s) to open the menu; hold it again to close it. The menu is in five sections (2.7.1: SEQ):
+**Hold HOME** (0.7 s) to open the menu; hold it again to close it. The menu is in six sections (2.7.1: SEQ; 1.7: USB):
 
 | Section | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | **SCREEN** | **COLOR**: the screen palette (GREEN, AMBER, CYAN, RED, MONO, SYNTHWAVE — the default since 1.1.0 —, then [your theme](#your-theme) once you sent one; SYNTHWAVE, 1.1.0: night indigo, a cyan accent, the tracks in cyan, magenta, sunset orange and violet (5–8 periwinkle, rose, gold, orchid), neon rules with a glow under the headers, large values fading from pink to orange, a neon floor to the horizon where a page has an empty half, and a sun setting on the boot screen) | **ZOOM**: ON shows the value you touch large and white | **KNOB ACCEL** (2.7): ON (the default) a fast turn sweeps wider; OFF one value a detent | — |
 | **LIGHTS** | **LIGHTS**: OFF, LOW, MID, HIGH | **KEYS**: OFF, C KEYS, WHITE KEYS, ALL KEYS | **NOTES**: OFF / ON | — |
 | **AUDIO** | **SPEAKER LOWCUT**: ON cuts the lows the small speaker cannot play (~110 Hz) | **USB AUDIO**: MASTER / FULL | **USB RATE** (2.7): AUTO / 44.1 KHZ / 48 KHZ (takes effect at the next start) | **FILTER RESO** (2.7.2): the resonance of the per-track filter, 0 (clean, as before) … 10 |
+| **USB** (1.7) | **USB HOST**: OFF (always, at every start) / ON: the USB-C port plays a USB-MIDI keyboard or controller through a powered hub instead of talking to a computer ([USB keyboards](#usb-keyboards-usb-host)) | — | — | — |
 | **SEQ** (2.7.1) | **STEP ADVANCE**: ON (the default) the NOTES page moves on when you let go of the keys; OFF it stays, so a chord you missed is played again on the same step (KNOB 1 moves the cursor) | **DRUM PREVIEW**: OFF (the default) a drum sound picked with a knob (DRUMS screen, SEQ layer) is not heard, quiet for live; ON you hear it, as up to 2.7 | — | — |
 | **SYSTEM** | **2ND CORE** (2.7): **ON** (the default) / OFF. ON, the sound is computed on both of the FM-1's cores: about twice the room before the CPU runs out (many voices, INSERT effects on several tracks), the same sound. ON takes effect at the next power-on; ABOUT then says *2 CORES* (*1 CORE*: the second core did not answer and BoopBox runs on one, as before). OFF: one core, as in 2.6. (2.8.3) On some FM-1s the second core can misread a word under heavy load (a backup over USB): it checks every job before running it and refuses a wrong one, and BoopBox then goes on with one core until the next power-off (ABOUT: *1 CORE*) instead of crashing; if a crash happens while both cores run, the next start is on one core too, until you power off. If it keeps happening on your FM-1, set 2ND CORE to OFF | **HARDWARE CALIBRATION** (the knob selects it, OCT+ opens it) | **MIDI LEARN CLEAR** (2.6): how many CCs are learned; OCT+ forgets them all | **ABOUT**, the version (the knob selects it, OCT+ opens it) |
 
@@ -1056,7 +1058,9 @@ If a button or knob does the wrong thing, HOME menu → SYSTEM → **HARDWARE CA
 ### Where MIDI comes in
 
 - **The MIDI IN jack** (3.5 mm TRS on the FM-1): a keyboard or pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
-- **USB**: a computer or phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 cannot work: both are USB devices, and a USB link needs a host.
+- **USB**: a computer or phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works only with **USB HOST** on (below); otherwise both are USB devices, and a USB link needs a host.
+
+<a id="usb-keyboards-usb-host"></a>**USB keyboards: USB HOST (1.7, from [Melodee](https://github.com/keremimo/melodee)).** HOME menu → **USB** → **USB HOST** = ON: the USB-C port hosts a class-compliant USB-MIDI keyboard or controller, alone or behind a hub, and its notes, CCs, bend and clock play BoopBox as USB MIDI from a computer does. **The FM-1 does not power it: use a powered hub** (or a keyboard with its own supply); low-speed devices are not supported. The screen says *MIDI DEVICE READY*, *NO MIDI DEVICE* or *MIDI DEVICE LOST* (every note it held is let go). While it is on there is no web editor, no USB audio and no MIDI to a computer, and BoopBox sends nothing to the keyboard. It is never saved: every start is a normal USB device, so updates always work; OFF returns to the computer at once. Not yet tried on an FM-1 with a keyboard.
 
 Both work at once.
 
@@ -1116,7 +1120,7 @@ The knobs of a MIDI controller set the sound (the standard CC map of Felucca 1.1
 
 **Sustain and pitch bend (2.6).** The **sustain pedal** (CC 64, on the track its channel plays): while it is down, a note you let go keeps sounding until the pedal comes up (the arp keeps it, a recording holds it as you hear it; a note played again meanwhile ends with its key). **Pitch bend** bends the track its channel plays, smoothly, by up to **BEND** semitones (MIDI 3: 1–12, default 2); the drum track ignores it. Other CCs (mod wheel…) are ignored, unless you map them with MIDI LEARN.
 
-**Program Change (2.6, after Felucca 1.5.1 and @renebohne's PR #179).** A Program Change on a track's channel loads its sound: on a synth track, number *n* is the *n*-th sound of the PRESETS list (0 the first: 808 BOOM; the 153 factory sounds by kind, then your user presets in order), on the drum channel kit *n*. A number past the end is ignored. The screen says *T2 PROG 5*. IN = CLOCK ignores it; IN = CH n sends it to the selected track. **(2.7.2) Bank Select (CC 0)** reaches the sounds past the first 128: send **CC 0** on the track's channel and it is latched for the next Program Change — bank 0 the first 128 of the PRESETS list, bank 1 the next 128, and so on (the rest of the factory sounds, then your user presets by slot). Send CC 0, then the Program Change.
+**Program Change (2.6, after Felucca 1.5.1 and @renebohne's PR #179).** A Program Change on a track's channel loads its sound: on a synth track, number *n* is the *n*-th sound of the PRESETS list (0 the first: 808 BOOM; the 223 factory sounds by kind (OBERVAVE's 70, 1.7, after the others), then your user presets in order), on the drum channel kit *n*. A number past the end is ignored. The screen says *T2 PROG 5*. IN = CLOCK ignores it; IN = CH n sends it to the selected track. **(2.7.2) Bank Select (CC 0)** reaches the sounds past the first 128: send **CC 0** on the track's channel and it is latched for the next Program Change — bank 0 the first 128 of the PRESETS list, bank 1 the next 128, and so on (the rest of the factory sounds, then your user presets by slot). Send CC 0, then the Program Change.
 
 ### MIDI LEARN (2.6)
 
