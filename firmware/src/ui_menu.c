@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* BoopBox menu (HOME held), in sections as the pages are (2.4): SCREEN (COLOR, ZOOM, KNOB ACCEL (2.7)), LIGHTS (LIGHTS, KEYS, NOTES),
- * AUDIO (LOWCUT, USB AUDIO, USB SERIAL (FELUCCA_CDC builds only), USB RATE (2.7 beta)), SEQ (2.7.1: STEP ADVANCE, DRUM PREVIEW), SYSTEM (2ND CORE (dualcore), HARDWARE CALIBRATION, LEARN CLEAR (2.6), ABOUT).
+ * AUDIO (LOWCUT, USB AUDIO, USB SERIAL (FELUCCA_CDC builds only), USB RATE (2.7 beta)), USB (1.7: USB HOST), SEQ (2.7.1: STEP ADVANCE, DRUM PREVIEW), SYSTEM (2ND CORE (dualcore), HARDWARE CALIBRATION, LEARN CLEAR (2.6), ABOUT).
  * SELECT goes to the section before / after (stopping at the ends), KNOB 1..4 set the section's settings in order (the knob's colour marks
  * its row), PRESETS moves the cursor; OCT+ steps the cursor's setting round or opens it (CALIBRATION, ABOUT),
  * OCT- closes (from ABOUT: back to the section). */
@@ -11,15 +11,24 @@ enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_
 #if FELUCCA_CDC
        MI_SERIAL,
 #endif
-       MI_RATE, MI_FRESO, MI_ADV, MI_DPREV, MI_RECLK, MI_MIDI, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_COUNT };
+       MI_RATE, MI_FRESO, MI_UHOST, MI_ADV, MI_DPREV, MI_RECLK, MI_MIDI, MI_CPU1, MI_PANEL, MI_LCLEAR, MI_ABOUT, MI_COUNT };
 static const char *const MI_NAME[MI_COUNT] = {"COLOR", "ZOOM", "KNOB ACCEL", "LIGHTS", "KEYS", "NOTES", "SPEAKER LOWCUT", "USB AUDIO",
 #if FELUCCA_CDC
                                               "USB SERIAL",
 #endif
-                                              "USB RATE", "FILTER RESO", "STEP ADVANCE", "DRUM PREVIEW", "REC KNOBS", "MIDI SETTINGS", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT"};
-enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_SEQ, MS_SYSTEM, MS_COUNT };   /* (2.7.1: SEQ) */
-static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "SEQ", "SYSTEM"};   /* (AUDIO: and USB) */
-static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_ADV, MI_CPU1, MI_COUNT};   /* rows of each */
+                                              "USB RATE", "FILTER RESO", "USB HOST", "STEP ADVANCE", "DRUM PREVIEW", "REC KNOBS", "MIDI SETTINGS", "2ND CORE", "HARDWARE CALIBRATION", "MIDI LEARN CLEAR", "ABOUT"};
+enum { MS_SCREEN, MS_LIGHTS, MS_AUDIO, MS_USB, MS_SEQ, MS_SYSTEM, MS_COUNT };   /* (2.7.1: SEQ; 1.7: USB) */
+static const char *const MS_NAME[MS_COUNT] = {"SCREEN", "LIGHTS", "AUDIO", "USB", "SEQ", "SYSTEM"};   /* (AUDIO: and USB audio) */
+static const uint8_t MS_FIRST[MS_COUNT + 1] = {MI_COLOR, MI_LIGHTS, MI_LOWCUT, MI_UHOST, MI_ADV, MI_CPU1, MI_COUNT};   /* rows of each */
+/* (1.7) USB HOST: the USB-C port plays host to a USB-MIDI keyboard or controller (usb_host.c); never saved */
+UI_SMALL static uint32_t mi_uhost(void)
+{
+#if FELUCCA_USB_HOST
+    return uh.want;
+#else
+    return 0;
+#endif
+}
 
 UI_SMALL static int mi_cpu1_have(void)                      /* the second core is running (cpu1.c; the host tests have no cpu1.c) */
 {
@@ -70,6 +79,7 @@ UI_SMALL static const char *mi_value(uint32_t i, uint16_t *c)
     case MI_NOTES: return lights_notes ? "ON" : "OFF";
     case MI_LOWCUT: return settings.lowcut ? "ON" : "OFF";
     case MI_USB: return usb_full ? "FULL" : "MASTER";
+    case MI_UHOST: return mi_uhost() ? "ON" : "OFF";
 #if FELUCCA_CDC
     case MI_SERIAL: return usb_serial ? "ON" : "OFF";
 #endif
@@ -123,7 +133,7 @@ UI_SMALL static void draw_menu(void)
                    settings.zoom * 104729u + lights_lvl * 1299709u + lights_keys * 15485863u + ml_count() * 2654435u +
                    lights_notes * 32452843u + usb_full * 49979687u + usb_serial * 86028121u + usb_rate * 15486719u + theme_shown() * 32452867u + theme.crc + cpu1_off * 122949829u +
                    knob_accel_off * 179424673u + drum_preview * 236887691u + step_adv_off * 373587883u + flt_reso * 512927357u +
-                   rec_locks * 694847539u;
+                   rec_locks * 694847539u + mi_uhost() * 961748927u;
     if (!ui.force && sig == ui.menu_sig)
         return;
     ui.menu_sig = sig;
@@ -282,6 +292,12 @@ UI_SMALL static void mi_set(uint32_t i, int32_t s)
     }
     case MI_USB:                                       /* right FULL, left MASTER */
         usb_full = (uint8_t)(s > 0 ? 1u : s < 0 ? 0u : !usb_full);
+        break;
+    case MI_UHOST:                                     /* (1.7) right ON, left OFF; OCT+ toggles. Not saved: every start is a
+                                                        * device again, so the editor and the updates always work */
+#if FELUCCA_USB_HOST
+        uh.want = (uint8_t)(s > 0 ? 1u : s < 0 ? 0u : !uh.want);
+#endif
         break;
 #if FELUCCA_CDC
     case MI_SERIAL:

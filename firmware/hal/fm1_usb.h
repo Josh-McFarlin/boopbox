@@ -8,6 +8,8 @@
  *   fm1_usb_reset()        CON0 = CON1 = 0, pads detached; wait >= 20 ms
  *   fm1_usb_attach(ep0)    clock, EP DMA defaults, PHY on, D+ pull-up
  *   fm1_usb_off()          detach: controller off, pads inputs
+ *   fm1_usb_host_attach(ep0) / fm1_usb_line()   host mode (usb_host.c, BoopBox 1.7, from Melodee): pull-downs, PHY,
+ *                          VBUS valid; the D+ / D- levels
  *   SIE (MUSB byte map):   fm1_usb_sie_on, _wr_start / _rd_start, _done, _data
  *   EP DMA:                fm1_usb_ep0_buf, fm1_usb_ep_txbuf / _rxbuf,
  *                          fm1_usb_ep0_send / fm1_usb_ep_send (csync first),
@@ -58,6 +60,29 @@ FM1_INLINE void fm1_usb_attach(void *ep0)
     FM1_USB_IO_CON0 |= 0x40u;                           /* D+ pull-up: attach */
     FM1_USB_CON0 |= 0x3Cu;
 }
+
+/* Host (A-device) on USB0, the sequence of the AC79 SDK's usb_h_sie_init(0) (Melodee's, Kerem Kilic, GPL-3.0-only):
+ * D+ / D- digital inputs with their pull-downs (USB_IO_CON0 DPDIE DMDIE DPPD DMPD, no pull-ups), PHY on, SIE out of
+ * reset, VBUS valid, CID 0 (A-device). The caller waits >= 20 ms after fm1_usb_reset and again after this before
+ * touching the SIE, then writes DEVCTL = 3 (session + host request). Nothing here drives VBUS: the port needs power
+ * from outside (a powered hub) */
+FM1_INLINE void fm1_usb_host_attach(void *ep0)
+{
+    uint32_t n;
+    FM1_CLK_CON1 &= ~3u;                                /* USB clock = PLL48M */
+    FM1_USB_EP0_ADR = (uint32_t)(uintptr_t)ep0;
+    for (n = 1; n <= 3u; n++)
+        FM1_USB_EP_RADR(n) = (uint32_t)(uintptr_t)ep0;
+    FM1_USB_EP4_RADR = (uint32_t)(uintptr_t)ep0;
+    FM1_USB_CON0 = 0;
+    FM1_USB_CON1 = 0;
+    FM1_USB_IO_CON0 = 0;
+    FM1_USB_IO_CON0 |= (1u << 10) | (1u << 9) | (1u << 5) | (1u << 4);
+    FM1_USB_IO_CON0 &= ~((1u << 11) | (1u << 8));
+    FM1_USB_CON0 |= 0x25u;                              /* PHY_ON | USB_NRST | VBUS */
+}
+/* D+ / D- single-ended levels (CON0 bit 17 / 16): both 0 = nothing attached, else a device pulls one up */
+FM1_INLINE uint32_t fm1_usb_line(void) { return (FM1_USB_CON0 >> 16) & 3u; }
 
 FM1_INLINE void fm1_usb_off(void)
 {

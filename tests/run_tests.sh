@@ -45,6 +45,7 @@ fi
 mkdir -p build/gen
 [ build/gen/felucca_tables.h -nt tools/gen_tables.py ] || python3 tools/gen_tables.py build/gen/felucca_tables.h
 [ build/gen/felucca_fm6.h -nt tools/gen_fm6_patches.py ] || python3 tools/gen_fm6_patches.py build/gen/felucca_fm6.h
+[ build/gen/felucca_obv.h -nt tools/gen_obv.py ] || python3 tools/gen_obv.py build/gen/felucca_obv.h
 
 $CC -o "$OUT/storage_test" tests/storage_test.c
 run "flash storage (A/B, torn writes)" "$OUT/storage_test"
@@ -193,6 +194,11 @@ run "TRS MIDI parser" "$OUT/midi_uart_test"
 $CC -Ifirmware/hal -o "$OUT/encoder_test" tests/encoder_test.c
 run "knobs: one click = one step (slow, fast, pauses, bounce)" "$OUT/encoder_test"
 HALF=$(sed -n 's/^#define HALF_FRAMES \([0-9]*\).*/\1/p' firmware/src/core.h)
+# (1.7) the USB MIDI host (usb_host.c, from Melodee) against its model of the SIE, a keyboard, hubs and a stick
+cc -O1 -g -fsanitize=address,undefined -DHALF_FRAMES=$HALF -Ifirmware/hal -Ifirmware/src -Ibuild/gen -o "$OUT/usb_host_test" \
+    tests/usb_host_test.c
+run "USB MIDI host: enumeration (direct, hubs, a hub on a hub), events, the filter, back-pressure, unplug, recovery" \
+    "$OUT/usb_host_test"
 $CC -DT_CDC=1 -DHALF_FRAMES=$HALF -o "$OUT/uac_test" tests/uac_test.c -lm
 run "USB audio input: descriptors (with CDC), ring and packets" "$OUT/uac_test"
 $CC -DT_CDC=0 -DHALF_FRAMES=$HALF -o "$OUT/uac_test_nocdc" tests/uac_test.c -lm
