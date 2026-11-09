@@ -152,6 +152,7 @@ To make room for the lessons (the app slot is full in the normal build), the tra
 - **No web editor** (its SysEx; updates and USB rescue still work).
 - **Three sample sets fewer:** HORNS, STRGS and SCRCH, with the sounds made from them (HORN STAB, STRING STB, SCRATCH,
   STR CLOUD, HORN CLOUD). GRAIN's DRONE plays on the PIANO set instead of the horns.
+- **8 synth voices shared, not 20** (1.6.0): the budget its songs were made and approved with.
 
 The trainer image is 562,892 B of the 581,564 B app slot (about 18 KB free); the coach and the lessons take about
 39 KB with the why pages (about 18 KB of them), the song area 8 KiB and its checks about 1.5 KB; RAM: level 4's cards

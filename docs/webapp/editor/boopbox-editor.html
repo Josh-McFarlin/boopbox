@@ -102,7 +102,13 @@
   .tabs button { background: none; color: var(--dim); text-align: left; padding: 6px 12px; border-left: 4px solid transparent; }
   .tabs button:hover { color: var(--fg); background: var(--s1); }
   .tabs button[aria-selected="true"] { color: var(--fg); background: var(--s2); border-left-color: var(--trk); }
-  .devcard { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .tabs button .tdesc { display: block; color: var(--dim); opacity: .8; font-size: 13px; line-height: 16px; margin: 2px 0 0 22px;
+                        text-transform: none; white-space: normal; }
+  .tabs button[aria-selected="true"] .tdesc, .tabs button:hover .tdesc { opacity: 1; }
+  .pagedesc { margin: 6px 0 0; color: var(--dim); max-width: 75ch; }
+  .pagedesc:empty { display: none; }
+  .devcard { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid var(--line);
+             position: sticky; bottom: -20px; padding-bottom: 20px; margin-bottom: -20px; background: var(--bg); }   /* Connect stays in sight while the pages scroll */
   .devline { display: flex; align-items: center; gap: 8px; color: var(--fg); }
   .led { width: 10px; height: 10px; background: var(--s3); flex: none; }
   .led.on { background: var(--t2); box-shadow: 0 0 8px var(--t2); }
@@ -580,10 +586,10 @@
             border-right: 0; border-bottom: 1px solid var(--line); }
     .brand svg { width: 96px; }
     .tabs { flex-direction: row; overflow-x: auto; order: 3; width: 100%; }
-    .tabs .navh { display: none; }
+    .tabs .navh, .tabs button .tdesc { display: none; }
     .tabs button { border-left: 0; border-bottom: 3px solid transparent; }
     .tabs button[aria-selected="true"] { border-bottom-color: var(--trk); }
-    .devcard { margin: 0 0 0 auto; padding: 0; border: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .devcard { margin: 0 0 0 auto; padding: 0; border: 0; flex-direction: row; flex-wrap: wrap; align-items: center; position: static; }
     #connect { width: auto; }
     .main { padding: 0 16px 24px; }
     .top { position: static; }
@@ -898,20 +904,23 @@
       <span>editor</span>
     </a>
     <nav class="tabs" id="tabs" role="tablist" aria-orientation="vertical">
-      <div class="navh" data-t="navTrack"></div>
+      <!-- (1.5.2) grouped by what you came to do; each page says in a line what it is for (tabd_*, tabh_*) -->
+      <div class="navh" data-t="navPlay"></div>
       <button role="tab" data-tab="live" data-t="tabLive" data-ic="note_eight"></button>
+      <div class="navh" data-t="navTrack"></div>
       <button role="tab" data-tab="sound" data-t="sound" data-ic="symbol_audio"></button>
       <button role="tab" data-tab="sequencer" data-t="tabSeq" data-ic="symbol_grid"></button>
       <button role="tab" data-tab="patterns" data-t="tabPatterns" data-ic="symbol_folder"></button>
       <button role="tab" data-tab="tracks" data-t="tabTracks" data-ic="ui_slider_vertical"></button>
+      <div class="navh" data-t="navSong"></div>
       <button role="tab" data-tab="song" data-t="tabSong" data-ic="control_arrow_loop"></button>
+      <button role="tab" data-tab="projects" data-t="projects" data-ic="port_disk"></button>
       <div class="navh" data-t="navSounds"></div>
       <button role="tab" data-tab="library" data-t="library" data-ic="symbol_books"></button>
       <button role="tab" data-tab="samples" data-t="samples" data-ic="symbol_waves"></button>
       <button role="tab" data-tab="kits" data-t="tabKits" data-ic="symbol_drum"></button>
-      <button role="tab" data-tab="drumsynth" data-t="tabDrumSynth" data-ic="symbol_waves"></button>
+      <button role="tab" data-tab="drumsynth" data-t="tabDrumSynth" data-ic="function_env_adsr_exp"></button>
       <div class="navh" data-t="navDevice"></div>
-      <button role="tab" data-tab="projects" data-t="projects" data-ic="symbol_folder"></button>
       <button role="tab" data-tab="settings" data-t="tabSettings" data-ic="symbol_cog"></button>
       <button role="tab" data-tab="theme" data-t="tabTheme" data-ic="ui_knob"></button>
     </nav>
@@ -928,6 +937,7 @@
   <main class="main">
     <header class="top">
       <div class="titlebar"><h1 id="pagetitle"></h1><div id="status" role="status" aria-live="polite"></div></div>
+      <p class="pagedesc" id="pagedesc"></p>
       <div class="trackbar" id="trackbar" hidden><span class="dim" data-t="track"></span><span class="seg" id="trackbtns" role="group"></span></div>
     </header>
     <p class="hint" id="hint" hidden></p>
@@ -1112,6 +1122,28 @@
       </div>
     </section>
 
+    <section class="panel" id="p-projects" data-tab="projects" data-dev hidden>
+      <div class="card">
+        <h2 data-t="projects" data-ic="symbol_folder"></h2>
+        <p class="dim" data-t="projHelp"></p>
+        <div class="slots" id="slots"></div>
+      </div>
+      <div class="card" id="bkgroup" hidden>
+        <h2 data-t="bkTitle" data-ic="port_disk"></h2>
+        <p class="dim" data-t="bkHelp"></p>
+        <p class="bar"><button id="bk-save" class="pri" data-t="bkSave"></button> <button id="bk-load" data-t="bkLoad"></button>
+          <input id="bk-file" type="file" accept=".json,application/json" hidden></p>
+        <progress id="bk-prog" max="1" value="0" hidden></progress>
+      </div>
+      <!-- 2.7: a song as one file (the LIVE page's playlist plays them) -->
+      <div class="card" id="sfgroup" hidden>
+        <h2 data-t="sfTitle" data-ic="control_arrow_loop"></h2>
+        <p class="dim" data-t="sfHelp"></p>
+        <p class="bar"><button id="sf-save" class="pri" data-t="sfSave" data-ic="symbol_download"></button> <button id="sf-load" data-t="sfLoad" data-ic="symbol_upload"></button>
+          <input id="sf-file" type="file" accept=".sloopsong,.json,application/json" hidden></p>
+      </div>
+    </section>
+
     <section class="panel" id="p-library" data-tab="library" hidden>
       <div class="libcols" id="libsec">
         <div class="card" id="libpane">
@@ -1196,28 +1228,6 @@
         </div>
       </div>
       <div class="groups" id="dsgroups"></div>
-    </section>
-
-    <section class="panel" id="p-projects" data-tab="projects" data-dev hidden>
-      <div class="card">
-        <h2 data-t="projects" data-ic="symbol_folder"></h2>
-        <p class="dim" data-t="projHelp"></p>
-        <div class="slots" id="slots"></div>
-      </div>
-      <div class="card" id="bkgroup" hidden>
-        <h2 data-t="bkTitle" data-ic="port_disk"></h2>
-        <p class="dim" data-t="bkHelp"></p>
-        <p class="bar"><button id="bk-save" class="pri" data-t="bkSave"></button> <button id="bk-load" data-t="bkLoad"></button>
-          <input id="bk-file" type="file" accept=".json,application/json" hidden></p>
-        <progress id="bk-prog" max="1" value="0" hidden></progress>
-      </div>
-      <!-- 2.7: a song as one file (the LIVE page's playlist plays them) -->
-      <div class="card" id="sfgroup" hidden>
-        <h2 data-t="sfTitle" data-ic="control_arrow_loop"></h2>
-        <p class="dim" data-t="sfHelp"></p>
-        <p class="bar"><button id="sf-save" class="pri" data-t="sfSave" data-ic="symbol_download"></button> <button id="sf-load" data-t="sfLoad" data-ic="symbol_upload"></button>
-          <input id="sf-file" type="file" accept=".sloopsong,.json,application/json" hidden></p>
-      </div>
     </section>
 
     <section class="panel" id="p-settings" data-tab="settings" data-dev hidden>
@@ -5044,7 +5054,7 @@ const TEXT = {
     sfSave: "このソングを書き出す", sfLoad: "ソングファイルを読み込む", sfName: "ソングの名前", sfSaving: "ソングを書き出し中 ", sfSaved: "ソングを書き出しました：",
     sfLoading: "ソングを読み込み中 ", sfLoaded: "ソングを読み込みました：", sfConfirm: "「{name}」を読み込みますか？ FM-1 のセクション A–D とループが置き換わります。",
     songBadFile: "BoopBox のソングファイルではありません", plTitle: "プレイリスト", plAdd: "ソングを追加", plSave: "リストを保存", plOpen: "リストを開く",
-    plNext: "次のソング", plAuto: "読み込んだら再生", plEmpty: "ソングを書き出して（ソングとセクション → このソングを書き出す）、ここに追加してください。",
+    plNext: "次のソング", plAuto: "読み込んだら再生", plEmpty: "ソングを書き出して（保存と読込 → このソングを書き出す）、ここに追加してください。",
     plLoad: "読み込む", plUp: "上へ", plDown: "下へ", plRemove: "削除", plBadList: "BoopBox のプレイリストではありません",
     tabLive: "LIVE", lvNeeds: "トランスポート・セクション・フィル・エフェクトには FM-1 の SLOOP 2.7 が必要です。ミキサーと鍵盤は使えます。",
     lvPlay: "再生", lvStop: "停止", lvRec: "録音", lvRecArm: "録音待機", lvRecFree: "録音：ループ確定", lvUndo: "元に戻す", lvRedo: "やり直す", lvBpm: "BPM", lvTap: "タップ",
@@ -5066,7 +5076,7 @@ const TEXT = {
       "セクション A–D で曲を作る：好きなループで「ループを保存」の A を押し、ループを変えて B に保存…。A–D をタップすると次の小節で切り替わります。",
       "フェーダー、ミュート、ソロでミックス。エフェクトパッド（LOOP 4、STOP、KILL LOW…）を押している間だけパンチインします。",
       "シーンは「何が鳴るか」ではなく「どう鳴るか」を変えます：静かなミックスをシーン 1（フィルタ閉、リバーブ少）、大きいミックスをシーン 2 に保存し、1 と 2 をタップ。4 小節のモーフでゆっくり移ることも。",
-      "1 本のショーには：各ソングを書き出し（ソングとセクション → このソングを書き出す）プレイリストに追加、MIDI コントローラーを覚えさせ（MIDI ラーン）、本番前にロック、セットを録音。"],
+      "1 本のショーには：各ソングを書き出し（保存と読込 → このソングを書き出す）プレイリストに追加、MIDI コントローラーを覚えさせ（MIDI ラーン）、本番前にロック、セットを録音。"],
     lvxGuideFoot: "各カードの「?」が説明します。コントロールにマウスを置くと何をするか表示されます。「表示：基本」は上級カードを隠します。",
     lvxSub_transport: "スタート、ストップ、録音、テンポ。",
     lvxSub_sections: "何が鳴るか：ソングの 4 つのパート（ノート）。",
@@ -5085,7 +5095,7 @@ const TEXT = {
     lvxHelp_perform: "演奏中のトラックのすべてを、メニューなしで。\n音色：エンジンの値（FM-1 の EDIT ページ）、3 つのマクロ（FLT PIT SHP）、エンベロープとグライド、LFO。\nアルペジオ・キー：アルペジオ（モード、速さ、オクターブ、ゲート、スウィング、順序、ホールド）、キー（ルート、スケール、コード、トランスポーズ）——「全シンセトラック」で 3 つのシンセに送ります。\nインサート・バス：トラックの INSERT とフィルタ、共有のディレイ、リバーブ、コーラス、TEXTURE、メトロノーム。\nステップ：パターンのグリッド。タップでオン／オフ（新しいシンセステップは最後に弾いた音）、右クリックでフィル条件（黄：フィルのみ、赤：フィルなし）。LEN、DIV、SWG、GATE：長さ、速さ、スウィング、音の長さ。\nドラムの音色タブ：パッドを選び、チューン（半音）とディケイ（DRUMS の SOUND ページと同じ）。ステップタブのパターンボタン：全体を 1 ステップずらす、長さ ½ / ×2、トランスポーズ（各 1 回のアンドゥ）。",
     lvxHelp_fx: "パンチインエフェクトはパッドを押している間（または Shift + 文字キー）だけ鳴り、離すと元通り。何も録音・変更されません。\nループ・タイム：直前の拍の繰り返し（LOOP 4…32）、スタッター、リバース、ストップ、半速、巻き戻し、フリーズ。フィルタ・EQ：ロー／ハイパス、帯域カット、電話。カラー：クラッシュ、エイリアス、オクターブ上、フランジャー、エコー。ムーブメント：ゲート、ワブル、オートパン、モノ、フェードアウト。\nラッチ：タップでオンのまま、もう一度（または別のエフェクト）でオフ。",
     lvxHelp_master: "トラックの後、ミックス全体にかかります。\nフィルタ：DJ フィルタ（左暗く、右細く、中央オフ）。ダスト：ローファイ（ノイズ、揺れ、ざらつき）。ダック：キックが他のトラックを押し下げます（ポンピング）。\n音量：ここから FM-1 の音量。MASTER ノブを回すとノブに戻ります（ノブ：すぐ戻す）。リバーブスロー／エコースロー：押す間、全トラックがリバーブかディレイへ（FX + OCT- / OCT+ と同じ）、離すと戻ります。",
-    lvxHelp_playlist: "複数のソングのセット用。まず各ソングをファイルに：ソングとセクション → このソングを書き出す（ループ、A–D と順番）。\nソングを追加：ファイルをここへ。ソングをタップ（または次のソング、N キー）：FM-1 が止まり、数秒で読み込み、「読み込んだら再生」で始まります。\n✎ でソングのテンポ（読み込み時に設定）とキュー（ステージ用メモ、再生中に表示、次のソングも）。\nリストを保存：ソング、シーン、MIDI 割り当てを 1 ファイルに。リストはこのブラウザにも残ります。",
+    lvxHelp_playlist: "複数のソングのセット用。まず各ソングをファイルに：保存と読込 → このソングを書き出す（ループ、A–D と順番）。\nソングを追加：ファイルをここへ。ソングをタップ（または次のソング、N キー）：FM-1 が止まり、数秒で読み込み、「読み込んだら再生」で始まります。\n✎ でソングのテンポ（読み込み時に設定）とキュー（ステージ用メモ、再生中に表示、次のソングも）。\nリストを保存：ソング、シーン、MIDI 割り当てを 1 ファイルに。リストはこのブラウザにも残ります。",
     lvxTabSub_sound: "トラックの音：エンジン、マクロ、エンベロープ、LFO。",
     lvxTabSub_arp: "アルペジオとトラックのキー。",
     lvxTabSub_fx: "トラックの INSERT とフィルタ、全トラック共有のエフェクト。",
@@ -5153,7 +5163,7 @@ const TEXT = {
     other: "English", connect: "接続", disconnect: "切断", mock: "モック（実機なし）",
     sound: "音色", engine: "エンジン", presets: "プリセット", initSound: "音色を初期化",
     track: "トラック", drum: "ドラム",
-    saveFile: "ファイルに保存", loadFile: "ファイルを読み込む", projects: "ソングとセクション",
+    saveFile: "ファイルに保存", loadFile: "ファイルを読み込む", projects: "保存と読込",
     load: "読込", save: "保存", used: "使用中", empty: "空", unknown: "—",
     steps: "ステップ", reload: "再読み込み", clearSeq: "シーケンスを消去",
     notesHelp: "ノートは C4 E4 G4 のように入力（最大 4 音、C4 = 60）。",
@@ -5213,8 +5223,26 @@ const TEXT = {
     installer: "BoopBox インストーラー",
     offline: "エディタをダウンロード（パソコンでオフライン用：Chrome / Edge で開く）",
     install: "アプリとしてインストール（オフラインで使える・Android も）",
-    tabSeq: "シーケンサー", tabTracks: "トラック", tabSettings: "設定",
-    navTrack: "トラック", navSounds: "サウンド", navDevice: "本体", tabKits: "ドラムキット", fm1: "FM-1",
+    tabSeq: "シーケンサー", tabTracks: "ミキサー", tabSettings: "設定",
+    navPlay: "演奏", navTrack: "ループを作る", navSong: "ソング", navSounds: "自分の音", navDevice: "FM-1", tabKits: "ドラムキット", fm1: "FM-1",
+    tabd_live: "ライブで演奏", tabd_sound: "トラックの音色", tabd_sequencer: "トラックの音符とステップ",
+    tabd_patterns: "パターン・チェーン・コード", tabd_tracks: "レベル・パン・ミュート", tabd_song: "セクション A–D の並び",
+    tabd_projects: "セクション・バックアップ", tabd_library: "保存した音色", tabd_samples: "WAV を楽器に",
+    tabd_kits: "WAV をドラムキットに", tabd_drumsynth: "シンセドラムを作る", tabd_settings: "テンポ・チューン・FX",
+    tabd_theme: "画面の色",
+    tabh_live: "パソコン・タブレット・スマホでショーを演奏：再生と停止、セクションの切り替え、ミックス、エフェクト、鍵盤。",
+    tabh_sound: "選んだトラックの音色の全設定（エンジン、プリセット、エンベロープ、フィルター、エフェクト）。FM-1 のノブと同じです。トラックは上で選びます。",
+    tabh_sequencer: "選んだトラックのパターンの音符：ステップをクリック、ピアノロールで描く、または MIDI ファイルを読み込む。",
+    tabh_patterns: "各トラックの 8 パターン P1–P8、順に鳴らすチェーン、ソングのコード。FM-1 から読み込み、変更して送ります。",
+    tabh_tracks: "全トラックを並べて：レベル、パン、ミュート、選択中のトラック。",
+    tabh_song: "ソングモードでセクション A–D を鳴らす順番と小節数。FM-1 の SONG 画面です。",
+    tabh_projects: "作業中のループをセクション A–D に保存・読込、ソングをファイルに、FM-1 全体をバックアップ。",
+    tabh_library: "このブラウザに保存した音色と、FM-1 の 32 のユーザープリセット。検索は FM-1 なしでも使えます。",
+    tabh_samples: "自分の WAV をサンプルスロット USR1–USR4 に送り、SAMPLE や SLICE エンジンで鳴らします。",
+    tabh_kits: "自分の WAV からドラムキットを作り（白鍵 1 つに 1 音）、FM-1 に送ります。",
+    tabh_drumsynth: "自分のシンセドラムキット SYN1–SYN4：音を変えると FM-1 ですぐ鳴ります。",
+    tabh_settings: "FM-1 全体の設定：テンポ、スウィング、クリック、チューン、マスターエフェクトとドラム、ファームウェア情報。",
+    tabh_theme: "FM-1 の画面の自分の色。FM-1 なしでも作れます。",
     stepList: "ステップ一覧（音名を入力）", stepsOf: "{n} ステップ", fontCredit: "フォント: Terminus（SIL OFL 1.1）",
     ctlDrag: "値を上下にドラッグでも変更できます。",
     kitTitle: "ドラムキット", kitHelp: "ドラムトラック用に 16 の音を作ります（白鍵 1 つに 1 音）。3 ステップ: 音を入れる → 置き場所を選ぶ → FM-1 に送る。",
@@ -5226,7 +5254,7 @@ const TEXT = {
     kitUsing: "ドラムトラックの KIT: ", kitNoKit: "このファームウェアのドラムトラックには USR キットがありません（2.4 以降）。",
     kitConfirm: "{x} を上書きしてこのキットを書き込みますか？", kitAssigned: "振り分けました: ",
     kitFull: "16 パッドとも埋まっています", kitLoaded: "ZIP を読み込みました: ",
-    needDevice: "FM-1 を接続すると編集できます。", smpNone: "このファームウェアにはユーザーサンプルのスロットがありません。",
+    needDevice: "このページには FM-1 が必要です：USB でつなぎ、「接続」を押してください。", smpNone: "このファームウェアにはユーザーサンプルのスロットがありません。",
     bankConnect: "FM-1 を接続すると本体のユーザープリセットも扱えます。", bankNone: "このファームウェアにはユーザープリセットがありません。",
     drumNote: "ドラムトラックにはエンジンもプリセットもありません。レベル・パン・ミュートは「トラック」、キットとパターンは「シーケンサー」で。",
     drumGridHelp: "クリック：ヒット／消去（同じレベルとロールなら）。Shift＋クリック：ヒットを一段強く（GHOST・SOFT・NORM・HARD）。白鍵 F3〜G5 の 16 音。",
@@ -5237,9 +5265,9 @@ const TEXT = {
     fillCond: "フィル", fcNorm: "通常", fcFill: "フィル時のみ", fcNoFill: "フィル時は休み",
     lockFull: "このトラックのロックはいっぱいです。", lockRefused: "このパラメータはロックできません。",
     lockHelp: "ナッジ：ステップの長さの 1/64 単位で早め（−）／遅め（＋）。ロック：そのステップだけパラメータの値を変え、次のステップで元に戻ります。フィル：「フィル時のみ」のステップは GLO ＋ キー 9 を押している間（またはキー 10 で次の小節）だけ鳴り、「フィル時は休み」はその間だけ休みます（グリッドの F と ×）。本体では SEQ ＋ ステップ長押し ＋ KNOB 4（ナッジ）／PRESETS（ロック、ALGORITHM でパラメータ）／OCT+（フィル）。",
-    mixer: "ミキサー", mixHelp: "本体の TRACKS ページと同じ 4 トラック。フェーダーはレベル（ドラムは GLO > DRUMS LEVEL）。パンはどのトラックも選択を変えずに書き込みます（0.8 のファームウェアでは一瞬そのトラックを選びます）。REC は本体での録音待機の表示です。",
+    mixer: "ミキサー", mixHelp: "本体の TRACKS ページと同じトラック。フェーダーはレベル（ドラムは GLO > DRUMS LEVEL）。パンはどのトラックも選択を変えずに書き込みます（0.8 のファームウェアでは一瞬そのトラックを選びます）。REC は本体での録音待機の表示です。",
     level: "レベル", pan: "パン", mute: "ミュート", rec: "REC", selectTrack: "選択", selectedTrack: "選択中",
-    projHelp: "FM-1 が持つのは 1 曲です: セクション A〜D（それぞれ 4 トラックのループ: 音色、パターン、テンポ、キー）と、その並び（ソングタブ）。「読込」はセクションを今のループに入れ、「保存」は今のループをセクションにしまいます。4 曲ではありません: 何曲も残すには、曲ごとに下のバックアップをファイルに保存し、使う曲を復元してください。",
+    projHelp: "FM-1 が持つのは 1 曲です: セクション A〜D（それぞれ 4 トラックのループ: 音色、パターン、テンポ、キー）と、その並び（「ソングの順番」ページ）。「読込」はセクションを今のループに入れ、「保存」は今のループをセクションにしまいます。4 曲ではありません: 何曲も残すには、曲ごとに下のバックアップをファイルに保存し、使う曲を復元してください。",
     bkTitle: "バックアップ", bkHelp: "FM-1 の中身をすべて 1 つのファイルに保存します: 今のループ、ソング（セクション A〜D とその並び）、ユーザープリセット、FM6 の音色バンク、サンプル USR1〜4、設定（色、キャリブレーション、ソング、ライト）。復元すると、本体はファイルの状態に戻ります（今の内容は上書きされます）。",
     bkSave: "バックアップを保存", bkLoad: "ファイルから復元", bkSaving: "バックアップ中 ", bkSaved: "バックアップを保存しました",
     bkRestoring: "復元中 ", bkRestored: "復元しました", bkConfirm: "FM-1 の今の内容をすべてこのバックアップで置き換えます。続けますか？",
@@ -5365,7 +5393,7 @@ const TEXT = {
     midiHowDrum: "GM ドラムの音（36 キック、38 スネア、42 ハット…）がドラムのレーンに、強さが ghost〜hard のレベルに入ります。",
     midiSetLen: "トラックの長さを {n} ステップにする", midiImport: "読み込む",
     midiConfirm: "このトラックのパターンを置き換えます。よろしいですか？", midiDone: "読み込みました。音の数: ", midiBad: "MIDI ファイルを読めません: ",
-    tabSong: "ソング", songTitle: "ソング",
+    tabSong: "ソングの順番", songTitle: "ソングの順番",
     songHelp: "FM-1 の SONG 画面と同じもの: セクション A〜D（FM-1 の SAVE → SECTION）を並べ、それぞれ何小節鳴らすか。全部で 16 項目まで。PLAY はソングモード（SAVE + 13）で。",
     songSection: "セクション", songBars: "小節", songTimes: "回数",
     songEmpty: "空のスロットのセクションがあります: FM-1 で先に SAVE + 5〜8 で保存してください。",
@@ -5442,7 +5470,7 @@ const TEXT = {
     sfSave: "Export this song", sfLoad: "Load a song file", sfName: "The song's name", sfSaving: "Exporting the song ", sfSaved: "Song exported: ",
     sfLoading: "Loading the song ", sfLoaded: "Song loaded: ", sfConfirm: "Load \"{name}\"? The sections A–D and the loop on the FM-1 are replaced.",
     songBadFile: "Not a BoopBox song file", plTitle: "playlist", plAdd: "add songs", plSave: "save the list", plOpen: "open a list",
-    plNext: "next song", plAuto: "play when loaded", plEmpty: "Export your songs (Song & sections → Export this song), then add them here.",
+    plNext: "next song", plAuto: "play when loaded", plEmpty: "Export your songs (Save & load → Export this song), then add them here.",
     plLoad: "load", plUp: "up", plDown: "down", plRemove: "remove", plBadList: "Not a BoopBox playlist",
     tabLive: "LIVE", lvNeeds: "Transport, sections, fills and effects need SLOOP 2.7 on the FM-1. The mixer and the keys work.",
     lvPlay: "play", lvStop: "stop", lvRec: "rec", lvRecArm: "rec armed", lvRecFree: "rec: close loop", lvUndo: "undo", lvRedo: "redo", lvBpm: "BPM", lvTap: "tap",
@@ -5464,7 +5492,7 @@ const TEXT = {
       "Build your song with the sections A–D: play a loop you like, press A under “save the loop into”, change the loop, save it into B… Tap A, B, C or D: the FM-1 jumps there at the next bar.",
       "Mix with the faders, mute and solo. Hold an effect pad (LOOP 4, STOP, KILL LOW…) for a punch-in that lasts while you hold it.",
       "Scenes change how it sounds, not what plays: store a calm mix in scene 1 (filters closed, little reverb) and a big one in scene 2, then tap 1 and 2 — or choose a morph of 4 bars to glide from one to the other.",
-      "For a whole show: export each song (Song & sections → Export this song) and add them to the playlist, teach your MIDI controller the page (MIDI learn), lock the page before you go on, and record the set."],
+      "For a whole show: export each song (Save & load → Export this song) and add them to the playlist, teach your MIDI controller the page (MIDI learn), lock the page before you go on, and record the set."],
     lvxGuideFoot: "Every card has a “?” that explains it, and a mouse over a control says what it does. “view: essentials” hides the advanced cards.",
     lvxSub_transport: "Start, stop, record and keep time.",
     lvxSub_sections: "What plays: the four parts of your song (the notes).",
@@ -5483,7 +5511,7 @@ const TEXT = {
     lvxHelp_perform: "Everything you can turn on the track you play, without menus.\nsound: the engine's own values (as the FM-1's EDIT page), the three macros (FLT PIT SHP), the envelope and glide, the LFO.\narp & key: the arpeggiator (mode, rate, octaves, gate, swing, order, hold); the key (root, scale, chord, transpose) — “every synth track” sends the key to all three synths.\ninsert & bus: the track's INSERT effect and filter; the shared delay, reverb, chorus, TEXTURE (a background bed) and the metronome.\nsteps: the pattern as a grid. Tap a step to turn it on or off (a new synth step plays the last note you played); right-click for its fill condition (yellow: only in a fill, red: never in a fill). LEN, DIV, SWG, GATE: the pattern's length, speed, swing and note length.\nThe drums' sound tab: pick a pad, then its tune (semitones) and decay, as the DRUMS screen's SOUND page. The steps tab's pattern buttons: shift the whole pattern a step, half or double its length, transpose it — each one undo.",
     lvxHelp_fx: "Punch-in effects play only while you hold the pad (or Shift + a letter key), then the sound comes back exactly as it was: nothing is recorded or changed.\nloops & time: repeat the last beats (LOOP 4 … 32), stutter, reverse, stop, half speed, rewind, freeze. filter & EQ: low / high pass, kill a band, phone. colour: crush, alias, octave up, flanger, echo. movement: gate, wobble, auto-pan, mono, fade out.\nlatch: a tap turns the effect on and it stays; another tap (or another effect) turns it off.",
     lvxHelp_master: "These act on the whole mix, after the tracks.\nfilter: a DJ filter (left darker, right thinner, middle off). dust: lo-fi — noise, wobble and grit. duck: the kick pushes the other tracks down (the “pumping” of dance music).\nvolume: the FM-1's level from here; turning its MASTER knob takes it back (knob: at once). rev throw / echo throw: hold for every track to pour into the reverb or the delay, as FX + OCT- / OCT+ — let go and it falls back.",
-    lvxHelp_playlist: "For a set of several songs. First, save each song as a file: Song & sections → Export this song (the loop, A–D and their order).\nadd songs: put the files here. Tap a song (or next song, key N): the FM-1 stops, loads it in a few seconds and, with “play when loaded”, starts.\n✎ gives a song its tempo (set when it loads) and a cue — a note for you on stage, shown while it plays, with the next song under it.\nsave the list: one file with the songs, your scenes and your MIDI mappings, to take to the gig. The list also stays in this browser.",
+    lvxHelp_playlist: "For a set of several songs. First, save each song as a file: Save & load → Export this song (the loop, A–D and their order).\nadd songs: put the files here. Tap a song (or next song, key N): the FM-1 stops, loads it in a few seconds and, with “play when loaded”, starts.\n✎ gives a song its tempo (set when it loads) and a cue — a note for you on stage, shown while it plays, with the next song under it.\nsave the list: one file with the songs, your scenes and your MIDI mappings, to take to the gig. The list also stays in this browser.",
     lvxTabSub_sound: "The sound of the track: the engine, the macros, the envelope, the LFO.",
     lvxTabSub_arp: "The arpeggiator and the key the track plays in.",
     lvxTabSub_fx: "The track's INSERT and filter, then the effects all tracks share.",
@@ -5551,7 +5579,7 @@ const TEXT = {
     other: "日本語", connect: "Connect", disconnect: "Disconnect", mock: "Mock device (no hardware)",
     sound: "Sound", engine: "Engine", presets: "Presets", initSound: "Init sound",
     track: "Track", drum: "Drums",
-    saveFile: "Save to file", loadFile: "Load file", projects: "Song & sections",
+    saveFile: "Save to file", loadFile: "Load file", projects: "Save & load",
     load: "Load", save: "Save", used: "used", empty: "empty", unknown: "—",
     steps: "Steps", reload: "Reload", clearSeq: "Clear sequence",
     notesHelp: "Enter notes like C4 E4 G4 (up to 4, C4 = 60).",
@@ -5611,8 +5639,27 @@ const TEXT = {
     installer: "BoopBox installer",
     offline: "Download the editor (offline on a computer: open it in Chrome or Edge)",
     install: "Install the app (works offline, Android too)",
-    tabSeq: "Sequencer", tabTracks: "Tracks", tabSettings: "Settings",
-    navTrack: "Track", navSounds: "Sounds", navDevice: "Device", tabKits: "Drum kit", fm1: "FM-1",
+    tabSeq: "Sequencer", tabTracks: "Mixer", tabSettings: "Settings",
+    navPlay: "Play", navTrack: "Make a loop", navSong: "Song", navSounds: "Your sounds", navDevice: "FM-1", tabKits: "Drum kit", fm1: "FM-1",
+    /* (1.5.2) what each page is for: tabd_ a few words under its name in the side bar, tabh_ a sentence under the page's title */
+    tabd_live: "perform a set", tabd_sound: "shape a track's sound", tabd_sequencer: "a track's notes",
+    tabd_patterns: "chains and chords", tabd_tracks: "level, pan, mute", tabd_song: "arrange sections A–D",
+    tabd_projects: "sections, backups", tabd_library: "sounds you kept", tabd_samples: "WAVs as instruments",
+    tabd_kits: "WAVs as a drum kit", tabd_drumsynth: "build synth drums", tabd_settings: "tempo, tuning, FX",
+    tabd_theme: "screen colours",
+    tabh_live: "Play a show from the computer, a tablet or a phone: start and stop, switch sections, mix, hold effects and play the keys.",
+    tabh_sound: "Every setting of the selected track's sound (engine, preset, envelopes, filter, effects), like the FM-1's knobs. Pick the track above.",
+    tabh_sequencer: "The notes of the selected track's pattern: click the steps, draw in the piano roll, or import a MIDI file.",
+    tabh_patterns: "Each track's eight patterns P1–P8, the chain that plays them in turn, and the song's chords. Read from the FM-1, change, then send.",
+    tabh_tracks: "Every track side by side: its level, pan and mute, and which one is selected.",
+    tabh_song: "The order the sections A–D play in song mode, and for how many bars: the FM-1's SONG screen.",
+    tabh_projects: "Save the loop you are working on into a section A–D or load one back, keep a song as a file, or back up the whole FM-1.",
+    tabh_library: "Sounds you keep in this browser, next to the 32 user presets on the FM-1. Searching works without the FM-1.",
+    tabh_samples: "Send your own WAV files to the sample slots USR1–USR4 and play them with the SAMPLE or SLICE engine.",
+    tabh_kits: "Build a drum kit from your own WAV files, one sound per white key, and send it to the FM-1.",
+    tabh_drumsynth: "Your own synthesised drum kits SYN1–SYN4: change any sound and hear it at once on the FM-1.",
+    tabh_settings: "Settings for the whole FM-1: tempo, swing, click, tuning, the master effects and drums, and the firmware information.",
+    tabh_theme: "Your own colours for the FM-1's screen. You can design one without the FM-1.",
     stepList: "Step list (type note names)", stepsOf: "{n} steps", fontCredit: "Font: Terminus (SIL OFL 1.1)",
     ctlDrag: "You can also drag a value up or down.",
     kitTitle: "Drum kit", kitHelp: "Build 16 sounds for the drum track, one per white key. Three steps: put your sounds on the pads, choose where the kit goes, send it to the FM-1.",
@@ -5624,7 +5671,7 @@ const TEXT = {
     kitUsing: "Drum track KIT: ", kitNoKit: "This firmware's drum track has no USR kits (SLOOP 2.4 and later).",
     kitConfirm: "Replace {x} with this kit?", kitAssigned: "Sorted: ",
     kitFull: "All 16 pads are taken", kitLoaded: "ZIP opened: ",
-    needDevice: "Connect the FM-1 to edit.", smpNone: "This firmware has no user sample slots.",
+    needDevice: "This page needs the FM-1: plug it in with USB and press Connect.", smpNone: "This firmware has no user sample slots.",
     bankConnect: "Connect the FM-1 to see its user presets too.", bankNone: "This firmware has no user presets.",
     drumNote: "The drum track has no engine or presets. Level, pan and mute: Tracks; the kit and the pattern: Sequencer.",
     drumGridHelp: "Click: a hit / clear it (same level and roll). Shift+click: a hit one level louder (GHOST, SOFT, NORM, HARD). The 16 sounds of the white keys F3..G5.",
@@ -5635,9 +5682,9 @@ const TEXT = {
     fillCond: "Fill", fcNorm: "normal", fcFill: "fill only", fcNoFill: "no fill",
     lockFull: "This track holds no more locks (24 a track; 32 on an eight-track BoopBox).", lockRefused: "This parameter cannot be locked.",
     lockHelp: "Nudge: the step early (-) or late (+), in 1/64 of a step. A lock gives a parameter another value for this step only; the base comes back at the next one. Fill: a \"fill only\" step plays only while GLO + key 9 is held (or key 10 makes the next bar a fill), a \"no fill\" step is silent then (F and \u00d7 on the grid). On the device: SEQ + a step held + KNOB 4 (nudge) / PRESETS (the lock; ALGORITHM picks its parameter) / OCT+ (the fill condition).",
-    mixer: "Mixer", mixHelp: "The four tracks of the device's TRACKS page. The fader is the level (drums: GLO > DRUMS LEVEL). Pan is written to any track without changing the selection (firmware 0.8: by selecting it for a moment). REC shows a track armed for live recording on the device.",
+    mixer: "Mixer", mixHelp: "The tracks of the device's TRACKS page. The fader is the level (drums: GLO > DRUMS LEVEL). Pan is written to any track without changing the selection (firmware 0.8: by selecting it for a moment). REC shows a track armed for live recording on the device.",
     level: "Level", pan: "Pan", mute: "Mute", rec: "REC", selectTrack: "Select", selectedTrack: "Selected",
-    projHelp: "The FM-1 holds one song: four sections A–D, each a loop of every track (sounds, patterns, tempo, key), and the order they play in (the Song tab). Load puts a section into the loop you are working on; Save stores that loop into a section. They are not four songs: to keep several songs, save a Backup file per song (below) and restore the one you want.",
+    projHelp: "The FM-1 holds one song: four sections A–D, each a loop of every track (sounds, patterns, tempo, key), and the order they play in (the Song order page). Load puts a section into the loop you are working on; Save stores that loop into a section. They are not four songs: to keep several songs, save a Backup file per song (below) and restore the one you want.",
     bkTitle: "Backup", bkHelp: "Everything on the FM-1 in one file: the loop you are working on, the song (its sections A–D and their order), the user presets, the FM6 patch bank, the samples USR1–USR4 and the settings (colours, calibration, the song, the lights). Restoring puts the FM-1 back as it was in the file (what is on it now is replaced).",
     bkSave: "Save a backup", bkLoad: "Restore from a file", bkSaving: "Backing up ", bkSaved: "Backup saved",
     bkRestoring: "Restoring ", bkRestored: "Restored", bkConfirm: "Replace everything on the FM-1 with this backup?",
@@ -5763,7 +5810,7 @@ const TEXT = {
     midiHowDrum: "GM drum notes (36 kick, 38 snare, 42 hat…) go to the drum lanes, velocity to the levels ghost to hard.",
     midiSetLen: "Set the track's length to {n} steps", midiImport: "Import",
     midiConfirm: "This replaces the track's pattern. Go on?", midiDone: "Imported. Notes: ", midiBad: "Not a readable MIDI file: ",
-    tabSong: "Song", songTitle: "Song",
+    tabSong: "Song order", songTitle: "Song order",
     songHelp: "The FM-1's SONG screen: the sections A–D (SAVE → SECTION on the FM-1) in order, each for so many bars. 16 entries at most. PLAY it in song mode (SAVE + key 13).",
     songSection: "Section", songBars: "Bars", songTimes: "Times",
     songEmpty: "A section has an empty slot: save it on the FM-1 first (SAVE + keys 5–8).",
@@ -5847,6 +5894,10 @@ function sayK(k, arg = "") {
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-t]").forEach((e) => setLabel(e, t(e.dataset.t)));
+  for (const b of $("tabs").querySelectorAll("button[data-tab]")) {   /* what each page is for, under its name */
+    b.append(el("span", { class: "tdesc", text: t("tabd_" + b.dataset.tab) }));
+    b.title = t("tabh_" + b.dataset.tab);
+  }
   $("lang").textContent = t("other");
   setLabel($("connect"), t(dev ? "disconnect" : "connect"));
   if (lastKey) $("status").textContent = t(lastKey) + lastArg;
@@ -5864,7 +5915,7 @@ $("lang").addEventListener("click", () => { lang = lang === "ja" ? "en" : "ja"; 
 
 /* ---------------------------------------------------------------- tabs --- */
 /* one panel at a time; the last one is remembered (localStorage) and in the URL hash (#sound ...) */
-const TABS = ["live", "sound", "sequencer", "patterns", "tracks", "song", "library", "samples", "kits", "drumsynth", "projects", "settings", "theme"];
+const TABS = ["live", "sound", "sequencer", "patterns", "tracks", "song", "projects", "library", "samples", "kits", "drumsynth", "settings", "theme"];
 const TAB_KEY = "felucca-editor-tab";
 const TRACK_TABS = new Set(["sound", "sequencer", "tracks"]);
 let tab = (() => {
@@ -5931,6 +5982,7 @@ function renderPanels() {
   $("trackbar").hidden = !(ready && hasTracks() && TRACK_TABS.has(want));
   const nb = $("tabs").querySelector(`button[data-tab="${want}"]`);   /* the page's title: its name in the side bar */
   $("pagetitle").textContent = nb ? t(nb.dataset.t) : "";
+  $("pagedesc").textContent = nb ? t("tabh_" + want) : "";
   if (want === "kits") renderKits();
   if (want === "drumsynth" && ready) {                 /* (2.5) the SYN kits, read once per connection */
     if (DS.dev !== dev) { Object.assign(DS, { dev, kit: null, list: null, k: 0, lane: 0 }); if (dsOk()) op(() => dsLoad(0)); renderDs(); } else renderDs();
@@ -10588,7 +10640,7 @@ async function songLoadUI(file, progress) {
   for (let k = 0; k < 4; k++) {
     try { dev.slotUsed[k] = parse[CMD.PROJECT](await rq(req.project(2, k))).used; } catch (e) { if (e.message === "closed") throw e; }
   }
-  SG.dev = null;                                    /* (the Song tab reads the order again) */
+  SG.dev = null;                                    /* (the Song order page reads it again) */
 }
 $("sf-save").addEventListener("click", () => { if (dev) songExport(); });
 $("sf-load").addEventListener("click", () => { if (dev) $("sf-file").click(); });
@@ -11077,7 +11129,7 @@ function lvFx(fx, on) {
 const LV_FX_GROUPS = [["lvFxLoops", [0, 1, 2, 3, 24, 4, 5, 6, 7, 19, 23]], ["lvFxTone", [8, 9, 16, 17, 18, 10]],
   ["lvFxColour", [11, 12, 20, 21, 14]], ["lvFxMove", [13, 15, 22, 25, 26]]];
 
-/* ---- (2.7) the playlist: song files (Song & sections → Export this song), loaded one after the other. A song loads
+/* ---- (2.7) the playlist: song files (Save & load → Export this song), loaded one after the other. A song loads
    with the FM-1 stopped (a few seconds of flash), then plays if "play when loaded" is on. The list is kept in this
    browser (IndexedDB), and saved / opened as one file to take to a gig */
 const PLF = { FORMAT: "sloop-playlist", VERSION: 1 };
