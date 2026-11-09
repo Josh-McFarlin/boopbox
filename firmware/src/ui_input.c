@@ -152,6 +152,8 @@ UI_SMALL static uint32_t keys_lit(void)
     default:                                       /* playing, ARP roll, SAVE song, every page and the menu */
         break;
     }
+    if (kb_pats)                                   /* PATTERNS / CHAIN / SCENES: the pads (ui_pats.c) */
+        return pats_keys_lit(blink) | fm1_in.notes;
     if (kb_grid) {                                 /* the DRUMS grid page: the sound's steps of this page */
         uint32_t len = trk_len(DFOC), b0 = drum_cursor / 16u * 16u;
         for (i = 0; i < 16u; i++) {
@@ -933,14 +935,19 @@ UI_SMALL static int ly_quiet(void)
         ly_quiet_t = 0;
     return ly_quiet_t != 0;
 }
-/* (1.7) SEQ held + SAVE tapped: the PATTERNS screen, from any page and track (SAVE alone: SONG / the SAVE pages) */
+/* (1.7) SEQ held + SAVE tapped: the SCENES page (the PATTERNS pages' last), from any page and track (SAVE alone: SONG /
+ * the SAVE pages) */
 static uint8_t seq_save_held;
 UI_SMALL static void pats_open(void)
 {
+    uint32_t i;
     if (!ui.home && cur_page()->graph == GR_BROWSE)
         br_close(1);                                      /* (the sound browser: the sound browsed to kept, as SAVE) */
     vis_on = 0;
     studio_open(SC_PATS);
+    for (i = ui.page; i < NPAGES && PAGES[i].scope == SC_PATS; i++)
+        if (PAGES[i].id[0] == PV_SCENES)
+            ui.page = (uint8_t)i;
 }
 /* the layers, once a frame: which one is held (or locked), the taps on release, its keys and knobs.
  * Returns 1 while one is held or locked (the page does not take the knobs then) */
@@ -1006,6 +1013,9 @@ UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_
             if ((e >> 8) == KB_GRID) {                    /* the DRUMS grid page: a step key */
                 if (((e >> 7) & 1u) && grid_keys_on())
                     grid_key(e & 31u);
+            } else if ((e >> 8) == KB_PATS) {             /* PATTERNS / CHAIN / SCENES: a pad */
+                if (((e >> 7) & 1u) && on_pats_page())
+                    pats_key(e & 31u);
             } else if (!((e >> 7) & 1u)) {
                 layer_key(e >> 8, e & 31u, 0);
             }
@@ -1237,6 +1247,7 @@ UI_SMALL static void ui_input(void)
     }
     kb_grid = (uint8_t)grid_keys_on();                  /* (seq.c: the keys are the grid's steps) */
     kb_harm = (uint8_t)(on_chords_page() && !ui.menu);  /* (seq.c: the keys are chords, harmony.c harm_key) */
+    kb_pats = (uint8_t)(on_pats_page() && !ui.menu);    /* (seq.c: the keys are pads, ui_pats.c pats_key) */
     if (ui.menu) {                                      /* HOME / REC taps do nothing here */
         punch.hold = 0;
         thr_req = 0;
