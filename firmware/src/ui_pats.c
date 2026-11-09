@@ -71,22 +71,6 @@ UI_SMALL static uint64_t pats_map(uint32_t k, uint32_t p, uint32_t *len)
     }
     return m;
 }
-/* a pattern's picture: up to 16 columns over its LEN, a column lit when one of its steps holds something */
-UI_SMALL static void pats_pic(int32_t x, int32_t y, int32_t w, int32_t h, uint64_t m, uint32_t len, uint16_t c)
-{
-    uint32_t cols = len < 16u ? len : 16u, i;
-    int32_t cw;
-    if (!cols)
-        return;
-    cw = w / (int32_t)cols;
-    for (i = 0; i < cols; i++) {
-        uint32_t a = i * len / cols, b = (i + 1u) * len / cols, j, on = 0;
-        for (j = a; j < b && j < NSTEP; j++)
-            on |= (uint32_t)(m >> j) & 1u;
-        if (on)
-            cv_rect(x + (int32_t)i * cw, y, cw > 2 ? cw - 1 : 1, h, c);
-    }
-}
 UI_SMALL static void pats_poll(void)             /* (every frame) a change the ISR refused: said; a scene made */
 {
     if (pb_full) {
@@ -170,20 +154,73 @@ UI_SMALL static void pats_key(uint32_t k)
     fmt_int(b + 8, w + 1);
     ui_say(b, song.playing ? " NEXT" : "");
 }
-/* the head: the title, two lines on the right, where SELECT and SEQ go */
-UI_SMALL static void pats_head(const char *title, const char *r1, uint16_t c1, const char *r2, uint16_t c2, const char *nav)
+/* the head: the title, two lines on the right */
+UI_SMALL static void pats_head(const char *title, const char *r1, uint16_t c1, const char *r2, uint16_t c2)
 {
     cv_begin(240, 42, C_BLACK);
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, title, C_WHITE);
-    cv_text(4, 24, &FONT_S, nav, UI_G3);
     ui_text_r(4, r1, c1);
     ui_text_r(20, r2, c2);
     cv_rule(0, 39, 240, UI_G1);
     cv_blit(0, 0);
 }
-/* the pads' strip (white keys 1..16) on a canvas at y: 1..8 the track's patterns, 9..16 the scenes */
-UI_SMALL static void pats_keystrip(int32_t y, uint32_t blink)
+/* a tile with its corners cut (rounded at this size) */
+UI_SMALL static void pats_tile(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c)
+{
+    cv_rect(x + 2, y, w - 4, h, c);
+    cv_rect(x, y + 2, w, h - 4, c);
+    cv_rect(x + 1, y + 1, w - 2, h - 2, c);
+}
+UI_SMALL static void pats_frame(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c)   /* a frame, 2 px */
+{
+    cv_rect(x + 2, y, w - 4, 2, c), cv_rect(x + 2, y + h - 2, w - 4, 2, c);
+    cv_rect(x, y + 2, 2, h - 4, c), cv_rect(x + w - 2, y + 2, 2, h - 4, c);
+    cv_rect(x + 1, y + 1, 1, 1, c), cv_rect(x + w - 2, y + 1, 1, 1, c);
+    cv_rect(x + 1, y + h - 2, 1, 1, c), cv_rect(x + w - 2, y + h - 2, 1, 1, c);
+}
+/* a pattern's picture: up to 16 columns over its LEN, a column lit when one of its steps holds something; the
+ * columns on a beat taller (the rhythm at a glance) */
+UI_SMALL static void pats_pic(int32_t x, int32_t y, int32_t w, int32_t h, uint64_t m, uint32_t len, uint16_t c)
+{
+    uint32_t cols = len < 16u ? len : 16u, i;
+    int32_t cw;
+    if (!cols)
+        return;
+    cw = w / (int32_t)cols;
+    for (i = 0; i < cols; i++) {
+        uint32_t a = i * len / cols, b = (i + 1u) * len / cols, j, on = 0;
+        int32_t hh = (a % 4u) == 0u ? h : (a % 2u) == 0u ? h * 3 / 4 : h / 2;
+        for (j = a; j < b && j < NSTEP; j++)
+            on |= (uint32_t)(m >> j) & 1u;
+        if (on)
+            cv_rect(x + (int32_t)i * cw, y + h - hh, cw > 2 ? cw - 1 : 1, hh, c);
+    }
+}
+/* the knobs at 188 (or a message), the buttons' line under them */
+UI_SMALL static void pats_foot(const char *const *L, char (*v)[8], const char *hint)
+{
+    uint32_t k;
+    cv_begin(240, 52, C_BLACK);
+    if (ui.msg_t) {
+        cv_rect(0, 2, 240, 30, C_WHITE);
+        ui_text_mid(9, ui.msg, C_BLACK);
+    } else {
+        for (k = 0; k < 4u; k++) {
+            cv_rect((int32_t)k * 60 + 4, 0, 52, 3, UI_COL[k]);
+            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, L[k]) / 2, 3, &FONT_S, L[k], UI_G3);
+            cv_text((int32_t)k * 60 + 30 - text_w(&FONT_S, v[k]) / 2, 17, &FONT_S, v[k],
+                    ui.hot_t && ui.hot_col == k ? C_WHITE : UI_G4);
+        }
+    }
+    cv_rect(0, 34, 240, 1, UI_G1);
+    cv_text(4, 36, &FONT_S, hint, UI_G4);
+    cv_blit(0, 188);
+}
+/* the keyboard: white keys 1..16 (F3 .. G5) and the black keys between, 1..8 the track's patterns, 9..16 the scenes;
+ * each white key in what it does now (the pattern playing in the track's colour, one asked for white, one that holds
+ * something dim; the scene playing light, one asked for white) */
+UI_SMALL static void pats_keyboard(int32_t y, uint32_t blink)
 {
     uint32_t i, sel = song.sel % NTRK, used = pats_used(sel);
     const track_t *t = &trk[sel];
@@ -192,33 +229,24 @@ UI_SMALL static void pats_keystrip(int32_t y, uint32_t blink)
         int32_t x = (int32_t)i * 15;
         uint16_t c, tc;
         if (i < 8u) {
-            uint32_t asked = t->pat_req == i + 1u;
-            c = i == t->pat ? UI_COL[sel] : asked && blink ? C_WHITE : ((used >> i) & 1u) ? UI_DIM[sel] : UI_G1;
-            tc = i == t->pat || (asked && blink) ? C_BLACK : ((used >> i) & 1u) ? C_WHITE : UI_G3;
+            uint32_t asked = t->pat_req == i + 1u, has = (used >> i) & 1u;
+            c = i == t->pat ? UI_COL[sel] : asked && blink ? C_WHITE : has ? UI_DIM[sel] : UI_G1;
+            tc = i == t->pat || (asked && blink) ? C_BLACK : has ? C_WHITE : UI_G3;
             fmt_int(b, (int32_t)i + 1);
         } else {
-            uint32_t s = i - 8u;
-            c = s == scn_cur ? UI_G4 : s == scn_ask && blink ? C_WHITE : UI_G2;
-            tc = s == scn_cur || (s == scn_ask && blink) ? C_BLACK : UI_G4;
-            fmt_int(b, (int32_t)s + 1);
+            uint32_t sc = i - 8u;
+            c = sc == scn_cur ? UI_G4 : sc == scn_ask && blink ? C_WHITE : UI_G2;
+            tc = sc == scn_cur || (sc == scn_ask && blink) ? C_BLACK : UI_G4;
+            fmt_int(b, (int32_t)sc + 1);
         }
-        cv_rect(x + 1, y, 13, 16, c);
-        cv_text(x + 8 - text_w(&FONT_S, b) / 2, y + 2, &FONT_S, b, tc);
+        cv_rect(x, y, 14, 27, c);
+        cv_text(x + 7 - text_w(&FONT_S, b) / 2, y + 12, &FONT_S, b, tc);
     }
-    cv_rect(119, y - 2, 2, 20, C_WHITE);         /* (patterns | scenes) */
+    for (i = 0; i < 15u; i++)                    /* (from F: a black key after F, G, A, C and D) */
+        if (i % 7u != 3u && i % 7u != 6u)
+            cv_rect((int32_t)i * 15 + 10, y, 9, 11, C_BLACK);
 }
-UI_SMALL static void pats_knobs(const char *const *L, char (*v)[8])
-{
-    cv_begin(240, 38, C_BLACK);                  /* the knobs, or a message */
-    if (ui.msg_t) {
-        cv_rect(0, 4, 240, 30, C_WHITE);
-        ui_text_mid(11, ui.msg, C_BLACK);
-    } else {
-        knob_strip(L, v);
-    }
-    cv_blit(0, 202);
-}
-/* when the change asked for happens: "in 3 beats", "at loop end" (playing), else "" */
+/* when the change asked for happens: "next in 3 beats", "at loop end" (playing), else "" */
 UI_SMALL static void pats_when(char *b)
 {
     uint32_t q = (uint32_t)clamp(song.g[G_PATQ], PQ_LOOP, PQ_4BAR), span, left;
@@ -232,8 +260,8 @@ UI_SMALL static void pats_when(char *b)
     }
     span = 4u * QB[q];
     left = span - clk_beat % span;
-    str_cpy(b, "in ", 4);
-    fmt_int(b + 3, (int32_t)left);
+    str_cpy(b, "next in ", 9);
+    fmt_int(b + 8, (int32_t)left);
     str_cpy(b + str_len(b), left == 1u ? " beat" : " beats", 7);
 }
 UI_SMALL static void pads_draw(uint32_t blink)
@@ -247,37 +275,34 @@ UI_SMALL static void pads_draw(uint32_t blink)
     fmt_int(b + 6, (int32_t)sel + 1);
     fmt_int(q, (int32_t)(pb_n * 100u / PB_SIZE));       /* (how full the pattern store is) */
     str_cpy(q + str_len(q), "% full", 8);
-    pats_head("PATTERNS", b, UI_COL[sel], q, pb_n * 10u > PB_SIZE * 9u ? UI_RED : UI_G3, "< play  chain >");
-    cv_begin(240, 104, C_BLACK);                 /* the eight tiles, two rows of four */
+    pats_head("PATTERNS", b, UI_COL[sel], q, pb_n * 10u > PB_SIZE * 9u ? UI_RED : UI_G3);
+    cv_begin(240, 98, C_BLACK);                  /* the eight tiles, two rows of four */
     for (p = 0; p < NPAT; p++) {
-        int32_t x = 2 + (int32_t)(p % 4u) * 60, y = 2 + (int32_t)(p / 4u) * 52;
+        int32_t x = 4 + (int32_t)(p % 4u) * 59, y = 2 + (int32_t)(p / 4u) * 50;
         uint32_t playing = p == t->pat, asked = t->pat_req == p + 1u, has = (used >> p) & 1u, len = 0;
         uint64_t m = has ? pats_map(sel, p, &len) : 0;
         uint16_t bg = playing ? UI_COL[sel] : has ? UI_G2 : UI_G1, fg = playing ? C_BLACK : has ? C_WHITE : UI_G3;
-        cv_rect(x, y, 56, 46, bg);
-        if (asked && blink) {
-            cv_rect(x, y, 56, 2, C_WHITE), cv_rect(x, y + 44, 56, 2, C_WHITE);
-            cv_rect(x, y, 2, 46, C_WHITE), cv_rect(x + 54, y, 2, 46, C_WHITE);
-        }
+        pats_tile(x, y, 54, 44, bg);
+        if (asked && blink)
+            pats_frame(x, y, 54, 44, C_WHITE);
         fmt_int(b, (int32_t)p + 1);
-        cv_text(x + 4, y + 3, &FONT_S, b, fg);
+        cv_text(x + 4, y + 2, &FONT_S, b, fg);
         if (playing || asked)
-            cv_text(x + 52 - text_w(&FONT_S, playing ? "now" : "next"), y + 3, &FONT_S, playing ? "now" : "next",
+            cv_text(x + 50 - text_w(&FONT_S, playing ? "now" : "next"), y + 2, &FONT_S, playing ? "now" : "next",
                     playing ? C_BLACK : C_WHITE);
         if (has)
-            pats_pic(x + 4, y + 20, 48, 22, m, len, playing ? C_BLACK : UI_COL[sel]);
+            pats_pic(x + 5, y + 19, 45, 21, m, len, playing ? C_BLACK : UI_COL[sel]);
         else
-            cv_text(x + 28 - text_w(&FONT_S, "empty") / 2, y + 22, &FONT_S, "empty", UI_G3);
+            cv_text(x + 27 - text_w(&FONT_S, "empty") / 2, y + 22, &FONT_S, "empty", UI_G3);
         if (p == pats_cursor)
-            cv_rect(x, y + 48, 56, 2, C_WHITE);
+            cv_rect(x, y + 46, 54, 2, C_WHITE);
     }
     cv_blit(0, 42);
-    cv_begin(240, 56, C_BLACK);                  /* the pads, what the buttons do */
-    cv_text(4, 0, &FONT_S, "keys: patterns", UI_G3);
-    ui_text_r(0, "scenes", UI_G3);
-    pats_keystrip(16, blink);
-    cv_text(4, 38, &FONT_S, "oct+ this track  oct- all", UI_G4);
-    cv_blit(0, 146);
+    cv_begin(240, 48, C_BLACK);                  /* the keys: what each does */
+    pats_keyboard(0, blink);
+    cv_text(4, 28, &FONT_S, "keys: patterns", UI_G3);
+    ui_text_r(28, "scenes", UI_G3);
+    cv_blit(0, 140);
     fmt_int(v[0], (int32_t)pats_cursor + 1);
     str_cpy(v[1], PQN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
     if (pats_arm == 1u) {
@@ -291,63 +316,87 @@ UI_SMALL static void pads_draw(uint32_t blink)
         str_cpy(v[3], "again", 6);
     else
         fmt_int(v[3], (int32_t)pats_cursor + 1);
-    pats_knobs(L, v);
+    pats_foot(L, v, "oct+ this track  oct- all");
 }
 UI_SMALL static void chain_draw(uint32_t blink)
 {
-    uint32_t sel = song.sel % NTRK, n = trk[sel].pat_nchain, i, r0;
+    uint32_t sel = song.sel % NTRK, n = trk[sel].pat_nchain, used = pats_used(sel), i, w0, tot, p;
     const track_t *t = &trk[sel];
     char b[24];
     static const char *const L[4] = {"slot", "pattern", "repeat", "play"};
     static char v[4][8];
+    (void)blink;
     if (chain_cursor > n)
         chain_cursor = (uint8_t)n;
     str_cpy(b, "track ", 7);
     fmt_int(b + 6, (int32_t)sel + 1);
-    pats_head("CHAIN", b, UI_COL[sel], !n ? "no chain" : n < 2u ? "1 slot" : t->pat_coff ? "off" : "playing",
-              n >= 2u && !t->pat_coff ? UI_COL[1] : UI_G3, "< patterns  scenes >");
-    r0 = chain_cursor / 6u;                      /* (two rows of six: the cursor's row and the next, or the last two) */
-    if (r0 > 0u && r0 * 6u + 6u > (n < NCHAIN ? n + 1u : n))
-        r0--;
-    cv_begin(240, 104, C_BLACK);
-    for (i = r0 * 6u; i < r0 * 6u + 12u; i++) {
-        int32_t x = 2 + (int32_t)(i % 6u) * 40, y = 2 + (int32_t)((i - r0 * 6u) / 6u) * 52;
+    pats_head("CHAIN", b, UI_COL[sel], !n ? "no chain" : n < 2u ? "1 slot" : t->pat_coff ? "loops: off" : "loops: on",
+              n >= 2u && !t->pat_coff ? UI_G4 : UI_G3);
+    tot = n < NCHAIN ? n + 1u : n;               /* (the slots and the end) */
+    w0 = chain_cursor > 2u ? chain_cursor - 2u : 0u;   /* (six at a time, the cursor's third) */
+    if (w0 + 6u > tot)
+        w0 = tot > 6u ? tot - 6u : 0u;
+    cv_begin(240, 72, C_BLACK);                  /* the slots in order, an arc back to the first */
+    cv_text(4, 0, &FONT_S, n >= 2u ? "plays in order, then round" : "keys add patterns", UI_G3);
+    for (i = w0; i < w0 + 6u && i < tot; i++) {
+        int32_t x = 4 + (int32_t)(i - w0) * 39, y = 17;
         if (i < n) {
-            uint32_t sl = t->pat_chain[i], on = chain_on(t) && i == t->pat_ci && CH_PAT(sl) == t->pat;
-            cv_rect(x, y, 36, 44, on ? UI_COL[sel] : UI_G2);
+            uint32_t sl = t->pat_chain[i], on = chain_on(t) && i == t->pat_ci && CH_PAT(sl) == t->pat, len = 0;
+            uint64_t m = ((used >> CH_PAT(sl)) & 1u) ? pats_map(sel, CH_PAT(sl), &len) : 0;
+            pats_tile(x, y, 34, 42, on ? UI_COL[sel] : UI_G2);
             fmt_int(b, (int32_t)CH_PAT(sl) + 1);
-            cv_text(x + 18 - text_w(&FONT_L, b) / 2, y + 2, &FONT_L, b, on ? C_BLACK : C_WHITE);
-            str_cpy(b, "x", 2);
-            fmt_int(b + 1, (int32_t)CH_REP(sl));
-            cv_text(x + 18 - text_w(&FONT_S, b) / 2, y + 26, &FONT_S, b, on ? C_BLACK : UI_G4);
-            if (on && CH_REP(sl) > 1u)            /* (the loops played of its repeats) */
-                cv_rect(x, y + 41, (int32_t)(36u * (t->pat_cr + 1u) / CH_REP(sl)), 3, C_WHITE);
-            if (i + 1u < n || chain_on(t))
-                cv_rect(x + 37, y + 20, 2, 4, UI_G3);
-        } else if (i == n && n < NCHAIN) {
-            cv_rect(x, y, 36, 44, UI_G1);
-            cv_text(x + 18 - text_w(&FONT_L, "+") / 2, y + 8, &FONT_L, "+", UI_G3);
+            cv_text(x + 17 - text_w(&FONT_L, b) / 2, y - 3, &FONT_L, b, on ? C_BLACK : C_WHITE);
+            if (CH_REP(sl) > 1u) {                /* (its repeats in the picture's place) */
+                str_cpy(b, "x", 2);
+                fmt_int(b + 1, (int32_t)CH_REP(sl));
+                cv_text(x + 17 - text_w(&FONT_S, b) / 2, y + 26, &FONT_S, b, on ? C_BLACK : C_WHITE);
+            } else {
+                pats_pic(x + 4, y + 30, 26, 9, m, len, on ? C_BLACK : UI_DIM[sel]);
+            }
+            if (on)                              /* (the loops played of its repeats) */
+                cv_rect(x, y + 44, (int32_t)(34u * (t->pat_cr + 1u) / CH_REP(sl)), 2, C_WHITE);
+            if (i + 1u < n) {                    /* (an arrow to the next) */
+                cv_rect(x + 35, y + 19, 2, 4, UI_G3);
+                cv_rect(x + 37, y + 20, 1, 2, UI_G3);
+            }
         } else {
-            continue;
+            pats_tile(x, y, 34, 42, UI_G1);
+            cv_text(x + 17 - text_w(&FONT_L, "+") / 2, y + 3, &FONT_L, "+", UI_G3);
         }
         if (i == chain_cursor)
-            cv_rect(x, y + 46, 36, 2, C_WHITE);
+            pats_frame(x, y, 34, 42, C_WHITE);
+    }
+    if (n >= 2u) {                               /* (round: an arc under the slots back to the first) */
+        int32_t xe = 4 + (int32_t)((n - 1u < w0 + 5u ? n - 1u : w0 + 5u) - w0) * 39 + 17;
+        uint16_t c = chain_on(t) ? UI_G3 : UI_G1;
+        cv_rect(20, 68, xe - 20, 1, c);
+        cv_rect(20, 64, 1, 4, c), cv_rect(xe, 64, 1, 4, c);
+        cv_rect(18, 64, 5, 1, c), cv_rect(19, 63, 3, 1, c);
     }
     cv_blit(0, 42);
-    cv_begin(240, 56, C_BLACK);
+    cv_begin(240, 74, C_BLACK);                  /* the patterns to add, where the cursor is */
+    cv_text(4, 2, &FONT_S, "add a pattern: keys 1-8", UI_G3);
+    for (p = 0; p < NPAT; p++) {
+        int32_t x = 4 + (int32_t)p * 29;
+        uint32_t has = (used >> p) & 1u;
+        pats_tile(x, 20, 26, 24, has ? UI_DIM[sel] : UI_G1);
+        fmt_int(b, (int32_t)p + 1);
+        cv_text(x + 13 - text_w(&FONT_S, b) / 2, 24, &FONT_S, b, has ? C_WHITE : UI_G3);
+        if (chain_cursor < n && CH_PAT(t->pat_chain[chain_cursor]) == p)
+            pats_frame(x, 20, 26, 24, C_WHITE);
+    }
     if (chain_cursor < n) {
         str_cpy(b, "slot ", 6);
         fmt_int(b + 5, (int32_t)chain_cursor + 1);
         str_cpy(b + str_len(b), " of ", 5);
         fmt_int(b + str_len(b), (int32_t)n);
+        str_cpy(b + str_len(b), "  x", 4);
+        fmt_int(b + str_len(b), (int32_t)CH_REP(t->pat_chain[chain_cursor]));
     } else {
-        str_cpy(b, n ? "end: keys add" : "empty: keys add", 16);
+        str_cpy(b, n ? "the end: a key appends" : "empty: a key starts it", 23);
     }
-    cv_text(4, 0, &FONT_S, b, UI_G4);
-    ui_text_r(0, "scenes", UI_G3);
-    pats_keystrip(16, blink);
-    cv_text(4, 38, &FONT_S, "oct+ insert  oct- remove", UI_G4);
-    cv_blit(0, 146);
+    cv_text(4, 52, &FONT_S, b, C_WHITE);
+    cv_blit(0, 114);
     if (chain_cursor < n) {
         uint32_t sl = t->pat_chain[chain_cursor];
         fmt_int(v[0], (int32_t)chain_cursor + 1);
@@ -360,57 +409,66 @@ UI_SMALL static void chain_draw(uint32_t blink)
         str_cpy(v[2], "-", 2);
     }
     str_cpy(v[3], t->pat_coff ? "off" : "on", 4);
-    pats_knobs(L, v);
+    pats_foot(L, v, "oct+ insert  oct- remove");
 }
 UI_SMALL static void scenes_draw(uint32_t blink)
 {
-    uint32_t s, k, sel = song.sel % NTRK;
+    uint32_t s, k, sel = song.sel % NTRK, used[NTRK];
     char b[20], q[12];
     static const char *const L[4] = {"scene", "quant", "name", "pattern"};
     static char v[4][8];
+    for (k = 0; k < NTRK; k++)
+        used[k] = pats_used(k);
     str_cpy(q, "q ", 3);
     str_cpy(q + 2, PQN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
     if (scn_ask < NSCENE)
         pats_when(b);
     else
         b[0] = 0;
-    pats_head("SCENES", q, UI_COL[1], b, C_WHITE, "< chain  seq: song");
+    pats_head("SCENES", q, UI_COL[2], b, C_WHITE);
     for (k = 0; k < 2u; k++) {                   /* the rows, four a band */
         uint32_t r;
-        cv_begin(240, k ? 88 : 72, C_BLACK);
+        cv_begin(240, 73, C_BLACK);
         for (r = 0; r < 4u; r++) {
-            int32_t y = (int32_t)r * 18;
-            uint32_t t;
+            int32_t y = (int32_t)r * 18 + 1;
+            uint32_t tk, named;
             s = k * 4u + r;
-            cv_rect(0, y, 240, 16, s == scn_cursor ? UI_G2 : UI_G1);
-            if (s == scn_ask && blink) {
-                cv_rect(0, y, 240, 1, C_WHITE), cv_rect(0, y + 15, 240, 1, C_WHITE);
+            named = scn_name[s] != 0u;
+            cv_rect(2, y, 236, 16, s == scn_cur ? UI_G2 : UI_G1);
+            if (s == scn_cursor) {
+                cv_rect(2, y, 236, 1, C_WHITE), cv_rect(2, y + 15, 236, 1, C_WHITE);
+                cv_rect(2, y, 1, 16, C_WHITE), cv_rect(237, y, 1, 16, C_WHITE);
             }
-            if (s == scn_cur) {                  /* (a play triangle) */
-                cv_rect(3, y + 3, 2, 10, C_WHITE), cv_rect(5, y + 4, 2, 8, C_WHITE);
-                cv_rect(7, y + 5, 2, 6, C_WHITE), cv_rect(9, y + 7, 2, 2, C_WHITE);
+            if (s == scn_cur || (s == scn_ask && blink)) {   /* (a play triangle: playing, or asked, blinking) */
+                uint16_t c = s == scn_cur ? UI_COL[0] : C_WHITE;
+                cv_rect(5, y + 3, 2, 10, c), cv_rect(7, y + 4, 2, 8, c);
+                cv_rect(9, y + 5, 2, 6, c), cv_rect(11, y + 7, 2, 2, c);
             }
             fmt_int(b, (int32_t)s + 1);
-            cv_text(14, y + 2, &FONT_S, b, C_WHITE);
-            cv_text(28, y + 2, &FONT_S, N_SCN[scn_name[s] % NSCN_NAMES], scn_name[s] ? C_WHITE : UI_G3);
-            for (t = 0; t < NTRK; t++) {
-                int32_t x = 94 + (int32_t)t * 18;
-                uint32_t p = scn_pat[s][t];
-                uint16_t c = p >= NPAT ? UI_G1 : s == scn_cur ? UI_COL[t] : UI_DIM[t];
-                cv_rect(x, y + 1, 16, 14, c);
-                if (p < NPAT)
+            cv_text(17, y + 1, &FONT_S, b, named || s == scn_cur ? C_WHITE : UI_G3);
+            cv_text(30, y + 1, &FONT_S, N_SCN[scn_name[s] % NSCN_NAMES], named ? C_WHITE : UI_G3);
+            for (tk = 0; tk < NTRK; tk++) {      /* each track: its pattern holds something (in its colour) or not */
+                int32_t x = 96 + (int32_t)tk * 18;
+                uint32_t p = scn_pat[s][tk], has = p < NPAT && ((used[tk] >> p) & 1u);
+                uint16_t c = p >= NPAT ? UI_G1 : !has ? UI_G2 : s == scn_cur ? UI_COL[tk] : UI_DIM[tk];
+                cv_rect(x, y + 2, 15, 12, c);
+                if (p >= NPAT)
+                    cv_rect(x + 5, y + 7, 5, 2, UI_G3);   /* (keep: a dash) */
+                else if (p != s) {               /* (another pattern than the scene's number: said) */
                     fmt_int(b, (int32_t)p + 1);
-                else
-                    str_cpy(b, "-", 2);
-                cv_text(x + 8 - text_w(&FONT_S, b) / 2, y + 1, &FONT_S, b,
-                        p < NPAT && s == scn_cur ? C_BLACK : p < NPAT ? C_WHITE : UI_G3);
-                if (s == scn_cursor && t == sel)
-                    cv_rect(x, y + 14, 16, 2, C_WHITE);
+                    cv_text(x + 8 - text_w(&FONT_S, b) / 2, y, &FONT_S, b, has && s == scn_cur ? C_BLACK : C_WHITE);
+                }
+                if (s == scn_cursor && tk == sel)
+                    cv_rect(x, y + 14, 15, 2, C_WHITE);
             }
         }
-        if (k)
-            cv_text(4, 74, &FONT_S, "oct+ launch  oct- store", UI_G4);
-        cv_blit(0, k ? 114 : 42);
+        if (k && scn_ask < NSCENE && song.playing && song.g[G_PATQ] > PQ_LOOP) {   /* (how far to the change) */
+            static const uint8_t QB[4] = {0, 1, 2, 4};
+            uint32_t span = 4u * QB[(uint32_t)clamp(song.g[G_PATQ], 0, 3)];
+            cv_rect(2, 72, 236, 1, UI_G1);
+            cv_rect(2, 72, (int32_t)(236u * (clk_beat % span + 1u) / span), 1, C_WHITE);
+        }
+        cv_blit(0, k ? 115 : 42);
     }
     fmt_int(v[0], (int32_t)scn_cursor + 1);
     str_cpy(v[1], PQN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
@@ -422,7 +480,7 @@ UI_SMALL static void scenes_draw(uint32_t blink)
     } else {
         str_cpy(v[3], "keep", 5);
     }
-    pats_knobs(L, v);
+    pats_foot(L, v, "oct+ launch  oct- store");
 }
 UI_SMALL static void pats_screen_draw(void)
 {
