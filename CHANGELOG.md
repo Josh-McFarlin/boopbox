@@ -13,6 +13,19 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 20 synth voices (firmware, after 1.5.1)
+
+In the next BoopBox firmware the synth tracks **share 20 voices** instead of 8 ([polyphony](GUIDE.md#polyphony)):
+
+- Chords on several tracks at once now all sound: three pads of 6 notes and a bass no longer take each other's notes.
+  One track still plays at most 8 notes (and each engine keeps its own cap: FM6 6, VOICE 4, GRAIN and PHYS 3).
+- When the tracks ask for more than 20, the oldest voice gives way as before (a released one first, never a track's
+  bass).
+- Many heavy voices at once (FM6, PHYS, TRIO, GRAIN) use more of the FM-1's time. If it runs short, the FM-1 fades
+  out the quietest voices one at a time, as it already did. SYSTEM (KNOB 4) shows the load.
+- **BoopBox Trainer keeps 8 voices**, the budget its three songs were made and approved with.
+- Projects, presets and settings open as they are; a project with only a few voices sounds exactly the same.
+
 ## 1.5.1
 
 **BoopBox Trainer: the coach's text always fits** ([the trainer](docs/trainer.md)):

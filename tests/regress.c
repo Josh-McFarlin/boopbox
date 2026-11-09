@@ -20,7 +20,7 @@
  *    wider). Compared with CPU_FILE
  *    (tests/cpu_baseline.txt) at +25 % (instructions) or +35 % (time); ns per sample printed for
  *    information. A counted cost over the budget fails, a timed one or one far under it only warns.
- * 4. voices: the shared budget of 8 across 3 parts, stolen voices fade (no step), MONO / LEGATO /
+ * 4. voices: the shared budget (NVBUDGET) across 3 parts, stolen voices fade (no step), MONO / LEGATO /
  *    UNISON keep their note under pressure, the VOICE engine's 4-voice cap, release frees voices, and
  *    no hanging note after the note-offs on any routing (USB channels 1..3, 10, others while the
  *    selected track changes, the keys while the selected track changes, with ARP and the voice modes).
@@ -517,8 +517,9 @@ static void midi_pkt(uint32_t st, uint32_t d1, uint32_t d2)   /* as usb.c: the q
 }
 
 /* the shared budget: 3 POLY parts (ANALOG, DIGITAL, VOICE) play random notes on and off for 6 s, up to
- * 8 held each; after every block: at most 8 part voices sounding, none still fading after KILL_BLOCKS
- * (a stolen voice fades out), the VOICE part at most 4; then all off: every voice free */
+ * 8 held each (host_budget_fill holds the rest of a budget over 8 on tracks 5..7); after every block: at
+ * most NVBUDGET voices sounding on all the tracks, none still fading after KILL_BLOCKS (a stolen voice fades
+ * out), the VOICE part at most 4; then all off: every voice free */
 static int chk_budget(char *msg, uint32_t n)
 {
     static const uint8_t E[3] = {0, 1, 5};
@@ -531,6 +532,7 @@ static int chk_budget(char *msg, uint32_t n)
         trk[p].p[P_AMODE] = 0;
         trk[p].p[P_SUS] = 100;
     }
+    host_budget_fill();
     for (k = 0; k < 6u * FS / CTL; k++) {
         uint32_t i, a = 0, va = 0;
         if (k % 4u == 0u) {
@@ -545,9 +547,9 @@ static int chk_budget(char *msg, uint32_t n)
             }
         }
         blk();
-        for (p = 0; p < NPART; p++)
+        for (p = 0; p < NTRK; p++)
             for (i = 0; i < NVOICE; i++) {
-                static uint8_t fade_blocks[NPART][NVOICE];
+                static uint8_t fade_blocks[NTRK][NVOICE];
                 uint32_t f4 = trk[p].v[i].active && trk[p].v[i].stage == 4u;
                 a += trk[p].v[i].active && !f4;          /* sounding (a stolen voice fades out over KILL_BLOCKS) */
                 va += p == 2u && trk[p].v[i].active && !f4;
@@ -561,12 +563,15 @@ static int chk_budget(char *msg, uint32_t n)
         for (k = 0; k < 128u; k++)
             if (held[p][k])
                 trk_note_off(&trk[p], k);
+    for (p = 4; p < 7u; p++)                             /* (and the held rest of the budget) */
+        for (k = 0; k < 128u; k++)
+            trk_note_off(&trk[p], k);
     rel_at = fpos;
     finish();
     snprintf(msg, n, "3 POLY parts, random notes: at most %u voices active (budget %u), VOICE part at most %u (cap 4), "
              "%u voices taken, %u still fading after their KILL_BLOCKS, all free %.2f s after the note-offs",
-             worst, NVOICE, vworst, voice_kills - kills0, fading, R.free_s);
-    return worst <= NVOICE && vworst <= 4u && !fading && R.free_s >= 0 && voice_kills > kills0;
+             worst, NVBUDGET, vworst, voice_kills - kills0, fading, R.free_s);
+    return worst <= NVBUDGET && vworst <= 4u && !fading && R.free_s >= 0 && voice_kills > kills0;
 }
 
 /* a stolen voice fades: plain sines (filter open, no sends) on 3 parts; part 1 holds 7 notes, part 2 one,
@@ -585,9 +590,11 @@ static int chk_steal_fade(char *msg, uint32_t n)
         xfade_sine(&trk[p]);
     for (f = 0; f < frames; f += CTL) {
         uint32_t ms = f * 1000u / FS, k0 = voice_kills;
-        if (f == 0)
+        if (f == 0) {
             for (i = 0; i < 7u; i++)
                 trk_note_on(&trk[0], N1[i], 90);
+            host_budget_fill();                          /* (NVBUDGET over 8: the rest held on tracks 5..7) */
+        }
         if (f == at(0.5))
             trk_note_on(&trk[1], 74, 90);
         if (ms >= 1000u && f % (FS / 2u) < CTL && ms < 3500u)
@@ -635,6 +642,7 @@ static int chk_keep(char *msg, uint32_t n, uint32_t mode)
         trk[k].p[P_SUS] = 100;
     }
     trk_note_on(&trk[0], 40, 100);
+    host_budget_fill();                                  /* (NVBUDGET over 8: the rest held on tracks 5..7) */
     for (k = 0; k < 2u * FS / CTL; k++) {
         if (k % 3u == 0u)
             trk_note_on(&trk[1u + k / 3u % 2u], 50u + k / 3u % 40u, 100);
@@ -876,7 +884,7 @@ int main(int argc, char **argv)
 
     /* 4: the voice checks */
     k0 = nj;
-    add(J_CHECK, "voices: budget of 8 across 3 parts")->check = chk_budget;
+    add(J_CHECK, "voices: the shared budget across 3 parts")->check = chk_budget;
     add(J_CHECK, "voices: a stolen voice fades")->check = chk_steal_fade;
     add(J_CHECK, "voices: MONO keeps its note")->check = chk_keep_mono;
     add(J_CHECK, "voices: LEGATO keeps its note")->check = chk_keep_legato;
@@ -902,7 +910,7 @@ int main(int argc, char **argv)
             j->pi = (uint8_t)pi;
         }
     {   /* mixes: idle (subtracted from the presets' counts), idle + drums, DIGITAL + PHASE + VOICE asking
-         * 8 + 8 + 4 (the budget keeps 8) + drums */
+         * 8 + 8 + 4 (all 20 sound with NVBUDGET 20; the trainer keeps 8) + drums */
         job_t *j;
         j = add(J_CPU, "cpu/mix/3parts_heavy_now_drums");      /* (2.5 exp) FM6, GRAIN, TRIO */
         memset(cpu_parts[ncpu], 0, sizeof cpu_parts[ncpu]);
@@ -995,8 +1003,8 @@ int main(int argc, char **argv)
         if (r->tail_peak > LIM_TAIL)
             snprintf(why + strlen(why), sizeof why - strlen(why), " not silent at the end: peak %d (limit %d);",
                      r->tail_peak, LIM_TAIL);
-        if (r->vmax > NVOICE)
-            snprintf(why + strlen(why), sizeof why - strlen(why), " %u voices (budget %u);", r->vmax, NVOICE);
+        if (r->vmax > NVBUDGET)
+            snprintf(why + strlen(why), sizeof why - strlen(why), " %u voices (budget %u);", r->vmax, NVBUDGET);
         if (why[0]) {
             printf("regress: HEALTH FAIL  %s:%s\n", j->name, why);
             h_fail++;

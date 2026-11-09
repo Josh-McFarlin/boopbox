@@ -40,8 +40,8 @@ change of the firmware and is updated as the work goes on (the last section).
 
 - `core.h`: `NTRK 4`, `NPART 3`, `TRK_DRUM 3`; `is_drum(t)` is `t == TDRUM`; `ex_off[NTRK]`; `song.solo`/`song.rec`
   are bit masks (8 bits: room for 8 tracks).
-- **Voices** (`voice.c`): every synth part owns `v[NVOICE]` (8) but only `NVOICE` of all parts' voices sound at
-  once (`voices_busy`, `voice_victim`, `shed_voice`: loops over `NPART`). The drums have their own 6 voices
+- **Voices** (`voice.c`): every synth part owns `v[NVOICE]` (8) but only `NVOICE` of all parts' voices sounded at
+  once (now `NVBUDGET`, 20: see below) (`voices_busy`, `voice_victim`, `shed_voice`: loops over `NPART`). The drums have their own 6 voices
   (`drums.c NDRUM`) outside that budget.
 - **Engine state** (`engines.c`): GRAIN, DRAWBAR, FM6 and PHYS keep their big state in `eng_arena[NPART]`
   (3 x 8,592 B in the pool). FM6 also keeps per-part patch copies in RAM (`fm6_patch`, `fm6_eff`, `fm6_lfo`,
@@ -77,7 +77,8 @@ block at most, nudges, ratchets) and changes what is per track:
 1. **Eight tracks, each SYNTH or DRUM** (`track_t.kind`). `is_drum(t)` reads the kind; no index is special.
    The default project keeps the old layout on tracks 1..4 (three synths, drums on 4) and adds tracks 5..8
    (synths 5..7, a second drum track on 8) so that old projects open as they were.
-2. **One voice budget across all synth tracks**: `NVOICE` (8) sounding synth voices shared by the eight tracks,
+2. **One voice budget across all synth tracks**: `NVBUDGET` sounding synth voices shared by the eight tracks (20;
+   the trainer build 8, the budget its songs were approved with; a track still owns `NVOICE` (8)),
    with the existing priorities (released first, then extra UNISON voices, then held POLY voices that are not the
    bass). The drum voices stay a separate pool (`NDRUM`), now shared by every drum track with an owner per voice.
 3. **Big engine state is lent, not multiplied.** The three engine arenas become a pool of `NARENA` (3) slots lent

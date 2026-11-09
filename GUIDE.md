@@ -175,7 +175,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 | Track | Colour | Plays (at power-on) | Knob of the same colour |
 | --- | --- | --- | --- |
-| **1** | blue | a synth (the synth tracks share 8 voices) | KNOB 1 |
+| **1** | blue | a synth (the synth tracks share 20 voices) | KNOB 1 |
 | **2** | green | a synth | KNOB 2 |
 | **3** | yellow | a synth | KNOB 3 |
 | **4** | orange | a drum machine: 16 sounds, one per white key | KNOB 4 |
@@ -883,7 +883,7 @@ The **SAMPLE** sets are free recordings (CC0: Versilian Studios VSCO-2 CE and VC
 
 ### Polyphony
 
-The three synth tracks **share one pool of 8 voices**; the drum track has its own 6. Played on its own, each engine's maximum polyphony is:
+The synth tracks **share one pool of 20 voices** (BoopBox Trainer: 8); the drum tracks have their own 6. One track plays at most 8 at once; played on its own, each engine's maximum polyphony is:
 
 | Voices | Engines |
 | --- | --- |
@@ -892,7 +892,7 @@ The three synth tracks **share one pool of 8 voices**; the drum track has its ow
 | **4** | VOICE |
 | **3** | GRAIN, PHYS (SYMP model: **2**) |
 
-In **MONO** or **LEGATO** a track plays one note at a time; **UNISON** stacks detuned voices within the same cap. When more than one synth track sounds at once, the 8-voice pool is split between them: a part that needs a voice takes the oldest sounding one.
+In **MONO** or **LEGATO** a track plays one note at a time; **UNISON** stacks detuned voices within the same cap. When the synth tracks together ask for more than 20, a part that needs a voice takes the oldest sounding one (a released one first, never a track's bass). If the FM-1 runs short of time with many heavy voices (FM6, PHYS, TRIO...), it fades out the quietest voices one by one, as before.
 
 ### FM6 and DX7 patches
 

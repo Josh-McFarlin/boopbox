@@ -149,7 +149,7 @@ static void play(FILE *f, FILE *log, uint32_t bars)
             tsum[i] += n;
         }
         vmax = b > vmax ? b : vmax;
-        full += b >= NVOICE;
+        full += b >= NVBUDGET;
         for (i = 0; i < CTL * 2u; i++) {
             int32_t s = out[i] < 0 ? -out[i] : out[i];
             peak = (uint32_t)s > peak ? (uint32_t)s : peak;
@@ -165,7 +165,7 @@ static void play(FILE *f, FILE *log, uint32_t bars)
     }
     fprintf(log, "  %u bars, %.1f s: peak %.1f dBFS, rms %.1f dBFS, %u clipped samples; synth voices: at most %u, "
             "%u blocks at the budget of %u\n", bars, frames / (double)FS, 20 * log10(peak / 32768.0 + 1e-9),
-            10 * log10(sq / (double)(frames * 2u) / (32768.0 * 32768.0) + 1e-12), clip, vmax, full, NVOICE);
+            10 * log10(sq / (double)(frames * 2u) / (32768.0 * 32768.0) + 1e-12), clip, vmax, full, NVBUDGET);
     fprintf(log, "  voices given up (stolen or ended early): %u; per track max/mean:", kills);
     for (i = 0; i < NTRK; i++)
         if (!is_drum(&trk[i]))

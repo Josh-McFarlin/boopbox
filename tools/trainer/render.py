@@ -117,7 +117,7 @@ def main():
     src = os.path.join(OUT, "render_songs.c")
     open(src, "w").write("\n".join(body) + "\n")
     exe = os.path.join(OUT, "render_songs")
-    cc = ["cc", "-O2", "-w", "-I" + os.path.join(ROOT, "build", "gen"), "-I" + os.path.join(ROOT, "firmware", "src"),
+    cc = ["cc", "-O2", "-w", "-DNVBUDGET=8", "-I" + os.path.join(ROOT, "build", "gen"), "-I" + os.path.join(ROOT, "firmware", "src"),
           "-I" + os.path.join(ROOT, "firmware", "hal"), "-I" + os.path.join(ROOT, "tests"), "-o", exe, src, "-lm"]
     subprocess.check_call(cc)
     r = subprocess.call([exe])

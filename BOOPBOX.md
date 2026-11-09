@@ -519,7 +519,7 @@ The glow is a short pulse on every scan of the panel (about 900 times a second):
 
 | | |
 | --- | --- |
-| Tracks | 3 synth parts (8 voices shared) + drums (16 sounds, 6 voices) |
+| Tracks | 3 synth parts (20 voices shared) + drums (16 sounds, 6 voices) |
 | Sounds | 153 presets on 12 engines (browsed by kind, level-matched), 6-operator FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4) |
 | Sequencer | 64 steps per track, own length and division each (1/32 to two bars); chords with a level and ratchet per note; drums with a level and ratchet per sound; ties, slide; per-step nudge (±½ step in 1/64), parameter locks (24 per track, any sound parameter) and fill conditions (fill only / no fill); swing 0 (straight) to 100 (MPC 75 %); one sample-accurate clock for steps, arp, rolls, slicer and song (no drift) |
 | Performance | layers (hold a button: keys and knobs change job): punch-in FX, erase, note repeat, step entry, key / chords, mute / solo / fill / tap tempo; live sections on the bar and a quick chain of up to 8 |

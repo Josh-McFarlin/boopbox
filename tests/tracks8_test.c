@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Eight tracks (core.h NTRK): every track plays at once on its own length; the synth tracks share one budget of NVOICE
+/* Eight tracks (core.h NTRK): every track plays at once on its own length; the synth tracks share one budget of NVBUDGET
  * voices (the bass of each kept), the drum tracks one pool (each voice its track's: level, mute, choke); a track
  * changes kind while the transport runs (nothing left sounding); the engine arenas and the SLICER's STUT buffers are
  * lent, a fifth asker waits or plays live; MIDI channels CH5..CH8 in and out; the selected track changes without
@@ -130,7 +130,7 @@ static void t_eight(void)
         ok &= pk[i] > 500;
     check(ok, "eight tracks play together: every one heard (its meter), synths 1-3 5-7, drums 4 and 8");
     check(phase_ok, "each track on its own length (16 12 10 16 7 9 11 13): step = grid step mod LEN, every block");
-    check(busy_max <= NVOICE, "the synth voices sounding never pass the shared budget (NVOICE)");
+    check(busy_max <= NVBUDGET, "the synth voices sounding never pass the shared budget (NVBUDGET)");
     {
         uint32_t after = trk[4].seq_abs, ok2;
         ok2 = trk[4].seq_abs != SEQ_NONE && trk[0].seq_abs != SEQ_NONE && trk[4].seq_abs == trk[0].seq_abs;
@@ -170,7 +170,7 @@ static void t_budget(void)
                     bass_ok &= has;
                 }
     }
-    check(busy_max <= NVOICE && voice_kills > kills0, "24 notes asked of 8 voices: never more than 8 sound, the rest are taken (faded)");
+    check(busy_max <= NVBUDGET && voice_kills > kills0, "24 notes asked of the budget (NVBUDGET): never more sound, the rest are taken (faded)");
     check(bass_ok, "voice stealing keeps every track's bass (its lowest held note) while the chords run");
     transport_req = 2;
     blocks(4u * FS / CTL);
