@@ -164,7 +164,8 @@ the track's, the same for all its patterns. A new pattern starts empty, with the
 
 ### The PATTERNS screen (SEQ, after PLAY)
 
-Tap **SEQ** until the PATTERNS screen shows (NOTES, TIMING, PLAY, **PATTERNS**, SONG; on a drum track the DRUMS screen in place of NOTES). It shows the eight tracks as
+Hold **SEQ** and tap **SAVE**, from any page and track (1.7). Or tap **SEQ** until it shows (NOTES, TIMING, PLAY,
+**PATTERNS**, SONG; on a drum track the DRUMS grid in place of NOTES), or **SELECT** right from PLAY. It shows the eight tracks as
 rows and their eight patterns as columns:
 
 | Tile | Means |

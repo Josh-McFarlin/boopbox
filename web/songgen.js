@@ -162,7 +162,7 @@ export function makeLesson(score0, C) {
     const of = n > 1 || multi ? ` ${multi ? SEC[i] : ""}`.trimEnd() : "";
     let chose = false;
     if (cur[k] !== n) {
-      if (!onPatterns) add(`PATTERNS: ${label(i)}`, "TAP SEQ UNTIL PATTERNS", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
+      if (!onPatterns) add(`PATTERNS: ${label(i)}`, "HOLD SEQ, TAP SAVE", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
       add(`${label(i)}: PATTERN ${n}`, `TRACK ${t}: KNOB 1 TO ${n}, OCT+`, TG("PATSEL"), "SECTIONS", { trk: t - 1, v: n - 1 });
       cur[k] = n;
       chose = true;
@@ -212,7 +212,7 @@ export function makeLesson(score0, C) {
     const care = used.reduce((m, [, t]) => m | (1 << (t - 1)), 0);
     let muted = 0;
     add("STOP TO SAVE", "PRESS PLAY TO STOP", TG("PLAY"), "SECTIONS", { v: 0, btn: B("PLAY") });
-    add("THE SECTIONS", "TAP SEQ UNTIL PATTERNS", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
+    add("THE SECTIONS", "HOLD SEQ, TAP SAVE", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
     secs.forEach((s, i) => {
       const b = new Array(8).fill(255), on = used.filter(([k]) => pat[i][k]);
       for (const [k, t] of on) { b[t - 1] = pat[i][k] - 1; cur[k] = pat[i][k]; }

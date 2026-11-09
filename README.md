@@ -372,7 +372,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | Control | What it does |
 | --- | --- |
 | **MASTER** | volume (and the USB audio level, if USB AUDIO is on MASTER) |
-| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group (the tabs at the bottom name them) · DRUMS: grid / kit |
+| **SELECT** | on HOME and inside a layer: tempo · on a page: the previous / next page of its group (the tabs at the bottom name them; SEQ's include PATTERNS) · drums: kit ↔ sound |
 | **ALGORITHM** | the selected track, 1–8, on every page (1.2.0; the header names it) |
 | **PRESETS** | the selected track's sound, or the drum kit |
 | **KNOB 1–4** | the four values on the screen, each in its colour: on a page of values KNOB 1 top left, 2 top right, 3 bottom left, 4 bottom right; on TRACKS and the other full screens, the dials at the bottom |
@@ -380,7 +380,7 @@ Nothing to download or compile. Your projects, user presets, samples and setting
 | **FX · SEL · ENV · LFO · EDIT · GLO** (top row) | tap: their pages · hold FX, SEL, EDIT, GLO: a layer. **SEL** is the second button of the top row, between FX and ENV (not the SELECT knob) |
 | **HOME** | the TRACKS screen · on it: the full-screen visualiser (SELECT: 6 styles; HOME again closes it) · hold: the menu · tapped while a layer is held: lock it |
 | **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages · hold: the song layer |
-| **ARP · SEQ** | tap: their pages · hold: note repeat · steps |
+| **ARP · SEQ** | tap: their pages (SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS, SONG) · hold: note repeat · steps · hold SEQ + tap SAVE: the PATTERNS screen |
 | **PLAY** | start / stop all the tracks; its light flashes on every beat |
 | **REC** | playing: record now / stop · stopped: arm (the REC screen) · hold: clear the track |
 | **EDIT + OCT− / OCT+** | undo / redo |

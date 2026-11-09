@@ -233,14 +233,14 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **LFO** | LFO pages (LFO, LFO DEST) | — |
 | **FX** | FX pages (FX, FILTER, SLICER, DLY, REV/CHO) | punch-in layer |
 | **SEL** | SEL pages (SEL, SEL 2) | key / chord layer |
-| **EDIT** | EDIT pages (EDIT 1, EDIT 2, VOICE, VOICE 2) · on TRACKS with the drum track: the **DRUMS** screen · on DRUMS: grid ↔ kit · on the NOTES page: delete the note | erase layer |
+| **EDIT** | EDIT pages (EDIT 1, EDIT 2, VOICE, VOICE 2) · with the drum track: the **DRUMS** screen's **kit** page, again: kit ↔ **sound** · on the NOTES page: delete the note | erase layer |
 | **ARP** | ARP pages (ARP, ARP 2) | note-repeat layer |
-| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, then the PATTERNS and SONG screens) · with the drum track: the **DRUMS** screen in place of NOTES (2.7.1: from any page; it opened STEP from ARP's) · on DRUMS: grid ↔ kit | step layer |
+| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer · held + **SAVE** tapped: the **PATTERNS** screen |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select the track, on every screen but SONG (its loop start); on DRUMS a synth track goes to its NOTES, on NOTES a drum track to its DRUMS grid (1.4.2). Inside a layer it waits; not during a free take | — |
 | **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it (a drum track: its **kits**) · on the DRUMS screen: the kit | — |
-| **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends) · DRUMS screen: grid ↔ kit · visualiser: the style · menu: the section | — |
+| **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends; SEQ: NOTES or the DRUMS grid, TIMING, PLAY, PATTERNS) · DRUMS kit / sound: kit ↔ sound · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
 | **MASTER** | output volume (the visualiser ignores it) | — |
 
@@ -313,7 +313,16 @@ Every kit is level-matched. The kit is saved with projects and song sections. Ch
 
 ### The DRUMS screen
 
-Open it with **EDIT** or **SEQ** tapped on the TRACKS screen while the drum track is selected. It has three pages, grid, kit and (2.7) sound; **EDIT / SEQ tapped** goes to the next one, **SELECT** right / left walks them. After sound, **SEQ** goes on to the **PATTERNS** screen (1.4.2: a drum track's way there), and SEQ there back to the grid.
+It has three pages, grid, kit and (2.7) sound, in two groups, as on a synth track (1.7):
+
+- **SEQ** tapped with the drum track selected opens the **grid**: it is the drum track's first SEQ page, in place of
+  NOTES. SEQ again (or **SELECT** right) goes on through the other SEQ pages, **TIMING**, **PLAY** and **PATTERNS**,
+  then the SONG screen, exactly as from a synth track's NOTES.
+- **EDIT** tapped with the drum track selected opens the **kit**; EDIT again (or **SELECT**) switches kit ↔ **sound**.
+  SEQ from either goes back to the grid.
+
+The top right of the screen names the page you are on and where SEQ or EDIT goes next. Hold **SEQ** and tap **SAVE**
+for the PATTERNS screen from anywhere.
 
 **Grid page** — the 16 sounds × 16 steps, levels as shades, ratchets as notches.
 
@@ -553,7 +562,7 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while recording or 
 
 **The DRUMS grid has the same sheet** (2.7.2): on the grid, **OCT+ held** opens it for the hit of KNOB 1's sound on KNOB 2's step: **RATCHET** (x1 … x4), **NUDGE** and **FILL** (the step's: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step), **DELETE** (OCT+); OCT− closes it. OCT+ tapped still turns the page of steps.
 
-The **TIMING** page (tap SEQ again; called PATTERN before) holds the pattern's **LEN** and the track's **DIV**, **SWG** (swing) and **GATE** (how long each note lasts). Tap SEQ again for the **PLAY** page (the play direction and the random seed), then the **PATTERNS** screen (eight patterns a track) and the **SONG** screen. On the drum track, SEQ opens the [DRUMS screen](#the-drums-screen) in place of NOTES; TIMING, PLAY, PATTERNS and SONG work the same.
+The **TIMING** page (tap SEQ again; called PATTERN before) holds the pattern's **LEN** and the track's **DIV**, **SWG** (swing) and **GATE** (how long each note lasts). Tap SEQ again for the **PLAY** page (the play direction and the random seed), then the **PATTERNS** screen (eight patterns a track) and the **SONG** screen. **SELECT** walks NOTES, TIMING, PLAY and PATTERNS both ways (1.7), and **SEQ held + SAVE** goes straight to PATTERNS. SEQ tapped from any other page always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES; TIMING, PLAY, PATTERNS and SONG work the same.
 
 ### Nudge (micro timing)
 
@@ -733,7 +742,7 @@ The song's settings can only be edited while it is stopped (*STOP FIRST*). An em
 | **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat; each track with its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** a coloured **A–D** badge by the title shows which section is playing. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track; on a muted track: unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
 | **Visualiser** | tap **HOME** on TRACKS | full-screen visualiser, six styles; see [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the layer's colour |
-| **DRUMS** (grid / kit) | tap **EDIT** or **SEQ** on TRACKS with the drum track | see [The DRUMS screen](#the-drums-screen) |
+| **DRUMS** (grid / kit / sound) | tap **SEQ** (grid) or **EDIT** (kit) with the drum track | see [The DRUMS screen](#the-drums-screen) |
 | **REC READY / FREE TAKE / COUNT-IN** | **REC** while stopped | the tracks, then **mode · length · start · quant** on KNOB 1–4 (4-3-2-1 during a count-in); in a free take: the seconds and the loop it would make |
 | **Hold ring** | hold **REC** | the ring of *clear track* filling |
 | **SONG** | tap **SAVE** on TRACKS, or **SAVE + key 16** | the section chain; see [The SONG screen](#the-song-screen) |
@@ -1383,8 +1392,9 @@ If the official firmware comes up with odd settings or a scrambled display, it i
 | tap HOME | TRACKS · on TRACKS: visualiser |
 | hold HOME | menu |
 | tap SAVE | on TRACKS: SONG screen · else SAVE pages |
-| tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their pages (again: next page) |
-| tap EDIT / SEQ on TRACKS, drum track | DRUMS screen (again: grid ↔ kit) |
+| tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
+| hold SEQ + tap SAVE | PATTERNS screen |
+| tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS) / kit (again: sound) |
 | OCT− / OCT+ | octave (both: 0) · drums: ghost / hard while held |
 | ALGORITHM | track |
 | PRESETS | sound · drum kit |

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The PATTERNS and CHORDS screens.
- * PATTERNS (SEQ, a screen of its own, before SONG): the eight tracks' patterns (patbank.c) as a grid, a row a track,
+ * PATTERNS (the last SEQ page: NOTES, TIMING, PLAY, PATTERNS, then SONG; SELECT walks to it, SEQ held + SAVE opens it
+ * from anywhere, 1.7): the eight tracks' patterns (patbank.c) as a grid, a row a track,
  * a column a pattern: lit, the one playing; dim, one that holds something; dark, an empty one; a white frame blinking,
  * the one asked for (it waits for its boundary); a dot under it, a pattern of the track's chain.
  *   ALGORITHM the track, KNOB 1 the pattern (the cursor), OCT+ asks for it on the track, OCT- on every track (they
@@ -57,6 +58,7 @@ UI_SMALL static void pats_screen_draw(void)
     cv_begin(240, 42, C_BLACK);                  /* the head (and the two rows over the grid: never left from another screen) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
     cv_text(4, 4, &FONT_L, "PATTERNS", C_WHITE);
+    cv_text(4, 24, &FONT_S, "< play   seq: song", UI_G3);   /* (1.7) SELECT left: PLAY; SEQ again: SONG */
     str_cpy(b, "q ", 3);
     str_cpy(b + 2, QN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
     ui_text_r(4, b, UI_COL[2]);
@@ -138,14 +140,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
         if (b == B_PLAY) {
             if (!ft_owns_press())
                 transport_req = song.playing ? 2 : 1;
-        } else if (b == B_SEQ) {
-            if (is_drum(t)) {                        /* a drum track: back to its grid (1.4.2: GRID KIT SOUND PATTERNS) */
-                drum_page = 0;
-                studio_open(SC_DRUM);
-            } else
-                open_family(FAM_SEQ);                /* (the next SEQ screen: SONG) */
-            return;
-        } else if (b == B_OCTUP) {
+        } else if (b == B_OCTUP) {                   /* (SEQ tapped: the next SEQ screen, SONG: ui_input.c layer_tap) */
             pats_ask(sel, pats_cursor);
             ui_message(song.playing ? "PATTERN ASKED" : "PATTERN");
         } else if (b == B_OCTDN) {
@@ -161,6 +156,11 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
             return;
         }
     }
+    if ((s = panel_enc(EN_SELECT)) != 0 && (rec_wait || ft_on)) {
+        sel_tempo(s);                                /* (the REC screen, a take: SELECT the tempo, as on every page) */
+    } else if (s && page_walk(s) && !on_pats_page())
+        return;                                      /* (1.7) SELECT: the SEQ pages, as on NOTES, TIMING, PLAY (left:
+                                                      * PLAY; PATTERNS is the last of them) */
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on)     /* (ALGORITHM picks the track here too, as on TRACKS) */
         track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
     for (k = 0; k < 4u; k++) {

@@ -971,7 +971,8 @@ UI_SMALL static void draw_graph(void)
 }
 
 /* the page shown: its place in its family and how many (*n), as SELECT walks them (2.7: the screens of their own, SONG
- * and DRUMS, are not counted: SEQ is NOTES 1/3, TIMING 2/3, PLAY 3/3; the page shown always counts) */
+ * and DRUMS, are not counted; 1.7: PATTERNS is: SEQ is NOTES 1/4, TIMING 2/4, PLAY 3/4, PATTERNS 4/4; the page shown
+ * always counts) */
 UI_SMALL static uint32_t page_pos(uint32_t *n)
 {
     const page_t *pg = cur_page();
@@ -979,8 +980,7 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
     *n = 0;
     for (i = 0; i < NPAGES; i++)
         if (PAGES[i].fam == pg->fam && (i == ui.page || (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG &&
-                                                         PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_PATS &&
-                                                         PAGES[i].scope != SC_HARM))) {
+                                                         PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_HARM))) {
             (*n)++;
             if (i == ui.page)
                 k = *n;
@@ -992,6 +992,8 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
 UI_SMALL static const char *page_name(uint32_t i)
 {
     const engine_t *e = ENGINES[TSEL->eng_req % NENGINES];
+    if (PAGES[i].scope == SC_STEP && is_drum(TSEL))
+        return "GRID";                                /* (1.7) the drum track's NOTES: its DRUMS grid */
     return PAGES[i].scope == SC_ENGINE ? e->page_title[PAGES[i].id[0] != P_E0] : PAGES[i].title;
 }
 /* (1.2) the page before (d < 0) or after the one shown in its family, as SELECT walks them; -1 at the ends */
@@ -1000,8 +1002,7 @@ UI_SMALL static int32_t page_nb(int32_t d)
     uint32_t fam = cur_page()->fam;
     int32_t i = (int32_t)ui.page + d;
     for (; i >= 0 && i < (int32_t)NPAGES && PAGES[i].fam == fam; i += d)
-        if (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG && PAGES[i].scope != SC_DRUM &&
-            PAGES[i].scope != SC_PATS && PAGES[i].scope != SC_HARM)
+        if (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG && PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_HARM)
             return i;
     return -1;
 }

@@ -13,6 +13,24 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**Pages that are easier to find** ([the controls](BOOPBOX.md#the-panel-tap-hold-layers)):
+
+- **PATTERNS is a page like the others.** SELECT walks the SEQ pages NOTES, TIMING, PLAY and **PATTERNS** both ways,
+  the tabs at the bottom name it, and the page counter counts it (NOTES 1/4 … PATTERNS 4/4).
+- **Hold SEQ and tap SAVE: the PATTERNS screen**, from any page and any track. SAVE alone still opens SONG or the SAVE
+  pages.
+- **A button always opens its first page** when you come from another page (SEQ: NOTES), so the same taps always reach
+  the same page. It no longer remembers the page you last used in that group.
+- **The drum track's SEQ works like a synth track's:** SEQ opens the grid (in place of NOTES), then TIMING, PLAY,
+  PATTERNS and SONG. The **kit** and **sound** pages moved to **EDIT** (EDIT: kit, again: sound), and SELECT there
+  switches kit ↔ sound. The top right of the DRUMS screen names the page and what comes next. Before, SEQ went grid →
+  kit → sound → PATTERNS on the drum track only.
+- BoopBox Trainer's coach says *HOLD SEQ, TAP SAVE* for the PATTERNS screen.
+
+Projects, songs, presets and settings open as they are.
+
 ## 1.6.0
 
 **20 synth voices:** the synth tracks now **share 20 voices** instead of 8 ([polyphony](GUIDE.md#polyphony)):
