@@ -330,6 +330,18 @@ nrpn() {
         { echo "docs/NRPN.md differs from the firmware: $OUT/nrpn_test --write docs/NRPN.md"; return 1; }
 }
 run "NRPN: track parameters by CC99/98, 14-bit CC6/38, selection kept and ended, drums, engines; docs/NRPN.md current" nrpn
+# (1.9.2) a parameter's description is 12 B (core.h param_desc_t: min int8, max uint8, def int8): a value that does not
+# fit would be cut silently at -w; this compile of the whole firmware (every engine's table) refuses it
+desc_fit() {
+    if $CC --version 2>/dev/null | grep -qi clang; then w=constant-conversion; else w=overflow; fi   # (gcc: -Woverflow)
+    # (not -w: it would turn the check off too; the other warnings are left out of the log)
+    if $CC -fsyntax-only -Werror=$w -Ibuild/gen -Ifirmware/src -Ifirmware/hal tests/ui_pages_test.c > "$OUT/desc_fit.txt" 2>&1; then
+        echo "descriptors: every range fits the 12-byte description (-Werror=$w)"
+    else
+        grep -A3 "error" "$OUT/desc_fit.txt"; return 1
+    fi
+}
+run "parameter descriptions: every min, max and default fits (12 B a description)" desc_fit
 run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" \
     cc_run lock_test "$GH" tests/lock_test.c
 run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" \

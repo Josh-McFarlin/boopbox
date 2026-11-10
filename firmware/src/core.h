@@ -58,13 +58,23 @@ enum {
     F_FILT                      /* -64..63: the DJ filter, LP <- OFF -> HP */
 };
 
+/* a parameter's description (12 B: docs/memory-savings-analysis.md F3). Every range fits: min -128..0, max 0..255,
+ * def -128..127 (tests/run_tests.sh desc_fit: a value that does not fit fails the compile) */
 typedef struct {
     const char *label;
-    uint8_t fmt;
-    int16_t min, max, def;
+    uint8_t fmt;                /* F_* (bits 0..3) | U_* (bits 4..5: its unit): desc_fmt, desc_unit */
+    int8_t min;
+    uint8_t max;
+    int8_t def;
     const char *const *names;   /* F_ENUM */
-    const char *unit;           /* F_INT / F_ENUM optional unit */
 } param_desc_t;
+enum { U_NONE, U_CT = 1u << 4, U_HZ = 2u << 4, U_ST = 3u << 4 };   /* an F_INT / F_ENUM value's unit */
+#define desc_fmt(d) ((uint32_t)(d)->fmt & 15u)
+static const char *desc_unit(const param_desc_t *d)
+{
+    static const char *const U[4] = {0, "ct", "Hz", "st"};
+    return U[(d->fmt >> 4) & 3u];
+}
 
 enum {                          /* per-track parameters */
     P_LEVEL,

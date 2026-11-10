@@ -71,8 +71,8 @@ static const char *const N_ENGNAME[] = {"ANALOG", "DIGITAL", "PHASE", "LOFI", "S
 #endif
 };
 
-#define PD(l, f, mn, mx, df) {l, f, mn, mx, df, 0, 0}
-#define PE(l, n, df) {l, F_ENUM, 0, (int16_t)(sizeof(n) / sizeof(n[0]) - 1), df, n, 0}
+#define PD(l, f, mn, mx, df) {l, f, mn, mx, df, 0}
+#define PE(l, n, df) {l, F_ENUM, 0, (uint8_t)(sizeof(n) / sizeof(n[0]) - 1), df, n}
 
 static const param_desc_t TP[P_COUNT] = {
     [P_LEVEL] = PD("LVL", F_DB, 0, 127, 104),
@@ -175,7 +175,7 @@ static const param_desc_t GP[G_COUNT] = {
     [G_SYNC] = PE("SYNC", N_SYNC, 0),           /* a setting of the FM-1, not of a project (panel.c lights_sync) */
     [G_ROUTE] = PE("IN", N_MIN, 0),             /* MIDI IN: NOTES (and the clock), CLOCK only, or CH n: that channel only (a setting of the FM-1) */
     [G_INFO] = PD("CPU", F_INT, 0, 0, 0),
-    [G_SLOT] = {"SECT", F_INT, 1, 4, 1, N_SECT, 0},     /* (2.7: A..D, the song's sections; "SLOT" 1..4 before) */
+    [G_SLOT] = {"SECT", F_INT, 1, 4, 1, N_SECT},     /* (2.7: A..D, the song's sections; "SLOT" 1..4 before) */
     [G_NAME] = PE("NAME", N_DASH, 0),
     [G_LOAD] = PE("LOAD", N_GO, 0),
     [G_SAVE] = PE("SAVE", N_GO, 0),
@@ -238,11 +238,11 @@ static const param_desc_t DRUM_MIX_DESC[3] = {PD("LVL", F_INT, 0, 127, 100), PD(
                                               PD("DLY", F_INT, 0, 127, 0)};
 /* the INSERT's A B C as its TYPE means them (TP's ranges and defaults): the drives DRIVE TONE LEVEL, CRUSH BITS RATE
  * LPF, the swept ones RATE DEPTH FDBK; OFF TP's own */
-#define PU(l, f, df, n, u) {l, f, 0, 127, df, n, u}
+#define PU(l, f, df, n, u) {l, (f) | (u), 0, 127, df, n}
 static const param_desc_t INS_DESC[3][3] = {
-    {PU("DRIVE", F_PCT, 64, 0, 0), PU("TONE", F_CUTOFF, 96, 0, 0), PU("LEVEL", F_DB, 96, 0, 0)},
-    {PU("BITS", F_INT, 64, N_IBITS, 0), PU("RATE", F_INT, 96, N_IRATE, "Hz"), PU("LPF", F_CUTOFF, 96, 0, 0)},
-    {PU("RATE", F_LFOHZ, 64, 0, 0), PU("DEPTH", F_PCT, 96, 0, 0), PU("FDBK", F_PCT, 96, 0, 0)},
+    {PU("DRIVE", F_PCT, 64, 0, U_NONE), PU("TONE", F_CUTOFF, 96, 0, U_NONE), PU("LEVEL", F_DB, 96, 0, U_NONE)},
+    {PU("BITS", F_INT, 64, N_IBITS, U_NONE), PU("RATE", F_INT, 96, N_IRATE, U_HZ), PU("LPF", F_CUTOFF, 96, 0, U_NONE)},
+    {PU("RATE", F_LFOHZ, 64, 0, U_NONE), PU("DEPTH", F_PCT, 96, 0, U_NONE), PU("FDBK", F_PCT, 96, 0, U_NONE)},
 };
 #undef PU
 CTL_SMALL static const param_desc_t *ins_desc(int32_t type, uint32_t k)
@@ -252,9 +252,9 @@ CTL_SMALL static const param_desc_t *ins_desc(int32_t type, uint32_t k)
     return &INS_DESC[type < 5 ? 0 : type == 5 ? 1 : 2][k % 3u];   /* (SOFT .. FUZZ, CRUSH, the swept ones) */
 }
 static const param_desc_t ESYNC_DESC[3] = {   /* ATK DEC REL with ENV SYNC on: the range and defaults as ever */
-    {"ATK", F_INT, 0, 127, 10, ESYNC_NAMES, 0},
-    {"DEC", F_INT, 0, 127, 70, ESYNC_NAMES, 0},
-    {"REL", F_INT, 0, 127, 60, ESYNC_NAMES, 0},
+    {"ATK", F_INT, 0, 127, 10, ESYNC_NAMES},
+    {"DEC", F_INT, 0, 127, 70, ESYNC_NAMES},
+    {"REL", F_INT, 0, 127, 60, ESYNC_NAMES},
 };
 
 CTL_SMALL static const param_desc_t *track_desc(const track_t *t, uint32_t id)
@@ -353,7 +353,7 @@ static uint32_t exp_scale(uint32_t scale, uint32_t v, uint32_t k24)
 static void param_format(const param_desc_t *d, int32_t v, char *val, const char **unit)
 {
     *unit = "";
-    switch (d->fmt) {
+    switch (desc_fmt(d)) {
     case F_PCT:                                       /* of the range: 0 .. 100 % */
         fmt_int(val, d->max > 0 ? (v * 100 + d->max / 2) / d->max : v);
         *unit = "%";
@@ -443,8 +443,8 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         break;
     case F_ENUM:
         str_cpy(val, d->names[v < d->min ? d->min : v > d->max ? d->max : v], 9);   /* (1.2: eight letters, MASTER whole; the columns cut to their width) */
-        if (d->unit)
-            *unit = d->unit;
+        if (desc_unit(d))
+            *unit = desc_unit(d);
         break;
     case F_BPM:
         fmt_int(val, v);
@@ -469,8 +469,8 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         } else {
             fmt_int(val, v);
         }
-        if (d->unit)
-            *unit = d->unit;
+        if (desc_unit(d))
+            *unit = desc_unit(d);
         break;
     }
 }
@@ -491,7 +491,7 @@ static const char *const N_DIR[] = {"FWD", "REV", "PEND", "RAND"};   /* core.h D
 static const char *const N_HFOL[] = {"OFF", "TRANS", "SCALE"};      /* harmony.c HF_* */
 static const param_desc_t PS_DESC[PS_COUNT] = {
     [PS_DIR] = PE("DIR", N_DIR, 0),
-    [PS_SEED] = {"SEED", F_INT, 0, 255, 0, 0, 0},
+    [PS_SEED] = {"SEED", F_INT, 0, 255, 0, 0},
     [PS_HFOL] = PE("FOLLOW", N_HFOL, 0),
 };
 enum { GR_NONE, GR_ADSR, GR_LFO, GR_STEPS, GR_ARP, GR_SCALE, GR_FX, GR_ROLL, GR_BROWSE, GR_SLOTS, GR_USER, GR_TRK,

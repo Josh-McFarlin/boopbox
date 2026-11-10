@@ -94,7 +94,7 @@ UI_SMALL static uint32_t param_icon(const param_desc_t *d, int32_t v)
     uint32_t i;
     if (!d)
         return ICON_NONE;
-    if (d->fmt == F_ENUM && d->names && v >= d->min && v <= d->max &&
+    if (desc_fmt(d) == F_ENUM && d->names && v >= d->min && v <= d->max &&
         (str_eq(d->label, "WAVE") || str_eq(d->label, "WAVE2")))
         for (i = 0; i < sizeof(WAVE_ICON) / sizeof(WAVE_ICON[0]); i++)
             if (str_eq(d->names[v], WAVE_ICON[i].label))
