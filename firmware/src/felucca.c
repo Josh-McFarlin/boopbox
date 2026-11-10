@@ -6,6 +6,17 @@
 #include "fm1_sys.h"
 #include "fm1_irq.h"
 #include "fm1_guard.h"
+/* (1.8) the key velocity and aftertouch (src/keyvel.c; off unless MENU > KEYS asks): the scan's samples of rows PA7 /
+ * PA8, a press's wait for its strike */
+static void kv_sample(uint32_t key, uint32_t v, uint32_t driven, uint32_t now_ms);
+static int kv_drive(uint32_t key);
+static void kv_note_on(uint32_t k);
+static void kv_tick(void);
+static volatile uint32_t fm1_ms;
+#define FM1_INPUT_ANALOG(col, rowbit, v, driven) kv_sample(fm1_an_note(col, rowbit), v, driven, fm1_ms)
+#define FM1_INPUT_DRIVE(col, rowbit) kv_drive(fm1_an_note(col, rowbit))
+#define FM1_INPUT_NOTE_ON(k) kv_note_on(k)
+#define FM1_INPUT_TICK() kv_tick()
 #include "fm1_input.h"
 #include "fm1_timer.h"
 #include "fm1_audio.h"

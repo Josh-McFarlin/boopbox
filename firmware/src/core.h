@@ -485,6 +485,10 @@ static inline int32_t expr_gain(int32_t lvl, uint32_t k)
     uint32_t e = 127u - ex_off[k % NTRK];
     return e >= 127u ? lvl : (int32_t)(((uint32_t)lvl * ((e * e * 16384u + 8064u) / 16129u)) >> 14);
 }
+/* (1.8) aftertouch per track, 0..127: the keys' pressure (keyvel.c, seq.c kv_block) or MIDI channel pressure, whichever
+ * is higher; at_vib: MENU > KEYS > AFTERTOUCH's target, 0 FILTER (opens the track's filter), 1 VIBRATO (the track's LFO
+ * on the pitch). 0, as before 1.8: nothing changes (voice.c track_render) */
+static volatile uint8_t trk_at[NTRK], at_vib;
 static volatile uint8_t thr_ed;          /* (2.7) the editor's LIVE page: its own THROWs (editor_live.c), with thr_req's */
 /* (2.7) the editor's LIVE page: the master level from there (0: the MASTER knob; 1..127: its level + 1). The knob takes
  * it back when it is turned (main.c); ed_master_k: the knob's reading when the page set it (0xFFFF: not read yet) */

@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include "fm1_cc.h"
 
+#ifndef FM1_XIP                     /* (1.8: the browser emulator maps it onto its memory flash, firmware/host/emu.c) */
 #define FM1_XIP(off) (0x02000000u + (uint32_t)(off) - 0x4000u)
+#endif
 
 FM1_INLINE const uint8_t *fm1_xip_ptr(uint32_t off) { return (const uint8_t *)FM1_XIP(off); }

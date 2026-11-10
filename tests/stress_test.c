@@ -13,7 +13,7 @@
  *   bench   (BENCH=1) host time per audio block of a worst case (3 FM6 parts, 4-note chords, ratchets,
  *           240 BPM) with the 2.4 additions (strum 60 ms, voice leading, the track filter on all four
  *           tracks) against the same without them; the visualiser's draw time per style against the
- *           TRACKS screen; FONT_L text drawn from S against a stored 2x copy
+ *           TRACKS screen; FONT_L text (S at 2x) against FONT_S
  * Run it under -fsanitize=address,undefined too: any read or write out of bounds stops it.
  *   stress_test [FRAMES [SEED]]   (default 40000: about 11 minutes of use) */
 #define UI_PAGES_HARNESS_ONLY 1
@@ -27,59 +27,27 @@ static void scheck(int ok, const char *what) { if (!ok) { printf("FAIL %s\n", wh
 static double st_ns(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e9 + t.tv_nsec; }
 
 /* ---- font ---- */
-static uint8_t big_data[64 * 24 * 32 / 2 + 64];   /* the old FONT_L: S enlarged and stored (reference only) */
-static uint16_t big_off[64];
-static felucca_font_t FONT_L2X;
-
-static void font_ref_build(void)
-{
-    uint32_t gi, o = 0;
-    for (gi = 0; gi < 64u; gi++) {
-        uint32_t ws = FONT_S.bw[gi], wb = FONT_L.bw[gi], bs = (ws + 1u) / 2u, bb = (wb + 1u) / 2u, x, y;
-        const uint8_t *s = FONT_S.data + FONT_S.off[gi];
-        big_off[gi] = (uint16_t)o;
-        for (y = 0; y < 32u; y++)
-            for (x = 0; x < wb; x++) {
-                uint32_t sx = x / 2u, v;
-                if (FONT_S.bits == 1u) {                  /* (2.6: S at 1 bit a pixel) */
-                    uint32_t i = (y / 2u) * ws + sx;
-                    v = (s[i >> 3] >> (7u - (i & 7u))) & 1u ? 15u : 0u;
-                } else {
-                    v = s[(y / 2u) * bs + sx / 2u];
-                    v = (sx & 1u) ? (v & 15u) : (v >> 4);
-                }
-                if (x & 1u) big_data[o + y * bb + x / 2u] |= (uint8_t)v;
-                else big_data[o + y * bb + x / 2u] = (uint8_t)(v << 4);
-            }
-        o += 32u * bb;
-        assert(o <= sizeof big_data);
-    }
-    FONT_L2X = FONT_L;
-    FONT_L2X.sh = 0;
-    FONT_L2X.bits = 0;                                /* (the reference: 4-bit, stored at 2x) */
-    FONT_L2X.off = big_off;
-    FONT_L2X.data = big_data;
-}
-
 static void t_font(void)
 {
     static uint16_t a[CV_MAX];
-    uint32_t c, i, bad = 0, n = 0;
+    uint32_t c, i, x, y, bad = 0, n = 0;
     char s[48];
-    font_ref_build();
-    scheck(FONT_L.data == FONT_S.data && FONT_L.sh == 1u && FONT_L.h == 2u * FONT_S.h && FONT_L.first == FONT_S.first,
+    scheck(FONT_L.sh == 1u && FONT_L.h == 2u * FONT_S.h && FONT_L.first == FONT_S.first,
            "font: FONT_L draws FONT_S's bitmaps at 2x");
     for (c = 32; c < 128u; c++) {                     /* every character, lower case folding to capitals */
         s[0] = (char)c; s[1] = 0;
-        cv_begin(40, 40, C_BLACK); cv_text(6, 3, &FONT_L2X, s, C_HI);
-        memcpy(a, cv_px, sizeof(uint16_t) * 40u * 40u);
-        cv_begin(40, 40, C_BLACK); cv_text(6, 3, &FONT_L, s, C_HI);
-        for (i = 0; i < 40u * 40u; i++) { n++; bad += a[i] != cv_px[i]; }
-        scheck(text_w(&FONT_L, s) == text_w(&FONT_L2X, s) && text_w(&FONT_L, s) == 2 * text_w(&FONT_S, c < 'a' || c > 'z' ? s : "A"),
-               "font: L advance = 2 x S");
+        {   /* the S glyph L must show: the capital; past '_' (L's last) '?' */
+            char r[2] = {(char)(c >= 'a' && c <= 'z' ? c - 32u : c > 95u ? '?' : c), 0};
+            cv_begin(20, 20, C_BLACK); cv_text(0, 0, &FONT_S, r, C_HI);
+        }
+        memcpy(a, cv_px, sizeof(uint16_t) * 20u * 20u);
+        cv_begin(40, 40, C_BLACK); cv_text(0, 0, &FONT_L, s, C_HI);
+        for (y = 0; y < 40u; y++)
+            for (x = 0; x < 40u; x++) { n++; bad += a[(y / 2u) * 20u + x / 2u] != cv_px[y * 40u + x]; }
+        scheck(text_w(&FONT_L, s) == 2 * text_w(&FONT_S, s), "font: L advance = 2 x S");
     }
     printf("font: %u characters, %u pixels compared, %u different\n", 96u, n, bad);
-    scheck(bad == 0, "font: FONT_L from S at 2x = the stored 2x font, pixel for pixel");
+    scheck(bad == 0, "font: FONT_L = FONT_S at 2x, pixel for pixel");
     for (i = 0; i < 20000u; i++) {                    /* random text anywhere, partly or wholly off the canvas */
         uint32_t len = rn(40), k, w = 1u + rn(240), h = 1u + rn(124);
         const felucca_font_t *f = rn(2) ? &FONT_L : &FONT_S;
@@ -359,15 +327,15 @@ static void t_bench(void)
     printf("bench: draw a frame: TRACKS screen %.1f us;", home / 1000);
     for (s = 0; s < VIS_N; s++) printf(" %s %.1f%s", VIS_NAME[s], v[s] / 1000, s + 1u < VIS_N ? "," : " us\n");
     vis_on = 0; go_home(); frames(4);
-    for (i = 0; i < 3000u; i++) {                     /* FONT_L from S (shifts) against the stored 2x copy */
+    for (i = 0; i < 3000u; i++) {                     /* FONT_L (S at 2x) against FONT_S */
         double t0 = st_ns();
         cv_begin(240, 32, C_BLACK); cv_text(2, 0, &FONT_L, TXT[i % 6u], C_HI);
         a += st_ns() - t0;
         t0 = st_ns();
-        cv_begin(240, 32, C_BLACK); cv_text(2, 0, &FONT_L2X, TXT[i % 6u], C_HI);
+        cv_begin(240, 32, C_BLACK); cv_text(2, 0, &FONT_S, TXT[i % 6u], C_HI);
         b += st_ns() - t0;
     }
-    printf("bench: a large value drawn: %.2f us from S at 2x, %.2f us from a stored 2x copy (%+.0f %%)\n",
+    printf("bench: a value drawn: %.2f us large (S at 2x), %.2f us small (%+.0f %%)\n",
            a / 3000 / 1000, b / 3000 / 1000, (a / b - 1) * 100);
     transport_req = 2; frames(4);
 }

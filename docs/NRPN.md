@@ -1,0 +1,192 @@
+# BoopBox: the NRPN map
+
+<!-- Generated from firmware/src/params.c and the engines by tests/nrpn_test.c (`nrpn_test --write`);
+     tests/run_tests.sh fails when this file and the firmware differ. Do not edit by hand. -->
+
+Every parameter of a track's sound, mix and sequencer can be set over MIDI with an **NRPN** (after JIANT FM's
+NRPN map), with more resolution than a CC. The CC map (CC5 7 10 71..75 91 93 94, CC11, CC64) and MIDI LEARN are
+unchanged.
+
+- **Select:** CC99 (NRPN MSB) **0**, then CC98 (NRPN LSB) the parameter's number below, on the channel the
+  track plays (GLO > MIDI: IN = CH n sends it to the selected track).
+- **The value:** CC6 (data entry MSB) then CC38 (LSB): 14 bits, 0..16383, over the parameter's range:
+  `v = min + (x * (max - min) + 8191) / 16383`. CC6 alone is a 7-bit value (`x = msb * 129`).
+- The parameter stays selected: more CC6 / CC38 set it again. CC99 with another value, or CC101 / CC100 (an
+  RPN), end the selection. Nothing is selected at power-on.
+- A **drum track** takes LVL, REV and DLY over its own drum mix ranges; its other numbers set the track's
+  values as on a synth track.
+
+## Track parameters (CC99 0)
+
+| CC98 | parameter | range | default | values |
+| --- | --- | --- | --- | --- |
+| 0 | LVL | 0..127 | 104 | |
+| 1 | ATK | 0..127 | 10 | |
+| 2 | DEC | 0..127 | 70 | |
+| 3 | SUS | 0..127 | 90 | |
+| 4 | REL | 0..127 | 60 | |
+| 5 | FLT | -64..63 | 0 | |
+| 6 | PIT | -64..63 | 0 | |
+| 7 | SHP | -64..63 | 0 | |
+| 8 | TRIM | -64..63 | 0 | |
+| 9 | RATE | 0..127 | 60 | |
+| 10 | WAVE | 0..4 | 0 | SIN TRI SAW SQR S&H |
+| 11 | PHS | 0..127 | 0 | |
+| 12 | FADE | 0..127 | 0 | |
+| 13 | PIT | -64..63 | 0 | |
+| 14 | FLT | -64..63 | 0 | |
+| 15 | SHP | -64..63 | 0 | |
+| 16 | AMP | 0..127 | 0 | |
+| 17 | MODE | 0..14 | 0 | OFF UP DN UPDN RND ORD REPEAT DNUP UP+8 CONV DIVG PINKY THUMB WALK CHORD |
+| 18 | RATE | 0..5 | 2 | 1/4 1/8 1/16 1/32 8T 16T |
+| 19 | OCT | 1..4 | 1 | |
+| 20 | GATE | 1..127 | 64 | |
+| 21 | SWG | 0..100 | 0 | |
+| 22 | PROB | 0..127 | 127 | |
+| 23 | HOLD | 0..1 | 0 | OFF ON |
+| 24 | ORD | 0..1 | 0 | NOTE PLAY |
+| 25 | ROOT | 0..11 | 0 | |
+| 26 | SCL | 0..15 | 0 | CHR MAJ MIN DOR MIX PEN MPEN HARM PHRY LYD LOC MEL BLUES WHOLE DIMHW DIMWH |
+| 27 | QNT | 0..2 | 0 | OFF SNAP WHITE |
+| 28 | TRN | -24..24 | 0 | |
+| 29 | LEN | 1..64 | 16 | |
+| 30 | DIV | 0..8 | 2 | 1/4 1/8 1/16 1/32 8T 16T 1/2 1BAR 2BAR |
+| 31 | SWG | 0..100 | 0 | |
+| 32 | GATE | 1..127 | 64 | |
+| 33 | DST | 0..127 | 0 | |
+| 34 | CHO | 0..127 | 0 | |
+| 35 | DLY | 0..127 | 0 | |
+| 36 | REV | 0..127 | 0 | |
+| 37 | VCE | 0..3 | 0 | POLY MONO LEG UNI |
+| 38 | GLD | 0..127 | 0 | |
+| 39 | PAN | -64..63 | 0 | |
+| 40 | MUTE | 0..1 | 0 | OFF ON |
+| 41 | GLMOD | 0..1 | 0 | RATE TIME |
+| 42 | PRIO | 0..2 | 0 | LAST LOW HIGH |
+| 43 | ALLOC | 0..1 | 0 | ROT REUSE |
+| 44 | DTUNE | 0..127 | 40 | |
+| 45 | SLCR | 0..2 | 0 | OFF GATE STUT |
+| 46 | PAT | 1..16 | 1 | |
+| 47 | RATE | 0..5 | 1 | 1/8 1/16 1/32 8T 16T 32T |
+| 48 | DEPTH | 0..127 | 127 | |
+| 49 | CHORD | 0..5 | 0 | OFF TRIAD 7TH 9TH SUS4 POWER |
+| 50 | FILT | -64..63 | 0 | |
+| 51 | STRUM | -60..60 | 0 | |
+| 52 | VLEAD | 0..1 | 0 | OFF ON |
+| 53 | INSRT | 0..8 | 0 | OFF SOFT HARD FOLD FUZZ CRUSH PHASR FLANG CHOR |
+| 54 | INS A | 0..127 | 64 | |
+| 55 | INS B | 0..127 | 96 | |
+| 56 | INS C | 0..127 | 96 | |
+| 57 | MIX | 0..127 | 127 | |
+| 58 | TYPE | 0..2 | 0 | LP BP HP |
+| 59 | ESYNC | 0..1 | 0 | OFF ON |
+| 60 | SYNC | 0..10 | 0 | OFF 4BAR 2BAR 1BAR 1/2 1/4 1/8 8T 1/16 16T 1/32 |
+| 61 | TRIG | 0..1 | 0 | NOTE FREE |
+| 62 | POL | 0..1 | 0 | BI UNI |
+
+## The engine's EDIT values (CC98 63..70)
+
+Each engine gives these eight its own meaning (the EDIT page's knobs); the range is the engine's.
+
+| engine | CC98 | parameter | range | default | values |
+| --- | --- | --- | --- | --- | --- |
+| ANALOG | 63 | WAVE | 0..4 | 0 | SAW SQR TRI SIN PWM |
+| ANALOG | 64 | DTN | 0..127 | 10 | |
+| ANALOG | 65 | MIX | 0..127 | 64 | |
+| ANALOG | 66 | NOIS | 0..127 | 0 | |
+| ANALOG | 67 | CUT | 0..127 | 90 | |
+| ANALOG | 68 | RES | 0..127 | 30 | |
+| ANALOG | 69 | DRV | 0..127 | 0 | |
+| ANALOG | 70 | KTR | 0..127 | 64 | |
+| DIGITAL | 63 | ALG | 0..7 | 0 | 1 2 3 4 5 6 7 8 |
+| DIGITAL | 64 | R2 | 0..14 | 1 | .5 1 2 3 4 5 6 7 8 9 10 11 12 14 16 |
+| DIGITAL | 65 | R3 | 0..14 | 1 | .5 1 2 3 4 5 6 7 8 9 10 11 12 14 16 |
+| DIGITAL | 66 | R4 | 0..14 | 1 | .5 1 2 3 4 5 6 7 8 9 10 11 12 14 16 |
+| DIGITAL | 67 | IDX | 0..127 | 60 | |
+| DIGITAL | 68 | MDEC | 0..127 | 60 | |
+| DIGITAL | 69 | FB | 0..127 | 0 | |
+| PHASE | 63 | WAVE | 0..7 | 0 | SAW SQR PLS DSIN SPLS RSAW RTRI RTRP |
+| PHASE | 64 | WAVE2 | 0..8 | 0 | - SAW SQR PLS DSIN SPLS RSAW RTRI RTRP |
+| PHASE | 65 | DCW | 0..127 | 60 | |
+| PHASE | 66 | ENV | 0..127 | 64 | |
+| PHASE | 67 | DTN | 0..127 | 0 | |
+| PHASE | 68 | LINE | 0..1 | 0 | MIX RING |
+| PHASE | 69 | SUB | 0..127 | 0 | |
+| LOFI | 63 | CHIP | 0..4 | 0 | 4BIT 4B/2 8BIT 1BIT STEP |
+| LOFI | 64 | WAVE | 0..4 | 0 | PLS TRI SAW NOIS WRAM |
+| LOFI | 65 | DUTY | 0..127 | 64 | |
+| LOFI | 66 | CRSH | 0..127 | 0 | |
+| LOFI | 67 | SWP | 0..127 | 0 | |
+| LOFI | 68 | VIB | 0..127 | 0 | |
+| LOFI | 69 | ARP | 0..3 | 0 | OFF OCT MAJ MIN |
+| LOFI | 70 | TONE | 0..127 | 127 | |
+| SAMPLE | 63 | SET | 0..11 | 0 | PIANO BASS VIBES HORNS STRGS FLUTE SCRCH PERC USR1 USR2 USR3 USR4 |
+| SAMPLE | 64 | TUNE | -24..24 | 0 | |
+| SAMPLE | 65 | BITS | 0..127 | 0 | |
+| SAMPLE | 66 | LOOP | 0..1 | 1 | OFF ON |
+| SAMPLE | 67 | CUT | 0..127 | 127 | |
+| SAMPLE | 69 | DRV | 0..127 | 0 | |
+| VOICE | 63 | VOWL | 0..127 | 0 | |
+| VOICE | 64 | VOWL2 | 0..127 | 64 | |
+| VOICE | 65 | TALK | 0..127 | 0 | |
+| VOICE | 66 | SHIFT | -12..12 | 0 | |
+| VOICE | 67 | BUZZ | 0..127 | 64 | |
+| VOICE | 68 | BRTH | 0..127 | 10 | |
+| VOICE | 69 | Q | 0..127 | 64 | |
+| VOICE | 70 | RAND | 0..127 | 0 | |
+| TRIO | 63 | WAVE | 0..15 | 0 | SAW3 PLS3 PPT SST TRI3 S&T P&S P+N NOIS SYNC SYNCP SYNC3 RING RING3 R+S R+SP |
+| TRIO | 64 | INT2 | -24..24 | 0 | |
+| TRIO | 65 | INT3 | -24..24 | -12 | |
+| TRIO | 66 | DTN | 0..50 | 6 | |
+| TRIO | 67 | MODE | 0..3 | 0 | LP BP HP NOT |
+| TRIO | 68 | CUT | 0..127 | 80 | |
+| TRIO | 69 | RES | 0..127 | 40 | |
+| TRIO | 70 | PW | 0..127 | 64 | |
+| WHEEL | 63 | REG | 0..15 | 4 | FLUTE MELLO HOLLW SMOOT 3BAR BLUES GOSPL ROCK TOPS CLARI REED STRNG CHAPL BRITE BASS FULL |
+| WHEEL | 64 | SUB | -8..8 | 0 | |
+| WHEEL | 65 | BODY | -8..8 | 0 | |
+| WHEEL | 66 | TOP | -8..8 | 0 | |
+| WHEEL | 67 | PERC | 0..6 | 0 | OFF 2ND 3RD 2SOFT 3SOFT 2SLOW 3SLOW |
+| WHEEL | 68 | CLICK | 0..127 | 40 | |
+| WHEEL | 69 | DRV | 0..127 | 0 | |
+| WHEEL | 70 | ROTR | 0..2 | 1 | OFF SLOW FAST |
+| GRAIN | 63 | SRC | 0..11 | 0 | PIANO BASS VIBES HORNS STRGS FLUTE SCRCH PERC USR1 USR2 USR3 USR4 |
+| GRAIN | 64 | POS | 0..127 | 32 | |
+| GRAIN | 65 | SIZE | 0..127 | 80 | |
+| GRAIN | 66 | DENS | 0..127 | 80 | |
+| GRAIN | 67 | PTCH | -24..24 | 0 | |
+| GRAIN | 68 | SPRD | 0..127 | 30 | |
+| GRAIN | 69 | RAND | 0..127 | 10 | |
+| GRAIN | 70 | TONE | 0..127 | 127 | |
+| FM6 | 63 | ALG | 0..32 | 0 | PAT 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 |
+| FM6 | 64 | FB | -7..7 | 0 | |
+| FM6 | 65 | MLVL | -64..63 | 0 | |
+| FM6 | 66 | MRAT | -16..16 | 0 | |
+| FM6 | 67 | MEG | -64..63 | 0 | |
+| FM6 | 68 | VMOD | -7..7 | 0 | |
+| FM6 | 69 | DTUN | 0..127 | 0 | |
+| FM6 | 70 | PTCH | 0..34 | 0 | F1 F2 F3 F4 F5 F6 F7 F8 B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27 |
+| PHYS | 63 | MODEL | 0..3 | 0 | MODAL STRNG MEMB SYMP |
+| PHYS | 64 | STRC | 0..127 | 64 | |
+| PHYS | 65 | BRIT | 0..127 | 80 | |
+| PHYS | 66 | DAMP | 0..127 | 80 | |
+| PHYS | 67 | POS | 0..127 | 20 | |
+| PHYS | 68 | ACC | 0..127 | 90 | |
+| PHYS | 69 | BOW | 0..127 | 0 | |
+| PHYS | 70 | EXC | 0..127 | 0 | |
+| NOISE | 63 | MODE | 0..3 | 0 | ANLG DUST LFSR META |
+| NOISE | 64 | COLR | 0..127 | 64 | |
+| NOISE | 65 | FREQ | 0..127 | 80 | |
+| NOISE | 66 | RES | 0..127 | 30 | |
+| NOISE | 67 | TRK | 0..127 | 64 | |
+| NOISE | 68 | DENS | 0..127 | 0 | |
+| NOISE | 69 | DRFT | 0..127 | 0 | |
+| NOISE | 70 | CRSH | 0..127 | 0 | |
+| OBERVAVE | 63 | PROG | 0..69 | 0 | DARK ARP POLY BRASS OB SYNC LD UNISON LD PWM STRING BELL XMOD OB FATBASS ARP SEQ SWEEP PAD BP QUACK DUAL SAW RESO ZAP BRASS STAB NOISE WASH HOLLOW PAD SQUARE LD OB SUBBASS OB SOFTKEY SYNC BRASS DRONE UNI CLAV PLUCK WOBBLE BS ARP PLUCK ARP CHORD RANDOM ARP UPSIDE ARP FIFTHS LD VINTAGE PD NEON PAD XMOD GROWL PERC HIT INIT NIGHTDRIVE MINOR FALL SHADOW ARP GLASS ARP PULSE ARP ARP BASS DREAM ARP STAB CHORD BIG BRASS HORN SECT OB WARMPAD DARK PAD AIR CHOIR SLOW SWEEP GHOST PAD OB ENSEMBL SYNC PAD ICE BELLS SOFT EP PULSE ORGN TAPE KEYS ACID LINE OB PLUCKBS OB DEEP SYNC BASS SOLO LEAD OB PWM LD SCREAM LD SOFT FLUTE LASER WIND RISE SPACEDRONE KICK SNARE HIHAT CLAP E-PIANO OB WURLI |
+| OBERVAVE | 64 | TYPE | 0..6 | 0 | PROG LP12 HP12 BP12 NOTCH LP24 SEM |
+| OBERVAVE | 65 | XMOD | -64..63 | 0 | |
+| OBERVAVE | 66 | DTN | -64..63 | 0 | |
+| OBERVAVE | 67 | CUT | -64..63 | 0 | |
+| OBERVAVE | 68 | RES | -64..63 | 0 | |
+| OBERVAVE | 69 | FENV | -64..63 | 0 | |
+| OBERVAVE | 70 | DRV | -64..63 | 0 | |

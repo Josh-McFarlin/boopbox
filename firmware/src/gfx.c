@@ -13,17 +13,10 @@
 #define UI_SMALL
 #endif
 #endif
-typedef struct {               /* proportional, see tools/gen_font.py */
-    uint8_t h;
-    uint8_t pad;               /* bitmap starts this many pixels left of the pen */
-    uint8_t first, last;
-    uint8_t sh;                /* 1: the bitmaps are another font's, drawn at 2x (L = S at 2x, no copy) */
-    const uint8_t *adv;        /* advance per glyph */
-    const uint8_t *bw;         /* bitmap width per glyph (starts FONT_PAD left of the pen) */
-    const uint16_t *off;       /* byte offset of each glyph */
-    const uint8_t *data;
-    uint8_t bits;              /* SLOOP 2.6: 1 = 1 bit a pixel (a pixel font: glyph rows one after the other, high
-                                * bit first, each glyph from a whole byte); 0 = 2 pixels a byte, alpha 0..15 */
+typedef struct {               /* (1.8) tools/gen_font.py: the glyphs are FONT_S_DATA's, 8 x 16 at 1 bit a pixel */
+    uint8_t h;                 /* 16, or 32 at 2x */
+    uint8_t first, last;       /* the codes it draws (anything past last: '?') */
+    uint8_t sh;                /* 1: drawn at 2x (L = S at 2x, no copy) */
 } felucca_font_t;
 #include "felucca_font.h"
 
@@ -309,62 +302,46 @@ static void cv_glow(uint32_t y0, uint32_t y1)
         for (y = y0; y < y1; y++)
             cv_rect(0, (int32_t)y, (int32_t)cv_w, 1, rgb565_over(UI_COL[1], (y - y0) * (y - y0), (y1 - y0) * (y1 - y0) * 3u));
 }
-/* glyph index of a character: the screen shows capitals only (SLOOP 2.6: bold capitals read better on the
- * small screen), so lower case folds to upper case, Latin-1 too (\xfc -> \xdc; not the division sign, nor sharp
- * s and y diaeresis, which have none); anything missing (and C1 controls) draws as '?' */
+/* glyph index of a character (FONT_S_DATA, tools/gen_font.py CODES): the screen shows capitals only (SLOOP 2.6: bold
+ * capitals read better on the small screen), so lower case folds to upper case, Latin-1 too (\xfc -> \xdc; not the
+ * division sign, nor sharp s and y diaeresis, which have none); (1.8) an accented capital draws as its letter (\xc9 ->
+ * E), the U umlaut keeps its own; anything else (and C1 controls) draws as '?' */
 static uint32_t glyph(const felucca_font_t *f, uint32_t ch)
 {
+    static const char FOLD[31] = "AAAAAAACEEEEIIIIDNOOOOOXOUUU\xdcYP";   /* \xc0 .. \xde */
     if ((ch >= 'a' && ch <= 'z') || (ch >= 0xE0u && ch <= 0xFEu && ch != 0xF7u))
         ch -= 32u;
-    if (ch < f->first || ch > f->last || (ch >= 127u && ch < 160u))
+    if (ch >= 0xC0u && ch <= 0xDEu)
+        ch = (uint8_t)FOLD[ch - 0xC0u];
+    if (ch > f->last)
         ch = '?';
-    return ch - f->first;
+    return ch == 0xDCu ? 69u : ch >= 32u && ch <= 96u ? ch - 32u : ch >= 123u && ch <= 126u ? ch - 58u : '?' - 32u;
 }
 
-/* text, alpha-blended onto the background with colour c; returns the end x */
+/* text in colour c; returns the end x */
 static int32_t cv_text(int32_t x, int32_t y, const felucca_font_t *f, const char *s, uint16_t c)
 {
-    uint16_t ramp[16];
-    uint32_t a, ramped = 0;
     /* (1.1.0) SYNTHWAVE: large text in a bright colour fades: the values (C_HI, hot pink) to the sunset's orange, the rest
      * from a white sheen at the top to its colour by half way (chrome). Labels, dim and grey text stay flat */
     int grad = pal_neon && f->h >= 32u && c != C_DIM && c != C_GRAY && c != C_LINE && c != UI_G3 && c != UI_G4 &&
                c != C_BLACK;
+    uint32_t sh = f->sh, w = 8u << sh;
     for (; *s; s++) {
-        uint32_t gi = glyph(f, (uint8_t)*s), gx, gy, w, bpr;
-        const uint8_t *gd;
-        w = f->bw[gi];
-        gd = f->data + f->off[gi];
-        if (f->bits == 1u) {                           /* on / off pixels: full colour where a bit is set */
-            uint32_t sw = w >> f->sh;
-            for (gy = 0; gy < f->h; gy++) {
-                uint16_t rc = c;                       /* (the ramp's top step: c itself) */
-                if (grad)                              /* (1.1.0) SYNTHWAVE, large text: a gradient top to bottom */
-                    rc = c == C_HI ? rgb565_mix(c, SYNTH_SUN, gy, f->h)
-                                   : gy < f->h / 2u ? rgb565_mix(0xFFFFu, c, gy + 2u, f->h / 2u + 2u) : c;
-                for (gx = 0; gx < w; gx++) {
-                    uint32_t i = (gy >> f->sh) * sw + (gx >> f->sh);
-                    if ((gd[i >> 3] >> (7u - (i & 7u))) & 1u)
-                        cv_pset(x - f->pad + (int32_t)gx, y + (int32_t)gy, rc);
-                }
-            }
-            x += f->adv[gi];
-            continue;
+        const uint8_t *gd = FONT_S_DATA + 16u * glyph(f, (uint8_t)*s);
+        uint32_t gx, gy;
+        for (gy = 0; gy < f->h; gy++) {
+            uint32_t row = gd[gy >> sh];
+            uint16_t rc = c;                           /* (the ramp's top step: c itself) */
+            if (!row)
+                continue;
+            if (grad)                                  /* (1.1.0) SYNTHWAVE, large text: a gradient top to bottom */
+                rc = c == C_HI ? rgb565_mix(c, SYNTH_SUN, gy, f->h)
+                               : gy < f->h / 2u ? rgb565_mix(0xFFFFu, c, gy + 2u, f->h / 2u + 2u) : c;
+            for (gx = 0; gx < w; gx++)
+                if ((row >> (7u - (gx >> sh))) & 1u)
+                    cv_pset(x + (int32_t)gx, y + (int32_t)gy, rc);
         }
-        if (!ramped) {                                 /* (4 bits a pixel: the ramp from the background to c; no font uses it now) */
-            for (a = 0; a < 16u; a++)
-                ramp[a] = rgb565_over(c, a, 15u);      /* (on black: c * a / 15, as before) */
-            ramped = 1;
-        }
-        bpr = ((w >> f->sh) + 1u) / 2u;
-        for (gy = 0; gy < f->h; gy++)
-            for (gx = 0; gx < w; gx++) {
-                uint32_t sx = gx >> f->sh, v = gd[(gy >> f->sh) * bpr + sx / 2u];
-                v = (sx & 1u) ? (v & 15u) : (v >> 4);
-                if (v)
-                    cv_pset(x - f->pad + (int32_t)gx, y + (int32_t)gy, ramp[v]);
-            }
-        x += f->adv[gi];
+        x += (int32_t)w;
     }
     return x;
 }
@@ -374,10 +351,7 @@ UI_SMALL static void lcd_clear(void) { lcd_fill(0, 0, 240, 240, C_BLACK); }
 
 static int32_t text_w(const felucca_font_t *f, const char *s)
 {
-    int32_t w = 0;
-    for (; *s; s++)
-        w += f->adv[glyph(f, (uint8_t)*s)];
-    return w;
+    return (int32_t)(str_len(s) * (8u << f->sh));   /* (every glyph advances 8: tools/gen_font.py) */
 }
 
 /* FONT_S text ending at the right margin (x = 236), and centred on the 240-px screen */

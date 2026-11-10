@@ -13,6 +13,28 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.8.0
+
+- **Newer FM-1s save again.** FM-1s sold from late 2026 (the logo on the front) have another maker's flash chip. BoopBox
+  did not know it and ran from RAM only on them: nothing was saved, and updates did not work. It knows both chips now
+  (the app, the USB rescue and the update loader). Found by [JIANT FM](https://github.com/juanjiant-bit/JIANT).
+- **NRPN** (after JIANT FM): every parameter of a track can be set over MIDI with 14 bits: CC99 0, CC98 the
+  parameter's number, then CC6 and CC38. The map: [docs/NRPN.md](docs/NRPN.md). The CC map and MIDI LEARN are
+  unchanged.
+- **Key velocity and aftertouch** on the FM-1's own keys (F3..C5), from JIANT FM after Charles Vestal's Velo: hold
+  HOME → **KEYS** (the USB section's new name). **VELOCITY** OFF / SOFT / NORMAL / HARD; **AFTERTOUCH** opens the
+  filter or adds vibrato, and goes out as MIDI channel pressure; **VEL LEARN** lets each key learn your touch (OCT+
+  forgets it). **Both are OFF by default**, and then nothing changes. MIDI channel pressure in works too.
+- **Try BoopBox in the browser**: [the emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real
+  firmware (screen, sequencer, sound) with the FM-1 drawn on the page; play it with the mouse, a touch screen or the
+  keyboard. Your projects stay in the browser. After JIANT FM's emulator.
+- **The screen's font takes less room**: the glyphs are read straight from flash (about 2.5 KB of flash and 4.8 KB of
+  RAM back). Every screen looks the same; an accented capital in a name (É, Ñ) now shows as its letter (E, N).
+- **The menu's section tabs** slide so the one you are on always shows whole (SYSTEM was cut off).
+
+Projects, presets and settings from 1.7.0 open as before. Going back to 1.7.0 keeps everything too (it ignores the
+new settings).
+
 ## 1.7.0
 
 **Patterns you can play, chains you can write, scenes for the song** ([the

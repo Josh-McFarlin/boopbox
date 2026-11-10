@@ -67,7 +67,7 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY); SELECT skips the others |
 | `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
 
-The flash is full: the default build leaves 6,248 B of the app slot free (1.3.1) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
+The flash is full: the default build leaves 2,076 B of the app slot free (1.8, with key velocity; the font read in place and the display curves computed made room: `docs/memory-savings-analysis.md` F4, F9) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
 visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the build fails and
 says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes, and
 `docs/memory-savings-analysis.md` for where the flash and the RAM go and what can still be saved (measured, ranked).
@@ -214,3 +214,11 @@ A release is published on GitHub when a PR that adds a new firmware binary is me
    (edit that part in `.github/release-install.md`).
    A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing,
    and neither does a version that has a release already.
+
+## The browser emulator
+
+`python3 tools/build_emu.py` compiles the whole firmware (`firmware/host/emu.c`: the UI, the sequencer, the sound, the
+storage on a memory flash) to WebAssembly with clang's wasm32 target and wasm-ld (or Emscripten), into `build/emu/`
+with the page from `web/emu/`. Serve that folder (`python3 -m http.server -d build/emu`) and open it. `web/make_site.py`
+puts it in the site as `webapp/emu/` when it is built. Tests: `tests/emu_test.c` (the same core on the host) and
+`tests/emu_wasm_test.mjs` (the wasm in Node), both in `tests/run_tests.sh`.

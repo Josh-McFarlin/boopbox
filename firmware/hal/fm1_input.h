@@ -51,6 +51,31 @@
 #ifndef FM1_INPUT_IDLE
 #define FM1_INPUT_IDLE() ((void)0)
 #endif
+/* (1.8) The key velocity's sampling (src/keyvel.c), off unless MENU > KEYS > VELOCITY or AFTERTOUCH is on (fm1_an.on
+ * below; the code that samples, fm1__an_take / fm1__an_start, at the end of hal/fm1_adc.h). After Velo (Charles
+ * Vestal, github.com/charlesvestal/fm1-velocity, GPL-3.0) as JIANT FM carries it: while on, each tick also starts an ADC
+ * conversion on row PA7 (even frames) or PA8 (odd frames) of the column it has just latched, and takes it at the next
+ * tick before the rows are read: every key of those two rows (notes 0..19, F3..C5) once every two frames (~2.2 ms),
+ * the voltage across its carbon pill against the row's pull-up (1023 open, lower as the key is pressed harder).
+ * FM1_INPUT_ANALOG(col, rowbit, v, driven) gets each sample (rowbit 3 PA7, 4 PA8). The odd frames' columns 0 and 1
+ * on PA8 are OCT- / OCT+, no note: those two slots take the MASTER pot and the battery instead (fm1_adc_read hands
+ * them to the main loop). A sample FM1_INPUT_DRIVE(col, rowbit) asks for is taken with the row driven high (a seated
+ * key's range spreads); the row is an input with its pull-up again at the take, before the rows are read. Off: one
+ * byte tested twice a tick, the scan's writes and reads as before */
+#ifndef FM1_INPUT_ANALOG
+#define FM1_INPUT_ANALOG(col, rowbit, v, driven) ((void)0)
+#endif
+#ifndef FM1_INPUT_DRIVE
+#define FM1_INPUT_DRIVE(col, rowbit) 0
+#endif
+/* (1.8) a note key's press debounced (k 0..26), just before its bit sets (src/keyvel.c kv_note_on) */
+#ifndef FM1_INPUT_NOTE_ON
+#define FM1_INPUT_NOTE_ON(k) ((void)0)
+#endif
+/* (1.8) every tick, after the last tick's sample was taken, before the keys are read (src/keyvel.c kv_tick) */
+#ifndef FM1_INPUT_TICK
+#define FM1_INPUT_TICK() ((void)0)
+#endif
 #ifndef FM1_LED_US
 #define FM1_LED_US 40u           /* LED on-time per column (brightness vs scan rate) */
 #endif
@@ -98,6 +123,24 @@ static volatile struct {
 /* SLOOP 2.7: buttons held over MIDI (GLO > MIDI 3 > REMOTE: src/ui_input.c remote_poll), bit i = button i: read as
  * closed by the debounce, so a remote press is a press like any other (taps, holds, layers) */
 static volatile uint32_t fm1_remote_btn;
+/* (1.8) the converter's owner: the key scan while on (fm1__an_take / fm1__an_start, hal/fm1_adc.h), else the main loop
+ * (fm1_adc_read). want: the main loop asks (keyvel.c); on: the scan has it (set with want, cleared by the scan once
+ * nothing is pending and the row is an input again) */
+static volatile struct {
+    uint8_t want, on, pend, driven;   /* driven: the pending sample's row is driven high (released at the take) */
+    uint8_t col, rowbit, phase;       /* the pending sample: column, row bit (3 PA7, 4 PA8, 0 the pot / battery); frame */
+    uint8_t drive;                    /* 0: no driven samples; 1..4: driven at strength drive - 1 (HD0 bit 0, HD bit 1) */
+    int16_t master, batt;             /* taken in their slots (-1: none since on) */
+    uint16_t timeouts;                /* conversions not done by the next tick */
+} fm1_an;
+static void fm1__an_take(void);
+static void fm1__an_start(uint32_t n);
+/* (1.8) the note key (0..19, F3..C5) at (column, row bit) of the rows with a converter, 20 if none */
+static uint32_t fm1_an_note(uint32_t col, uint32_t rowbit)
+{
+    int id = col < FM1_NCOL && rowbit < 6u ? FM1_KEYMAP[rowbit][col] : -1;
+    return id >= 14 && id < 34 ? (uint32_t)id - 14u : 20u;
+}
 static uint8_t fm1_led[FM1_NCOL];
 #ifndef FM1_GLOW_NS
 #define FM1_GLOW_NS 4000u        /* the glow pulse a frame (ns); a lit LED ~95 us: ~1/24 the brightness */
@@ -200,8 +243,10 @@ static void fm1__key(uint32_t id, uint32_t closed)
         return;
     *c = 0;
     if (note) {
-        if (!on)
+        if (!on) {
+            FM1_INPUT_NOTE_ON(id - 14u);            /* (1.8) before the key's bit: its velocity, or its wait */
             fm1_in.notes_pressed |= bit;
+        }
         fm1_in.notes ^= bit;
     } else {
         fm1_in.buttons ^= bit;
@@ -299,6 +344,9 @@ static void fm1_input_tick(void)
     uint32_t ta = a ? FM1__NS_T(FM1_GLOW_NS) : 0u, tb = b ? FM1__NS_T(fm1_led_bg_ns) : 0u;
     uint32_t tmax = ta > tb ? ta : tb;
     fm1__led_lines(0);
+    if (fm1_an.on)                                 /* (1.8) the key velocity's sample of the last tick (see top) */
+        fm1__an_take();
+    FM1_INPUT_TICK();
     fm1_in.raw[p] = (uint8_t)fm1__rows();          /* column p has been latched one tick (the lines dark) */
     if (tmax) {
         uint32_t t0 = fm1_ticks(), cur = lit | a | (tb ? b : 0u), on, d;
@@ -317,6 +365,8 @@ static void fm1_input_tick(void)
     } else {
         fm1__sr_word(w);
     }
+    if (fm1_an.on)                                 /* (1.8) column n's PA7 / PA8 sample */
+        fm1__an_start(n);
     fm1__led_lines(fm1_led[n]);
     fm1__tick_col = (uint8_t)n;
     fm1__keys(p);                                  /* its keys now: no wait for the frame's end */
@@ -380,3 +430,5 @@ static void fm1_led_key(uint32_t id, int on)
                     fm1_led[p] &= (uint8_t)~(1u << r);
             }
 }
+
+#include "fm1_adc.h"                    /* (1.8) after the scan: the converter, and the scan's samples of it */

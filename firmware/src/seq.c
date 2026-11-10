@@ -73,6 +73,7 @@ static volatile uint8_t transport_req;   /* 1 start, 2 stop (from the UI); 3 sta
 static volatile uint8_t panic_req;       /* bit per track: release every sounding note (preset / engine change) */
 static volatile uint8_t arp_keep_req;    /* (2.7) bit per track: a sound loaded under its running arp: the arp's notes stay */
 
+#include "keyvel.c"          /* (1.8) key velocity and aftertouch (keyboard_block, kv_block; MENU > KEYS) */
 CTL_SMALL static uint32_t trk_index(const track_t *t) { return (uint32_t)(t - trk); }
 
 /* the global that holds track i's MIDI channel (GLO > MIDI): CH1..CH3, CH4 (G_DRCH, the drum channel of the four-track
@@ -2415,6 +2416,8 @@ CTL_SMALL static void key_down(uint32_t k)
     }
     if (is_drum(t)) {                                 /* the drum track: the key's lane */
         uint32_t lane = lane_of_key(k), lvl = key_lvl();
+        if (lvl == LV_NORM && (kv.on & 1u))           /* (1.8) the key's velocity, when OCT- / OCT+ is not held */
+            lvl = vel_lvl(KV_VEL(k));
         kb_nt[k][0] = (uint8_t)lane;
         kb_n[k] = 1;
         if (layer == LY_ROLL) {
@@ -2425,7 +2428,7 @@ CTL_SMALL static void key_down(uint32_t k)
         kb_kind[k] = KS_DRUM;
         drum_input(t, lane, lvl, 0, 1);
         mc = trk_midi_ch(sel);
-        midi_out_note(mc, (uint32_t)LANE_NOTE[lane], lvl_vel(lvl, 100));
+        midi_out_note(mc, (uint32_t)LANE_NOTE[lane], lvl_vel(lvl, KV_VEL(k)));
         return;
     }
     {
@@ -2459,9 +2462,9 @@ CTL_SMALL static void key_down(uint32_t k)
             in_chord = kb_n[k] > 1u ? kb_nt[k] : 0;
             in_chord_n = kb_n[k];
             in_chord_i = i;
-            input_on(t, kb_nt[k][i], 100);
+            input_on(t, kb_nt[k][i], KV_VEL(k));       /* (1.8: the key's velocity; 100 with VELOCITY OFF) */
             in_chord = 0;
-            midi_out_note(mc, (uint32_t)kb_nt[k][i], 100u);
+            midi_out_note(mc, (uint32_t)kb_nt[k][i], KV_VEL(k));
         }
         in_key = 0;
         /* the pen of the SEQ layer: the keys down now (a chord), else this note */
@@ -2558,9 +2561,32 @@ CTL_SMALL static void audition_block(void)
             trk_note_on(&trk[aud_trk % NTRK], LANE_NOTE[l], lvl_vel((lv >> (2u * l)) & 3u, 100));
 }
 
+/* (1.8) aftertouch: each track's held note keys' pressure (keyvel.c), beside the MIDI channel pressure it heard
+ * (midi_at), into trk_at (voice.c); MIDI OUT sends a track's key pressure as channel pressure when it changes */
+static uint8_t midi_at[NTRK], kv_at_out[NTRK];
+CTL_SMALL static void kv_block(void)
+{
+    uint32_t i, k, m, a;
+    at_vib = (uint8_t)KV_AT_VIB();
+    for (i = 0; i < NTRK; i++) {
+        for (k = 0, m = 0; k < KV_NK; k++)
+            if (kb_kind[k] == KS_NOTE && kb_trk[k] == i && ((kb_prev >> k) & 1u))
+                m |= 1u << k;
+        a = kv_at(m);
+        if (a != kv_at_out[i] && (kv.on & 2u)) {
+            uint32_t mc = trk_midi_ch(i);
+            kv_at_out[i] = (uint8_t)a;
+            if (mc <= 15u)
+                midi_out_event(0x0Du | (0xD0u | mc) << 8 | a << 16);
+        }
+        trk_at[i] = (uint8_t)(a > midi_at[i] ? a : midi_at[i]);
+    }
+}
 CTL_SMALL static void keyboard_block(void)
 {
-    uint32_t cur = fm1_in.notes, ch = cur ^ kb_prev, k, r;
+    uint32_t cur = fm1_in.notes & ~kv.hold, ch = cur ^ kb_prev, k, r;   /* (1.8: a press waiting for its velocity: not
+                                                                          * yet; keyvel.c) */
+    kv_block();
     audition_block();
     /* (2.7: MUTE mode stays when EDIT is let go, until a black key again: the mutes at hand, live; 2.6 went back to
      * erasing) */
@@ -3275,12 +3301,41 @@ CTL_SMALL static void sus_set(track_t *t, int on)
             input_off(t, n);
         }
 }
-CTL_SMALL static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
+/* (1.8) value 0..full over the parameter's range: a CC (full 127) or an NRPN's 14 bits (full 16383) */
+CTL_SMALL static void midi_cc_set_n(track_t *t, uint32_t id, uint32_t value, uint32_t full)
 {
     const param_desc_t *d = is_drum(t) ? track_desc(t, id % P_COUNT)
                             : id >= P_E0 ? &ENGINES[t->eng_req % NENGINES]->edit[(id - P_E0) & 7u] : &TP[id % P_COUNT];
     if (d->max > d->min)
-        t->p[id % P_COUNT] = (int16_t)(d->min + ((int32_t)(value & 127u) * (d->max - d->min) + 63) / 127);
+        t->p[id % P_COUNT] = (int16_t)(d->min + ((int32_t)(value > full ? full : value) * (d->max - d->min) +
+                                                 (int32_t)(full / 2u)) / (int32_t)full);
+}
+#define midi_cc_set(t, id, value) midi_cc_set_n(t, id, (value) & 127u, 127u)
+/* (1.8, after JIANT FM's NRPN map) NRPN: CC99 0 + CC98 n select track parameter n (its P_* id: docs/NRPN.md) on the
+ * track the channel plays; CC6 (data entry MSB) then CC38 (LSB) set it, 14 bits over its range (CC6 alone: 7 bits,
+ * x 129). The selection stays for more CC6 / CC38; CC99 other than 0, CC101 / CC100 (an RPN: none here) end it.
+ * nrpn_sel: the parameter + 1 (0: none, as at power-on); nrpn_hi: the NRPN MSB heard (CC99); nrpn_dm: the last CC6 */
+static uint8_t nrpn_sel[NTRK], nrpn_hi[NTRK], nrpn_dm[NTRK];
+CTL_SMALL static int midi_nrpn(track_t *t, uint32_t cc, uint32_t value)    /* 1: cc was NRPN's */
+{
+    uint32_t ti = trk_index(t) % NTRK, sel = nrpn_sel[ti];
+    if (cc == 99u) {
+        nrpn_hi[ti] = (uint8_t)value;
+        nrpn_sel[ti] = 0;
+    } else if (cc == 98u) {
+        nrpn_sel[ti] = (uint8_t)(nrpn_hi[ti] == 0u && value < P_COUNT ? value + 1u : 0u);
+    } else if (cc == 101u || cc == 100u) {
+        nrpn_sel[ti] = 0;
+    } else if (cc == 6u || cc == 38u) {
+        if (!sel--)
+            return 1;
+        if (cc == 6u)
+            nrpn_dm[ti] = (uint8_t)value;
+        midi_cc_set_n(t, sel, cc == 6u ? value * 129u : ((uint32_t)nrpn_dm[ti] << 7) | value, 16383u);
+    } else {
+        return 0;
+    }
+    return 1;
 }
 /* 1: cc is learned (set here) or taken by MIDI LEARN waiting for one */
 static int __attribute__((noinline)) midi_learned(uint32_t cc, uint32_t value)
@@ -3329,6 +3384,8 @@ static void __attribute__((noinline)) midi_cc(track_t *t, uint32_t cc, uint32_t 
     int16_t *slot = 0;
     uint32_t i, id = 0xFFFFu;
     if (midi_learned(cc, value))                       /* (a learned CC is the user's: not the map's) */
+        return;
+    if (midi_nrpn(t, cc, value & 127u))
         return;
     if (cc == 64u) {                                   /* the sustain pedal (2.6): >= 64 down */
         sus_set(t, value >= 64u);
@@ -3726,6 +3783,10 @@ CTL_SMALL static void events_block(uint32_t n)
                     midi_bend(ch, TSEL, d1, d2);
                 continue;
             }
+            if (st == 0xD0u) {                        /* (1.8) channel pressure: the aftertouch (kv_block) */
+                midi_at[song.sel % NTRK] = (uint8_t)d1;
+                continue;
+            }
             if (st == 0xC0u) {                        /* Program Change (2.6): the selected track's sound */
                 pc_req[song.sel % NTRK] = (uint8_t)(d1 + 1u);
                 pc_bank[song.sel % NTRK] = ch_bank[ch & 15u];   /* (2.7.2) with its Bank Select */
@@ -3741,6 +3802,11 @@ CTL_SMALL static void events_block(uint32_t n)
                 midi_sel_set(ch, d1, 0);
             }
         } else {
+            if (st == 0xD0u) {                            /* (1.8) channel pressure: the aftertouch (kv_block) */
+                if (!song.g[G_ROUTE] && (t = midi_track(ch)) != 0)
+                    midi_at[trk_index(t) % NTRK] = (uint8_t)d1;
+                continue;
+            }
             if (st == 0xB0u) {                            /* a CC (IN = CLOCK: none) */
                 if (d1 == 0u) {                           /* (2.7.2) Bank Select: latched for the next Program Change */
                     ch_bank[ch & 15u] = (uint8_t)d2;

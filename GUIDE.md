@@ -1018,14 +1018,14 @@ The visualiser sees the mix **as if MASTER were all the way up**: with MASTER tu
 
 ## 20. The HOME menu and the lights
 
-**Hold HOME** (0.7 s) to open the menu; hold it again to close it. The menu is in six sections (2.7.1: SEQ; 1.7: USB):
+**Hold HOME** (0.7 s) to open the menu; hold it again to close it. The menu is in six sections (2.7.1: SEQ; 1.7: USB, 1.8: KEYS):
 
 | Section | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | **SCREEN** | **COLOR**: the screen palette (GREEN, AMBER, CYAN, RED, MONO, SYNTHWAVE — the default since 1.1.0 —, then [your theme](#your-theme) once you sent one; SYNTHWAVE, 1.1.0: night indigo, a cyan accent, the tracks in cyan, magenta, sunset orange and violet (5–8 periwinkle, rose, gold, orchid), neon rules with a glow under the headers, large values fading from pink to orange, a neon floor to the horizon where a page has an empty half, and a sun setting on the boot screen) | **ZOOM**: ON shows the value you touch large and white | **KNOB ACCEL** (2.7): ON (the default) a fast turn sweeps wider; OFF one value a detent | — |
 | **LIGHTS** | **LIGHTS**: OFF, LOW, MID, HIGH | **KEYS**: OFF, C KEYS, WHITE KEYS, ALL KEYS | **NOTES**: OFF / ON | — |
 | **AUDIO** | **SPEAKER LOWCUT**: ON cuts the lows the small speaker cannot play (~110 Hz) | **USB AUDIO**: MASTER / FULL | **USB RATE** (2.7): AUTO / 44.1 KHZ / 48 KHZ (takes effect at the next start) | **FILTER RESO** (2.7.2): the resonance of the per-track filter, 0 (clean, as before) … 10 |
-| **USB** (1.7) | **USB HOST**: OFF (always, at every start) / ON: the USB-C port plays a USB-MIDI keyboard or controller through a powered hub instead of talking to a computer ([USB keyboards](#usb-keyboards-usb-host)) | — | — | — |
+| **KEYS** (1.8; USB in 1.7) | **VELOCITY** (1.8): OFF (the default: every key 100) / SOFT / NORMAL / HARD, the curve of the keys' velocity ([key velocity](#key-velocity-and-aftertouch-18)) | **AFTERTOUCH** (1.8): OFF (the default) / FILTER LOW, MID, HIGH / VIBRATO LOW, MID, HIGH | **VEL LEARN** (1.8): ON (the default) the keys learn your touch / OFF; **OCT+** forgets it | **USB HOST**: OFF (always, at every start) / ON: the USB-C port plays a USB-MIDI keyboard or controller through a powered hub instead of talking to a computer ([USB keyboards](#usb-keyboards-usb-host)) 
 | **SEQ** (2.7.1) | **STEP ADVANCE**: ON (the default) the NOTES page moves on when you let go of the keys; OFF it stays, so a chord you missed is played again on the same step (KNOB 1 moves the cursor) | **DRUM PREVIEW**: OFF (the default) a drum sound picked with a knob (DRUMS screen, SEQ layer) is not heard, quiet for live; ON you hear it, as up to 2.7 | — | — |
 | **SYSTEM** | **2ND CORE** (2.7): **ON** (the default) / OFF. ON, the sound is computed on both of the FM-1's cores: about twice the room before the CPU runs out (many voices, INSERT effects on several tracks), the same sound. ON takes effect at the next power-on; ABOUT then says *2 CORES* (*1 CORE*: the second core did not answer and BoopBox runs on one, as before). OFF: one core, as in 2.6. (2.8.3) On some FM-1s the second core can misread a word under heavy load (a backup over USB): it checks every job before running it and refuses a wrong one, and BoopBox then goes on with one core until the next power-off (ABOUT: *1 CORE*) instead of crashing; if a crash happens while both cores run, the next start is on one core too, until you power off. If it keeps happening on your FM-1, set 2ND CORE to OFF | **HARDWARE CALIBRATION** (the knob selects it, OCT+ opens it) | **MIDI LEARN CLEAR** (2.6): how many CCs are learned; OCT+ forgets them all | **ABOUT**, the version (the knob selects it, OCT+ opens it) |
 
@@ -1049,6 +1049,23 @@ All of these are **settings of the FM-1**, kept when you load a project or start
 - **NOTES** — ON: the notes sounding on the selected synth track light their keys, played live or by the sequencer (each for at least a tenth of a second, so short sequencer notes show too). The drum track always lights its hits. Works on every page and in every layer.
 - **Always:** PLAY flashes on every beat; REC blinks when armed and is solid while recording; the button of the page shown is lit; in a layer, keys 1, 5, 9, 13 glow dimly and what is on is fully lit; OCT− / OCT+ light when the octave is off 0; a locked layer's button blinks.
 
+### Key velocity and aftertouch (1.8)
+
+From [JIANT FM](https://github.com/juanjiant-bit/JIANT), after Charles Vestal's [Velo](https://github.com/charlesvestal/fm1-velocity).
+Under each key of the FM-1 is a carbon pill whose resistance falls the harder it is pressed. On the 20 keys **F3..C5**
+BoopBox can read it (the top row, C#5..G5, has no sensor and plays the average of your recent playing). It is **OFF** until
+you turn it on in HOME menu → **KEYS**:
+
+- **VELOCITY** SOFT / NORMAL / HARD: the curve. A synth key plays, records and sends out its velocity; on a drum track the
+  velocity picks the hit (ghost, soft, normal, hard; holding OCT− or OCT+ still forces ghost or hard). A synth note waits
+  at most 2.2 ms for its key's reading; drum keys never wait.
+- **AFTERTOUCH** FILTER or VIBRATO, LOW / MID / HIGH: keep pressing a held key to open the track's filter or add vibrato
+  (at the track's LFO speed). It is sent out as MIDI channel pressure; channel pressure coming in from MIDI does the same.
+- **VEL LEARN** ON: each key adjusts to how you play (strikes move its soft / normal / hard marks a little each time), and
+  the result is saved 30 s after you stop. **OCT+** on the row puts the factory marks back.
+
+Every FM-1 is a little different. If one key is always louder than the others, play it for a minute with VEL LEARN on.
+
 ### Hardware calibration
 
 If a button or knob does the wrong thing, HOME menu → SYSTEM → **HARDWARE CALIBRATION** (or hold **OCT− + OCT+** while switching on): press each button and turn each knob to the right as the screen asks. 30 s without input cancels it and keeps the old setup.
@@ -1062,7 +1079,7 @@ If a button or knob does the wrong thing, HOME menu → SYSTEM → **HARDWARE CA
 - **The MIDI IN jack** (3.5 mm TRS on the FM-1): a keyboard or pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
 - **USB**: a computer or phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works only with **USB HOST** on (below); otherwise both are USB devices, and a USB link needs a host.
 
-<a id="usb-keyboards-usb-host"></a>**USB keyboards: USB HOST (1.7, from [Melodee](https://github.com/keremimo/melodee)).** HOME menu → **USB** → **USB HOST** = ON: the USB-C port hosts a class-compliant USB-MIDI keyboard or controller, alone or behind a hub, and its notes, CCs, bend and clock play BoopBox as USB MIDI from a computer does. **The FM-1 does not power it: use a powered hub** (or a keyboard with its own supply); low-speed devices are not supported. The screen says *MIDI DEVICE READY*, *NO MIDI DEVICE* or *MIDI DEVICE LOST* (every note it held is let go). While it is on there is no web editor, no USB audio and no MIDI to a computer, and BoopBox sends nothing to the keyboard. It is never saved: every start is a normal USB device, so updates always work; OFF returns to the computer at once. Not yet tried on an FM-1 with a keyboard.
+<a id="usb-keyboards-usb-host"></a>**USB keyboards: USB HOST (1.7, from [Melodee](https://github.com/keremimo/melodee)).** HOME menu → **KEYS** (USB before 1.8) → **USB HOST** = ON: the USB-C port hosts a class-compliant USB-MIDI keyboard or controller, alone or behind a hub, and its notes, CCs, bend and clock play BoopBox as USB MIDI from a computer does. **The FM-1 does not power it: use a powered hub** (or a keyboard with its own supply); low-speed devices are not supported. The screen says *MIDI DEVICE READY*, *NO MIDI DEVICE* or *MIDI DEVICE LOST* (every note it held is let go). While it is on there is no web editor, no USB audio and no MIDI to a computer, and BoopBox sends nothing to the keyboard. It is never saved: every start is a normal USB device, so updates always work; OFF returns to the computer at once. Not yet tried on an FM-1 with a keyboard.
 
 Both work at once.
 

@@ -349,6 +349,27 @@ run "eight tracks: all at once on their own lengths, the shared voice budget, tw
     cc_run tracks8_test "-DARENA_STATS $GH" tests/tracks8_test.c
 run "step components: each type, directions, seeds, drums, other lengths beside, nothing hanging, stores, damage" \
     cc_run comp_test "$GH" tests/comp_test.c
+run "parameter display: TIME, LFO Hz, CUTOFF and dB computed, every value as the tables showed it" \
+    cc_run display_test "$GH" tests/display_test.c
+run "key velocity: the scan's sampling, the map, the 2.2 ms bound, drums no wait, calibration, pressure; OFF as before" \
+    cc_run keyvel_test "-O1 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal" tests/keyvel_test.c
+run "key velocity in the sequencer: synth and drum keys, held-back presses, aftertouch (keys, MIDI), FILTER / VIBRATO" \
+    cc_run keyvel_seq_test "$GH" tests/keyvel_seq_test.c
+emu() {
+    cc_run emu_test "-O1 -w -Ibuild/gen -Ifirmware/src" tests/emu_test.c "$OUT" || return 1
+    if command -v node >/dev/null && command -v clang >/dev/null && command -v wasm-ld >/dev/null; then
+        python3 tools/build_emu.py >/dev/null && node tests/emu_wasm_test.mjs
+    else
+        echo "emu wasm: no clang / wasm-ld / node: the WebAssembly build not checked"
+    fi
+}
+run "browser emulator: powers on, keys sound and light, pages, knobs, PLAY, MASTER, the flash kept across a power-on; its wasm" emu
+nrpn() {
+    cc_run nrpn_test "$GH" tests/nrpn_test.c || return 1
+    "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" docs/NRPN.md ||
+        { echo "docs/NRPN.md differs from the firmware: $OUT/nrpn_test --write docs/NRPN.md"; return 1; }
+}
+run "NRPN: track parameters by CC99/98, 14-bit CC6/38, selection kept and ended, drums, engines; docs/NRPN.md current" nrpn
 run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" \
     cc_run lock_test "$GH" tests/lock_test.c
 run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" \

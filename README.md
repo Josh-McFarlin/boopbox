@@ -9,6 +9,7 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 <a href="BOOPBOX.md">Manual</a> ·
 <a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/editor/">Web editor</a> ·
+<a href="https://josh-mcfarlin.github.io/boopbox/webapp/emu/">Try it in the browser</a> ·
 <a href="../../releases">Releases</a> ·
 <a href="CHANGELOG.md">Changelog</a> ·
 <a href="../../issues">Report a bug</a>
@@ -24,7 +25,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.7.0](#whats-new-in-170)
+1. [What's new in 1.8.0](#whats-new-in-180)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +45,16 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.7.0
+## What's new in 1.8.0
+
+**Key velocity and aftertouch** on the FM-1's own keys (F3..C5), from [JIANT FM](https://github.com/juanjiant-bit/JIANT)
+after Charles Vestal's [Velo](https://github.com/charlesvestal/fm1-velocity): hold HOME → **KEYS** (OFF by default;
+[details](#key-velocity-and-aftertouch-18)). **Try BoopBox in the browser**: [the
+emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real firmware. **Newer FM-1s** (sold from late
+2026, logo on the front) **save again**: their flash chip is known now. **NRPN** for every track parameter
+([the map](docs/NRPN.md)). Your projects, presets and settings are kept ([all changes](CHANGELOG.md)).
+
+### 1.7.0
 
 **OBERVAVE, a 13th engine:** the voice of [OberVave](https://github.com/zvenson/obervave) by zvenson, an 8-voice analog
 polysynth with sync, cross-mod, a 24 dB ladder and a SEM filter, and its **70 programs** (brass, pads, sync leads,
@@ -399,7 +409,7 @@ Colours: **blue** track 1 and KNOB 1, **green** 2, **yellow** 3, **orange** 4 (d
 
 ## The menu: settings of the FM-1
 
-Hold **HOME**. The menu is in six sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **USB** (USB HOST), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS), **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT). **SELECT** goes from one section to the next, **KNOB 1–4** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
+Hold **HOME**. The menu is in six sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **KEYS** (VELOCITY, AFTERTOUCH, VEL LEARN, USB HOST), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS), **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT). **SELECT** goes from one section to the next, **KNOB 1–4** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
 
 | Item | Choices | What it does |
 | --- | --- | --- |
@@ -442,9 +452,36 @@ BoopBox takes MIDI from two places at once:
 
 Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
+### Try it in the browser (1.8)
+
+**[The emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/)** (after JIANT FM's) runs the real firmware in the
+browser: the same screen, sequencer and sound engines, played with the mouse, a touch screen or the computer's keyboard.
+Your projects are kept in the browser between visits. Not there: USB, MIDI, your own samples and the keys' own velocity
+sensing. It is built from the same source (`firmware/host/emu.c`, `python3 tools/build_emu.py`).
+
+### Key velocity and aftertouch (1.8)
+
+**(1.8, from [JIANT FM](https://github.com/juanjiant-bit/JIANT), after Charles Vestal's
+[Velo](https://github.com/charlesvestal/fm1-velocity))** The FM-1's keys are a carbon pill under a rubber dome: the harder
+you press, the lower its resistance. BoopBox can read it on the 20 keys **F3..C5** and play them with velocity, and turn
+how hard you keep pressing into **aftertouch**. Both are **OFF** by default: hold HOME, SELECT to **KEYS**.
+
+- **VELOCITY** (KNOB 1): OFF (every key 100, as before), **SOFT** (louder for less), **NORMAL**, **HARD** (you have to
+  hit harder). Synth keys play and record their velocity and send it out over MIDI; on a drum track the velocity picks
+  the hit's level (ghost, soft, normal, hard) unless you hold OCT− or OCT+. The top row (**C#5..G5**) has no sensor: it
+  plays at the average of your recent playing.
+- **AFTERTOUCH** (KNOB 2): OFF, **FILTER LOW / MID / HIGH** (pressing opens the track's filter) or **VIBRATO LOW / MID /
+  HIGH** (pressing adds vibrato at the speed of the track's LFO). LOW needs the most pressure. It goes out as MIDI
+  channel pressure, and **MIDI channel pressure in** (from a keyboard or a DAW) does the same, with AFTERTOUCH on or off.
+- **VEL LEARN** (KNOB 3): ON (the default) lets each key learn your touch as you play; the calibration is saved by itself
+  30 s after you stop playing. OFF keeps it as it is. **OCT+** on VEL LEARN forgets what the keys learnt.
+- A synth note waits at most **2.2 ms** for its key's reading (drum keys never wait), so the timing stays tight.
+- Untested hardware is possible: every FM-1's pills differ a little. If notes come out too loud or too soft, try another
+  curve, play a minute so the keys learn, or turn VELOCITY OFF.
+
 ### USB keyboards (USB HOST)
 
-**(1.7, from [Melodee](https://github.com/keremimo/melodee))** Hold HOME → **USB** → **USB HOST** = **ON**, and the
+**(1.7, from [Melodee](https://github.com/keremimo/melodee))** Hold HOME → **KEYS** (1.7: USB) → **USB HOST** = **ON**, and the
 USB-C port becomes the host of a class-compliant USB-MIDI keyboard or controller, alone or behind a hub. Its notes,
 CCs, pitch bend and clock play BoopBox as USB MIDI from a computer does (the channels above, MIDI LEARN, IN).
 
@@ -484,6 +521,10 @@ The knobs of a MIDI controller set the sound, on the track the channel plays (as
 | 72 · 73 · 75 | release · attack · decay |
 | 74 | the track's FILTER: 64 off, lower a low-pass, higher a high-pass (every engine, the drums too) |
 | 91 · 93 · 94 | the reverb, chorus and delay sends (on the drum channel 91 and 94 are GLO → DRUMS → REV and DLY) |
+
+**NRPN** (1.8, after JIANT FM): every parameter of a track, with 14 bits of resolution. CC99 = 0 and CC98 = the
+parameter's number select it on the track's channel, then CC6 (and CC38 for the fine part) set it. The numbers and
+ranges: [docs/NRPN.md](docs/NRPN.md).
 
 Other CCs (mod wheel…) are ignored. From 2.6 the **sustain pedal** (CC 64) and **pitch bend** work too (the bend's range: MIDI 3 → BEND, 1–12 semitones).
 
@@ -633,7 +674,8 @@ See [BUILDING.md](BUILDING.md). In short: the JieLi toolchain and three files of
 - **@renebohne** — the played-note key lights (pull request #11) and, in 2.6, MIDI Program Change (Felucca pull request #179).
 - **ChanceTheMaker** and **keremimo** — the TRS MIDI input fix (Felucca Salt) and contributions to the MIDI clock.
 - **andrerezemini** ([sloop-lab](https://github.com/andrerezemini/sloop-lab)) — in 2.7 the sound on the FM-1's second core and 38 KB of RAM back (pull request #111), on the dual-core start of **Charles Vestal** ([X0X](https://github.com/charlesvestal/fm1-x0x)) and **keremimo** ([Melodee](https://github.com/keremimo/melodee)).
-- **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)) — in 2.7 the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide come from JIANT's.
+- **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)) — in 2.7 the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide come from JIANT's; in 1.8 the support for the newer FM-1s' flash chip, the NRPN map, the key velocity and aftertouch (its model, calibration and tests), and the idea of the browser emulator.
+- **Charles Vestal** ([Velo](https://github.com/charlesvestal/fm1-velocity)) — in 1.8 the key velocity rests on his finding: how to drive and read the FM-1's carbon key pills.
 - **renebohne** — in 2.7 MIDI CC 74 sweeps each engine's own cutoff or brightness, after his pull request #71 (Felucca 1.1.5's standard CC map).
 - **@ordenador** (Mario Faúndez Vidal) — the web editor's local audio preview: the firmware's own engines and sequencer in the browser (WebAssembly), with the playable piano / pads and the inline sequence editing (pull request #120).
 - **Everyone who installed SLOOP, made music with it, commented, reported a bug or asked for a feature** — most of each update comes from your messages: parameter locks, DX7 patches, dotted delays and longer steps (2.4); in 2.6 a MIDI channel per track, sustain and pitch bend, step entry from a MIDI keyboard, TEXTURE, the fixed crackles, the web editor bug with the same value on two tracks, and the MIDI learn backup. You asked, tested and reported them.
