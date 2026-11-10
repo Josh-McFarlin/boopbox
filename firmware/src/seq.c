@@ -3275,12 +3275,41 @@ CTL_SMALL static void sus_set(track_t *t, int on)
             input_off(t, n);
         }
 }
-CTL_SMALL static void midi_cc_set(track_t *t, uint32_t id, uint32_t value)
+/* (1.8) value 0..full over the parameter's range: a CC (full 127) or an NRPN's 14 bits (full 16383) */
+CTL_SMALL static void midi_cc_set_n(track_t *t, uint32_t id, uint32_t value, uint32_t full)
 {
     const param_desc_t *d = is_drum(t) ? track_desc(t, id % P_COUNT)
                             : id >= P_E0 ? &ENGINES[t->eng_req % NENGINES]->edit[(id - P_E0) & 7u] : &TP[id % P_COUNT];
     if (d->max > d->min)
-        t->p[id % P_COUNT] = (int16_t)(d->min + ((int32_t)(value & 127u) * (d->max - d->min) + 63) / 127);
+        t->p[id % P_COUNT] = (int16_t)(d->min + ((int32_t)(value > full ? full : value) * (d->max - d->min) +
+                                                 (int32_t)(full / 2u)) / (int32_t)full);
+}
+#define midi_cc_set(t, id, value) midi_cc_set_n(t, id, (value) & 127u, 127u)
+/* (1.8, after JIANT FM's NRPN map) NRPN: CC99 0 + CC98 n select track parameter n (its P_* id: docs/NRPN.md) on the
+ * track the channel plays; CC6 (data entry MSB) then CC38 (LSB) set it, 14 bits over its range (CC6 alone: 7 bits,
+ * x 129). The selection stays for more CC6 / CC38; CC99 other than 0, CC101 / CC100 (an RPN: none here) end it.
+ * nrpn_sel: the parameter + 1 (0: none, as at power-on); nrpn_hi: the NRPN MSB heard (CC99); nrpn_dm: the last CC6 */
+static uint8_t nrpn_sel[NTRK], nrpn_hi[NTRK], nrpn_dm[NTRK];
+CTL_SMALL static int midi_nrpn(track_t *t, uint32_t cc, uint32_t value)    /* 1: cc was NRPN's */
+{
+    uint32_t ti = trk_index(t) % NTRK, sel = nrpn_sel[ti];
+    if (cc == 99u) {
+        nrpn_hi[ti] = (uint8_t)value;
+        nrpn_sel[ti] = 0;
+    } else if (cc == 98u) {
+        nrpn_sel[ti] = (uint8_t)(nrpn_hi[ti] == 0u && value < P_COUNT ? value + 1u : 0u);
+    } else if (cc == 101u || cc == 100u) {
+        nrpn_sel[ti] = 0;
+    } else if (cc == 6u || cc == 38u) {
+        if (!sel--)
+            return 1;
+        if (cc == 6u)
+            nrpn_dm[ti] = (uint8_t)value;
+        midi_cc_set_n(t, sel, cc == 6u ? value * 129u : ((uint32_t)nrpn_dm[ti] << 7) | value, 16383u);
+    } else {
+        return 0;
+    }
+    return 1;
 }
 /* 1: cc is learned (set here) or taken by MIDI LEARN waiting for one */
 static int __attribute__((noinline)) midi_learned(uint32_t cc, uint32_t value)
@@ -3329,6 +3358,8 @@ static void __attribute__((noinline)) midi_cc(track_t *t, uint32_t cc, uint32_t 
     int16_t *slot = 0;
     uint32_t i, id = 0xFFFFu;
     if (midi_learned(cc, value))                       /* (a learned CC is the user's: not the map's) */
+        return;
+    if (midi_nrpn(t, cc, value & 127u))
         return;
     if (cc == 64u) {                                   /* the sustain pedal (2.6): >= 64 down */
         sus_set(t, value >= 64u);

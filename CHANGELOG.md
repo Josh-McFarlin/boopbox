@@ -13,6 +13,17 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+- **Newer FM-1s save again.** FM-1s sold from late 2026 (the logo on the front) have another maker's flash chip. BoopBox
+  did not know it and ran from RAM only on them: nothing was saved, and updates did not work. It knows both chips now
+  (the app, the USB rescue and the update loader). Found by [JIANT FM](https://github.com/juanjiant-bit/JIANT).
+- **NRPN** (after JIANT FM): every parameter of a track can be set over MIDI with 14 bits: CC99 0, CC98 the
+  parameter's number, then CC6 and CC38. The map: [docs/NRPN.md](docs/NRPN.md). The CC map and MIDI LEARN are
+  unchanged.
+
+Projects, presets and settings from 1.7.0 open as before.
+
 ## 1.7.0
 
 **Patterns you can play, chains you can write, scenes for the song** ([the

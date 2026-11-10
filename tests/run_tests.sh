@@ -349,6 +349,12 @@ run "eight tracks: all at once on their own lengths, the shared voice budget, tw
     cc_run tracks8_test "-DARENA_STATS $GH" tests/tracks8_test.c
 run "step components: each type, directions, seeds, drums, other lengths beside, nothing hanging, stores, damage" \
     cc_run comp_test "$GH" tests/comp_test.c
+nrpn() {
+    cc_run nrpn_test "$GH" tests/nrpn_test.c || return 1
+    "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" docs/NRPN.md ||
+        { echo "docs/NRPN.md differs from the firmware: $OUT/nrpn_test --write docs/NRPN.md"; return 1; }
+}
+run "NRPN: track parameters by CC99/98, 14-bit CC6/38, selection kept and ended, drums, engines; docs/NRPN.md current" nrpn
 run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" \
     cc_run lock_test "$GH" tests/lock_test.c
 run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" \
