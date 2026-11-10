@@ -16,7 +16,13 @@
  *   resets the others that are not done. */
 enum {
     TG_TRACK, TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_PLAY, TG_PAGE, TG_OCT, TG_NOTES, TG_LANES, TG_MUTES,
-    TG_LOCK, TG_PATSEL, TG_PATS, TG_PATHAS, TG_SAVED, TG_SONG, TG_SONGMODE, TG_DONE
+    TG_LOCK, TG_PATSEL, TG_PATS, TG_PATHAS, TG_SAVED, TG_SONG, TG_SONGMODE, TG_DONE,
+    /* (after TG_DONE: its number is in level 4's song area, web/trslot.js) the SCENES and CHAIN pages: */
+    TG_SCENE,                                      /* scene p: its name v (N_SCN; -1 any), each track's pattern (data:
+                                                    * 8 bytes, 255 any, SCN_KEEP keep) */
+    TG_SCNPLAY,                                    /* scene p playing (launched, every track of it changed) */
+    TG_CHAIN,                                      /* track trk's chain (data: its count, then each slot, CH_SLOT), on */
+    TG_COUNT
 };
 enum { HOW_ANY, HOW_SEQ, HOW_NOTES };              /* how a pattern is written: the hints and the keys lit */
 enum { PG_DRUMS = 1, PG_PATTERNS, PG_SONG };       /* TG_PAGE */
@@ -74,7 +80,7 @@ UI_SMALL static const char *tr_str(const uint8_t *s, uint32_t used, uint32_t o, 
 UI_SMALL static int tr_card_ok(const tr_card_t *c, const uint8_t *d, uint32_t n)
 {
     uint32_t o = c->data, len, i, k;
-    if (c->goal > TG_DONE || (c->trk >= NTRK && c->trk != 255u) || c->btn > NB || c->why >= TR_NWHY)
+    if (c->goal >= TG_COUNT || (c->trk >= NTRK && c->trk != 255u) || c->btn > NB || c->why >= TR_NWHY)
         return 0;
     switch (c->goal) {
     case TG_PARAM:
@@ -89,6 +95,17 @@ UI_SMALL static int tr_card_ok(const tr_card_t *c, const uint8_t *d, uint32_t n)
         return c->v >= 0 && c->v < NPAT;
     case TG_PATHAS:
         return c->p < NPAT;
+    case TG_SCNPLAY:
+        return c->p < NSCENE;
+    case TG_SCENE:
+        if (c->p >= NSCENE || c->v >= (int16_t)NSCN_NAMES || c->v < -1 || o + NTRK > n)
+            return 0;
+        for (k = 0; k < NTRK; k++)
+            if (d[o + k] != 255u && d[o + k] > SCN_KEEP)
+                return 0;
+        return 1;
+    case TG_CHAIN:
+        return c->trk < NTRK && o < n && d[o] <= NCHAIN && o + 1u + d[o] <= n;
     case TG_LOCK:
         return c->p < P_COUNT && o < n && d[o] < NSTEP;
     case TG_PATS:
@@ -688,17 +705,34 @@ UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
         tr_algo_say(k);
         return;
     }
-    if (pats_cursor != p) {
+    if (copy && pats_cursor != p) {
         tr_say("KNOB 1 TO PATTERN ", "");
         tr_num((int32_t)p + 1);
         return;
     }
     if (copy)
         tr_say(pats_arm == 1u ? "KNOB 3 RIGHT AGAIN: COPY" : "KNOB 3 RIGHT TWICE: COPY", "");
-    else if (song.playing && trk[k].pat_req)
+    else if (song.playing && trk[k].pat_req == p + 1u)
         tr_say("WAIT FOR THE BAR", "");
-    else
-        tr_say("PRESS OCT+ TO PLAY IT", ""), tr.btn = B_OCTUP;
+    else {
+        tr_say("PRESS WHITE KEY ", "");          /* (the keys are the pads: the pattern's key lit) */
+        tr_num((int32_t)p + 1);
+        tr.keys = 1u << key_of_white(p);
+    }
+}
+/* the way to a page of the three (PV_*): SEQ held + SAVE (SCENES), then SELECT left */
+UI_SMALL static int tr_to_view(uint32_t view)
+{
+    static const char *const VN[3] = {"PATTERNS", "CHAIN", "SCENES"};
+    if (tr_quiet || (on_pats_page() && pats_view() == view))
+        return 1;
+    if (on_pats_page()) {
+        tr_say(pats_view() > view ? "TURN SELECT LEFT: " : "TURN SELECT RIGHT: ", VN[view % 3u]);
+        return 0;
+    }
+    tr_say("HOLD SEQ, TAP SAVE", "");
+    tr.btn = B_SEQ;
+    return 0;
 }
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
@@ -779,7 +813,10 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         if (at)
             return 1;
         if (PAGES[c->p].scope == SC_PATS) {
-            tr_to_pats();
+            uint32_t v = 0, i = c->p;                   /* (which of the three: its place among them) */
+            while (i > 0u && PAGES[i - 1u].scope == SC_PATS)
+                i--, v++;
+            tr_to_view(v);
             if (str_eq(tr.hint, c->act))
                 tr.hint[0] = 0;                         /* (what the action says already) */
         } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
@@ -873,7 +910,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         }
         if (bad == NTRK)
             return 1;
-        if (same && on_pats_page() && pats_view() == PV_PADS && pats_cursor == w0) {   /* one for all: OCT- every track */
+        if (same && on_pats_page() && pats_view() == PV_PADS && pats_cursor == w0 && w0 < NPAT) {   /* one for all: OCT- */
             tr_say(song.playing && trk[bad].pat_req ? "WAIT FOR THE BAR" : "PRESS OCT-: EVERY TRACK", "");
             tr.btn = B_OCTDN;
             return 0;
@@ -921,6 +958,87 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     }
     case TG_SONGMODE:
         return arrangement_enabled && song.playing;
+    case TG_SCENE: {
+        const uint8_t *d = &TR_D[c->data];
+        uint32_t s = c->p % NSCENE, k, bad = NTRK, store = 1;
+        for (k = 0; k < NTRK; k++) {
+            if (d[k] == 255u || scn_pat[s][k] == d[k])
+                continue;
+            store &= d[k] < NPAT && trk[k].pat == d[k] && !trk[k].pat_req;   /* (what plays is what it wants) */
+            if (bad == NTRK || k == song.sel)
+                bad = k;                         /* (the track selected first) */
+        }
+        if (bad == NTRK && (c->v < 0 || scn_name[s] == (uint32_t)c->v))
+            return 1;
+        if (!tr_to_view(PV_SCENES))
+            return 0;
+        if (scn_cursor != s) {
+            tr_say("KNOB 1 TO SCENE ", "");
+            tr_num((int32_t)s + 1);
+        } else if (c->v >= 0 && scn_name[s] != (uint32_t)c->v) {
+            tr_say("KNOB 3 TO ", N_SCN[(uint32_t)c->v % NSCN_NAMES]);
+        } else if (store) {
+            tr_say(pats_arm == 3u ? "PRESS OCT- AGAIN: STORE" : "PRESS OCT- TWICE: STORE", "");
+            tr.btn = B_OCTDN;
+        } else if (song.sel != bad) {
+            tr_algo_say(bad);
+        } else if (d[bad] >= NPAT) {
+            tr_say("KNOB 4 DOWN TO KEEP", "");
+        } else {
+            tr_say("KNOB 4 TO PATTERN ", "");
+            tr_num((int32_t)d[bad] + 1);
+        }
+        return 0;
+    }
+    case TG_SCNPLAY:
+        if (scn_cur == c->p && scn_ask == SCN_NONE)
+            return 1;
+        if (!on_pats_page()) {                   /* (any of the three: the keys 9..16 launch the scenes) */
+            tr_to_view(PV_SCENES);
+            return 0;
+        }
+        if (scn_ask == c->p && song.playing) {
+            tr_say("WAIT FOR THE BAR", "");
+            return 0;
+        }
+        tr_say("PRESS WHITE KEY ", "");
+        tr_num((int32_t)c->p + 9);
+        tr.keys = 1u << key_of_white(8u + c->p);
+        return 0;
+    case TG_CHAIN: {
+        const uint8_t *d = &TR_D[c->data];
+        uint32_t n = d[0], i;
+        for (i = 0; i < n && i < t->pat_nchain && t->pat_chain[i] == d[1u + i]; i++)
+            ;
+        if (i == n && t->pat_nchain == n && !t->pat_coff)
+            return 1;
+        if (!tr_to_view(PV_CHAIN) || !tr_sel(c))
+            return 0;
+        if (i == n && t->pat_nchain == n) {      /* (the slots right: PLAY off) */
+            tr_say("KNOB 4 RIGHT: PLAY ON", "");
+        } else if (i >= t->pat_nchain) {         /* (a slot missing: at the end, its key) */
+            if (chain_cursor != t->pat_nchain) {
+                tr_say("KNOB 1 TO THE END", "");
+            } else {
+                tr_say("PRESS WHITE KEY ", "");
+                tr_num((int32_t)CH_PAT(d[1u + i]) + 1);
+                tr.keys = 1u << key_of_white(CH_PAT(d[1u + i]));
+            }
+        } else if (chain_cursor != i) {          /* (a slot wrong, or one too many) */
+            tr_say("KNOB 1 TO SLOT ", "");
+            tr_num((int32_t)i + 1);
+        } else if (i >= n) {
+            tr_say("PRESS OCT-: REMOVE IT", "");
+            tr.btn = B_OCTDN;
+        } else if (CH_PAT(t->pat_chain[i]) != CH_PAT(d[1u + i])) {
+            tr_say("KNOB 2 TO PATTERN ", "");
+            tr_num((int32_t)CH_PAT(d[1u + i]) + 1);
+        } else {
+            tr_say("KNOB 3 TO X", "");
+            tr_num((int32_t)CH_REP(d[1u + i]));
+        }
+        return 0;
+    }
     default:
         return 0;
     }
@@ -1011,7 +1129,8 @@ UI_SMALL static void tr_resume(void)
     uint32_t i, from = 0, k;
     for (i = 0; i < tr.card; i++)
         if (L->cards[i].goal == TG_PATSEL || L->cards[i].goal == TG_PATS || L->cards[i].goal == TG_PATHAS ||
-            L->cards[i].goal == TG_SAVED)
+            L->cards[i].goal == TG_SAVED || L->cards[i].goal == TG_SCENE || L->cards[i].goal == TG_SCNPLAY ||
+            L->cards[i].goal == TG_CHAIN)
             from = i + 1u;
     tr_quiet = 1;
     for (i = from; i < tr.card; i++)

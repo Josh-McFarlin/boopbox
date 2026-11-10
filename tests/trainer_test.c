@@ -478,6 +478,37 @@ static void follow_hints(const tr_card_t *c)
             slow(EN_K3, 1);
         else if (tr_prefix(h, "TURN SELECT LEFT"))
             slow(EN_SELECT, -1);
+        else if (tr_prefix(h, "TURN SELECT RIGHT"))
+            slow(EN_SELECT, 1);
+        else if ((n = hint_num(h, "PRESS WHITE KEY ")) > 0) {   /* (the coach lights that key: it says so) */
+            if (!((tr.keys >> key_of_white((uint32_t)n - 1u)) & 1u)) {
+                printf("trainer: %s: \"%s\" without its key lit\n", c->head, h);
+                hint_lost++;
+            }
+            key(key_of_white((uint32_t)n - 1u));
+        } else if ((n = hint_num(h, "KNOB 1 TO SCENE ")) > 0)
+            slow(EN_K1, scn_cursor < (uint32_t)n - 1u ? 1 : -1);
+        else if ((n = hint_num(h, "KNOB 1 TO SLOT ")) > 0)
+            slow(EN_K1, chain_cursor < (uint32_t)n - 1u ? 1 : -1);
+        else if (!strcmp(h, "KNOB 1 TO THE END"))
+            slow(EN_K1, 1);
+        else if ((n = hint_num(h, "KNOB 2 TO PATTERN ")) > 0)
+            slow(EN_K2, CH_PAT(TSEL->pat_chain[chain_cursor % NCHAIN]) < (uint32_t)n - 1u ? 1 : -1);
+        else if ((n = hint_num(h, "KNOB 3 TO X")) > 0)
+            slow(EN_K3, CH_REP(TSEL->pat_chain[chain_cursor % NCHAIN]) < (uint32_t)n ? 1 : -1);
+        else if ((n = hint_num(h, "KNOB 4 TO PATTERN ")) > 0) {
+            uint32_t p = scn_pat[scn_cursor % NSCENE][song.sel % NTRK];
+            slow(EN_K4, p >= NPAT || p < (uint32_t)n - 1u ? 1 : -1);   /* (KEEP is below pattern 1) */
+        } else if (!strcmp(h, "KNOB 4 DOWN TO KEEP"))
+            slow(EN_K4, -1);
+        else if (tr_prefix(h, "KNOB 4 RIGHT"))
+            slow(EN_K4, 1);
+        else if (tr_prefix(h, "KNOB 3 TO ")) {           /* (a scene's name) */
+            uint32_t w = 0;
+            while (w < NSCN_NAMES && strcmp(N_SCN[w], h + 10))
+                w++;
+            slow(EN_K3, scn_name[scn_cursor % NSCENE] < w ? 1 : -1);
+        }
         else if (tr_prefix(h, "PRESS OCT+"))
             tap(B_OCTUP);
         else if (tr_prefix(h, "PRESS OCT-"))
@@ -535,6 +566,9 @@ static void do_card(const tr_card_t *c)
     case TG_LANES: do_lanes(c); break;
     case TG_MUTES: do_mutes(c); break;
     case TG_LOCK: do_lock(c); break;
+    case TG_SCENE: case TG_SCNPLAY: case TG_CHAIN:      /* (scenes and chains: the hints alone, every time) */
+        follow_hints(c);
+        break;
     case TG_PATSEL: case TG_PATS: case TG_PATHAS:
         if (hint_tries++ == 0u) {                        /* (the first try: the hints alone) */
             follow_hints(c);
@@ -717,8 +751,9 @@ static int play_level(uint32_t l, const char *shots)
         }
         hint_tries = 0;
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
-            if (hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS ||
-                                                    c->goal == TG_PAGE)) {
+            if ((hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS ||
+                                                     c->goal == TG_PAGE)) ||
+                (tries == 1u && (c->goal == TG_SCENE || c->goal == TG_SCNPLAY || c->goal == TG_CHAIN))) {
                 printf("trainer: level %u card %u (%s): the hints alone did not get there: %s\n", l + 1u, at + 1u,
                        c->head, tr.hint);
                 hint_lost++;
@@ -755,6 +790,8 @@ static uint32_t tg_size(const tr_card_t *c, const uint8_t *d)   /* a card's targ
     case TG_LANES: return 2u + d[1] * (d[0] + 1u);
     case TG_LOCK: return 1;
     case TG_PATS: return NTRK;
+    case TG_SCENE: return NTRK;
+    case TG_CHAIN: return 1u + d[0];
     case TG_SONG: return c->flags & 1u ? 1u : 1u + 2u * d[0];
     default: return 0;
     }
@@ -1008,7 +1045,10 @@ int main(int argc, char **argv)
             check(!bad, what);
         }
         if (l == 1u) {                                   /* the verse and the chorus as the score has them */
-            check(trk[3].pat == 1u && trk[2].pat == 1u && song.playing, "level 2 ends in the chorus (pattern 2), playing");
+            check(trk[2].pat == 0u && song.playing && scn_cur == 0u && !strcmp(N_SCN[scn_name[0]], "VERSE") &&
+                  !strcmp(N_SCN[scn_name[1]], "CHORUS") && trk[3].pat_nchain == 2u && trk[3].pat_chain[0] == CH_SLOT(0, 3) &&
+                  trk[3].pat_chain[1] == CH_SLOT(1, 1) && chain_on(&trk[3]),
+                  "level 2 ends in the verse (scene 1 VERSE, scene 2 CHORUS), playing, the drums' chain 1 x3, 2");
         }
     }
     {
@@ -1131,7 +1171,7 @@ int main(int argc, char **argv)
         ok &= damaged(slot, 10, 2, 1);                           /* another format */
         ok &= damaged(slot, 16, 1, 1);                           /* one card */
         ok &= damaged(slot, 16, 200, 1);                         /* more cards than RAM for them */
-        ok &= damaged(slot, 32u + 4u, TG_DONE + 1u, 1);          /* a goal */
+        ok &= damaged(slot, 32u + 4u, TG_COUNT, 1);              /* a goal (past the last) */
         ok &= damaged(slot, 32u + 5u, 9, 1);                     /* a track */
         ok &= damaged(slot, 32u + 14u, TR_NWHY, 1);              /* a topic */
         ok &= damaged(slot, 32u + 16u * (TR_LEVELS[1].n - 1u) + 4u, TG_PLAY, 1);   /* the last card not DONE */
@@ -1169,7 +1209,8 @@ int main(int argc, char **argv)
             have = TR_CHECK[i].trk == 255u ? song.g[TR_CHECK[i].id] : trk[TR_CHECK[i].trk].p[TR_CHECK[i].id];
             bad += have - TR_CHECK[i].v > 4 || TR_CHECK[i].v - have > 4;
         }
-        check(!bad && trk[3].pat == 1u && trk[2].pat == 1u, "level 4: every setting of its song (level 2's) is on the FM-1");
+        check(!bad && trk[2].pat == 0u && scn_cur == 0u && trk[3].pat_nchain == 2u,
+              "level 4: every setting of its song (level 2's) is on the FM-1");
         done3 = tr.done & 7u;
         check(((tr.done >> TR_NLEVELS) & 1u) && tr_actions(TR_NLEVELS, a) == 1u && a[0] == TA_AGAIN,
               "the picker: level 4 done, PLAY IT AGAIN");

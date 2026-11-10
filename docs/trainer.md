@@ -8,7 +8,7 @@ works on BoopBox too.
 | Level | Song | Style | What it teaches |
 | --- | --- | --- | --- |
 | 1 | **First Light** | lo-fi hip-hop, 86 BPM, A minor, 4 tracks | choosing tracks, kits and sounds; the DRUMS grid; notes on steps with the SEQ layer; key and scale; chord mode; DIV, LEN, GATE; swing; sends; mutes to perform it |
-| 2 | **Neon Avenue** | synthwave, 104 BPM, D minor, 5 tracks | the NOTES page (typing a line, chords, LEN, accents); drum levels and a ratchet; track 5; the sound browser; the delay; pan and level; patterns for a verse and a chorus |
+| 2 | **Neon Avenue** | synthwave, 104 BPM, D minor, 5 tracks | the NOTES page (typing a line, chords, LEN, accents); drum levels and a ratchet; track 5; the sound browser; the delay; pan and level; patterns played on the keys; **scenes** for a verse and a chorus, launched on white keys 9 and 10; a drum **chain** with repeats (verse beat ×3, then a fill) |
 | 3 | **Lanterns** | melodic dubstep, 150 BPM, D minor, 7 tracks | an 8-track drop; envelopes; the DUCK pump; patterns per section; a 64-step roll with ratchets; a lock with SLIDE; mutes and sections A–D; the SONG screen and song mode |
 
 | 4 | **Your song** | any | a song from an audio file: [the song page](#the-song-page) writes it, the installer puts it in the trainer (below: [Level 4](#level-4-the-song-area)) |
@@ -175,7 +175,7 @@ normal build or its tests. It installs like any BoopBox package; installing the 
 - `tools/trainer/songs.py` holds the scores (tracks, sounds, steps, drum lanes, locks, sections, song).
   `tools/trainer/render.py` renders them.
 - `tools/trainer/lessons.py` holds each level's steps: a headline (up to 23 characters), an action (up to 30; `@` in
-  it is the value wanted, as the screen shows it), the page a knob is on, and a goal (a track, a kit, a sound, a parameter, a pattern's notes or hits, the mutes, a lock, the patterns playing, a
+  it is the value wanted, as the screen shows it), the page a knob is on, and a goal (a track, a kit, a sound, a parameter, a pattern's notes or hits, the mutes, a lock, the patterns playing, a scene's name and patterns, the scene playing, a track's chain, a
   section saved, the song...). Notes and hits come from the score. It writes `trainer_lessons.h`, which the build
   compiles in.
 - `firmware/src/trainer.c` checks the goals, draws the coach and the level picker, lights the panel and keeps the progress log.
