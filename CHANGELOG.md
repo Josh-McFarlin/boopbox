@@ -13,6 +13,15 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.1
+
+**BoopBox Trainer has three levels again** ([the trainer](docs/trainer.md)): level 4 (*YOUR SONG*, a song made from an
+audio file) is gone from the FM-1, and so is the page that made it (webapp/song/) from the site and the installer.
+The trainer's level picker shows levels 1–3 and BoopBox's menu as its fourth page. If you were in level 4, the trainer
+starts with no level running; the progress of levels 1–3 is kept. The trainer image is 9,348 B smaller.
+
+BoopBox itself is as in 1.9.0 (its version reads 1.9.1); projects, presets and settings open as they are.
+
 ## 1.9.0
 
 **Beats from the keys** ([the details](docs/groovebox-controls.md#beats-from-the-keys-the-play-page-of-a-drum-track-19)):

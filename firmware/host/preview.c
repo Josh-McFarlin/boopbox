@@ -72,7 +72,7 @@ void preview_track(uint32_t k, uint32_t engine, uint32_t preset)
     t->preset = (uint8_t)preset;
 }
 /* a factory sound on track k as the FM-1's sound browser loads it (ui.c apply_preset_to): the sound's parameters to the
- * preset's, the pattern and the mix kept (the trainer's song page: web/song-worklet.js) */
+ * preset's, the pattern and the mix kept */
 void preview_preset(uint32_t k, uint32_t engine, uint32_t pi)
 {
     if (k >= NPART || engine >= NENGINES) return;

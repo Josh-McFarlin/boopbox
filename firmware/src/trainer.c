@@ -17,7 +17,7 @@
 enum {
     TG_TRACK, TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_PLAY, TG_PAGE, TG_OCT, TG_NOTES, TG_LANES, TG_MUTES,
     TG_LOCK, TG_PATSEL, TG_PATS, TG_PATHAS, TG_SAVED, TG_SONG, TG_SONGMODE, TG_DONE,
-    /* (after TG_DONE: its number is in level 4's song area, web/trslot.js) the SCENES and CHAIN pages: */
+    /* the SCENES and CHAIN pages: */
     TG_SCENE,                                      /* scene p: its name v (N_SCN; -1 any), each track's pattern (data:
                                                     * 8 bytes, 255 any, SCN_KEEP keep) */
     TG_SCNPLAY,                                    /* scene p playing (launched, every track of it changed) */
@@ -41,156 +41,8 @@ typedef struct {
     uint8_t n;
 } tr_level_t;
 #include "trainer_lessons.h"
-#include "fm1_cc.h"                                /* fm1_opaque */
-
-/* ------------------------------------------------------------- level 4: the song area --- */
-/* A song made elsewhere (the trainer's web page: web/trslot.js) is written into TR_SLOT of the trainer package before
- * it is installed (tools/trainer/slot.py has the format). At power-on it is checked field by field (tr_slot_load): when
- * it is whole it is level 4, its cards copied to RAM with their strings and targets left in the flash; otherwise the
- * picker has the three levels built in. The magic finds the area in the image (it is there once: tr_slot_load checks it
- * as numbers); its other bytes are 0xFF: no song. */
-#define TR_NLV (TR_NLEVELS + 1)                    /* the levels there can be: the three built in, the song area's */
-#define TR_SLOT_SIZE 8192u
-#define TR_C4MAX 128u                              /* a song's cards at most */
-__attribute__((used, aligned(4))) static const uint8_t TR_SLOT[TR_SLOT_SIZE] = {
-    'B', 'O', 'O', 'P', 'S', 'O', 'N', 'G', [8 ... TR_SLOT_SIZE - 1u] = 0xFFu};
-static tr_card_t tr_c4[TR_C4MAX];
-static tr_level_t tr_l4;                           /* level 4 (n 0: no song) */
-static const uint8_t *tr_d4;                       /* its targets (in the song area) */
-static uint8_t tr_nlv = TR_NLEVELS;                /* the levels in the picker: TR_NLV with a song */
-static uint16_t tr_tag4;                           /* the song's tag (its CRC's low half): its progress is its own */
-UI_SMALL static const tr_level_t *tr_level(uint32_t l) { return l < TR_NLEVELS ? &TR_LEVELS[l] : &tr_l4; }
-#define TR_D (tr.lvl == TR_NLV ? tr_d4 : TR_DATA)  /* the targets of the level running */
-UI_SMALL static const uint8_t *tr_slot(void) { return fm1_opaque(TR_SLOT); }   /* (the flash's bytes, not these) */
-UI_SMALL static uint32_t tr_u16(const uint8_t *s, uint32_t o) { return s[o] | (uint32_t)s[o + 1u] << 8; }
-UI_SMALL static const char *tr_str(const uint8_t *s, uint32_t used, uint32_t o, uint32_t max)
-{                                                  /* a string in the area: NUL within max characters, printable */
-    uint32_t i;
-    if (o < 32u || o >= used)
-        return 0;
-    for (i = 0; i <= max && o + i < used; i++) {
-        if (!s[o + i])
-            return (const char *)s + o;
-        if (s[o + i] < 32u || s[o + i] > 126u)
-            return 0;
-    }
-    return 0;
-}
-/* a card's fields and targets within what the checks index (d: the targets, n bytes) */
-UI_SMALL static int tr_card_ok(const tr_card_t *c, const uint8_t *d, uint32_t n)
-{
-    uint32_t o = c->data, len, i, k;
-    if (c->goal >= TG_COUNT || (c->trk >= NTRK && c->trk != 255u) || c->btn > NB || c->why >= TR_NWHY)
-        return 0;
-    switch (c->goal) {
-    case TG_PARAM:
-        return c->p < P_COUNT && o <= NPAGES;
-    case TG_GLOBAL:
-        return c->p < G_COUNT && o <= NPAGES;
-    case TG_PAGE:
-        return c->p < NPAGES;
-    case TG_SOUND:
-        return c->p < NENGINES;
-    case TG_PATSEL:
-        return c->v >= 0 && c->v < NPAT;
-    case TG_PATHAS:
-        return c->p < NPAT;
-    case TG_SCNPLAY:
-        return c->p < NSCENE;
-    case TG_SCENE:
-        if (c->p >= NSCENE || c->v >= (int16_t)NSCN_NAMES || c->v < -1 || o + NTRK > n)
-            return 0;
-        for (k = 0; k < NTRK; k++)
-            if (d[o + k] != 255u && d[o + k] > SCN_KEEP)
-                return 0;
-        return 1;
-    case TG_CHAIN:
-        return c->trk < NTRK && o < n && d[o] <= NCHAIN && o + 1u + d[o] <= n;
-    case TG_LOCK:
-        return c->p < P_COUNT && o < n && d[o] < NSTEP;
-    case TG_PATS:
-        if (o + NTRK > n)
-            return 0;
-        for (k = 0; k < NTRK; k++)
-            if (d[o + k] != 255u && d[o + k] >= NPAT)
-                return 0;
-        return 1;
-    case TG_SONG:
-        if (o >= n || d[o] > ARR_STEPS)
-            return 0;
-        if (c->flags & 1u)
-            return 1;
-        if (o + 1u + 2u * d[o] > n)
-            return 0;
-        for (k = 0; k < d[o]; k++)
-            if (d[o + 1u + 2u * k] >= ARR_SCENES)
-                return 0;
-        return 1;
-    case TG_NOTES:
-        if (o >= n || (len = d[o]) == 0 || len > NSTEP)
-            return 0;
-        for (o++, i = 0; i < len; i++) {
-            if (o >= n || (d[o] & 3u) == 3u)
-                return 0;
-            k = d[o++] & 3u;
-            if (k == 1u) {
-                if (o >= n || d[o] == 0 || d[o] > 4u || o + 1u + d[o] > n)
-                    return 0;
-                for (k = 1; k <= d[o]; k++)
-                    if (d[o + k] > 127u)
-                        return 0;
-                o += 1u + d[o];
-            }
-        }
-        return 1;
-    case TG_LANES:
-        if (o + 2u > n || (len = d[o]) == 0 || len > NSTEP || d[o + 1u] > DRUM_LANES ||
-            o + 2u + d[o + 1u] * (len + 1u) > n)
-            return 0;
-        for (k = 0; k < d[o + 1u]; k++)
-            if (d[o + 2u + k * (len + 1u)] >= DRUM_LANES)
-                return 0;
-        return 1;
-    default:
-        return 1;
-    }
-}
-/* the song area at s: level 4 when it is whole (1), else none (0) */
-UI_SMALL static int tr_slot_load(const uint8_t *s)
-{
-    uint32_t used = tr_u16(s, 8), n = s[16], toff = tr_u16(s, 18), tlen = tr_u16(s, 20), i;
-    const char *nm[4];
-    tr_l4.n = 0;
-    tr_nlv = TR_NLEVELS;
-    if (tr_u16(s, 0) != 0x4F42u || tr_u16(s, 2) != 0x504Fu || tr_u16(s, 4) != 0x4F53u || tr_u16(s, 6) != 0x474Eu ||
-        used > TR_SLOT_SIZE || used < 32u + 16u * n || tr_u16(s, 10) != 1u ||
-        (s[12] | (uint32_t)s[13] << 8 | (uint32_t)s[14] << 16 | (uint32_t)s[15] << 24) != st_crc32(s + 16, used - 16u) ||
-        n < 2u || n > TR_C4MAX || toff < 32u + 16u * n || toff + tlen > used)
-        return 0;
-    for (i = 0; i < 4u; i++)
-        if (!(nm[i] = tr_str(s, used, tr_u16(s, 22u + 2u * i), i ? 28u : 16u)))
-            return 0;
-    for (i = 0; i < n; i++) {
-        const uint8_t *q = s + 32u + 16u * i;
-        tr_card_t *c = &tr_c4[i];
-        c->head = tr_str(s, used, tr_u16(q, 0), 23u);
-        c->act = tr_str(s, used, tr_u16(q, 2), 30u);
-        c->goal = q[4], c->trk = q[5], c->p = q[6], c->btn = q[7];
-        c->v = (int16_t)tr_u16(q, 8);
-        c->tol = q[10], c->flags = q[11];
-        c->data = (uint16_t)tr_u16(q, 12);
-        c->why = q[14];
-        if (!c->head || !c->act || !tr_card_ok(c, s + toff, tlen) || ((c->goal == TG_DONE) != (i == n - 1u)))
-            return 0;
-    }
-    tr_l4.name = nm[0], tr_l4.style = nm[1], tr_l4.learn1 = nm[2], tr_l4.learn2 = nm[3];
-    tr_l4.cards = tr_c4;
-    tr_l4.n = (uint8_t)n;
-    tr_d4 = s + toff;
-    tr_tag4 = (uint16_t)tr_u16(s, 12);
-    tr_nlv = TR_NLV;
-    return 1;
-}
+UI_SMALL static const tr_level_t *tr_level(uint32_t l) { return &TR_LEVELS[l]; }
+#define TR_D TR_DATA                               /* the targets of the levels */
 
 #define TR_OK_MS 700u                              /* NICE shows this long, then the next card */
 #define TR_HEAD_MS 2000u                           /* a new card (one line): its number and headline this long */
@@ -200,7 +52,7 @@ UI_SMALL static int tr_slot_load(const uint8_t *s)
 static struct {
     uint8_t lvl;                                   /* the level running + 1, 0 = none */
     uint8_t card;                                  /* its card */
-    uint8_t at[TR_NLV];                            /* each level's card (kept) */
+    uint8_t at[TR_NLEVELS];                        /* each level's card (kept) */
     uint8_t done;                                  /* the levels finished, a bit each (kept) */
     uint8_t seen;                                  /* the welcome was shown (kept) */
     uint8_t ok;                                    /* the goal held: NICE until ok_ms + TR_OK_MS */
@@ -1046,7 +898,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
 
 /* ------------------------------------------------------------- the log (progress, in its own flash sector) --- */
 typedef struct {
-    uint8_t mark, lvl, card, done, seen, at[TR_NLV], tag[2], rsv[5 - TR_NLV];   /* tag: level 4's song */
+    uint8_t mark, lvl, card, done, seen, at[TR_NLEVELS], rsv[7 - TR_NLEVELS];   /* (rsv: was level 4's) */
     uint32_t crc;
 } tr_rec_t;
 _Static_assert(sizeof(tr_rec_t) == TR_REC, "a record of the log");
@@ -1064,16 +916,10 @@ UI_SMALL static void tr_log_boot(void)              /* power-on: the last record
     tr.log_at = o;
     if (!got)
         return;
-    for (k = 0; k < TR_NLV; k++)
+    for (k = 0; k < TR_NLEVELS; k++)
         tr.at[k] = (uint8_t)(last.at[k] < tr_level(k)->n ? last.at[k] : 0u);
-    tr.done = last.done, tr.seen = last.seen;
-    if (tr_nlv < TR_NLV || (last.tag[0] | last.tag[1] << 8) != tr_tag4) {   /* another song (or none): from its start */
-        tr.at[TR_NLEVELS] = 0;
-        tr.done &= (uint8_t)~(1u << TR_NLEVELS);
-        if (last.lvl == TR_NLV)
-            last.lvl = 0;
-    }
-    if (last.lvl && last.lvl <= tr_nlv) {
+    tr.done = (uint8_t)(last.done & ((1u << TR_NLEVELS) - 1u)), tr.seen = last.seen;
+    if (last.lvl && last.lvl <= TR_NLEVELS) {
         tr.lvl = last.lvl;
         tr.card = tr.at[last.lvl - 1u];
     }
@@ -1091,7 +937,6 @@ UI_SMALL static void tr_log_put(void)               /* a record (a few bytes pro
     memset(&r, 0, sizeof r);
     r.mark = TR_MARK, r.lvl = tr.lvl, r.card = tr.card, r.done = tr.done, r.seen = tr.seen;
     memcpy(r.at, tr.at, sizeof tr.at);
-    r.tag[0] = (uint8_t)tr_tag4, r.tag[1] = (uint8_t)(tr_tag4 >> 8);
     r.crc = st_crc32(&r, TR_REC - 4u);
     if (st_prog(TR_LOG + tr.log_at, &r, TR_REC) == 0)
         tr.dirty = 0;
@@ -1150,7 +995,7 @@ UI_SMALL static void tr_begin(uint32_t l)
     uint32_t k;
     arrangement_enabled = 0;
     project_new();
-    for (k = 0; k < TR_NLV; k++)
+    for (k = 0; k < TR_NLEVELS; k++)
         if (k == l || !((tr.done >> k) & 1u))
             tr.at[k] = 0;
     tr.done &= (uint8_t)~(1u << l);
@@ -1426,7 +1271,7 @@ static const char *const TA_NAME[] = {"CONTINUE", "START", "PLAY IT AGAIN", "STA
 UI_SMALL static uint32_t tr_actions(uint32_t page, uint8_t *a)   /* the page's actions, the first the default */
 {
     uint32_t n = 0;
-    if (page >= tr_nlv) {
+    if (page >= TR_NLEVELS) {
         a[n++] = TA_MENU;
         return n;
     }
@@ -1473,7 +1318,7 @@ UI_SMALL static void tr_pick_input(uint32_t pressed)
         return;
     }
     if ((s = panel_enc(EN_SELECT)) != 0 || (s = panel_enc(EN_ALGO)) != 0) {
-        tr.page = (uint8_t)clamp((int32_t)tr.page + (s > 0 ? 1 : -1), 0, tr_nlv);
+        tr.page = (uint8_t)clamp((int32_t)tr.page + (s > 0 ? 1 : -1), 0, TR_NLEVELS);
         tr.sel = 0;
         ui.force = 1;
     }
@@ -1551,8 +1396,8 @@ UI_SMALL static void tr_pick_draw(void)
     }
     uint8_t a[8];
     uint32_t page = tr.page, n = tr_actions(page, a), pass, i, first, sig;
-    const tr_level_t *L = page < tr_nlv ? tr_level(page) : 0;
-    uint16_t acc = page < tr_nlv ? UI_COL[page & 3u] : C_GRAY;
+    const tr_level_t *L = page < TR_NLEVELS ? tr_level(page) : 0;
+    uint16_t acc = page < TR_NLEVELS ? UI_COL[page & 3u] : C_GRAY;
     char b[32];
     sig = page * 131u + tr.sel * 7u + tr.done * 977u + (L ? tr.at[page] : 0u) * 31u + tr.lvl * 7919u + (uint32_t)tr_running();
     if (!ui.force && sig == tr.psig)
@@ -1565,14 +1410,12 @@ UI_SMALL static void tr_pick_draw(void)
         cv_text(4, 2, &FONT_S, "BOOPBOX TRAINER", C_HI);
         fmt_int(b, (int32_t)page + 1);
         str_cpy(b + str_len(b), "/", 2);
-        fmt_int(b + str_len(b), tr_nlv + 1);
+        fmt_int(b + str_len(b), TR_NLEVELS + 1);
         ui_text_r(2, b, C_GRAY);
         cv_rect(0, 20, 240, 1, C_LINE);
         if (L) {
             str_cpy(b, "LEVEL ", sizeof b);
             fmt_int(b + 6, (int32_t)page + 1);
-            if (page == TR_NLEVELS)
-                str_cpy(b + str_len(b), ": YOUR SONG", sizeof b - str_len(b));
             cv_text(4, 26, &FONT_S, b, acc);
             cv_text(4, 44, &FONT_L, L->name, C_WHITE);
             cv_text(4, 82, &FONT_S, L->style, C_AMB);
@@ -1614,7 +1457,6 @@ UI_SMALL static void tr_pick_draw(void)
 /* power-on: the progress log; the first start opens the picker */
 UI_SMALL static void trainer_boot(void)
 {
-    tr_slot_load(tr_slot());
     tr_log_boot();
     if (tr.lvl)
         tr_resume();
