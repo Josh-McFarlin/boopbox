@@ -99,6 +99,15 @@ int main(void)
     assert(jedec_reads == 1 && lcd_calls == 1);
     assert(services == 7 && sessions == 2);  /* idle startup starts no update */
     assert(bootguard_begin(&bootguard) == BOOT_ROM);
-    puts("recovery: boot failures, manual key, timer wrap, polled USB during OTA, retry, flash refusal and ROM fallback passed");
+    jedec = 0xB36014u; flash_ok = 0;         /* the late-2026 units' flash chip is known too */
+    retries = 0; if (!setjmp(exit_loop)) recovery_main();
+    assert(flash_ok && jedec_reads == 2);
+    jedec = 0x123456u;                       /* an unknown part: RAM only, no flash writes */
+    retries = 0; if (!setjmp(exit_loop)) recovery_main();
+    assert(!flash_ok && jedec_reads == 3);
+    jedec = 0x856014u;
+    retries = 0; if (!setjmp(exit_loop)) recovery_main();
+    assert(flash_ok);
+    puts("recovery: boot failures, manual key, timer wrap, polled USB during OTA, retry, flash refusal, both flash chips and ROM fallback passed");
     return 0;
 }
