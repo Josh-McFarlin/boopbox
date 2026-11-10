@@ -355,6 +355,15 @@ run "key velocity: the scan's sampling, the map, the 2.2 ms bound, drums no wait
     cc_run keyvel_test "-O1 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal" tests/keyvel_test.c
 run "key velocity in the sequencer: synth and drum keys, held-back presses, aftertouch (keys, MIDI), FILTER / VIBRATO" \
     cc_run keyvel_seq_test "$GH" tests/keyvel_seq_test.c
+emu() {
+    cc_run emu_test "-O1 -w -Ibuild/gen -Ifirmware/src" tests/emu_test.c "$OUT" || return 1
+    if command -v node >/dev/null && command -v clang >/dev/null && command -v wasm-ld >/dev/null; then
+        python3 tools/build_emu.py >/dev/null && node tests/emu_wasm_test.mjs
+    else
+        echo "emu wasm: no clang / wasm-ld / node: the WebAssembly build not checked"
+    fi
+}
+run "browser emulator: powers on, keys sound and light, pages, knobs, PLAY, MASTER, the flash kept across a power-on; its wasm" emu
 nrpn() {
     cc_run nrpn_test "$GH" tests/nrpn_test.c || return 1
     "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" docs/NRPN.md ||

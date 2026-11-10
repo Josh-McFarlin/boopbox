@@ -9,6 +9,7 @@
                               second choice in the installer
   webapp/installer/index.html index_pkg.html with fm1pkg.js, fm1ota.js and the metadata inlined
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
+  webapp/emu/index.html       (1.8) the browser emulator: web/emu/ and build/emu/boopbox-emu.wasm (tools/build_emu.py)
   webapp/song/index.html      with --trainer: song.html, the page that makes level 4 of the trainer from an audio file
                               (its modules, the note model in vendor/, the firmware's numbers: tools/trainer/consts.py);
                               online only (not kept by sw.js: the model is 2 MB)
@@ -37,6 +38,22 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ONLINE = "https://josh-mcfarlin.github.io/boopbox/"                 # (the offline editor's links)
+
+
+def emu_page(emu):
+    """(1.8) webapp/emu: the browser emulator (web/emu/ and build/emu/boopbox-emu.wasm from tools/build_emu.py); without
+    its wasm none at all, never an old one"""
+    wasm = HERE.parent / "build" / "emu" / "boopbox-emu.wasm"
+    if emu.exists():
+        shutil.rmtree(emu)
+    if not wasm.exists():
+        print("site: no emulator (python3 tools/build_emu.py first)")
+        return
+    emu.mkdir(parents=True)
+    for f in (HERE / "emu").iterdir():
+        if f.is_file():
+            shutil.copy(f, emu / f.name)
+    shutil.copy(wasm, emu / wasm.name)
 
 
 def offline_editor(html):
@@ -205,6 +222,7 @@ def main(pkg, version, out, trainer=None):
         shutil.copy(dsp, ed / dsp.name)
     elif (ed / dsp.name).exists():
         (ed / dsp.name).unlink()  # never serve an old audio build as the current one
+    emu_page(out / "webapp" / "emu")
     song = out / "webapp" / "song"
     if song.exists():
         shutil.rmtree(song)

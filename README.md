@@ -9,6 +9,7 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 <a href="BOOPBOX.md">Manual</a> ·
 <a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/editor/">Web editor</a> ·
+<a href="https://josh-mcfarlin.github.io/boopbox/webapp/emu/">Try it in the browser</a> ·
 <a href="../../releases">Releases</a> ·
 <a href="CHANGELOG.md">Changelog</a> ·
 <a href="../../issues">Report a bug</a>
@@ -442,6 +443,13 @@ BoopBox takes MIDI from two places at once:
 
 Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
+### Try it in the browser (1.8)
+
+**[The emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/)** (after JIANT FM's) runs the real firmware in the
+browser: the same screen, sequencer and sound engines, played with the mouse, a touch screen or the computer's keyboard.
+Your projects are kept in the browser between visits. Not there: USB, MIDI, your own samples and the keys' own velocity
+sensing. It is built from the same source (`firmware/host/emu.c`, `python3 tools/build_emu.py`).
+
 ### Key velocity and aftertouch (1.8)
 
 **(1.8, from [JIANT FM](https://github.com/juanjiant-bit/JIANT), after Charles Vestal's
@@ -657,7 +665,7 @@ See [BUILDING.md](BUILDING.md). In short: the JieLi toolchain and three files of
 - **@renebohne** — the played-note key lights (pull request #11) and, in 2.6, MIDI Program Change (Felucca pull request #179).
 - **ChanceTheMaker** and **keremimo** — the TRS MIDI input fix (Felucca Salt) and contributions to the MIDI clock.
 - **andrerezemini** ([sloop-lab](https://github.com/andrerezemini/sloop-lab)) — in 2.7 the sound on the FM-1's second core and 38 KB of RAM back (pull request #111), on the dual-core start of **Charles Vestal** ([X0X](https://github.com/charlesvestal/fm1-x0x)) and **keremimo** ([Melodee](https://github.com/keremimo/melodee)).
-- **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)) — in 2.7 the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide come from JIANT's; in 1.8 the support for the newer FM-1s' flash chip, the NRPN map, and the key velocity and aftertouch (its model, calibration and tests).
+- **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)) — in 2.7 the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide come from JIANT's; in 1.8 the support for the newer FM-1s' flash chip, the NRPN map, the key velocity and aftertouch (its model, calibration and tests), and the idea of the browser emulator.
 - **Charles Vestal** ([Velo](https://github.com/charlesvestal/fm1-velocity)) — in 1.8 the key velocity rests on his finding: how to drive and read the FM-1's carbon key pills.
 - **renebohne** — in 2.7 MIDI CC 74 sweeps each engine's own cutoff or brightness, after his pull request #71 (Felucca 1.1.5's standard CC map).
 - **@ordenador** (Mario Faúndez Vidal) — the web editor's local audio preview: the firmware's own engines and sequencer in the browser (WebAssembly), with the playable piano / pads and the inline sequence editing (pull request #120).

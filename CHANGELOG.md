@@ -26,6 +26,9 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
   HOME → **KEYS** (the USB section's new name). **VELOCITY** OFF / SOFT / NORMAL / HARD; **AFTERTOUCH** opens the
   filter or adds vibrato, and goes out as MIDI channel pressure; **VEL LEARN** lets each key learn your touch (OCT+
   forgets it). **Both are OFF by default**, and then nothing changes. MIDI channel pressure in works too.
+- **Try BoopBox in the browser**: [the emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real
+  firmware (screen, sequencer, sound) with the FM-1 drawn on the page; play it with the mouse, a touch screen or the
+  keyboard. Your projects stay in the browser. After JIANT FM's emulator.
 - **The screen's font takes less room**: the glyphs are read straight from flash (about 2.5 KB of flash and 4.8 KB of
   RAM back). Every screen looks the same; an accented capital in a name (É, Ñ) now shows as its letter (E, N).
 
