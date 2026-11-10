@@ -223,7 +223,8 @@ An asked change goes before the chain; the chain then goes on from the pattern a
 #### SCENES: the song's moments
 
 A scene is a pattern for each track, played together: an intro, a verse, a chorus. There are **8 scenes**, a row each:
-its number, its name and the pattern of each track (a `-` means the track **keeps** what it plays). The scene playing
+its number, its name and the pattern of each track, drawn as that pattern's picture (a `-` means the track **keeps**
+what it plays; a black box, an empty pattern). The scene playing
 has a ▶; one asked for has a blinking frame, and the header says when it comes (*in 3 beats*, *at loop end*). At first
 scene N is pattern N on every track, with no name.
 
@@ -235,7 +236,7 @@ scene N is pattern N on every track, with no name.
 | **KNOB 3 NAME** | its name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |
 | **KNOB 4** | the selected track's pattern in the scene: 1 … 8, or **keep** |
 | **OCT+** | launches the scene |
-| **OCT−**, twice | stores the patterns playing now into the scene (*OCT- AGAIN: STORE 3* first) |
+| **OCT−**, twice | stores the patterns playing now into the scene. The first press asks first: a box over the rows, *STORE INTO SCENE 3?*, with the pattern each track plays now; **OCT−** again stores, **OCT+**, a key, a knob or leaving the page cancels |
 
 Edit the pattern playing as usual (NOTES, the DRUMS grid, the SEQ layer, recording): its changes are kept when
 another pattern plays, and come back with it.

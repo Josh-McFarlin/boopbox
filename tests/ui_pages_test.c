@@ -2670,10 +2670,26 @@ int main(int argc, char **argv)
         check(ok, "SCENES: OCT+ launches the cursor's scene; a KEEP track goes on with its pattern");
         trk[0].pat_req = 6; frames(2);                   /* track 1 on pattern 6 */
         tap(B_OCTDN); frame();
-        ok = !strcmp(ui.msg, "OCT- AGAIN: STORE 2") && scn_pat[1][0] == 1u;
+        ok = pats_arm == 3u && scn_pat[1][0] == 1u;
+        tap(B_OCTUP); frame();                           /* OCT+: NO (nothing stored, nothing launched) */
+        ok &= !pats_arm && scn_pat[1][0] == 1u && scn_cur == 1u && !trk[0].pat_req && !strcmp(ui.msg, "STORE CANCELLED");
         tap(B_OCTDN); frame();
-        ok &= scn_pat[1][0] == 5u && scn_pat[1][1] == 2u && !strcmp(ui.msg, "SCENE STORED");
-        check(ok, "SCENES: OCT- twice stores the patterns playing into the scene");
+        ok &= pats_arm == 3u;
+        key(key_of_lane(8 + 4)); frames(1);              /* a key: NO as well (scene 5 not launched) */
+        ok &= !pats_arm && scn_ask == SCN_NONE && scn_cur == 1u && scn_pat[1][0] == 1u;
+        tap(B_OCTDN); frame();
+        ok &= pats_arm == 3u;
+        for (i = 0; i < 300u; i++)                       /* (no timeout: the question waits for its answer) */
+            frame();
+        ok &= pats_arm == 3u;
+        ui.force = 1; frame(); ppm("scenes-store-ask");
+        tap(B_OCTDN); frame();
+        ok &= !pats_arm && scn_pat[1][0] == 5u && scn_pat[1][1] == 2u && !strcmp(ui.msg, "SCENE STORED");
+        check(ok, "SCENES: OCT- asks (STORE INTO SCENE 2?), OCT+ or a key cancels, OCT- again stores what plays");
+        tap(B_OCTDN); frame();
+        go_home(); frame();
+        while (!(on_pats_page() && pats_view() == PV_SCENES)) { open_family(FAM_SEQ); frame(); }
+        check(!pats_arm, "SCENES: leaving the page with the STORE question up cancels it");
         song.g[G_PATQ] = PQ_BAR;
         transport_req = 1; frames(2);
         key(key_of_lane(8)); frame();                    /* scene 1, playing: it waits for the bar */

@@ -12,15 +12,18 @@
  *     round (patbank.c). A key puts its pattern after the cursor (at the end: appends, so keys type the list). KNOB 1
  *     the slot (or the end), KNOB 2 its pattern, KNOB 3 its repeats (x1..x16), KNOB 4 PLAY on / off. OCT+ inserts a
  *     copy of the slot after it, OCT- removes the slot.
- *   SCENES: eight scenes, a row each: its name and each track's pattern in it (- the track keeps what it plays). A key
- *     (9..16) or OCT+ launches one: every track asked for its pattern at once (PAT Q). KNOB 1 the scene, KNOB 2 PAT Q,
- *     KNOB 3 its name, KNOB 4 the selected track's pattern in it; OCT- twice stores the patterns playing into it. */
+ *   SCENES: eight scenes, a row each: its name and each track's pattern in it, as its picture (- the track keeps what
+ *     it plays; a black box: an empty pattern). A key (9..16) or OCT+ launches one: every track asked for its pattern
+ *     at once (PAT Q). KNOB 1 the scene, KNOB 2 PAT Q, KNOB 3 its name, KNOB 4 the selected track's pattern in it. OCT-
+ *     asks (a box over the rows: STORE INTO SCENE n?, the patterns playing now) and OCT- again stores them into it;
+ *     OCT+, a key, a knob or leaving the page cancels. */
 enum { PV_PADS, PV_CHAIN, PV_SCENES };
 static uint8_t pats_cursor;                      /* PATTERNS: the cursor's pattern */
 static uint8_t chain_cursor;                     /* CHAIN: the slot (the chain's count: the end) */
 static uint8_t scn_cursor;                       /* SCENES: the scene */
-static uint8_t pats_arm;                         /* 1: COPY armed, 2: CLEAR armed, 3: STORE armed (until pats_deadline) */
-static uint32_t pats_deadline;
+static uint8_t pats_arm;                         /* 1: COPY armed, 2: CLEAR armed (until pats_deadline), 3: STORE asked
+                                                  * (until answered, or the page left) */
+static uint32_t pats_deadline, pats_seen;        /* (pats_seen: the last frame on the pages) */
 static const char *const PQN[4] = {"loop", "1 bar", "2 bar", "4 bar"};
 /* the four knobs' strip on a 38-px band: a colour bar, the label and the value of each (the hot one white) */
 UI_SMALL static void knob_strip(const char *const *L, char (*v)[8])
@@ -136,6 +139,11 @@ UI_SMALL static void pats_key(uint32_t k)
     char b[20];
     if (w < 0 || w > 15)
         return;
+    if (pats_arm == 3u) {                        /* (the STORE question up: a key cancels it, nothing else) */
+        pats_arm = 0;
+        ui_message("STORE CANCELLED");
+        return;
+    }
     if (w >= 8) {
         scn_cursor = (uint8_t)(w - 8);
         scn_launch(scn_cursor);
@@ -411,6 +419,41 @@ UI_SMALL static void chain_draw(uint32_t blink)
     str_cpy(v[3], t->pat_coff ? "off" : "on", 4);
     pats_foot(L, v, "oct+ insert  oct- remove");
 }
+/* the STORE question (OCT- once on SCENES), over the rows' band k: the scene, the patterns playing now (what it gets),
+ * the answers */
+UI_SMALL static void scenes_ask_draw(uint32_t k)
+{
+    uint32_t tk;
+    char b[24];
+    cv_begin(240, 73, C_BLACK);
+    cv_rect(4, k ? 0 : 2, 232, k ? 69 : 71, C_WHITE);
+    cv_rect(6, k ? 0 : 4, 228, k ? 67 : 69, UI_G1);
+    if (!k) {
+        str_cpy(b, "STORE INTO SCENE ", 18);
+        fmt_int(b + 17, (int32_t)scn_cursor + 1);
+        str_cpy(b + str_len(b), "?", 2);
+        ui_text_mid(8, b, C_WHITE);
+        ui_text_mid(26, "it gets what plays now:", UI_G4);
+    }
+    for (tk = 0; tk < NTRK; tk++) {
+        int32_t x = 10 + (int32_t)tk * 28;
+        if (!k) {
+            uint32_t p = trk[tk].pat % NPAT, len = 0, has = (pats_used(tk) >> p) & 1u;
+            uint64_t m = has ? pats_map(tk, p, &len) : 0;
+            pats_tile(x, 44, 24, 26, has ? UI_G2 : C_BLACK);
+            if (has)
+                pats_pic(x + 3, 50, 18, 16, m, len, UI_COL[tk]);
+        } else {                                 /* (the tracks' numbers under them) */
+            fmt_int(b, (int32_t)tk + 1);
+            cv_text(x + 12 - text_w(&FONT_S, b) / 2, 0, &FONT_S, b, UI_G3);
+        }
+    }
+    if (k) {
+        ui_text_mid(22, "OCT- STORE  OCT+ CANCEL", C_WHITE);
+        ui_text_mid(42, "its old patterns are lost", UI_G3);
+    }
+    cv_blit(0, k ? 115 : 42);
+}
 UI_SMALL static void scenes_draw(uint32_t blink)
 {
     uint32_t s, k, sel = song.sel % NTRK, used[NTRK];
@@ -426,8 +469,12 @@ UI_SMALL static void scenes_draw(uint32_t blink)
     else
         b[0] = 0;
     pats_head("SCENES", q, UI_COL[2], b, C_WHITE);
-    for (k = 0; k < 2u; k++) {                   /* the rows, four a band */
+    for (k = 0; k < 2u; k++) {                   /* the rows, four a band (or the STORE question over them) */
         uint32_t r;
+        if (pats_arm == 3u) {
+            scenes_ask_draw(k);
+            continue;
+        }
         cv_begin(240, 73, C_BLACK);
         for (r = 0; r < 4u; r++) {
             int32_t y = (int32_t)r * 18 + 1;
@@ -447,19 +494,20 @@ UI_SMALL static void scenes_draw(uint32_t blink)
             fmt_int(b, (int32_t)s + 1);
             cv_text(17, y + 1, &FONT_S, b, named || s == scn_cur ? C_WHITE : UI_G3);
             cv_text(30, y + 1, &FONT_S, N_SCN[scn_name[s] % NSCN_NAMES], named ? C_WHITE : UI_G3);
-            for (tk = 0; tk < NTRK; tk++) {      /* each track: its pattern holds something (in its colour) or not */
-                int32_t x = 96 + (int32_t)tk * 18;
-                uint32_t p = scn_pat[s][tk], has = p < NPAT && ((used[tk] >> p) & 1u);
-                uint16_t c = p >= NPAT ? UI_G1 : !has ? UI_G2 : s == scn_cur ? UI_COL[tk] : UI_DIM[tk];
-                cv_rect(x, y + 2, 15, 12, c);
-                if (p >= NPAT)
-                    cv_rect(x + 5, y + 7, 5, 2, UI_G3);   /* (keep: a dash) */
-                else if (p != s) {               /* (another pattern than the scene's number: said) */
-                    fmt_int(b, (int32_t)p + 1);
-                    cv_text(x + 8 - text_w(&FONT_S, b) / 2, y, &FONT_S, b, has && s == scn_cur ? C_BLACK : C_WHITE);
+            for (tk = 0; tk < NTRK; tk++) {      /* each track: its pattern's picture (in its colour), a black box
+                                                  * for an empty one, a dash for keep */
+                int32_t x = 82 + (int32_t)tk * 19;
+                uint32_t p = scn_pat[s][tk], has = p < NPAT && ((used[tk] >> p) & 1u), len = 0;
+                uint64_t m = has ? pats_map(tk, p, &len) : 0;
+                if (p >= NPAT) {
+                    cv_rect(x + 6, y + 7, 6, 2, UI_G3);
+                } else {
+                    cv_rect(x, y + 2, 18, 12, !has ? C_BLACK : s == scn_cur ? UI_COL[tk] : UI_G2);
+                    if (has)
+                        pats_pic(x + 1, y + 4, 16, 8, m, len, s == scn_cur ? C_BLACK : UI_COL[tk]);
                 }
                 if (s == scn_cursor && tk == sel)
-                    cv_rect(x, y + 14, 15, 2, C_WHITE);
+                    cv_rect(x, y + 14, 18, 2, C_WHITE);
             }
         }
         if (k && scn_ask < NSCENE && song.playing && song.g[G_PATQ] > PQ_LOOP) {   /* (how far to the change) */
@@ -480,7 +528,7 @@ UI_SMALL static void scenes_draw(uint32_t blink)
     } else {
         str_cpy(v[3], "keep", 5);
     }
-    pats_foot(L, v, "oct+ launch  oct- store");
+    pats_foot(L, v, pats_arm == 3u ? "oct- store  oct+ cancel" : "oct+ launch  oct- store");
 }
 UI_SMALL static void pats_screen_draw(void)
 {
@@ -618,7 +666,10 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
         go_home();
         return;
     }
-    if (pats_arm && (int32_t)(fm1_ms - pats_deadline) > 0)
+    if (fm1_ms - pats_seen > 250u)               /* (back on the pages: nothing armed from before) */
+        pats_arm = 0;
+    pats_seen = fm1_ms;
+    if (pats_arm && pats_arm != 3u && (int32_t)(fm1_ms - pats_deadline) > 0)
         pats_arm = 0;
     for (k = 0; k < NB; k++) {
         uint32_t bt = k;
@@ -633,14 +684,15 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
                 ui_message(song.playing ? "PATTERN ASKED" : "PATTERN");
             } else if (view == PV_CHAIN) {
                 chain_add(t, chain_cursor < t->pat_nchain ? CH_PAT(t->pat_chain[chain_cursor]) : t->pat);
+            } else if (pats_arm == 3u) {         /* (the STORE question: OCT+ is NO) */
+                ui_message("STORE CANCELLED");
             } else {
                 scn_launch(scn_cursor);
                 str_cpy(b, "SCENE ", 7);
                 fmt_int(b + 6, (int32_t)scn_cursor + 1);
                 ui_say(b, song.playing ? " NEXT" : "");
             }
-            if (view != PV_SCENES || pats_arm != 3u)
-                pats_arm = 0;
+            pats_arm = 0;
         } else if (bt == B_OCTDN) {
             if (view == PV_PADS) {
                 uint32_t i;
@@ -660,9 +712,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
                     ui_message("SLOT REMOVED");
                 }
             } else if (pats_arm != 3u) {
-                str_cpy(b, "OCT- AGAIN: STORE ", 19);
-                fmt_int(b + str_len(b), (int32_t)scn_cursor + 1);
-                pats_arm_now(3, b);
+                pats_arm = 3;                    /* (the question, over the rows: scenes_ask_draw) */
             } else {
                 pats_arm = 0;
                 scn_store(scn_cursor);
@@ -682,6 +732,8 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
         return;                                      /* (1.7) SELECT: the SEQ pages, as on NOTES, TIMING, PLAY (left
                                                       * from PATTERNS: PLAY; SCENES is the last of them) */
     view = pats_view();
+    if (view != PV_SCENES && pats_arm == 3u)
+        pats_arm = 0;                                /* (SELECT away from SCENES: no question left behind) */
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* (ALGORITHM picks the track here too, as on TRACKS) */
         track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));
         sel = song.sel % NTRK;
