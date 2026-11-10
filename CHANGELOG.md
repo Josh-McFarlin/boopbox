@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.8.1
 
 **BoopBox Trainer teaches the new pattern pages** ([the levels](docs/trainer.md)):
 
@@ -27,7 +27,8 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 - Two new "why" pages, **SCENES** and **CHAINS**; VERSE AND CHORUS explains the keys as pads.
 - Level 4 (a song from the song page) says *PRESS WHITE KEY* too.
 
-Progress in level 2 from before goes on where it was; its last steps are new.
+Progress in level 2 from before goes on where it was; its last steps are new. BoopBox itself is as in 1.8.0 (its
+version reads 1.8.1); projects, presets and settings open as they are.
 
 ## 1.8.0
 

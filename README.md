@@ -25,7 +25,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.8.0](#whats-new-in-180)
+1. [What's new in 1.8.1](#whats-new-in-181)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -45,7 +45,13 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.8.0
+## What's new in 1.8.1
+
+**BoopBox Trainer teaches the PATTERNS, CHAIN and SCENES pages:** patterns played on the white keys, level 2's verse and
+chorus as **scenes** (launched on keys 9 and 10) and a drum **chain** with repeats ([the levels](docs/trainer.md)).
+BoopBox itself is as in 1.8.0 ([all changes](CHANGELOG.md)).
+
+### 1.8.0
 
 **Key velocity and aftertouch** on the FM-1's own keys (F3..C5), from [JIANT FM](https://github.com/juanjiant-bit/JIANT)
 after Charles Vestal's [Velo](https://github.com/charlesvestal/fm1-velocity): hold HOME → **KEYS** (OFF by default;
