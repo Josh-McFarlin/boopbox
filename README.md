@@ -25,7 +25,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.7.0](#whats-new-in-170)
+1. [What's new in 1.8.0](#whats-new-in-180)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -45,7 +45,16 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.7.0
+## What's new in 1.8.0
+
+**Key velocity and aftertouch** on the FM-1's own keys (F3..C5), from [JIANT FM](https://github.com/juanjiant-bit/JIANT)
+after Charles Vestal's [Velo](https://github.com/charlesvestal/fm1-velocity): hold HOME → **KEYS** (OFF by default;
+[details](#key-velocity-and-aftertouch-18)). **Try BoopBox in the browser**: [the
+emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real firmware. **Newer FM-1s** (sold from late
+2026, logo on the front) **save again**: their flash chip is known now. **NRPN** for every track parameter
+([the map](docs/NRPN.md)). Your projects, presets and settings are kept ([all changes](CHANGELOG.md)).
+
+### 1.7.0
 
 **OBERVAVE, a 13th engine:** the voice of [OberVave](https://github.com/zvenson/obervave) by zvenson, an 8-voice analog
 polysynth with sync, cross-mod, a 24 dB ladder and a SEM filter, and its **70 programs** (brass, pads, sync leads,

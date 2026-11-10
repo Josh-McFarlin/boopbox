@@ -202,7 +202,11 @@ UI_SMALL static void draw_menu(void)
             cv_text(4, 185, &FONT_S, "PHASE: CRISPYZEBRA (GPL)", C_DIM);
             cv_text(4, 198, &FONT_S, "VOICE: REF. KLATTSCH (MIT)", C_DIM);
         } else {
-            int32_t x = 4;
+            int32_t x = 4, end = 4;
+            for (i = 0; i <= sec; i++)              /* (1.8) the row wider than the screen: slid so this tab shows whole */
+                end += text_w(&FONT_S, MS_NAME[i]) + 6;
+            if (end - 6 > 238)
+                x -= end - 6 - 238;
             for (i = 0; i < MS_COUNT; i++) {        /* the sections as tabs: this one lit */
                 int32_t w = text_w(&FONT_S, MS_NAME[i]);
                 if (i == sec)
