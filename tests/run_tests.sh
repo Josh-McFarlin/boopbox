@@ -189,53 +189,13 @@ run "live UI: pages, layers (punch, steps, erase, roll, key, mix), holds, drums,
     cc_run ui_pages_test "$GH" tests/ui_pages_test.c "$OUT"
 
 # the TRAINER (tools/build.py --trainer): every level played from the menu to DONE with the panel alone, the songs'
-# settings, the progress kept, level 3's song (tests/trainer_test.c). With Node.js, the web page's songs
-# (webapp/song/: web/songgen.js), each played as level 4 by the trainer test (TR_SONGS): four written scores (one a
-# whole song: sections, patterns, song mode); with the trainer's renders (python3 tools/trainer/render.py), the three
-# songs as the page hears them, whole (web/songanalyze.js and Basic Pitch: the tempo, the key, the sections and the
-# song, level 1's beat). Then the song page in Chromium (an MP3 of level 1 in, the tempo, the key, both players, the
-# package with the song), on the site in docs/ (web/make_site.py ... --trainer), skipped without Playwright or the
-# renders; and level 4 on the way to the FM-1: a trainer package with a song written in (web/trslot.js,
-# tools/trainer/slot.py) is the package the build makes with that song, the browser and slot.py byte for byte
+# settings, the progress kept, level 3's song (tests/trainer_test.c)
 trainer() {
-    tf=0
     mkdir -p "$OUT/trainer"
     $CC -O2 -w -I$TGEN -Ifirmware/src -Ifirmware/hal -Itests -o "$OUT/trainer_test" tests/trainer_test.c -lm || return 1
-    TR_SONGS=""
-    if command -v node >/dev/null; then
-        python3 tools/trainer/consts.py "$OUT/trainer/consts.json" >/dev/null || tf=1
-        PW=""; [ -f build/preview/boopbox-preview.wasm ] && PW=build/preview/boopbox-preview.wasm
-        echo "-- TRAINER song page: scores to songs for level 4, the FM-1 player (web/songgen.js, web/songplay.js)"
-        PREVIEW_WASM=$PW node tests/trainer_song_test.mjs "$OUT/trainer/consts.json" "$OUT/trainer/songs" > "$OUT/trainer/songs.log" || tf=1
-        grep -v '^SONGS=' "$OUT/trainer/songs.log"
-        TR_SONGS=$(sed -n 's/^SONGS=//p' "$OUT/trainer/songs.log")
-        if [ -f build/trainer/1-first-light.wav ] && [ -f build/trainer/2-neon-avenue.wav ]; then
-            echo "-- TRAINER song page: the three songs, whole, as the page hears them (Basic Pitch on the CPU: a few minutes)"
-            node tests/trainer_analyze_test.mjs "$OUT/trainer/consts.json" "$OUT/trainer/heard" build/trainer/1-first-light.wav \
-                build/trainer/2-neon-avenue.wav build/trainer/3-lanterns-cinematic-dm-one-chord.wav 2>/dev/null |
-                grep -v '^SONGS=' | grep -v '^$' > "$OUT/trainer/heard.log" || tf=1
-            cat "$OUT/trainer/heard.log"
-            grep -q '^analyze: PASS' "$OUT/trainer/heard.log" || tf=1
-            TR_SONGS="$TR_SONGS:$(ls "$OUT"/trainer/heard/heard-*.bin | tr '\n' ':')"
-        else
-            echo "(skipped: the page's listening test needs the trainer's renders: python3 tools/trainer/render.py)"
-        fi
-    fi
-    echo "-- TRAINER: the three levels, a song in the song area and the web page's songs (level 4)"
-    env TR_SONGS="$TR_SONGS" "$OUT/trainer_test" "$OUT/trainer" || tf=1
-    if [ -f docs/webapp/song/index.html ] && [ -f build/trainer/1-first-light.mp3 ] && command -v node >/dev/null; then
-        echo "-- TRAINER song page in Chromium: listen, compare, the package to install"
-        node tests/trainer_page_test.mjs docs build/trainer/1-first-light.mp3 "$OUT/trainer" || tf=1
-    fi
-    if [ -f build/trainer-fw/felucca-trainer.fwsc ] && command -v node >/dev/null; then
-        echo "-- TRAINER song area: web/trslot.js and slot.py write the package the build would make"
-        python3 tests/trainer_slot_test.py build/trainer-fw "$OUT/trainer" || tf=1
-    else
-        echo "(skipped: the trainer song area test needs ./build.sh --trainer and Node.js)"
-    fi
-    return $tf
+    "$OUT/trainer_test" "$OUT/trainer"
 }
-run "TRAINER: the three levels, a song in the song area and the web page's songs (level 4) played to DONE with the panel alone" trainer
+run "TRAINER: the three levels played to DONE with the panel alone" trainer
 
 # no divide by 0 (the FM-1 runs with the div0 trap off, hal/fm1_irq.h: a real one would give a wrong value
 # silently): the UI fuzz, the sequencer, the projects and a minute of random live use, with UBSan

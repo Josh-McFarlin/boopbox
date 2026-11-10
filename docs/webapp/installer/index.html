@@ -112,8 +112,7 @@
   <p id="status"></p>
   <pre id="log"></pre>
   <a class="ed" href="../editor/" data-t="editor"></a>
-  <a class="ed" href="../song/" id="songlink" hidden data-t="song"></a>
-  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.9.0.html" data-t="edOffline"></a></p>
+  <p class="small"><a href="../editor/boopbox-editor.html" download="boopbox-editor-1.9.1.html" data-t="edOffline"></a></p>
   <p><button id="app" class="ed" hidden data-t="appInstall"></button></p>
   <hr>
   <p class="small" data-t="direct"></p>
@@ -463,7 +462,6 @@ const TEXT = {
     pickBoop: "グルーヴボックス（いつもの BoopBox）",
     pickTrainer: "FM-1 の上で 3 曲の作り方をステップごとに学べます。エディタと一部の音色はありません。",
     editor: "エディタ（インストール後、パソコンから音色やシーケンスを編集）",
-    song: "曲からトレーナーのレベル 4 を作る（音声ファイルを聴いて、FM-1 で作り方を教えます）",
     edOffline: "エディタをダウンロード（パソコンでインターネットなしで使う：ファイルを Chrome / Edge で開く）",
     appInstall: "アプリとしてインストール（エディタとインストーラーがオフラインで使える・Android も）",
     direct: "USB ケーブルはパソコンに直接つないでください。Probe や Transporter などの機材は不要です。",
@@ -502,7 +500,6 @@ const TEXT = {
     pickBoop: "The groovebox (the usual BoopBox)",
     pickTrainer: "Learn to make three songs, step by step, on the FM-1 itself. No web editor, a few sounds fewer.",
     editor: "Editor (after installing: edit sounds and sequences from the computer)",
-    song: "Your song as a trainer level (an audio file in, level 4 out: the trainer teaches you to make it)",
     edOffline: "Download the editor to use it without internet on a computer (open the file in Chrome or Edge)",
     appInstall: "Install the app (the editor and the installer offline, Android too)",
     direct: "Connect the USB cable directly to the computer. No probe or Transporter is needed.",
@@ -566,7 +563,7 @@ const sayK = (k, arg = "") => { lastKey = k; lastArg = arg; $("status").textCont
 const say = (txt) => { lastKey = null; $("status").textContent = txt; };
 const log = (t) => { $("log").textContent += t + "\n"; };
 let image = null;
-const meta = {"version": "1.9.0", "product": "FM-1_919", "pkg": "../../firmware/boopbox-1.9.0.fwsc", "sha256": "9f3d2b77c3720dc43ef9bbad9a9d45ccf39374c3d54235d375bf694ef93f1cd1", "trainer": {"version": "1.9.0", "product": "FM-1_919", "pkg": "../../firmware/boopbox-trainer-1.9.0.fwsc", "sha256": "07c4c315251ec940e84a37083606c81520818e7126a756a0785b938cddedbafb"}};
+const meta = {"version": "1.9.1", "product": "FM-1_919", "pkg": "../../firmware/boopbox-1.9.1.fwsc", "sha256": "6ea3dac2b97a0dbc7c028a338c797537d21d9400cde7eef196096328f112eb22", "trainer": {"version": "1.9.1", "product": "FM-1_919", "pkg": "../../firmware/boopbox-trainer-1.9.1.fwsc", "sha256": "b754a9069e790fdc9238e331641932fab93901e83d585e4ff0459aa61b074909"}};
 
 let writing = false;
 const lockAll = (on) => {
@@ -612,7 +609,6 @@ async function load() {
 }
 if (meta.trainer) {
   $("pick").hidden = false;
-  $("songlink").hidden = false;
   document.querySelector(`#pick input[value="${choice}"]`).checked = true;
   $("pick").addEventListener("change", (e) => {
     if (writing) return;
