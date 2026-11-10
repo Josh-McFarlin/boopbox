@@ -24,7 +24,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.6.0](#whats-new-in-160)
+1. [What's new in 1.7.0](#whats-new-in-170)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,17 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.6.0
+## What's new in 1.7.0
+
+**OBERVAVE, a 13th engine:** the voice of [OberVave](https://github.com/zvenson/obervave) by zvenson, an 8-voice analog
+polysynth with sync, cross-mod, a 24 dB ladder and a SEM filter, and its **70 programs** (brass, pads, sync leads,
+basses, electric pianos). **USB HOST** (from [Melodee](https://github.com/keremimo/melodee)): plug a USB-MIDI
+keyboard into the FM-1 through a **powered hub** (MENU → USB → USB HOST). **Patterns you can play:** the PATTERNS
+screen is now PATTERNS, CHAIN (a playlist with repeats) and SCENES (eight named moments of the song), with the keys as
+pads. To make room, the GM kit's cymbals and the VIBES set are stored a little smaller. Program Change numbers of the
+sounds move ([all changes](CHANGELOG.md)).
+
+### 1.6.0
 
 **20 synth voices.** The synth tracks share 20 voices instead of 8, so chords on several tracks at once all sound: three
 pads of 6 notes and a bass no longer take each other's notes. One track still plays at most 8 notes; BoopBox Trainer
