@@ -3,7 +3,7 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "BOOPBOX 1.8.1"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
+#define FELUCCA_VERSION "BOOPBOX 1.9.0"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
@@ -101,6 +101,7 @@ static int32_t accel(uint32_t role, int32_t s, int32_t range);   /* ui_input.c *
 static void lock_par_step(int32_t s);                            /* ui_layers.c: the lock parameter, the next lockable one */
 static void layer_screen_draw(void);                            /* ui_layers.c */
 static void drum_grid_open(void);                               /* ui_studio.c: the drum track's GRID */
+static int gen_keys_on(void);                                   /* ui_studio.c: (1.9) the keys make beats */
 static void hold_screen_draw(void);
 static uint8_t layer_shown;
 
@@ -148,6 +149,8 @@ UI_SMALL static void page_entered(void)
             ui_say(b, ": SEL TRK ONLY");
         }
     }
+    if (gen_keys_on())
+        ui_message("HOLD KEYS: A NEW BEAT");     /* (1.9) the keys make beats here (ui_studio.c gen_key) */
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* the white value / focus box was the old page's */
     ui.force = 1;

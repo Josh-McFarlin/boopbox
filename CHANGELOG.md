@@ -13,6 +13,17 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.0
+
+**Beats from the keys** ([the details](docs/groovebox-controls.md#beats-from-the-keys-the-play-page-of-a-drum-track-19)):
+on a drum track's **PLAY** page (SEQ, third page), hold one or more white keys and a whole beat is written across the
+kit. The lowest key held picks the groove (keys 1–8: HOUSE, ROCK, BOOM BAP, TRAP, BREAK, DEMBOW, DNB, ELECTRO; keys
+9–16 the same eight, busier); every other key held is a variation with more detail (ghost snares, open hats,
+percussion layers, a crash, a fill at the end). **The same keys and the same SEED always give the same beat.** One hold
+is one undo (EDIT + OCT−). On that page the keys no longer play the drums.
+
+Projects, presets and settings open as before.
+
 ## 1.8.1
 
 **BoopBox Trainer teaches the new pattern pages** ([the levels](docs/trainer.md)):

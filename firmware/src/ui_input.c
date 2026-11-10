@@ -1012,6 +1012,9 @@ UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_
             if ((e >> 8) == KB_GRID) {                    /* the DRUMS grid page: a step key */
                 if (((e >> 7) & 1u) && grid_keys_on())
                     grid_key(e & 31u);
+            } else if ((e >> 8) == KB_GEN) {              /* (1.9) the PLAY page of a drum track: a beat */
+                if (((e >> 7) & 1u) && gen_keys_on())
+                    gen_key(e & 31u);
             } else if ((e >> 8) == KB_PATS) {             /* PATTERNS / CHAIN / SCENES: a pad */
                 if (((e >> 7) & 1u) && on_pats_page())
                     pats_key(e & 31u);
@@ -1247,6 +1250,7 @@ UI_SMALL static void ui_input(void)
     kb_grid = (uint8_t)grid_keys_on();                  /* (seq.c: the keys are the grid's steps) */
     kb_harm = (uint8_t)(on_chords_page() && !ui.menu);  /* (seq.c: the keys are chords, harmony.c harm_key) */
     kb_pats = (uint8_t)(on_pats_page() && !ui.menu);    /* (seq.c: the keys are pads, ui_pats.c pats_key) */
+    kb_gen = (uint8_t)gen_keys_on();                    /* (1.9, seq.c: the keys held make a beat, drumgen.c) */
     if (ui.menu) {                                      /* HOME / REC taps do nothing here */
         punch.hold = 0;
         thr_req = 0;
