@@ -191,6 +191,20 @@ TOPICS = {
         "The verse sets the mood; the chorus is the big moment with the hook.",
         "Here both use the same chords and bass, so they belong together. The chorus adds a lead melody and "
         "busier drums. Patterns let each track keep both versions and switch between them in time.",
+        "On the PATTERNS page the white keys are the pads: keys 1 to 8 play the track's patterns 1 to 8, on the bar. "
+        "The lit key is the pattern playing; a blinking one waits for its moment.",
+    ]),
+    "SCENES": ("SCENES", [
+        "A scene is one moment of the song: a pattern for every track, played together. Scene 1 is the verse "
+        "(every track on pattern 1), scene 2 the chorus (every track on pattern 2).",
+        "White keys 9 to 16 launch scenes 1 to 8 on any of the three pages: every track changes at once, on the "
+        "bar. That is how you play a song live: verse, chorus, verse.",
+    ]),
+    "CHAINS": ("CHAINS", [
+        "A chain plays a track's patterns in order, each for its repeats, then starts again. Verse beat x3, then "
+        "the chorus beat once: the drums play a fill every fourth bar, by themselves.",
+        "Fills mark the end of a phrase: four bars is the most common phrase length, so a change in bar 4 tells "
+        "the listener something new is coming.",
     ]),
     "OPENHAT": ("OPEN HATS AND FILLS", [
         "Turning the closed offbeat hats into open hats makes the chorus wider and more energetic without "
@@ -207,8 +221,8 @@ TOPICS = {
     "DONE2": ("WHAT YOU MADE", [
         "A synthwave song with a verse and a chorus: four on the floor with a backbeat, an octave bass, a pad "
         "playing i - VI - III - VII with voice leading, an arpeggio with dotted echoes, and a lead in the chorus.",
-        "Switching patterns live is how you play a song's sections on the FM-1. Level 3 saves them as sections "
-        "and puts them in order.",
+        "Launching scenes is how you play a song's parts live on the FM-1; a chain varies one track by itself. "
+        "Level 3 saves the parts as sections and puts them in order.",
     ]),
     # ---------------------------------------------------------------- level 3: melodic dubstep
     "HALFTIME": ("HALF-TIME", [

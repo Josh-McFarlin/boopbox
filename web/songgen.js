@@ -162,8 +162,8 @@ export function makeLesson(score0, C) {
     const of = n > 1 || multi ? ` ${multi ? SEC[i] : ""}`.trimEnd() : "";
     let chose = false;
     if (cur[k] !== n) {
-      if (!onPatterns) add(`PATTERNS: ${label(i)}`, "HOLD SEQ, TAP SAVE", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
-      add(`${label(i)}: PATTERN ${n}`, `TRACK ${t}: KNOB 1 TO ${n}, OCT+`, TG("PATSEL"), "SECTIONS", { trk: t - 1, v: n - 1 });
+      if (!onPatterns) add(`PATTERNS: ${label(i)}`, "HOLD SEQ+SAVE, SELECT LEFT X2", TG("PAGE"), "SECTIONS", { p: page("PATTERNS", "SEQ"), btn: B("SEQ") });
+      add(`${label(i)}: PATTERN ${n}`, `TRACK ${t}: PRESS WHITE KEY ${n}`, TG("PATSEL"), "SECTIONS", { trk: t - 1, v: n - 1 });
       cur[k] = n;
       chose = true;
     }

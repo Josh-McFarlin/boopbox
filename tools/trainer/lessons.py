@@ -30,6 +30,7 @@ BTN = {"FX": 0, "SEL": 1, "ENV": 2, "LFO": 3, "EDIT": 4, "GLO": 5, "HOME": 6, "S
 
 
 PAGES = []                                      # filled in main(): params.c PAGES, as (title, family), in order
+SCN_NAMES = []                                  # filled in main(): the scenes' names, patbank.c N_SCN
 VAL_MAX = 4                                     # "@": the value as the screen shows it, about this long (tests/trainer_test.c checks)
 
 
@@ -170,6 +171,21 @@ class Level:
     def pathas(self, tracks, pat, head, act):
         self.add(head, act, "TG_PATHAS", v=sum(1 << (t - 1) for t in tracks), p=pat - 1)
 
+    def scene(self, sc, name, per_track, head, act):
+        """scene sc (1..8): its name (N_SCN, None: any) and the pattern of each track named {track: 1..8, or 0 keep}"""
+        b = [255] * 8
+        for t, p in per_track.items():
+            b[t - 1] = 8 if p == 0 else p - 1
+        self.add(head, act, "TG_SCENE", p=sc - 1, v=-1 if name is None else SCN_NAMES.index(name), data=("bytes", b))
+
+    def scnplay(self, sc, head, act):
+        self.add(head, act, "TG_SCNPLAY", p=sc - 1)
+
+    def chain(self, n, slots, head, act):
+        """track n's chain: [(pattern 1..8, repeats 1..16)], PLAY on"""
+        b = [len(slots)] + [(p - 1) | (r - 1) << 4 for p, r in slots]
+        self.add(head, act, "TG_CHAIN", trk=n - 1, data=("bytes", b))
+
     def saved(self, slot, head, act):
         self.add(head, act, "TG_SAVED", v="ABCD".index(slot), btn="SAVE")
 
@@ -237,7 +253,7 @@ def level1():
 def level2():
     s = S.SONGS[1]
     L = Level(2, s, "VERSE", "NEON AVENUE", "SYNTHWAVE, 104 BPM", "A VERSE AND A CHORUS",
-              "NOTES PAGE, PATTERNS, ECHO")
+              "NOTES PAGE, SCENES, A CHAIN")
     ch = s.sections["CHORUS"]
     L.glob("BPM", 104, "SYNTHWAVE AT 104", "TAP HOME, SELECT TO @", btn="HOME", held=True)
     L.param(1, "ROOT", 2, "THE SONG IS IN D", "HOLD SEL, PRESS A LIT KEY", btn="SEL", held=True)
@@ -288,14 +304,14 @@ def level2():
     L.page("DLY", "FX", "THE ECHO'S TIMING", "TAP FX UNTIL YOU SEE DLY")
     L.glob("DTIME", 6, "THE ECHO'S TIMING", "TURN KNOB 1 (TIME) TO @")
     L.glob("DFDBK", 55, "MORE ECHOES", "TURN KNOB 2 (FDBK) TO @", tol=4)
-    L.page("PATTERNS", "SEQ", "THE CHORUS: PATTERNS", "HOLD SEQ, TAP SAVE")
+    L.page("PATTERNS", "SEQ", "THE CHORUS: PATTERNS", "HOLD SEQ+SAVE, SELECT LEFT X2")
     L.pathas([1, 2, 4, 5], 2, "COPY 1 2 4 5 TO PAT 2", "EACH: KNOB 1 TO 2, KNOB 3 X2")
-    L.patsel(4, 2, "DRUMS: PLAY PATTERN 2", "TRACK 4: KNOB 1 TO 2, OCT+", filled=True)
+    L.patsel(4, 2, "DRUMS: PLAY PATTERN 2", "TRACK 4: PRESS WHITE KEY 2", filled=True)
     L.lanes(4, "OPEN HATS", "OFFBEAT HATS BECOME OPEN HATS", ["KICK", "SNARE", "CLAP", "HAT", "OHAT"], pat=ch[4])
     L.lanes(4, "A TOM AT THE END", "LOW TOM ON KEY 15, SOFT", ["KICK", "SNARE", "CLAP", "HAT", "OHAT", "LOTOM"],
             pat=ch[4])
     L.sound(3, "THE LEAD: PWM LEAD")
-    L.patsel(3, 2, "ITS OWN PATTERN 2", "TRACK 3: KNOB 1 TO 2, OCT+")
+    L.patsel(3, 2, "ITS OWN PATTERN 2", "TRACK 3: PRESS WHITE KEY 2")
     L.timing("FOUR BARS OF EIGHTHS")
     L.param(3, "SLEN", 32, "32 STEPS LONG", "TURN KNOB 1 (LEN) TO @")
     L.param(3, "SDIV", 1, "EIGHTH NOTES", "TURN KNOB 2 (DIV) TO @")
@@ -306,10 +322,15 @@ def level2():
     L.param(3, "SGATE", 100, "SMOOTHER", "TURN KNOB 4 (GATE) TO @", tol=4)
     L.param(3, "DLY", 45, "AN ECHO", "TAP FX, TURN KNOB 3 TO @", tol=4)
     L.param(3, "REV", 35, "A ROOM", "TURN KNOB 4 (REV) TO @", tol=4)
-    L.page("PATTERNS", "SEQ", "VERSE AND CHORUS", "HOLD SEQ, TAP SAVE")
-    L.pats({1: 1, 2: 1, 3: 1, 4: 1, 5: 1}, "BACK TO THE VERSE", "KNOB 1 TO 1, PRESS OCT-")
+    L.page("SCENES", "SEQ", "SCENES: VERSE, CHORUS", "HOLD SEQ, TAP SAVE")
+    L.scene(1, "VERSE", {1: 1, 2: 1, 3: 1, 4: 1, 5: 1}, "SCENE 1 IS THE VERSE", "KNOB 3 (NAME) TO VERSE")
+    L.scene(2, "CHORUS", {1: 2, 2: 2, 3: 2, 4: 2, 5: 2}, "SCENE 2 IS THE CHORUS", "KNOB 1 TO 2, KNOB 3 TO CHORUS")
+    L.scnplay(1, "BACK TO THE VERSE", "PRESS WHITE KEY 9")
     L.play(True, "PLAY THE VERSE", "PRESS PLAY")
-    L.pats({1: 2, 2: 2, 3: 2, 4: 2, 5: 2}, "INTO THE CHORUS", "KNOB 1 TO 2, PRESS OCT-")
+    L.scnplay(2, "INTO THE CHORUS", "PRESS WHITE KEY 10, WAIT")
+    L.scnplay(1, "AND BACK TO THE VERSE", "PRESS WHITE KEY 9, WAIT")
+    L.page("CHAIN", "SEQ", "A FILL EVERY 4TH BAR", "SELECT LEFT TO CHAIN")
+    L.chain(4, [(1, 3), (2, 1)], "DRUMS: VERSE X3, CHORUS", "KEYS 1, 2; KNOB 3 TO X3")
     L.done("LEVEL 2 DONE!", "HOLD HOME FOR LEVEL 3")
     return L
 
@@ -391,16 +412,16 @@ def level3():
     L.glob("DTIME", 6, "THE ECHO'S TIMING", "TURN KNOB 1 (TIME) TO @")
     L.glob("DFDBK", 50, "FEEDBACK", "TURN KNOB 2 (FDBK) TO @", tol=4)
     # patterns for the other sections
-    L.page("PATTERNS", "SEQ", "PATTERNS FOR SECTIONS", "HOLD SEQ, TAP SAVE")
-    L.patsel(4, 2, "THE BUILD'S BEAT", "TRACK 4: KNOB 1 TO 2, OCT+")
+    L.page("PATTERNS", "SEQ", "PATTERNS FOR SECTIONS", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.patsel(4, 2, "THE BUILD'S BEAT", "TRACK 4: PRESS WHITE KEY 2")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     L.lanes(4, "KICK ON EVERY BEAT", None, ["KICK"], pat=B[4])
-    L.page("PATTERNS", "SEQ", "THE BREAK'S BEAT", "HOLD SEQ, TAP SAVE")
-    L.patsel(4, 3, "THE BREAK'S BEAT", "TRACK 4: KNOB 1 TO 3, OCT+")
+    L.page("PATTERNS", "SEQ", "THE BREAK'S BEAT", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.patsel(4, 3, "THE BREAK'S BEAT", "TRACK 4: PRESS WHITE KEY 3")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     L.lanes(4, "JUST THE HATS", None, ["HAT"], pat=D[4])
-    L.page("PATTERNS", "SEQ", "THE BUILD'S ROLL", "HOLD SEQ, TAP SAVE")
-    L.patsel(8, 2, "THE BUILD'S ROLL", "TRACK 8: KNOB 1 TO 2, OCT+")
+    L.page("PATTERNS", "SEQ", "THE BUILD'S ROLL", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.patsel(8, 2, "THE BUILD'S ROLL", "TRACK 8: PRESS WHITE KEY 2")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     roll = B[8]
     L.lanes(8, "BAR 1: SNARE ON BEATS", None, ["SNARE"], pat=roll, upto=16)
@@ -409,14 +430,14 @@ def level3():
     L.add("BAR 4: EVERY STEP", "OCT+: STEPS 49-64, EVERY KEY", "TG_LANES", trk=7,
           data=("lanes", 64, [(S.LANES.index("SNARE"), [None if h is None else (h[0], 0) for h in roll.lanes["SNARE"]])]))
     L.lanes(8, "FASTER: RATCHETS", "KNOB 2 TO A STEP, HOLD OCT+", ["SNARE"], pat=roll)
-    L.page("PATTERNS", "SEQ", "THE BUILD'S PAD", "HOLD SEQ, TAP SAVE")
-    L.patsel(5, 2, "THE BUILD'S PAD", "TRACK 5: COPY TO 2, THEN OCT+", filled=True)
+    L.page("PATTERNS", "SEQ", "THE BUILD'S PAD", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.patsel(5, 2, "THE BUILD'S PAD", "TRACK 5: COPY TO 2, KEY 2", filled=True)
     L.page("NOTES", "SEQ", "A LOCK ON STEP 1", "TAP SEQ UNTIL YOU SEE NOTES")
     L.lock(5, 1, "TFLT", 30, False, "OPEN THE FILTER", "ADD A FILT LOCK TO STEP 1")
     L.lock(5, 1, "TFLT", 30, True, "OVER THE WHOLE BAR", "IN ITS LOCK: KNOB 3 TO SLIDE")
     # the sections: the patterns and the mutes of each, saved
     L.play(False, "STOP TO SAVE", "PRESS PLAY TO STOP")
-    L.page("PATTERNS", "SEQ", "SECTION C: THE DROP", "HOLD SEQ, TAP SAVE")
+    L.page("PATTERNS", "SEQ", "SECTION C: THE DROP", "HOLD SEQ+SAVE, SELECT LEFT X2")
     L.pats({4: 1, 5: 1, 8: 1}, "SECTION C: THE DROP", "TRACKS 4, 5, 8 ON PATTERN 1")
     L.mutes(C["_mute"], "MUTE FOR THE DROP", "HOLD GLO: MUTE TRACKS 5 6 7")
     L.saved("C", "SAVE IT AS C", "HOLD SAVE, PRESS KEY 7")
@@ -460,7 +481,8 @@ TOPIC_AT = {
         ("TO THE LEFT", "MIX"), ("THE ECHO'S TIMING", "ECHO"), ("THE CHORUS: PATTERNS", "SECTIONS"),
         ("OPEN HATS", "OPENHAT"), ("THE LEAD: PWM LEAD", "LEAD"), ("ITS OWN PATTERN 2", "SECTIONS"),
         ("FOUR BARS OF EIGHTHS", "VALUES"), ("THE HOOK", "LEAD"), ("SMOOTHER", "GATE"), ("AN ECHO", "ECHO"),
-        ("A ROOM", "SPACE"), ("VERSE AND CHORUS", "SECTIONS"), ("LEVEL 2 DONE!", "DONE2")],
+        ("A ROOM", "SPACE"), ("SCENES: VERSE, CHORUS", "SCENES"), ("A FILL EVERY 4TH BAR", "CHAINS"),
+        ("LEVEL 2 DONE!", "DONE2")],
     3: [("MELODIC DUBSTEP: 150", "TEMPO"), ("THE SONG IS IN D", "KEY"), ("D MINOR", "MINOR"),
         ("THE DRUMS: TRACK 4", "PARTS"), ("DRUM KIT: DUBSTEP", "SOUNDS"), ("THE DRUM GRID", "GRID"),
         ("HALF-TIME KICK", "HALFTIME"), ("HIT IT HARD", "DYNAMICS"), ("OFFBEAT HATS", "HATS"),
@@ -603,6 +625,8 @@ def main(out):
     body = params[params.index("static const page_t PAGES[] = {"):]
     body = body[:body.index("\n};")]
     PAGES.extend(re.findall(r'^\s*\{"([^"]+)", (FAM_\w+),', body, re.M))
+    pb = open(os.path.join(root, "firmware", "src", "patbank.c")).read()
+    SCN_NAMES.extend(re.findall(r'"([^"]*)"', pb[pb.index("N_SCN[] = {"):pb.index("};", pb.index("N_SCN[] = {"))]))
     os.environ.setdefault("FELUCCA_TRAINER", "1")
     PRESETS["GRAND PNO"] = (4, "SMP_PRESET_GRAND_PNO")      # (the samples header numbers the SAMPLE presets)
     levels = [level1(), level2(), level3()]

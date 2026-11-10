@@ -13,6 +13,23 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.8.1
+
+**BoopBox Trainer teaches the new pattern pages** ([the levels](docs/trainer.md)):
+
+- **Patterns on the keys:** the coach says *PRESS WHITE KEY 2* and lights that key, where it said *KNOB 1 TO 2, OCT+*.
+  The way to PATTERNS from anywhere is *HOLD SEQ + SAVE, SELECT LEFT ×2*.
+- **Level 2 ends with scenes:** name scene 1 VERSE and scene 2 CHORUS, then play verse → chorus → verse with white keys 9
+  and 10, on the bar. The coach checks a scene's name and patterns, and says how to fix one (*KNOB 3 TO CHORUS*, *PRESS
+  OCT- TWICE: STORE*).
+- **And a chain:** the drums play the verse beat ×3, then the chorus beat as a fill, typed on the keys with KNOB 3 for
+  the repeats.
+- Two new "why" pages, **SCENES** and **CHAINS**; VERSE AND CHORUS explains the keys as pads.
+- Level 4 (a song from the song page) says *PRESS WHITE KEY* too.
+
+Progress in level 2 from before goes on where it was; its last steps are new. BoopBox itself is as in 1.8.0 (its
+version reads 1.8.1); projects, presets and settings open as they are.
+
 ## 1.8.0
 
 - **Newer FM-1s save again.** FM-1s sold from late 2026 (the logo on the front) have another maker's flash chip. BoopBox
