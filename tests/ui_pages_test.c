@@ -1191,9 +1191,27 @@ int main(int argc, char **argv)
         encs[panel.enc[EN_SELECT]] = 1; frame(); ui.force = 1; frame(); ppm("menu-audio");
         check(mi_sec(ui.menu_sel) == MS_AUDIO, "menu: SELECT right: AUDIO (LOWCUT, USB AUDIO, USB RATE)");
         encs[panel.enc[EN_SELECT]] = 5; frame(); ui.force = 1; frame(); ppm("menu-usb");
-        check(mi_sec(ui.menu_sel) == MS_USB && ui.menu_sel == MI_UHOST && MS_FIRST[MS_USB + 1] - MS_FIRST[MS_USB] == 1u &&
-              !strcmp(mi_value(MI_UHOST, &(uint16_t){0}), "OFF"),
-              "menu (1.7): SELECT right: USB (USB HOST, OFF at every start)");
+        check(mi_sec(ui.menu_sel) == MS_KEYS && ui.menu_sel == MI_VEL && MS_FIRST[MS_KEYS + 1] - MS_FIRST[MS_KEYS] == 4u &&
+              !strcmp(mi_value(MI_UHOST, &(uint16_t){0}), "OFF") && !strcmp(mi_value(MI_VEL, &(uint16_t){0}), "OFF") &&
+              !strcmp(mi_value(MI_AT, &(uint16_t){0}), "OFF") && !strcmp(mi_value(MI_VLEARN, &(uint16_t){0}), "ON"),
+              "menu (1.8): SELECT right: KEYS (VELOCITY OFF, AFTERTOUCH OFF, VEL LEARN ON, USB HOST OFF at every start)");
+        for (i = 0; i < 2u; i++) { encs[panel.enc[EN_K1]] = 1; frame(); }   /* (one value a detent) */
+        for (i = 0; i < 5u; i++) { encs[panel.enc[EN_K2]] = 1; frame(); }
+        ui.force = 1; frame(); ppm("menu-keys");
+        check(KV_VEL_MODE() == KV_VNORM && !strcmp(mi_value(MI_VEL, &(uint16_t){0}), "NORMAL") && KV_AT_MODE() == 2u &&
+              KV_AT_VIB() && !strcmp(mi_value(MI_AT, &(uint16_t){0}), "VIBRATO MID"),
+              "menu KEYS: KNOB 1 VELOCITY NORMAL, KNOB 2 AFTERTOUCH VIBRATO MID (kv_set, keyvel.c)");
+        for (i = 0; i < 9u; i++) { encs[panel.enc[EN_K2]] = -1; frame(); }
+        encs[panel.enc[EN_K3]] = -1; frame();
+        check(KV_AT_MODE() == 0u && !KV_LEARN() && !strcmp(mi_value(MI_VLEARN, &(uint16_t){0}), "OFF"),
+              "menu KEYS: AFTERTOUCH back to OFF (stops at the end), VEL LEARN OFF");
+        kv.ref[3][1] = 0;
+        encs[panel.enc[EN_K3]] = 1; frame();
+        edges_btn |= BT(B_OCTUP); fm1_in.buttons |= BT(B_OCTUP); frame(); fm1_in.buttons &= ~BT(B_OCTUP); frame();
+        check(KV_LEARN() && kv.ref[3][1] >> 4 == 594 && kv_cal_dirty, "menu KEYS: VEL LEARN ON, OCT+ puts the keys' marks back (saved)");
+        kv_set = 0;
+        encs[panel.enc[EN_PRESET]] = 3; frame();
+        check(ui.menu_sel == MI_UHOST, "menu KEYS: USB HOST, the fourth row");
         encs[panel.enc[EN_SELECT]] = 5; frame();
         check(mi_sec(ui.menu_sel) == MS_SEQ, "menu (2.7.1): SELECT right: SEQ (STEP ADVANCE, DRUM PREVIEW)");
         encs[panel.enc[EN_SELECT]] = 5; frame();

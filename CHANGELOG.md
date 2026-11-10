@@ -22,7 +22,15 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
   parameter's number, then CC6 and CC38. The map: [docs/NRPN.md](docs/NRPN.md). The CC map and MIDI LEARN are
   unchanged.
 
-Projects, presets and settings from 1.7.0 open as before.
+- **Key velocity and aftertouch** on the FM-1's own keys (F3..C5), from JIANT FM after Charles Vestal's Velo: hold
+  HOME → **KEYS** (the USB section's new name). **VELOCITY** OFF / SOFT / NORMAL / HARD; **AFTERTOUCH** opens the
+  filter or adds vibrato, and goes out as MIDI channel pressure; **VEL LEARN** lets each key learn your touch (OCT+
+  forgets it). **Both are OFF by default**, and then nothing changes. MIDI channel pressure in works too.
+- **The screen's font takes less room**: the glyphs are read straight from flash (about 2.5 KB of flash and 4.8 KB of
+  RAM back). Every screen looks the same; an accented capital in a name (É, Ñ) now shows as its letter (E, N).
+
+Projects, presets and settings from 1.7.0 open as before. Going back to 1.7.0 keeps everything too (it ignores the
+new settings).
 
 ## 1.7.0
 

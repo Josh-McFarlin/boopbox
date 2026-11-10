@@ -341,6 +341,14 @@ static int32_t names_turn(const param_desc_t *d, int32_t v, int32_t steps)
     return d->min + (k * range + n - 1) / n;
 }
 
+/* (1.8) round(scale * 2^(v * k24 / 2^24)): the display's exponential curves from FM6's 2^x table instead of four tables
+ * (TIME_MS_X10, LFO_HZ_X100, CUTOFF_HZ: gen_tables.py; tests/display_test.c checks every value shows as before) */
+static uint32_t exp_scale(uint32_t scale, uint32_t v, uint32_t k24)
+{
+    uint32_t x = v * k24;
+    fm6_x2_fill();
+    return (uint32_t)((((uint64_t)fm6_mant((int32_t)(x & 0xFFFFFFu)) * scale << (x >> 24)) + (1u << 29)) >> 30);
+}
 /* value string (<= 5 chars) and unit for a parameter value */
 static void param_format(const param_desc_t *d, int32_t v, char *val, const char **unit)
 {
@@ -374,7 +382,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         *unit = "%";
         break;
     case F_TIME: {
-        uint32_t ms10 = TIME_MS_X10[v & 127];
+        uint32_t ms10 = exp_scale(10u, (uint32_t)v & 127u, 1755361u);   /* 1 ms .. 10 s (gen_tables.py TIME_MS_X10) */
         if (ms10 < 100u) {
             fmt_fix(val, (int32_t)ms10, 1);
             *unit = "ms";
@@ -390,7 +398,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         break;
     }
     case F_LFOHZ: {
-        uint32_t h = LFO_HZ_X100[v & 127];
+        uint32_t h = exp_scale(5u, (uint32_t)v & 127u, 1273993u);       /* 0.05 .. 40 Hz (LFO_HZ_X100) */
         if (h < 1000u)
             fmt_fix(val, (int32_t)h, 2);
         else
@@ -399,7 +407,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         break;
     }
     case F_CUTOFF: {
-        uint32_t h = CUTOFF_HZ[v & 127];
+        uint32_t h = exp_scale(30u, (uint32_t)v & 127u, 1196717u);      /* 30 Hz .. 16 kHz (CUTOFF_HZ) */
         if (h < 1000u) {
             fmt_int(val, (int32_t)h);
             *unit = "Hz";
@@ -415,11 +423,11 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
     case F_DB:
         if (v <= 0) {
             str_cpy(val, "OFF", 6);
-        } else if (LEVEL_DB_X10[v] > -100) {
-            fmt_fix(val, LEVEL_DB_X10[v], 1);
+        } else if ((v - 112) * 5 > -100) {                 /* (dB = (v - 112) / 2: LEVEL_DB_X10) */
+            fmt_fix(val, (v - 112) * 5, 1);
             *unit = "dB";
         } else {
-            fmt_int(val, (LEVEL_DB_X10[v] - 5) / 10);   /* "-12 dB": five characters leave no room for the unit */
+            fmt_int(val, ((v - 112) * 5 - 5) / 10);   /* "-12 dB": five characters leave no room for the unit */
             *unit = "dB";
         }
         break;

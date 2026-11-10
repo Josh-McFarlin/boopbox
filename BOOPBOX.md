@@ -449,7 +449,7 @@ The full Felucca engine is underneath (all of it in [GUIDE.md](GUIDE.md#16-every
 BoopBox takes MIDI from two places at once:
 
 - **The MIDI IN jack** (3.5 mm TRS, on the FM-1): a keyboard or a pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
-- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works with HOME menu → **USB** → **USB HOST** = ON (1.7) and a **powered hub** (the FM-1 does not power it): see [the guide](GUIDE.md#usb-keyboards-usb-host). While it is on there is no editor, no USB audio and no MIDI to a computer; every start is OFF again.
+- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works with HOME menu → **KEYS** → **USB HOST** = ON (1.7; the section was called USB before 1.8) and a **powered hub** (the FM-1 does not power it): see [the guide](GUIDE.md#usb-keyboards-usb-host). While it is on there is no editor, no USB audio and no MIDI to a computer; every start is OFF again.
 
 | MIDI channel | Plays |
 | --- | --- |

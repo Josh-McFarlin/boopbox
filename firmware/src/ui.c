@@ -1307,12 +1307,18 @@ UI_SMALL static void fav_toggle(int add)                      /* KNOB 4 on the P
 /* (2.7) the settings' side record: the theme (40 bytes, zero: none), then the favourites (ui.c fav) with a magic and a
  * CRC. A 2.7 beta wrote the theme alone (the rest erased: no favourites); an older SLOOP never reads it */
 #define FAVS_MAGIC 0x31564146u                      /* "FAV1" */
+/* (1.8) then the key velocity's calibration (keyvel.c kv_cal_io), with a magic and a CRC: a record without it (1.7 and
+ * before) leaves the seeds; 1.7 reads its own part and never these bytes */
 typedef struct {
     theme_t th;
     uint32_t fmagic;
     uint16_t fav[FAV_N];
     uint32_t fcrc;
+    uint32_t vmagic;
+    uint8_t vcal[32];
+    uint32_t vcrc;
 } side_rec_t;
+static uint8_t kv_cal_dirty;                        /* (1.8) the calibration learnt or reset: the next settings_save writes */
 UI_SMALL static void side_fill(side_rec_t *r)                /* what the settings' side record holds now */
 {
     memset(r, 0, sizeof *r);
@@ -1321,6 +1327,10 @@ UI_SMALL static void side_fill(side_rec_t *r)                /* what the setting
     r->fmagic = FAVS_MAGIC;
     memcpy(r->fav, fav, sizeof fav);
     r->fcrc = st_crc32(&r->fmagic, 4u + sizeof r->fav);
+    r->vmagic = KV_MAGIC;
+    kv_cal_io(r->vcal, 1);
+    r->vcrc = st_crc32(&r->vmagic, 4u + sizeof r->vcal);
+    kv_cal_dirty = 0;
 }
 UI_SMALL static void side_take(side_rec_t *r)                /* a side record read back: what checks out (theme, favourites) */
 {
@@ -1330,6 +1340,7 @@ UI_SMALL static void side_take(side_rec_t *r)                /* a side record re
     }
     if (r->fmagic == FAVS_MAGIC && r->fcrc == st_crc32(&r->fmagic, 4u + sizeof r->fav))
         memcpy(fav, r->fav, sizeof fav);
+    kv_cal_io(r->vmagic == KV_MAGIC && r->vcrc == st_crc32(&r->vmagic, 4u + sizeof r->vcal) ? r->vcal : 0, 0);
 }
 /* the PRESETS list: the favourites, then every factory sound by kind, then the user presets */
 UI_SMALL static uint32_t preset_pos(uint32_t *total)

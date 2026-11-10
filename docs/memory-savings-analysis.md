@@ -66,6 +66,10 @@ Code, by the proxy: `ui_draw` 43,040 (every screen inlined into it), `ui_input` 
 
 ## 2. The short list
 
+> **Applied since this analysis:** F1, F2, F7, F10 and part of F6 (1.3.1); F8 (1.7); **F4** (the font, the compact
+> variant: 70 glyphs, accented capitals drawn as their letter) and **F9** (the display curves) in 1.8, which made room for
+> the key velocity. Still open: F3, F5, the rest of F6.
+
 Flash first, because 1,540 B is what blocks the next feature. Everything in this table changes no sound, no screen
 and no stored format; each was measured in the proxy and the named host tests pass.
 

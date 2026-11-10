@@ -349,6 +349,12 @@ run "eight tracks: all at once on their own lengths, the shared voice budget, tw
     cc_run tracks8_test "-DARENA_STATS $GH" tests/tracks8_test.c
 run "step components: each type, directions, seeds, drums, other lengths beside, nothing hanging, stores, damage" \
     cc_run comp_test "$GH" tests/comp_test.c
+run "parameter display: TIME, LFO Hz, CUTOFF and dB computed, every value as the tables showed it" \
+    cc_run display_test "$GH" tests/display_test.c
+run "key velocity: the scan's sampling, the map, the 2.2 ms bound, drums no wait, calibration, pressure; OFF as before" \
+    cc_run keyvel_test "-O1 -w -Ibuild/gen -Ifirmware/src -Ifirmware/hal" tests/keyvel_test.c
+run "key velocity in the sequencer: synth and drum keys, held-back presses, aftertouch (keys, MIDI), FILTER / VIBRATO" \
+    cc_run keyvel_seq_test "$GH" tests/keyvel_seq_test.c
 nrpn() {
     cc_run nrpn_test "$GH" tests/nrpn_test.c || return 1
     "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" docs/NRPN.md ||

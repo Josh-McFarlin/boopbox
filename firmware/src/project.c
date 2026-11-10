@@ -600,7 +600,7 @@ typedef struct {
 #endif
     uint32_t lights;                               /* the backlight and the menu's switches (panel.c lights_word) */
 } persist_t;
-_Static_assert(sizeof(side_rec_t) == 80u && sizeof(side_rec_t) <= ST_SIDE_MAX, "the side record: theme, favourites");
+_Static_assert(sizeof(side_rec_t) == 120u && sizeof(side_rec_t) <= ST_SIDE_MAX, "the side record: theme, favourites, (1.8) the key velocity's calibration");
 static side_rec_t side_out;
 #if FELUCCA_ARRANGER
 _Static_assert(__builtin_offsetof(persist_t, arrangement) == 48u && sizeof(arr_config_t) == 36u,
@@ -621,6 +621,7 @@ UI_SMALL static void persist_boot(void)                    /* before settings_in
 #if FELUCCA_ARRANGER
     arr_defaults(&arrangement);
 #endif
+    kv_cal_io(0, 0);                               /* (1.8) the key velocity's seeds, until a saved calibration */
 #if FELUCCA_FLASH
     persist_t p;
     uint32_t f = irq_save();
@@ -692,7 +693,7 @@ UI_SMALL static int project_used(uint32_t slot) { return proj_ok(&proj_slot[slot
  * all three. The MIDI part: the MIDI LEARN map (seq.c ml_tab, ML_N entries, 2 bytes each, low first), then GLO > MIDI:
  * CH1 CH2 CH3, the drum channel | OTHER << 7 (and two menu switches), BEND | FX FADE << 4, FX CH, DR MAP | CLK OUT << 1
  * | FILTER RESO << 2, REMOTE; then (at MIDI_PART) GLO > MIDI 4's CH5..CH8, ml_hi (the learned entries of tracks 5..8, low
- * first), REC KNOBS, one spare. An object of another length: the SYN kits and the MIDI part at their defaults */
+ * first), REC KNOBS, (1.8) the key velocity's settings (keyvel.c kv_set). An object of another length: the SYN kits and the MIDI part at their defaults */
 #define MIDI_PART (2u * ML_N + 8u)
 #define MIDI_PART_8 (MIDI_PART + 8u)
 _Static_assert(sizeof(persist_t) + sizeof(dsu_bank_t) + MIDI_PART_8 <= ST_PAYLOAD_MAX, "the settings object fits its sector");
@@ -715,7 +716,7 @@ UI_SMALL static void midi_part_fill(uint8_t *b)
         b[MIDI_PART + k] = midi_set[10u + k];       /* (eight tracks) CH5..CH8 */
     b[MIDI_PART + 4u] = (uint8_t)ml_hi, b[MIDI_PART + 5u] = (uint8_t)(ml_hi >> 8);
     b[MIDI_PART + 6u] = (uint8_t)(rec_locks != 0u);    /* menu SEQ > REC KNOBS (LOCKS) */
-    b[MIDI_PART + 7u] = 0;
+    b[MIDI_PART + 7u] = kv_set;                     /* (1.8) menu KEYS: VELOCITY, AFTERTOUCH, VEL LEARN (keyvel.c) */
 }
 /* the MIDI part (MIDI_PART_8 bytes), every entry checked (a CC that learns, a parameter this knows, a channel 0..16, a
  * range 1..12) */
@@ -754,6 +755,7 @@ UI_SMALL static void midi_part_read(const uint8_t *b)
         midi_set[10u + k] = (uint8_t)(b[MIDI_PART + k] <= 16u ? b[MIDI_PART + k] : 0u);
     ml_hi = (uint16_t)((uint32_t)b[MIDI_PART + 4u] | (uint32_t)b[MIDI_PART + 5u] << 8);
     rec_locks = (uint8_t)(b[MIDI_PART + 6u] & 1u);
+    kv_set = (uint8_t)(b[MIDI_PART + 7u] & 0x3Fu);   /* (1.8; an older object's spare byte: 0, all off) */
     song.g[G_CH5] = midi_set[10], song.g[G_CH6] = midi_set[11], song.g[G_CH7] = midi_set[12], song.g[G_CH8] = midi_set[13];
     fm1_irq_on();
 }
@@ -821,7 +823,7 @@ UI_SMALL static void settings_save(void)
     {
         uint8_t mp[MIDI_PART_8];
         midi_part_fill(mp);
-        if (!memcmp(&p, &persist_saved, sizeof p) && !memcmp(mp, midi_saved, sizeof mp) && !fav_dirty)
+        if (!memcmp(&p, &persist_saved, sizeof p) && !memcmp(mp, midi_saved, sizeof mp) && !fav_dirty && !kv_cal_dirty)
             return;                                /* unchanged: no erase cycle */
     }
     if (settings_write(&p) == 0)
