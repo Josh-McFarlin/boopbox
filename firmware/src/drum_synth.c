@@ -36,9 +36,20 @@ typedef struct {
 typedef struct {
     const char *name, *style;
     uint8_t crush;               /* low nibble: bits dropped, high nibble: sample-and-hold - 1 */
-    dsnd_t s[DS_LANES];
+    uint8_t snd[DS_LANES];       /* (1.7) each lane's sound in DS_SND (stored once: most kits share most of them) */
+    uint8_t lvl[DS_LANES];       /* .. and its level (dsnd_t.level; DS_SND's own is 0) */
 } dkit_t;
-#include "felucca_drumkits.h"    /* DS_KITS[], DS_NKITS (tools/gen_drumkits.py) */
+#include "felucca_drumkits.h"    /* DS_SND[], DS_KITS[], DS_NKITS (tools/gen_drumkits.py) */
+/* factory kit f's sound on a lane, with its level in it: the 16 dsnd_t a kit had before 1.7 (the editor, SYN copies) */
+static void ds_kit_get(uint32_t f, dsnd_t *out)
+{
+    const dkit_t *k = &DS_KITS[f % DS_NKITS];
+    uint32_t i;
+    for (i = 0; i < DS_LANES; i++) {
+        out[i] = DS_SND[k->snd[i]];
+        out[i].level = k->lvl[i];
+    }
+}
 
 /* GM note -> synth lane and a pitch offset in semitones */
 static const struct { uint8_t lane; int8_t semi; } DS_MAP[128 - 35] = {
@@ -125,12 +136,14 @@ static const int16_t DS_METAL[6] = {0, 109, 163, 259, 268, 377};
 static const int8_t DK_IDX[8] = {-26, -17, -10, -4, 0, 6, 13, 21};
 static const uint16_t DK_SCALE[8] = {64, 102, 154, 205, 256, 358, 512, 768};
 /* tune16: the sound's TUNE in 1/16 semitones; dsel: its DECAY + 4 (0 .. 7) */
-static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, uint32_t vel, int32_t tune16, uint32_t dsel)
+/* d: the lane's sound (ds_lane of the note), level: its level (dsnd_t.level: a factory kit keeps it apart, DS_KITS) */
+static void ds_on_snd(dsv_t *s, const dsnd_t *d, uint32_t level, uint32_t crush, uint32_t note, uint32_t vel, int32_t tune16,
+                      uint32_t dsel)
 {
     int32_t dk = DK_IDX[dsel & 7u];
     int32_t semi;
-    uint32_t lane = ds_lane(note, &semi), i;
-    const dsnd_t *d = &snd[lane];
+    uint32_t i;
+    (void)ds_lane(note, &semi);
     memset(s, 0, sizeof *s);
     s->d = d;
     s->crush = (uint8_t)crush;
@@ -138,7 +151,7 @@ static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, ui
     {   /* level: quarter dB from 128; 24 quarters = 6 dB = x2 (0.02 dB off per 6 dB) */
         static const uint16_t QDB[24] = {1024, 1054, 1085, 1116, 1149, 1182, 1217, 1252, 1289, 1326, 1365, 1405,
                                          1446, 1488, 1532, 1576, 1622, 1669, 1718, 1768, 1820, 1873, 1928, 1984};
-        int32_t e = (int32_t)d->level - 128 + 192, q = e / 24 - 8;   /* (+192: positive for the divide) */
+        int32_t e = (int32_t)level - 128 + 192, q = e / 24 - 8;   /* (+192: positive for the divide) */
         uint32_t g = QDB[e % 24];
         s->lg = (int32_t)(q >= 0 ? g << q : g >> -q);
     }
@@ -183,6 +196,13 @@ static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, ui
     }
     for (i = 0; i < 6u; i++)
         s->minc[i] = ds_inc(s->base16 + DS_METAL[i]);
+}
+/* the lane of note in 16 sounds that carry their levels (a SYN kit, the editor's tests) */
+static void ds_on(dsv_t *s, const dsnd_t *snd, uint32_t crush, uint32_t note, uint32_t vel, int32_t tune16, uint32_t dsel)
+{
+    int32_t semi;
+    const dsnd_t *d = &snd[ds_lane(note, &semi)];
+    ds_on_snd(s, d, d->level, crush, note, vel, tune16, dsel);
 }
 
 /* one CTL block of control: the envelopes' targets at its end */
@@ -360,7 +380,7 @@ static void dsu_from_factory(uint32_t k, uint32_t src)
         u->name[i] = f->name[i];
     u->crush = f->crush;
     u->src = (uint8_t)(src % DS_NKITS);
-    memcpy(u->s, f->s, sizeof u->s);
+    ds_kit_get(src, u->s);
 }
 static void dsu_defaults(void)
 {

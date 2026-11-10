@@ -55,6 +55,10 @@
 #ifndef FELUCCA_UAC_TONE
 #define FELUCCA_UAC_TONE 0       /* bench: the USB input sends test triangles instead of the music */
 #endif
+#ifndef FELUCCA_USB_HOST
+#define FELUCCA_USB_HOST 1       /* (1.7) MENU > USB > USB HOST: the USB-C port hosts a USB-MIDI keyboard or controller
+                                  * instead of a computer (usb_host.c, from Melodee); never saved, the update loader never has it */
+#endif
 #include "usb.c"
 #ifndef FELUCCA_UART
 #define FELUCCA_UART 1           /* TRS MIDI IN on UART1 (3.5 mm jack) */

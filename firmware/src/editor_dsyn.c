@@ -62,7 +62,8 @@ UI_SMALL static int ed_dsyn_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
         uint32_t w = n == 1u ? a[0] : 127u, crush = 0, src = 0;
         char nm[8] = {0};
         if (w < DS_NKITS) {
-            s = DS_KITS[w].s;
+            ds_kit_get(w, (dsnd_t *)(void *)(b + 2));    /* (1.7: a factory kit's 16 sounds, expanded in place) */
+            s = (const dsnd_t *)(const void *)(b + 2);
             crush = DS_KITS[w].crush;
             src = w;
             for (i = 0; i < 8u && DS_KITS[w].name[i]; i++)
@@ -79,7 +80,8 @@ UI_SMALL static int ed_dsyn_handle(uint32_t cmd, const uint8_t *a, uint32_t n)
             ed_dsyn_name(nm);
             b[0] = (uint8_t)crush;                         /* (one pack7 stream: crush, src, the sounds) */
             b[1] = (uint8_t)src;
-            memcpy(b + 2, s, DS_LANES * sizeof(dsnd_t));
+            if ((const uint8_t *)s != b + 2)
+                memcpy(b + 2, s, DS_LANES * sizeof(dsnd_t));
             ed_pack7(b, sizeof b);
         }
         return 1;

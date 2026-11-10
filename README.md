@@ -18,13 +18,13 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 > **BoopBox is a renamed fork of SLOOP.** Its versions start again at 1.0.0, which carries on from SLOOP 2.8.3. The installer updates an FM-1 that runs SLOOP or Felucca, but BoopBox has its own eight-track project format: projects and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples and themes carry over. BoopBox is not affiliated with or endorsed by SLOOP's author, Felucca or Hügelton Instruments.
 
-BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, twelve synthesis engines, 153 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections and the **sequencer to MIDI out**. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
+BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths and two drum machines** by default (any track can be either), each drum machine with 16 sounds on the white keys, thirteen synthesis engines, 223 sounds, 37 drum kits, your own samples, a song mode you play with your hands, USB audio, MIDI in on the jack and MIDI clock — and now **physical models** (guitars, sitar, bells, hand drums), a **noise** engine, **six-operator FM with DX7 patches**, **parameter locks**, **micro timing**, **fills**, a **quick chain** of sections, the **sequencer to MIDI out**, **OberVave's analog polysynth** with its 70 programs and **USB HOST** for a USB-MIDI keyboard. House, techno, hip-hop, trap, drum & bass, amapiano, synthwave, lo-fi, ambient, chiptune — it does not pick a style for you. No factory patterns, nothing to load: everything you hear, you play.
 
 > Coming from SLOOP, your presets, samples and settings are kept, but your SLOOP projects do not open in BoopBox: save a backup with SLOOP's editor first (it restores into SLOOP). You can go back at any time (see [Going back](#going-back)).
 
 ## Contents
 
-1. [What's new in 1.6.0](#whats-new-in-160)
+1. [What's new in 1.7.0](#whats-new-in-170)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -44,7 +44,17 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.6.0
+## What's new in 1.7.0
+
+**OBERVAVE, a 13th engine:** the voice of [OberVave](https://github.com/zvenson/obervave) by zvenson, an 8-voice analog
+polysynth with sync, cross-mod, a 24 dB ladder and a SEM filter, and its **70 programs** (brass, pads, sync leads,
+basses, electric pianos). **USB HOST** (from [Melodee](https://github.com/keremimo/melodee)): plug a USB-MIDI
+keyboard into the FM-1 through a **powered hub** (MENU → USB → USB HOST). **Patterns you can play:** the PATTERNS
+screen is now PATTERNS, CHAIN (a playlist with repeats) and SCENES (eight named moments of the song), with the keys as
+pads. To make room, the GM kit's cymbals and the VIBES set are stored a little smaller. Program Change numbers of the
+sounds move ([all changes](CHANGELOG.md)).
+
+### 1.6.0
 
 **20 synth voices.** The synth tracks share 20 voices instead of 8, so chords on several tracks at once all sound: three
 pads of 6 notes and a bass no longer take each other's notes. One track still plays at most 8 notes; BoopBox Trainer
@@ -276,8 +286,8 @@ Keys 1, 5, 9 and 13 glow dimly while a layer is held: the first key of each row 
 
 ### Synths and sounds
 
-- **Twelve engines:** analog, 4-op FM, **6-op FM with DX7 patches (FM6, 2.4)**, phase distortion, three-oscillator, tonewheel organ, formant voice, granular, lo-fi chip, sampler, **physical models (PHYS, 2.5)**, **noise (NOISE, 2.5)**.
-- **153 sounds, browsed by kind** — basses (sliding 808s, acid 303, reese, FM, bass guitar), guitars, sitar and koto (physical models), keys (Rhodes, a real Steinway grand, house and afro keys), organs and accordion, pads (string machine, granular clouds), leads (supersaw, talkbox, pan flute, harmonica), plucks and bells (harp, steel drum, glockenspiel, celesta, xylophone), stabs and dub chords — every one level-matched. **32 slots** for your own presets.
+- **Thirteen engines:** analog, 4-op FM, **6-op FM with DX7 patches (FM6, 2.4)**, phase distortion, three-oscillator, tonewheel organ, formant voice, granular, lo-fi chip, sampler, **physical models (PHYS, 2.5)**, **noise (NOISE, 2.5)**, **OBERVAVE** (OberVave's 8-voice analog polysynth: sync, cross-mod, a 24 dB ladder and SEM filter; 1.7).
+- **223 sounds, browsed by kind** — basses (sliding 808s, acid 303, reese, FM, bass guitar), guitars, sitar and koto (physical models), keys (Rhodes, a real Steinway grand, house and afro keys), organs and accordion, pads (string machine, granular clouds), leads (supersaw, talkbox, pan flute, harmonica), plucks and bells (harp, steel drum, glockenspiel, celesta, xylophone), stabs and dub chords — every one level-matched. **32 slots** for your own presets.
 - Envelopes (with a pitch punch for 808s; 2.6: in note values with ENV SYNC), LFO (2.6: tempo-synced, free-running or unipolar), arpeggiator, glide and voice modes (POLY, MONO, LEGATO, UNISON), per-track drive, **INSERT effect** (2.6: soft / hard clip, wavefolder, fuzz, bit crush, phaser, flanger, chorus) and slicer, ANALOG's filter as LP, BP or HP (2.6), sends to a **stereo chorus**, a **tempo delay** (dotted 1/8 and 1/16 too) and a **stereo reverb**.
 - **Key and chords (SEL):** the key of the song for all synths, 16 scales, one-key chords (triad, 7th, 9th, sus4, power), keys snapped to the scale or the scale on the white keys.
 
@@ -389,7 +399,7 @@ Colours: **blue** track 1 and KNOB 1, **green** 2, **yellow** 3, **orange** 4 (d
 
 ## The menu: settings of the FM-1
 
-Hold **HOME**. The menu is in five sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS), **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT). **SELECT** goes from one section to the next, **KNOB 1–4** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
+Hold **HOME**. The menu is in six sections, as the pages are: **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **USB** (USB HOST), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS), **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT). **SELECT** goes from one section to the next, **KNOB 1–4** set the section's rows (each row shows its knob's colour), **PRESETS** moves the cursor, **OCT+** steps the cursor's setting round or opens it (CALIBRATION, ABOUT), **OCT−** closes. These are settings of the FM-1, not of a project: loading a project or NEW PROJECT does not change them, and the backup keeps them.
 
 | Item | Choices | What it does |
 | --- | --- | --- |
@@ -403,6 +413,7 @@ Hold **HOME**. The menu is in five sections, as the pages are: **SCREEN** (COLOR
 | **USB AUDIO** | MASTER / FULL | the level of the USB audio input: follows the MASTER knob, or a fixed full level |
 | **USB SERIAL** (2.6 only) | OFF / ON | a serial console for developers; OFF (default) so macOS 13–15 show the USB audio input; at the next start. From 2.7 not in the FM-1's build (the flash is full) |
 | **USB RATE** (2.7) | AUTO / 44.1 KHZ / 48 KHZ | the rates the USB audio input offers; 44.1 KHZ if a phone records it distorted; at the next start |
+| **USB HOST** (USB, 1.7) | OFF / ON | ON: the USB-C port plays a USB-MIDI keyboard or controller (through a powered hub) instead of talking to a computer; never saved, every start is OFF (see [USB keyboards](#usb-keyboards-usb-host)) |
 | **MIDI SETTINGS** (SEQ, 1.2.0) | | OCT+ opens the MIDI pages: MIDI (CH1–4), MIDI 2 (CH5–8), MIDI 3 (IN, OTHER, OUT, BEND), MIDI 4 (FX CH, DR MAP, REMOTE, CLOCK), SYSTEM (SYNC, USB); SELECT walks them, any button leaves |
 | **HARDWARE CALIBRATION** (SYSTEM) | | the panel table, if a key or a knob answers wrongly |
 | **ABOUT** | | the version (*SLOOP 2.4*) and its build date, the credits |
@@ -419,7 +430,7 @@ SELECT walks MIDI, MIDI 2, MIDI 3, MIDI 4 and SYSTEM (they were GLO's pages befo
 BoopBox takes MIDI from two places at once:
 
 - **The MIDI IN jack** (3.5 mm TRS): a keyboard or a pad controller with a MIDI output, through a **TRS-to-DIN MIDI adapter**. If nothing plays, try the other adapter type (A / B).
-- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box.
+- **USB**, from a computer or a phone (a DAW, a MIDI routing app), a USB MIDI host box, or (1.7) a USB-MIDI keyboard with [USB HOST](#usb-keyboards-usb-host) on.
 
 | MIDI channel | Plays |
 | --- | --- |
@@ -431,7 +442,24 @@ BoopBox takes MIDI from two places at once:
 
 Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
-A USB keyboard plugged **straight into the FM-1** cannot work: both are USB devices, and a USB link needs a host (a computer, a phone, or a USB MIDI host box). Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio on.
+### USB keyboards (USB HOST)
+
+**(1.7, from [Melodee](https://github.com/keremimo/melodee))** Hold HOME → **USB** → **USB HOST** = **ON**, and the
+USB-C port becomes the host of a class-compliant USB-MIDI keyboard or controller, alone or behind a hub. Its notes,
+CCs, pitch bend and clock play BoopBox as USB MIDI from a computer does (the channels above, MIDI LEARN, IN).
+
+- **The FM-1 does not power the keyboard.** Plug it through a **powered USB hub**, or use a keyboard with its own
+  power supply. Low-speed devices (some very old ones) are not supported.
+- The screen says *MIDI DEVICE READY* when it found the keyboard, *NO MIDI DEVICE* when what is plugged in has no
+  USB-MIDI, *MIDI DEVICE LOST* when it went away (BoopBox lets go of every note it held).
+- **While USB HOST is on, the computer side is off:** no web editor, no USB audio, no MIDI to a computer. BoopBox
+  sends nothing to the keyboard.
+- USB HOST is **never saved**: every start is a normal USB device again, so updates and the editor always work. Turn
+  it OFF to go back to the computer without a restart.
+- Not yet tried with a keyboard on an FM-1: please [report](../../issues) what works.
+
+Without USB HOST, a USB keyboard plugged straight into the FM-1 cannot work: both are USB devices, and a USB link needs
+a host. Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio on.
 
 ### MIDI out
 
@@ -531,7 +559,8 @@ The protocol is documented in [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md).
 | Cable | a USB **data** cable, plugged directly (no hub) |
 | USB audio | any computer that takes a class-compliant USB audio input (no driver) |
 | MIDI IN jack | 3.5 mm TRS, through a TRS-to-DIN MIDI adapter (type A or B) |
-| Not supported | Bluetooth MIDI; a USB keyboard plugged straight into the FM-1 |
+| USB keyboards | class-compliant USB-MIDI, with **USB HOST** on and a **powered hub** (the FM-1 does not power them; 1.7) |
+| Not supported | Bluetooth MIDI; low-speed USB devices |
 
 ## Troubleshooting
 
@@ -562,7 +591,7 @@ Something else? [Open an issue](../../issues): what you did, what you expected, 
 | | |
 | --- | --- |
 | Tracks | 3 synth parts (20 voices shared) + drums (16 sounds, 6 voices) |
-| Sounds | 153 presets on 12 engines (browsed by kind, level-matched), 6-op FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4), 32 user presets |
+| Sounds | 223 presets on 13 engines (browsed by kind, level-matched; OBERVAVE's 70 programs), 6-op FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4), 32 user presets |
 | Polyphony | 20 voices shared across the synth tracks (the trainer: 8), at most 8 a track; per engine played alone: **8** (ANALOG, DIGITAL, PHASE, LOFI, SAMPLE, TRIO, WHEEL, NOISE), **6** (FM6), **4** (VOICE), **3** (GRAIN, PHYS — SYMP model 2); MONO / LEGATO play one note at a time; drums 6 |
 | Drum kits | 37 (5 sampled, 32 synthesised, 16 sounds each), level-matched, plus your own: USR1–USR4 and USR3+4 (about 15 s) |
 | Sequencer | 64 steps per track, own length and division each (1/32 to two bars); chords with a level and ratchet per note; drums with a level and ratchet per sound; ties, slide; per-step parameter locks (24 per track), micro timing (±½ step in 1/64) and fill conditions; swing 0 (straight) to 100 (MPC 75 %); one sample-accurate clock (no drift) |

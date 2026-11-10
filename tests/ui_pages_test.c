@@ -1190,6 +1190,10 @@ int main(int argc, char **argv)
         check(ui.menu_sel == MI_LIGHTS, "menu: PRESETS moves the cursor round the section's rows");
         encs[panel.enc[EN_SELECT]] = 1; frame(); ui.force = 1; frame(); ppm("menu-audio");
         check(mi_sec(ui.menu_sel) == MS_AUDIO, "menu: SELECT right: AUDIO (LOWCUT, USB AUDIO, USB RATE)");
+        encs[panel.enc[EN_SELECT]] = 5; frame(); ui.force = 1; frame(); ppm("menu-usb");
+        check(mi_sec(ui.menu_sel) == MS_USB && ui.menu_sel == MI_UHOST && MS_FIRST[MS_USB + 1] - MS_FIRST[MS_USB] == 1u &&
+              !strcmp(mi_value(MI_UHOST, &(uint16_t){0}), "OFF"),
+              "menu (1.7): SELECT right: USB (USB HOST, OFF at every start)");
         encs[panel.enc[EN_SELECT]] = 5; frame();
         check(mi_sec(ui.menu_sel) == MS_SEQ, "menu (2.7.1): SELECT right: SEQ (STEP ADVANCE, DRUM PREVIEW)");
         encs[panel.enc[EN_SELECT]] = 5; frame();

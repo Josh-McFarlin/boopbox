@@ -111,6 +111,7 @@ fi
 mkdir -p build/gen
 [ build/gen/felucca_tables.h -nt tools/gen_tables.py ] || python3 tools/gen_tables.py build/gen/felucca_tables.h
 [ build/gen/felucca_fm6.h -nt tools/gen_fm6_patches.py ] || python3 tools/gen_fm6_patches.py build/gen/felucca_fm6.h
+[ build/gen/felucca_obv.h -nt tools/gen_obv.py ] || python3 tools/gen_obv.py build/gen/felucca_obv.h
 # the TRAINER's own generated headers (tools/build.py --trainer): three sample sets fewer, the lessons
 TGEN=build/trainer-fw/gen
 if [ ! -f "$TGEN/trainer_lessons.h" ] || [ "$TGEN/trainer_lessons.h" -ot tools/trainer/lessons.py ] ||
@@ -316,6 +317,12 @@ uac() {
 run "USB audio input: descriptors (with / without CDC, USB SERIAL OFF, USB RATE 44.1 / 48, no 48 kHz), ring and packets" uac
 uac_in_app() { ${CC%% *} -E -Ibuild/gen -Ifirmware/hal -Ifirmware/src firmware/src/felucca.c 2>/dev/null | grep -q uac_service; }
 run "USB audio input: built into the firmware (FELUCCA_UAC set before usb.c)" uac_in_app
+# (1.7) the USB MIDI host (usb_host.c, from Melodee) against its model of the SIE, a keyboard, hubs and a stick
+usb_host() {
+    cc -O1 -g -fsanitize=address,undefined -DHALF_FRAMES=$HALF -Ifirmware/hal -Ifirmware/src -Ibuild/gen \
+        -o "$OUT/usb_host_test" tests/usb_host_test.c && "$OUT/usb_host_test"
+}
+run "USB MIDI host: enumeration (direct, hubs, a hub on a hub), events, the filter, back-pressure, unplug, recovery" usb_host
 
 if [ -z "$NOFW" ]; then
 run "M-UPGRADE entry" cc_run ota_test "" tests/ota_test.c build/felucca.fwsc

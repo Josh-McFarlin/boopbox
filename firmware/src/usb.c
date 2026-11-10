@@ -879,6 +879,11 @@ static void ep1_rx(void)                                /* leaves the packet (NA
     sie_wr(S_RXCSR2, csr >> 8);
 }
 
+#ifndef FELUCCA_USB_HOST
+#define FELUCCA_USB_HOST 0                              /* felucca.c turns it on; the update loader never has it */
+#endif
+#include "usb_host.c"                                   /* (1.7) the port as a USB-MIDI host (MENU > USB > USB HOST) */
+
 #if FELUCCA_OTA
 /* ---- SysEx frames for the main loop (ota.c / editor.c hooks; felucca.c and the
  * update loader supply ota_now_ms / ota_idle) ---- */
@@ -1233,6 +1238,12 @@ static void uac_service(void)
 static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
 {
     uint32_t iu, it, ir;
+#if FELUCCA_USB_HOST
+    if (uh.run) {                                       /* a host: one IN endpoint, nothing of the device side */
+        uh_poll();
+        return;
+    }
+#endif
     if (!usb.up)
         return;
     if (fm1_usb_sof_take()) {                           /* SOF pending: not a reliable "host is there", */
@@ -1348,6 +1359,10 @@ static void usb_retry(uint32_t now_ms)
     static uint32_t t;
     if (usb.up || usb.detached || now_ms - t < 1000u)
         return;
+#if FELUCCA_USB_HOST
+    if (uh.on)
+        return;                                         /* the port is a host: uh_task owns it */
+#endif
     t = now_ms;
     usb.retries++;
     usb_start();

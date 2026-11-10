@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.7.0
 
 **Patterns you can play, chains you can write, scenes for the song** ([the
 details](docs/groovebox-controls.md#patterns)):
@@ -52,7 +52,49 @@ correctly on an older BoopBox.
   kit → sound → PATTERNS on the drum track only.
 - BoopBox Trainer's coach says *HOLD SEQ, TAP SAVE* for the PATTERNS screen.
 
-Projects, songs, presets and settings open as they are.
+**OBERVAVE, a new engine:** the voice of [OberVave](https://github.com/zvenson/obervave) by zvenson, an 8-voice analog
+polysynth in the spirit of the classic American ones of 1979–84, with its **70 programs** (brass, pads, strings, sync
+leads, basses, electric pianos, arpeggios):
+
+- Two oscillators (saw, pulse or both) with **hard sync**, **cross-modulation** and an envelope on the second one's
+  pitch, noise and a drive stage, into a **24 dB ladder filter** or a 12 dB filter (low-pass, high-pass, band-pass,
+  notch, or the **SEM** sweep from low-pass through notch to high-pass), with a **filter envelope of its own**, an LFO
+  and *vintage* (every voice a little off, drifting, as on the originals).
+- **PROG** picks one of the 70 programs; **TYPE, XMOD, DTN, CUT, RES, FENV, DRV** move the program's own settings
+  (0 = as it was made), so a program never keeps another's. The amp envelope, glide, MONO / UNISON, the arp and the
+  effects are the track's, set by the program's preset as with every engine.
+- The sound browser lists the programs by kind. Ten are named *OB …* where BoopBox already had a sound of that name.
+- **Program Change numbers move:** the PRESETS list is by kind, so the programs sit at the end of their kind's sounds and
+  the sounds after them have new numbers (the first 22, the basses up to SAW BASS, keep theirs). Your user presets come
+  after all 223 factory sounds.
+- OBERVAVE keeps its voices in an engine arena, like FM6, GRAIN, PHYS and WHEEL: at most three tracks play these
+  engines at once. Its voice costs about twice an ANALOG voice; when the tracks ask for more than the FM-1 can play,
+  voices give way as before.
+
+**USB HOST: plug a USB-MIDI keyboard into the FM-1** (MENU → **USB** → **USB HOST**, from
+[Melodee](https://github.com/keremimo/melodee) by Kerem Kilic):
+
+- With USB HOST **ON**, the USB-C port talks to a class-compliant USB-MIDI keyboard or controller instead of a
+  computer, alone or behind a hub. Its notes, controllers, pitch bend and clock play BoopBox as MIDI from a computer
+  does (the same channels, MIDI LEARN, routing). The screen says when a device is ready, when there is none, and when
+  it went away.
+- **The FM-1 does not power the keyboard:** use a **powered USB hub** (or a keyboard with its own power supply).
+  Low-speed devices are not supported. BoopBox sends nothing to the keyboard.
+- While USB HOST is on, the computer side is off: no web editor, no USB audio, no MIDI to a computer. USB HOST is
+  never saved: **every start is a normal USB device again**, so updates and the editor always work.
+- Not yet tried on an FM-1 with a keyboard: please [report](../../issues) what works and what does not.
+
+**Room in the flash for both:**
+
+- The GM sample kit's hi-hats, crash and ride are stored at 22 kHz like the rest of the kit (they were 32 kHz): they
+  lose the octave above 11 kHz (−11 KB). The GM KIT preset and the sampled drum kits sound a little less bright on top.
+- The 32 synthesized drum kits store each distinct sound once (242 instead of 512): they sound exactly as before
+  (−5 KB).
+- The VIBES sample set keeps 0.8 s of each recording (it was 1.0 s; −6.6 KB): its last 0.2 s, already faded by the
+  presets' envelopes, is gone. VIBES and GRAIN's VIBE HAZE end a little sooner on long notes.
+
+Projects, songs, presets and settings open as they are. An older BoopBox opens a track saved with OBERVAVE as an
+ANALOG track.
 
 ## 1.6.0
 

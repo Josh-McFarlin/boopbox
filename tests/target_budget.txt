@@ -14,6 +14,10 @@
 # Since SLOOP 2.8.4 the compiler jumps back to sample_render's shared return and into grain_render's inlined
 # gr_spawn; counted as loops, they put the per-sample loops one level deeper (x4): sample_render read 593, grain_render
 # 2363, over budget on every real build. Read right: 125 and 1747, fm6_render 346; the other functions unchanged.
+# 1.7: OBERVAVE (obv_render, OberVave's voice loop: two polyBLEP oscillators, the SVF or the 24 dB ladder) added at 7654:
+# 491 instructions in its per-sample loop, but the compiler gives that one loop three back edges into overlapping places
+# (the tails around the SVF's soft clip, duplicated), which this count weighs as three nested loops (x16). The host CPU
+# check (regress.c, callgrind) is the real measure: about twice an ANALOG voice.
 analog_render 630
 digital_render 333
 phase_render 79
@@ -31,4 +35,5 @@ drums_mix 6830
 fm6_op_run 72
 fm6_op_fb 26
 fm6_render 362
+obv_render 7654
 fm1_alnk0_irq 256

@@ -73,7 +73,7 @@ def main(raw, rep, only=None):
             old[(int(e), name)] = int(v)              # (by name: presets may move in their table)
             kept.append((int(e), int(p), name, int(v)))
     neng = max([int(r[0]) for r in rows] + [e for e, _, _, _ in kept]) + 1
-    pmax = 32
+    pmax = max([int(r[1]) for r in rows] + [p for _, p, _, _ in kept]) + 1   # (1.7: OBERVAVE has 70)
     tab = [[0] * pmax for _ in range(neng)]
     names = [[""] * pmax for _ in range(neng)]
     measured = {int(r[0]) for r in rows}
@@ -89,7 +89,7 @@ def main(raw, rep, only=None):
         if L is not None and name not in SKIP and (only is None or e == only):
             t += int(round((TARGET + MASTER_DB + ROLE[role] - L) * 2))
         tab[e][p] = max(-40, min(TRIM_MAX, t))   # (LEVEL 104 + 48 = 152: LEVEL still turns it up to 175)
-    write(neng, tab, names)
+    write(neng, tab, names, pmax)
     print(f"{len(rows)} presets levelled -> {OUT}")
 
 

@@ -2,7 +2,7 @@
 
 # BoopBox 1.1.0
 
-**A live groovebox firmware for the M-VAVE FM-1 — for any style.** Eight tracks — six synths and two drum machines by default, each drum machine with 16 sounds on the white keys (see [the groovebox controls](docs/groovebox-controls.md)) — twelve synthesis engines (six-operator FM with DX7 patches, and now physical models and noise), 153 sounds, 37 drum kits (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, reggaeton, synthwave, chiptune, ambient, jazz…), your own samples, ghost notes and ratchets, parameter locks, micro timing and fills, note repeat, one-key chords, 27 punch-in effects, a vinyl / sidechain / DJ-filter master, and a clear, colour-coded screen that always shows what your hands can do next. No factory patterns, nothing to load: everything you hear, you play.
+**A live groovebox firmware for the M-VAVE FM-1 — for any style.** Eight tracks — six synths and two drum machines by default, each drum machine with 16 sounds on the white keys (see [the groovebox controls](docs/groovebox-controls.md)) — thirteen synthesis engines (six-operator FM with DX7 patches, physical models, noise, and now OberVave's analog polysynth), 223 sounds, 37 drum kits (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, reggaeton, synthwave, chiptune, ambient, jazz…), your own samples, ghost notes and ratchets, parameter locks, micro timing and fills, note repeat, one-key chords, 27 punch-in effects, a vinyl / sidechain / DJ-filter master, and a clear, colour-coded screen that always shows what your hands can do next. No factory patterns, nothing to load: everything you hear, you play.
 
 BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/isod89/sloop-fm1) by isod89, itself based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments.
 
@@ -322,7 +322,7 @@ The screen shows the 27 keys as a keyboard: the white keys in four rows of four,
 
 ## The sound bank
 
-153 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the twelve engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (KNOB 3 VIEW groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs); your favourites come first and your own presets last. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
+223 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the thirteen engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (KNOB 3 VIEW groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs); your favourites come first and your own presets last. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
 
 | Kind | Sounds (engine) |
 | --- | --- |
@@ -442,14 +442,14 @@ The protocol is documented in [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) (
 
 ## Sound design pages
 
-The full Felucca engine is underneath (all of it in [GUIDE.md](GUIDE.md#16-every-page-knob-by-knob)): twelve synthesis engines (analog, 4-op FM, 6-op FM with DX7 patches, phase distortion, lo-fi chip, sampler, formant voice, three-oscillator, tonewheel organ, granular, physical models, noise), envelopes (with a pitch punch for the 808s), LFO, arpeggiator, scales and chords, glide and voice modes, per-track drive, INSERT effect (2.6: SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR), slicer and HP / LP filter, ANALOG's filter as LP, BP or HP (2.6), tempo-synced envelope (ENV SYNC) and LFO (LFO 2: SYNC, TRIG, POL) (2.6), chorus / delay / reverb sends (a stereo chorus, a tempo delay — 1/4 to 1/32, triplets, dotted 1/8 and 1/16 — a stereo reverb built as a feedback delay network: dense, no metallic ring), 32 user presets, 4 projects.
+The full Felucca engine is underneath (all of it in [GUIDE.md](GUIDE.md#16-every-page-knob-by-knob)): thirteen synthesis engines (analog, 4-op FM, 6-op FM with DX7 patches, phase distortion, lo-fi chip, sampler, formant voice, three-oscillator, tonewheel organ, granular, physical models, noise, OBERVAVE (1.7)), envelopes (with a pitch punch for the 808s), LFO, arpeggiator, scales and chords, glide and voice modes, per-track drive, INSERT effect (2.6: SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR), slicer and HP / LP filter, ANALOG's filter as LP, BP or HP (2.6), tempo-synced envelope (ENV SYNC) and LFO (LFO 2: SYNC, TRIG, POL) (2.6), chorus / delay / reverb sends (a stereo chorus, a tempo delay — 1/4 to 1/32, triplets, dotted 1/8 and 1/16 — a stereo reverb built as a feedback delay network: dense, no metallic ring), 32 user presets, 4 projects.
 
 ## MIDI keyboards
 
 BoopBox takes MIDI from two places at once:
 
 - **The MIDI IN jack** (3.5 mm TRS, on the FM-1): a keyboard or a pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
-- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 cannot work: both are USB devices, and a USB link needs a host.
+- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works with HOME menu → **USB** → **USB HOST** = ON (1.7) and a **powered hub** (the FM-1 does not power it): see [the guide](GUIDE.md#usb-keyboards-usb-host). While it is on there is no editor, no USB audio and no MIDI to a computer; every start is OFF again.
 
 | MIDI channel | Plays |
 | --- | --- |
@@ -527,7 +527,7 @@ The glow is a short pulse on every scan of the panel (about 900 times a second):
 | | |
 | --- | --- |
 | Tracks | 3 synth parts (20 voices shared) + drums (16 sounds, 6 voices) |
-| Sounds | 153 presets on 12 engines (browsed by kind, level-matched), 6-operator FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4) |
+| Sounds | 223 presets on 13 engines (browsed by kind, level-matched), 6-operator FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4) |
 | Sequencer | 64 steps per track, own length and division each (1/32 to two bars); chords with a level and ratchet per note; drums with a level and ratchet per sound; ties, slide; per-step nudge (±½ step in 1/64), parameter locks (24 per track, any sound parameter) and fill conditions (fill only / no fill); swing 0 (straight) to 100 (MPC 75 %); one sample-accurate clock for steps, arp, rolls, slicer and song (no drift) |
 | Performance | layers (hold a button: keys and knobs change job): punch-in FX, erase, note repeat, step entry, key / chords, mute / solo / fill / tap tempo; live sections on the bar and a quick chain of up to 8 |
 | Drum kits | 37 (5 sampled, 32 synthesised, 16 sounds each), plus your own: USR1–USR4 and USR3+4 (about 15 s) |
