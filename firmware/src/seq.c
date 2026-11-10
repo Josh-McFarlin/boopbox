@@ -178,6 +178,10 @@ static volatile uint8_t kb_harm;                      /* the CHORDS screen shown
  * events of lk_q, ui_pats.c pats_key: white keys 1..8 the track's patterns, 9..16 the scenes) and play nothing */
 #define KB_PATS (LY_COUNT + 1u)
 static volatile uint8_t kb_pats;
+/* (1.9) the PLAY page of a drum track shown (the UI sets it every frame): with no layer, the white keys held make a beat
+ * (KB_GEN events of lk_q, ui_studio.c gen_key, drumgen.c) and play nothing */
+#define KB_GEN (LY_COUNT + 2u)
+static volatile uint8_t kb_gen;
 /* the keys of the layers the UI handles (steps, key, mix): key k down / up, in order */
 #define LKQ 16u
 static volatile uint16_t lk_q[LKQ];
@@ -1441,6 +1445,7 @@ static void steps_clear(track_t *t)           /* an empty pattern (synth: REST s
     memset(t->fill, 0, sizeof t->fill);
     comp_clear(t);
 }
+#include "drumgen.c"                         /* (1.9) beats from the keys held: the PLAY page of a drum track */
 #include "patbank.c"                         /* patterns: NPAT a track, the bank, quantized changes, chains */
 #include "harmony.c"                         /* the song's key, scale and chord, that tracks follow */
 
@@ -2406,6 +2411,12 @@ CTL_SMALL static void key_down(uint32_t k)
         kb_kind[k] = KS_UI;
         kb_nt[k][0] = (uint8_t)KB_GRID;
         harm_key(k);
+        return;
+    }
+    if (is_drum(t) && layer == LY_PLAY && kb_gen) {    /* (1.9) the PLAY page: the keys held make a beat */
+        kb_kind[k] = KS_UI;
+        kb_nt[k][0] = (uint8_t)KB_GEN;
+        lk_push(KB_GEN, k, 1);
         return;
     }
     if (is_drum(t) && layer == LY_PLAY && kb_grid) {   /* the DRUMS grid page: a step key */

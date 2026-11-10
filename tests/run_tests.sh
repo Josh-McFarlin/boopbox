@@ -374,6 +374,8 @@ run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, 
     cc_run lock_test "$GH" tests/lock_test.c
 run "patterns: 8 a track, quantized changes (loop, bars), chains, the bank full, stores, sections, the song's loop region" \
     cc_run pat_test "$GH" tests/pat_test.c
+run "beats from the keys (drumgen): the same keys and seed the same beat, grooves, detail, length, nothing left over" \
+    cc_run drumgen_test "$GH" tests/drumgen_test.c
 run "harmony: key, scale, chords (TRANS, SCALE), quantized changes, a progression, live chords, note-offs, stores" \
     cc_run harm_test "$GH" tests/harm_test.c
 run "performance FX: LATCH (keys, MIDI), Q (1/16 .. bar), TARGET (master, drums, synths, the selected track)" \

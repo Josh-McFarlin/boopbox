@@ -617,6 +617,46 @@ UI_SMALL static void grid_key(uint32_t k)
     sync_reload = 1;                                    /* (2.7.1: not heard: the pattern plays it) */
 }
 
+/* (1.9) the PLAY page (SEQ) of a drum track shown, no layer held: its white keys make beats (seq.c kb_gen) */
+UI_SMALL static int gen_keys_on(void)
+{
+    const page_t *pg = cur_page();
+    return !ui.home && !ui.menu && is_drum(TSEL) && pg->fam == FAM_SEQ && pg->scope == SC_PATT;
+}
+/* a key down on the PLAY page of a drum track: the white keys held now (this one too) make the whole pattern
+ * (drumgen.c): the same keys and SEED, the same beat. One hold is one undo (EDIT + OCT-: the pattern before it) */
+static uint32_t gen_sess;
+UI_SMALL static void gen_key(uint32_t k)
+{
+    uint32_t keys = 0, i, g;
+    int32_t w = punch_key(k);
+    char b[24];
+    if (w < 0)
+        return;
+    if (song.playing && arrangement_enabled) {
+        ui_message("STOP THE SONG FIRST");
+        return;
+    }
+    for (i = 0; i < 27u; i++)                           /* the white keys held */
+        if (((fm1_in.notes >> i) & 1u) && punch_key(i) >= 0)
+            keys |= 1u << punch_key(i);
+    if ((keys & ~(1u << w)) == 0u)                      /* the first key of a hold: a new undo */
+        gen_sess = (undo_sess += 4u) | 3u;
+    keys |= 1u << w;
+    undo_mark(TSEL, gen_sess);
+    fm1_irq_off();
+    g = dg_make(TSEL, keys, (uint32_t)TSEL->cp_seed);
+    fm1_irq_on();
+    sync_reload = 1;
+    str_cpy(b, DG_NAME[(g - 1u) % DG_COUNT], sizeof b);
+    i = dg_bits(keys);
+    if (i > 1u) {
+        str_cpy(b + str_len(b), " +", sizeof b - str_len(b));
+        fmt_int(b + str_len(b), (int32_t)i - 1);
+    }
+    ui_say("BEAT ", b);
+}
+
 /* (2.7.2) the GRID's sheet (OCT+ held), as the NOTES page's: the hit of KNOB 1's sound on KNOB 2's step. RATCHET (its
  * hits in the step), NUDGE and FILL (the step's, every sound in it), MOVE (KNOB 2: a step a detent), COPY (OCT+: to the
  * next step, then MOVE moves the copy), DELETE (OCT+) */

@@ -108,6 +108,29 @@ be without them).
 DIR and SEED belong to the pattern (saved with it). They are not sound parameters: they cannot be locked or learnt
 over MIDI.
 
+### Beats from the keys (the PLAY page of a drum track, 1.9)
+
+On a drum track's **PLAY** page the white keys make beats: **hold one or more white keys** and the whole pattern is
+written at once, across the whole kit, over the track's length (TIMING > LEN). The keys play no sound on this page
+(the beat plays when the sequencer does), and the screen says *HOLD KEYS: A NEW BEAT* when you open it.
+
+| Keys held | Make |
+| --- | --- |
+| the **lowest** key held, white keys **1 … 8** | the groove: **HOUSE**, **ROCK**, **BOOM BAP**, **TRAP**, **BREAK**, **DEMBOW**, **DNB**, **ELECTRO** |
+| the lowest key held, white keys **9 … 16** | the same eight grooves, busier (hats in 16ths, more of everything below) |
+| each **other** key held | a variation of the groove, with more detail: kicks and ghost snares added, the open hat (two keys or more), a percussion layer (three: shaker, conga, rim, cowbell, ride or pedal hat, on a euclidean rhythm), a second one and a crash on the one (four), a fill of snares and toms on the last steps (three: two steps; five: four), the clap on the snare and hat rolls (more) |
+| **KNOB 2 SEED** | another set of variations for the same keys. At SEED 0 one key alone gives its groove plain |
+
+**The same keys and the same SEED always make the same beat**, in whatever order they are pressed: nothing is random
+from one hold to the next, so a beat you liked comes back with the same fingers. Each key pressed during a hold makes
+the beat again from all the keys held; letting go keeps the last one. The screen says what was made: *BEAT HOUSE*,
+*BEAT TRAP +2* (the groove, and the keys held besides the lowest).
+
+A beat replaces the pattern playing (its hits, levels and ratchets; its nudges, locks, fill conditions and components
+are cleared). **One hold is one undo**: EDIT + OCT− brings back the pattern from before the hold, EDIT + OCT+ the beat
+again. Edit it afterwards as any pattern (the DRUMS grid, the SEQ layer, recording), copy it to another pattern on
+PATTERNS. While a song plays (SONG screen), it is refused: *STOP THE SONG FIRST*.
+
 ### Saved
 
 Components, the direction and the seed are saved in the project (format 7) and in song sections. When a project does not

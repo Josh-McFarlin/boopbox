@@ -1308,6 +1308,47 @@ int main(int argc, char **argv)
         #undef PT
     }
 
+    {   /* 1.9: beats from the keys: on a drum track's PLAY page, the white keys held make the whole pattern (drumgen.c);
+         * the same keys, the same beat; one hold is one undo; the keys play no sound there */
+        uint32_t sel0 = song.sel, k1 = key_of_white(0), k5 = key_of_white(4);
+        dstep_t one[NSTEP], two[NSTEP];
+        int ok, on1;
+        song.sel = TRK_DRUM; go_home(); frame();
+        fm1_irq_off(); steps_clear(TDRUM); fm1_irq_on();
+        tap(B_SEQ); tap(B_SEQ); tap(B_SEQ); frames(2);
+        check(!strcmp(PAGES[ui.page].title, "PLAY") && gen_keys_on() && !strcmp(ui.msg, "HOLD KEYS: A NEW BEAT"),
+              "beats (1.9): the drum track's PLAY page takes the keys, and says so");
+        fm1_in.notes |= 1u << k1; frames(2);
+        memcpy(one, TDRUM->dstep, sizeof one);
+        on1 = dstep_has(&TDRUM->dstep[0], 0) && dstep_has(&TDRUM->dstep[4], 0) && !strcmp(ui.msg, "BEAT HOUSE");
+        fm1_in.notes |= 1u << k5; frames(2);
+        memcpy(two, TDRUM->dstep, sizeof two);
+        ok = on1 && memcmp(one, two, sizeof one) && !strcmp(ui.msg, "BEAT HOUSE +1");
+        fm1_in.notes &= ~(1u << k1 | 1u << k5); frames(2);
+        check(ok, "beats: key 1 held, HOUSE (kicks on the beat); key 5 too, another beat (HOUSE +1)");
+        press(B_EDIT); frames(10);
+        edges_btn |= BT(B_OCTDN); fm1_in.buttons |= BT(B_OCTDN); frame(); fm1_in.buttons &= ~BT(B_OCTDN); frame();
+        ok = track_empty(TDRUM);
+        edges_btn |= BT(B_OCTUP); fm1_in.buttons |= BT(B_OCTUP); frame(); fm1_in.buttons &= ~BT(B_OCTUP); frame();
+        ok &= !memcmp(two, TDRUM->dstep, sizeof two);
+        release(B_EDIT); frames(2);
+        check(ok, "beats: one hold, one undo (EDIT + OCT-: the empty pattern before it; OCT+: the beat again)");
+        fm1_in.notes |= 1u << k5; frames(2);
+        fm1_in.notes |= 1u << k1; frames(2);
+        ok = !memcmp(two, TDRUM->dstep, sizeof two);
+        fm1_in.notes &= ~(1u << k1 | 1u << k5); frames(2);
+        check(ok, "beats: the same keys (pressed in the other order) make the same beat");
+        TDRUM->cp_seed = 7;
+        fm1_in.notes |= 1u << k1; frames(2);
+        fm1_in.notes &= ~(1u << k1); frames(2);
+        check(memcmp(one, TDRUM->dstep, sizeof one) != 0, "beats: another SEED, another beat from the same key");
+        TDRUM->cp_seed = 0;
+        go_home(); frame();
+        check(!gen_keys_on(), "beats: HOME, the keys are the drums again");
+        fm1_irq_off(); steps_clear(TDRUM); fm1_irq_on();
+        song.sel = sel0; frame();
+    }
+
     {   /* 1.7: simpler ways around: a button from another group opens its first page; SEQ the same on every track
          * (drum track: GRID, TIMING, PLAY, PATTERNS, SONG); EDIT the drum track's KIT and SOUND; SEQ held + SAVE: PATTERNS */
         #define PT() (PAGES[ui.page].title)

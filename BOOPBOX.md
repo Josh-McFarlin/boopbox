@@ -180,6 +180,12 @@ Track 4 plays **16 sounds, one per white key** from the lowest F to the highest 
 
 **Levels:** every hit has one of four levels — **GHOST**, **SOFT**, **NORM** (as played), **HARD**. Hold **OCT−** while you hit for ghost notes, **OCT+** for hard hits; they are recorded so. **Ratchets:** a hit can repeat x1–x4 inside its step (ARP rolls record them; SEQ + a step + KNOB 3 sets them). The closed and pedal hats choke the open one.
 
+**Beats from the keys (1.9):** on the drum track's **PLAY** page (tap SEQ three times), **hold white keys** and a whole
+beat is written across the kit. The lowest key picks the groove (keys 1–8: HOUSE, ROCK, BOOM BAP, TRAP, BREAK, DEMBOW,
+DNB, ELECTRO; keys 9–16 the same, busier), each other key held adds a variation and more detail (ghost notes, open hats,
+percussion, a crash, a fill). The same keys and SEED (KNOB 2) always make the same beat; EDIT + OCT− undoes it
+([details](docs/groovebox-controls.md#beats-from-the-keys-the-play-page-of-a-drum-track-19)).
+
 ## Recording
 
 BoopBox records live and layers every pass on top of the last (overdub). Notes go to the nearest step **as you heard it**: the time between a key and its sound (~12 ms) is taken back, so what you play on the beat lands on the beat. Chords are kept on the synth tracks (up to 4 notes a step); held notes become ties.

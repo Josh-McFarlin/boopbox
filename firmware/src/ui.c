@@ -148,6 +148,8 @@ UI_SMALL static void page_entered(void)
             ui_say(b, ": SEL TRK ONLY");
         }
     }
+    if (!ui.home && pg->fam == FAM_SEQ && pg->scope == SC_PATT && is_drum(TSEL))
+        ui_message("HOLD KEYS: A NEW BEAT");     /* (1.9) the keys make beats here (ui_studio.c gen_key) */
     ui.entry_open = 0;
     ui.hot_t = 0;                                /* the white value / focus box was the old page's */
     ui.force = 1;
