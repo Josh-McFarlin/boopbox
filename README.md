@@ -25,7 +25,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.8.1](#whats-new-in-181)
+1. [What's new in 1.9.0](#whats-new-in-190)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -45,7 +45,15 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.8.1
+## What's new in 1.9.0
+
+**Beats from the keys:** on a drum track's **PLAY** page (SEQ, third page), hold one or more white keys and a whole
+beat is written across the kit. The lowest key picks the groove (keys 1–8: HOUSE, ROCK, BOOM BAP, TRAP, BREAK, DEMBOW,
+DNB, ELECTRO; 9–16 the same, busier); each other key held adds a variation and more detail. The same keys and SEED
+always give the same beat; EDIT + OCT− undoes it ([details](docs/groovebox-controls.md#beats-from-the-keys-the-play-page-of-a-drum-track-19);
+[all changes](CHANGELOG.md)).
+
+### 1.8.1
 
 **BoopBox Trainer teaches the PATTERNS, CHAIN and SCENES pages:** patterns played on the white keys, level 2's verse and
 chorus as **scenes** (launched on keys 9 and 10) and a drum **chain** with repeats ([the levels](docs/trainer.md)).

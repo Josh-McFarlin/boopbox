@@ -1323,9 +1323,9 @@ int main(int argc, char **argv)
         on1 = dstep_has(&TDRUM->dstep[0], 0) && dstep_has(&TDRUM->dstep[4], 0) && !strcmp(ui.msg, "BEAT HOUSE");
         fm1_in.notes |= 1u << k5; frames(2);
         memcpy(two, TDRUM->dstep, sizeof two);
-        ok = on1 && memcmp(one, two, sizeof one) && !strcmp(ui.msg, "BEAT HOUSE +1");
+        ok = on1 && memcmp(one, two, sizeof one) && !strcmp(ui.msg, "BEAT HOUSE");
         fm1_in.notes &= ~(1u << k1 | 1u << k5); frames(2);
-        check(ok, "beats: key 1 held, HOUSE (kicks on the beat); key 5 too, another beat (HOUSE +1)");
+        check(ok, "beats: key 1 held, HOUSE (kicks on the beat); key 5 too, another beat (still HOUSE)");
         press(B_EDIT); frames(10);
         edges_btn |= BT(B_OCTDN); fm1_in.buttons |= BT(B_OCTDN); frame(); fm1_in.buttons &= ~BT(B_OCTDN); frame();
         ok = track_empty(TDRUM);

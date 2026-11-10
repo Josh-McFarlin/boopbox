@@ -630,31 +630,23 @@ UI_SMALL static void gen_key(uint32_t k)
 {
     uint32_t keys = 0, i, g;
     int32_t w = punch_key(k);
-    char b[24];
     if (w < 0)
         return;
     if (song.playing && arrangement_enabled) {
         ui_message("STOP THE SONG FIRST");
         return;
     }
-    for (i = 0; i < 27u; i++)                           /* the white keys held */
-        if (((fm1_in.notes >> i) & 1u) && punch_key(i) >= 0)
-            keys |= 1u << punch_key(i);
-    if ((keys & ~(1u << w)) == 0u)                      /* the first key of a hold: a new undo */
+    for (i = 0; i < 16u; i++)                           /* the other white keys held */
+        if ((fm1_in.notes >> key_of_lane(i)) & 1u && i != (uint32_t)w)
+            keys |= 1u << i;
+    if (!keys)                                          /* the first key of a hold: a new undo */
         gen_sess = (undo_sess += 4u) | 3u;
-    keys |= 1u << w;
     undo_mark(TSEL, gen_sess);
     fm1_irq_off();
-    g = dg_make(TSEL, keys, (uint32_t)TSEL->cp_seed);
+    g = dg_make(TSEL, keys | 1u << w, (uint32_t)TSEL->cp_seed);
     fm1_irq_on();
     sync_reload = 1;
-    str_cpy(b, DG_NAME[(g - 1u) % DG_COUNT], sizeof b);
-    i = dg_bits(keys);
-    if (i > 1u) {
-        str_cpy(b + str_len(b), " +", sizeof b - str_len(b));
-        fmt_int(b + str_len(b), (int32_t)i - 1);
-    }
-    ui_say("BEAT ", b);
+    ui_say("BEAT ", DG_NAME[(g - 1u) % DG_COUNT]);
 }
 
 /* (2.7.2) the GRID's sheet (OCT+ held), as the NOTES page's: the hit of KNOB 1's sound on KNOB 2's step. RATCHET (its

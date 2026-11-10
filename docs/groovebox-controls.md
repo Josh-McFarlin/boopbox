@@ -123,8 +123,7 @@ written at once, across the whole kit, over the track's length (TIMING > LEN). T
 
 **The same keys and the same SEED always make the same beat**, in whatever order they are pressed: nothing is random
 from one hold to the next, so a beat you liked comes back with the same fingers. Each key pressed during a hold makes
-the beat again from all the keys held; letting go keeps the last one. The screen says what was made: *BEAT HOUSE*,
-*BEAT TRAP +2* (the groove, and the keys held besides the lowest).
+the beat again from all the keys held; letting go keeps the last one. The screen names the groove: *BEAT HOUSE*, *BEAT TRAP*.
 
 A beat replaces the pattern playing (its hits, levels and ratchets; its nudges, locks, fill conditions and components
 are cleared). **One hold is one undo**: EDIT + OCT− brings back the pattern from before the hold, EDIT + OCT+ the beat
