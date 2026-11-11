@@ -26,7 +26,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.9.2](#whats-new-in-192)
+1. [What's new in 1.9.3](#whats-new-in-193)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -46,7 +46,13 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.9.2
+## What's new in 1.9.3
+
+**Screen fixes:** on TRACKS the section letter (A–D) moved beside the beat lights, where it no longer covers *LOOP* or
+the bar.beat counter; the selected track's number no longer touches the tape icon; and a stray 1-pixel line at the
+right edge of 14 pages is gone ([all changes](CHANGELOG.md)).
+
+### 1.9.2
 
 **A synth track's LEVEL reads 0–127,** as a drum track's LEVEL does and as MIDI CC 7 sends it, on every screen and in
 the editor (it read in dB: *-4.0dB* is now *104*). The sound is unchanged: 112 is unity, each step 1/2 dB ([all

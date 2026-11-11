@@ -13,6 +13,17 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.3
+
+Screen fixes; projects, presets and settings open as they are.
+
+- **TRACKS: the section letter (A–D) no longer covers the transport.** It sat on *LOOP* / *SONG* when stopped and on
+  the bar.beat counter while playing; it is now on the beat-light row, just right of the four lights.
+- **The selected track's number** (the box after the tape icon, on the pages with four knob columns) no longer runs
+  into the icon: a small gap separates them.
+- **A stray line at the right edge** of 14 pages with four knob columns (SAVE > SECTION, ENV, LFO, FX, SEQ > NOTES …)
+  is gone: opened from TRACKS, they kept a 1-pixel strip of its header there.
+
 ## 1.9.2
 
 - **A synth track's LEVEL reads 0–127**, as a drum track's LEVEL and REV do and as MIDI CC 7 sends it, on its page,

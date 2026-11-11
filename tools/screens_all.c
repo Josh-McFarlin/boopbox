@@ -250,7 +250,8 @@ int main(int argc, char **argv)
     go_home(); frames(2);
     {
         static const char *const SEC[MS_COUNT][2] = {{"menu-screen", "MENU: SCREEN"}, {"menu-lights", "MENU: LIGHTS"},
-                                                     {"menu-audio", "MENU: AUDIO"}, {"menu-seq", "MENU: SEQ"},
+                                                     {"menu-audio", "MENU: AUDIO"}, {"menu-keys", "MENU: KEYS"},
+                                                     {"menu-seq", "MENU: SEQ"},
                                                      {"menu-system", "MENU: SYSTEM"}};
         for (i = 0; i < MS_COUNT; i++) {
             ui.menu = 1; ui.menu_sel = MS_FIRST[i]; ui.force = 1; frames(30);
