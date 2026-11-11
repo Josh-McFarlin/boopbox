@@ -2,7 +2,7 @@
 
 This page lists the controls added by the groovebox upgrade (eight tracks, step components, and what follows). Every
 control of SLOOP 2.8.3 described in `GUIDE.md` still works as written there; where a control changed, this page says
-so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The controls").
+so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The panel").
 
 Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make room in the flash
 (`docs/groovebox-performance.md`):
@@ -33,8 +33,8 @@ The default project: tracks 1-3 and 5-7 are synth tracks, tracks 4 and 8 drum tr
 engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older BoopBox opens on
 tracks 1-4 as it was; tracks 5-8 start as at power-on.
 
-Limits: the eight synth tracks share **8 sounding voices**; the drum tracks share one pool of drum voices. At most
-**three tracks** play GRAIN, DRAWBAR, FM6 or PHYS at once: choosing one of them on a fourth track (an engine, a
+Limits: the synth tracks share **20 sounding voices** (one track plays at most 8; BoopBox Trainer keeps 8 in all); the drum tracks share one pool of drum voices. At most
+**three tracks** play GRAIN, WHEEL (the drawbar organ), FM6, PHYS or OBERVAVE at once: choosing one of them on a fourth track (an engine, a
 preset of it, a user preset) is refused and the screen says *BIG ENGINES: 3 IN USE*; the track keeps its sound. Once
 one of the three plays another engine, the fourth can take it. At most **four tracks** use the SLICER's STUT mode at
 once (more play the SLICER without STUT).

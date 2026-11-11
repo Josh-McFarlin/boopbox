@@ -63,7 +63,7 @@ static int write_doc(const char *path)
                "NRPN map), with more resolution than a CC. The CC map (CC5 7 10 71..75 91 93 94, CC11, CC64) and MIDI LEARN are\n"
                "unchanged.\n\n"
                "- **Select:** CC99 (NRPN MSB) **0**, then CC98 (NRPN LSB) the parameter's number below, on the channel the\n"
-               "  track plays (GLO > MIDI: IN = CH n sends it to the selected track).\n"
+               "  track plays (MIDI 3 > IN = CH n sends it to the selected track).\n"
                "- **The value:** CC6 (data entry MSB) then CC38 (LSB): 14 bits, 0..16383, over the parameter's range:\n"
                "  `v = min + (x * (max - min) + 8191) / 16383`. CC6 alone is a 7-bit value (`x = msb * 129`).\n"
                "- The parameter stays selected: more CC6 / CC38 set it again. CC99 with another value, or CC101 / CC100 (an\n"
