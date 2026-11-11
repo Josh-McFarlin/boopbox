@@ -10,6 +10,8 @@ with a title and a line under each:
   boopbox-screens.png      the main screens
   boopbox-visualiser.png   the boot screen, a sound page, the menu and the visualiser's six styles
 in SYNTHWAVE, the screen palette the FM-1 starts with (MENU > SCREEN > COLOR).
+Also each screen alone, at its own 240x240 pixels: fm1/<name>.png (the website's home page shows them, drawn
+pixelated).
 """
 import subprocess
 import sys
@@ -87,6 +89,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     sheet(MAIN, 3, out / "boopbox-screens.png")
     sheet(MORE, 3, out / "boopbox-visualiser.png")
+    one = out / "fm1"
+    one.mkdir(exist_ok=True)
+    for name, _, _ in MAIN + MORE:
+        Image.open(WORK / f"{name}.ppm").convert("RGB").save(one / f"{name}.png", optimize=True)
 
 
 if __name__ == "__main__":

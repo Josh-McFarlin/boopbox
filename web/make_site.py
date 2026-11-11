@@ -3,11 +3,11 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 """Make the site (GitHub Pages):
 
-  index.html                  redirect to the installer
+  index.html                  the home page (webapp/home/index.html with <base href="webapp/home/">): what BoopBox is
   firmware/boopbox-VER.fwsc   the package
   firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (tools/build.py --trainer), offered as a
                               second choice in the installer
-  webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
+  webapp/home/, webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
                               the React pages (web/site/, web/src/), built by Vite (npm run build, into
                               build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
                               editor's version are written into their index.html here
@@ -177,7 +177,7 @@ def main(pkg, version, out, trainer=None):
 
     build_pages()
     app, fw = out / "webapp", out / "firmware"
-    for d in ("installer", "editor", "emu", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
+    for d in ("home", "installer", "editor", "emu", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
         if (app / d).exists():
             shutil.rmtree(app / d)
     shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)
@@ -203,10 +203,10 @@ def main(pkg, version, out, trainer=None):
         shutil.copy(dsp, app / "editor" / dsp.name)
     emu_page(app / "emu")
     app_files(out, version, name, (tname,) if tname else ())
-    (out / "index.html").write_text(
-        '<!doctype html><meta charset="utf-8"><title>BoopBox</title>'
-        '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
-        '<a href="webapp/installer/">BoopBox installer</a>\n', encoding="utf-8")
+    home = (app / "home" / "index.html").read_text(encoding="utf-8")   # the home page, at the root too: its links and
+    if home.count("<head>") != 1:                                      # assets are relative to webapp/home/
+        raise SystemExit("home/index.html must contain <head> once; update make_site.py")
+    (out / "index.html").write_text(home.replace("<head>", '<head>\n<base href="webapp/home/">'), encoding="utf-8")
     print(f"site: {out}: webapp/installer, webapp/editor, firmware/{name} ({len(raw)} B, {product})"
           + (f", firmware/{tname}" if tname else ""))
 

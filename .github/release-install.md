@@ -1,6 +1,6 @@
 ### How to install
 
-**From the browser (recommended):** open [the BoopBox installer](https://josh-mcfarlin.github.io/boopbox/) in **Chrome or Edge** on a computer and connect the FM-1 by USB, with a **data** cable, directly (no hub). Choose **BoopBox** or **BoopBox Trainer** (three songs taught step by step on the FM-1; [the trainer](@BLOB@/docs/trainer.md)), press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo. Your projects, user presets, samples and settings are kept. Then unplug the FM-1 and plug it back in once, so the computer finds its USB audio input.
+**From the browser (recommended):** open [the BoopBox installer](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge** on a computer and connect the FM-1 by USB, with a **data** cable, directly (no hub). Choose **BoopBox** or **BoopBox Trainer** (three songs taught step by step on the FM-1; [the trainer](@BLOB@/docs/trainer.md)), press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo. Your projects, user presets, samples and settings are kept. Then unplug the FM-1 and plug it back in once, so the computer finds its USB audio input.
 
 The installer always installs the newest version. To install this one in particular, use Python:
 

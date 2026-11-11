@@ -133,7 +133,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 ## 1. Install and update
 
-**From the browser (recommended).** Open the [installer page](https://josh-mcfarlin.github.io/boopbox/) in **Chrome or Edge**, connect the FM-1 by USB (a data cable, plugged straight in, no hub), press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo.
+**From the browser (recommended).** Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge**, connect the FM-1 by USB (a data cable, plugged straight in, no hub), press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo.
 
 **From the source folder (Windows).** Double-click **`INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep the black window open until the install is done. **`OPEN-EDITOR.bat`** opens the web editor.
 
@@ -1241,7 +1241,7 @@ SLOOP 2.5: the editor's **Drum synth** page changes every value of a synthesised
 
 ## 24. The web editor
 
-Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/), the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/), or **`OPEN-EDITOR.bat`**, in **Chrome or Edge** with the FM-1 on USB, and press **Connect** (allow MIDI). It follows the device live: turn a knob on the FM-1, the editor moves. It looks like the FM-1: the black screen, the four track colours, the FM-1's own pixel font. The language button switches English / Japanese.
+Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/), the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/), or **`OPEN-EDITOR.bat`**, in **Chrome or Edge** with the FM-1 on USB, and press **Connect** (allow MIDI). It follows the device live: turn a knob on the FM-1, the editor moves. It looks like the FM-1: the black screen, the four track colours, the FM-1's own pixel font. The language button switches English / Japanese.
 
 **Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer, `boopbox-editor-2.6.html`, also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it: it opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online one. Its sound library (kept in the browser) is its own, apart from the online editor's: move sounds between them with Export / Import, or a backup.
 
