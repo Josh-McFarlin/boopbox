@@ -4,7 +4,7 @@
 // https, so Web MIDI asks as usual (a downloaded file on Android opens as content://, where Chrome refuses MIDI).
 // Online the network always wins (the page as published, never an old one); the copy is only the fallback.
 // A new site (any file changed) is a new sw.js: the new copy replaces the old one.
-const STAMP = "1.9.3-c7e987b8739e";                          // version + a hash of the files
+const STAMP = "1.9.3-1948c622a4dc";                          // version + a hash of the files
 const CACHE = "boopbox-site-" + STAMP;
 const FILES = ["../firmware/boopbox-1.9.3.fwsc", "../firmware/boopbox-trainer-1.9.3.fwsc", "assets/SiteHeader-9GRIIKKT.js", "assets/editor-DwD10TXO.css", "assets/editor-llRSfGNS.js", "assets/fukiai-BZRgDyXV.ttf", "assets/installer-CXKvKzDd.js", "assets/preview-DAmPIRby.js", "assets/pwa-tnfvi2mQ.js", "assets/site-fGpbOikS.css", "assets/terminus-CfWn_mi8.ttf", "boopbox.webmanifest", "editor/", "editor/FUKIAI-LICENSE.txt", "editor/boopbox-preview.wasm", "editor/preview-worklet.js", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "installer/"];                          // relative to this file
 const KEEP = new Set(FILES.map((f) => new URL(f, self.location).href));
