@@ -24,8 +24,6 @@ BoopBox has no factory patterns and no style of its own. You play everything tha
 
 **This README is a short overview.** For every button, page and setting, read [the complete guide](GUIDE.md).
 
-> **BoopBox is a renamed fork of SLOOP.** BoopBox versions start again at 1.0.0, after SLOOP 2.8.3. The installer updates an FM-1 that runs SLOOP or Felucca. Presets, samples, settings and themes carry over. Projects and songs do not: BoopBox has its own eight-track format. Before you update from SLOOP, save a backup with the SLOOP editor. BoopBox is not affiliated with or endorsed by the author of SLOOP, Felucca or Hügelton Instruments.
-
 ## Contents
 
 1. [Screenshots](#screenshots)
@@ -228,4 +226,4 @@ Both commands build the firmware and serve the installer and the editor on `http
 
 The code is under GPL-3.0-only. See [LICENSE](LICENSE), and [LICENSING.md](LICENSING.md) for the assets. There is no warranty.
 
-M-VAVE and FM-1 are trademarks of their owners. BoopBox is not affiliated with M-VAVE, Elektron or Akai. The names of the drum kits describe styles, not products.
+M-VAVE and FM-1 are trademarks of their owners. BoopBox is not affiliated with M-VAVE, Elektron or Akai. The author of SLOOP, Felucca and Hügelton Instruments do not endorse BoopBox. The names of the drum kits describe styles, not products.
