@@ -10,26 +10,26 @@ The build makes three files in `build/`:
 
 ## Windows (WSL)
 
-`scripts/INSTALL-BOOPBOX.bat` builds in a WSL distribution and opens the installer on
-`http://localhost:8766/webapp/installer/`. It needs Python 3 with Pillow on Windows, a WSL
+`scripts/INSTALL-BOOPBOX.bat` builds BoopBox in a WSL distribution. Then it opens the installer on
+`http://localhost:8766/webapp/installer/`. The script needs three items: Python 3 with Pillow on Windows, a WSL
 distribution with the JieLi toolchain, and the three SDK files (below) in `build/deps/ac79`.
-Set `SLOOP_WSL_DISTRO` (default `Ubuntu`) and `SLOOP_TOOLCHAIN` (a Linux path, default
-`/root/.jieli/toolchain`) if yours differ.
+If your WSL distribution is different, set `SLOOP_WSL_DISTRO` (default `Ubuntu`). If your toolchain location is different, set `SLOOP_TOOLCHAIN` (a Linux path, default
+`/root/.jieli/toolchain`).
 
 ## Prerequisites (macOS)
 
 - Python 3 with Pillow: `pip3 install Pillow`
-- Docker Desktop. The JieLi toolchain is Linux x86-64 only; the build runs each tool in a
+- Docker Desktop. The JieLi toolchain runs only on Linux x86-64. The build runs each tool in a
   `linux/amd64` `debian:bookworm-slim` container (Rosetta on Apple silicon). Keep the source
-  tree in a folder Docker can share, e.g. under `/Users`.
-- The JieLi Linux toolchain (clang 4.0.1 for pi32v2, from JieLi's package server):
+  tree in a folder that Docker can share, for example under `/Users`.
+- The JieLi Linux toolchain (clang 4.0.1 for pi32v2, from the package server of JieLi):
 
   ```
   tools/get_toolchain.sh            # installs to ~/.jieli/toolchain
   ```
 
-- The JieLi AC79 SDK (Apache-2.0). The package uses three of its files
-  (`cpu/wl82/tools/uboot.boot`, `cfg_tool.bin`, `cfg/eq_cfg_hw.bin`); they are not part of this tree.
+- The JieLi AC79 SDK (Apache-2.0). The package uses three files of the SDK
+  (`cpu/wl82/tools/uboot.boot`, `cfg_tool.bin`, `cfg/eq_cfg_hw.bin`). These files are not part of this tree.
 
   ```
   git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
@@ -38,7 +38,7 @@ Set `SLOOP_WSL_DISTRO` (default `Ubuntu`) and `SLOOP_TOOLCHAIN` (a Linux path, d
 
 - Node.js (optional, for the web tests).
 
-On Linux x86-64 the toolchain runs natively and Docker is not needed.
+On Linux x86-64, the toolchain runs natively. Docker is not necessary.
 
 ## Build
 
@@ -49,11 +49,11 @@ scripts/build.sh
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`scripts/build.sh --release 1.2.0` makes a release build: the package identity becomes `FM-1_912` and the version
-string `BOOPBOX 1.2.0`; the package is `build/felucca-1.2.0.fwsc`. A suffix is kept: `--release 1.2.0-beta`
+`scripts/build.sh --release 1.2.0` makes a release build. In this build, the package identity becomes `FM-1_912`. The version
+string becomes `BOOPBOX 1.2.0`. The package is `build/felucca-1.2.0.fwsc`. The build keeps a suffix: `--release 1.2.0-beta`
 gives `BOOPBOX 1.2.0-BETA`.
 
-Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
+Build options (environment, `0` or `1`). The defaults are in `firmware/src/felucca.c`:
 
 | Flag | Default | |
 | --- | --- | --- |
@@ -62,37 +62,40 @@ Build options (environment, `0` or `1`; defaults in `firmware/src/felucca.c`):
 | `FELUCCA_CDC` | 1 | USB serial console |
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
-| `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text (4.6 KB less flash than the bitmap logo, 0) |
-| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME): about 10.8 KB with its six styles; 0 leaves it out |
-| `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: its styles built in, a bit each (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY); SELECT skips the others |
-| `FELUCCA_EDITOR` | 1 | the web editor's SysEx (14 KB); 0: the editor gets no reply, updates and USB rescue stay |
+| `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text. It uses 4.6 KB less flash than the bitmap logo (0). |
+| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME). It uses about 10.8 KB with its six styles. 0 leaves it out. |
+| `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: the styles that the build includes, one bit for each style (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY). SELECT skips the other styles. |
+| `FELUCCA_EDITOR` | 1 | the SysEx of the web editor (14 KB). With 0, the editor gets no reply. Updates and USB rescue stay. |
 
-The flash is full: the default build leaves 320 B of the app slot free (1.9.0, with the beats from the keys; 1.8 left 2,032 B, with key velocity: the font read in place and the display curves computed made room for it, `docs/memory-savings-analysis.md` F4, F9) (three tables are built in RAM at power-on to make room: see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
-visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`). When the app does not fit, the build fails and
-says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` for the measured sizes, and
-`docs/memory-savings-analysis.md` for where the flash and the RAM go and what can still be saved (measured, ranked).
+The flash is full. The default build leaves 320 B of the app slot free (1.9.0, with the beats from the keys). Version 1.8 left 2,032 B free, with key velocity. Two changes made room for key velocity: the firmware reads the font in place, and it computes the display curves (`docs/memory-savings-analysis.md` F4, F9). To make room, the firmware also builds three tables in RAM at power-on (see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
+visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`).
+
+If the app does not fit, the build fails and tells you. The build does not leave out anything by itself. See `docs/groovebox-performance.md` for the measured sizes.
+See `docs/memory-savings-analysis.md` for where the flash and the RAM go, and for the savings that are still possible (measured, ranked).
 
 ## The trainer build
 
-`scripts/build.sh --trainer` builds BoopBox Trainer, a separate firmware that teaches three songs on the FM-1 itself
-(`docs/trainer.md`). It has no web editor and three sample sets fewer (HORNS, STRGS, SCRCH), and it writes everything,
-generated headers included, to `build/trainer-fw/`. Its package is `felucca-trainer.fwsc` (`felucca-trainer-X.Y.Z.fwsc`
-with `--release X.Y.Z`; version string `BOOPBOX TRAINER X.Y.Z`). The normal build is unchanged by it, byte for byte.
+`scripts/build.sh --trainer` builds BoopBox Trainer. This is a separate firmware that teaches three songs on the FM-1 itself
+(`docs/trainer.md`). It has no web editor. It has three sample sets fewer (HORNS, STRGS, SCRCH). It writes everything to `build/trainer-fw/`,
+including the generated headers.
+
+Its package is `felucca-trainer.fwsc`. With `--release X.Y.Z`, the package is `felucca-trainer-X.Y.Z.fwsc`
+and the version string is `BOOPBOX TRAINER X.Y.Z`. The trainer build does not change the normal build, byte for byte.
 
 ## Samples
 
-The CC0 instrument samples that the SAMPLE engine uses are in `assets/samples-cc0/`
+The SAMPLE engine uses CC0 instrument samples. These samples are in `assets/samples-cc0/`
 (Versilian Studios, see `ATTRIBUTION.txt` there). `tools/fetch_cc0.py` downloads them
-again from the source repositories. Without that folder the build still works and the
+again from the source repositories. If that folder is not there, the build still works. Then the
 SAMPLE engine has only the generated drum kit.
 
-The generated drum one-shots (`build/genwav`, SLICE's BREAK and any GM role the CC0 kit lacks) come
-from `tools/gen_drums.py`, which the build runs.
+The generated drum one-shots (`build/genwav`, SLICE's BREAK and each GM role that the CC0 kit does not have) come
+from `tools/gen_drums.py`. The build runs this script.
 
 ## Logo and icons
 
-The logo, the icon atlas and the web app's icons are made by code and committed; the build reads them.
-After changing the drawing code, write them again:
+Code makes the logo, the icon atlas and the icons of the web app. These files are committed, and the build reads them.
+If you change the drawing code, write the files again:
 
 ```
 python3 tools/gen_logo.py --assets assets/logo     # boopbox-logo/icon .svg/.png, boopbox-splash.png
@@ -100,18 +103,20 @@ python3 tools/gen_logo.py --web web                # icon-192.png, icon-512.png,
 python3 tools/gen_icon_art.py                      # assets/icons.png (--preview OUT.png: 8x, labelled)
 ```
 
-The boot splash itself (`build/gen/boopbox_logo.h`) is made by the build from `tools/gen_logo.py`.
+The build makes the boot splash itself (`build/gen/boopbox_logo.h`) from `tools/gen_logo.py`.
 
-The README's screenshots are made the same way, from the code: `python3 tools/make_screens.py` draws the FM-1's
-screens with the firmware's own drawing code (`tools/screens_demo.c`, the host tests' harness, a demo project on the
-eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` takes the web editor's pages in its
-mock mode (Playwright and Chromium; build the pages first: `cd web && npm ci && npm run build`). Both write into `assets/screens/`.
-`python3 tools/make_all_screens.py` draws every screen of the firmware the same way (`tools/screens_all.c`: every
-page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
-screen and a contact sheet a group, listed in its `README.md`. Both draw in SYNTHWAVE, the palette the FM-1 starts
-with; `--palette N` draws another (gfx.c `PALETTES`).
-To compare a change, copy that gallery aside first: `tools/make_before_after.py BEFORE AFTER OUT.png` puts every
-screen of the two side by side in one image (the UX review's, `docs/ux-review/`).
+Code also makes the screenshots of the README, in the same way. `python3 tools/make_screens.py` draws the screens of the FM-1
+with the drawing code of the firmware (`tools/screens_demo.c`, the harness of the host tests, a demo project on the
+eight tracks). This script needs `build/gen`. `node tools/make_editor_screens.mjs` takes screenshots of the pages of the web editor in its
+mock mode (Playwright and Chromium). Before you run it, build the pages: `cd web && npm ci && npm run build`. Both scripts write into `assets/screens/`.
+
+`python3 tools/make_all_screens.py` draws every screen of the firmware in the same way (`tools/screens_all.c`: every
+page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser). It writes into `assets/screens/all/` one PNG for each
+screen and one contact sheet for each group. Its `README.md` lists them. Both draw in SYNTHWAVE, the palette that the FM-1 starts
+with. To draw in a different palette, use `--palette N` (gfx.c `PALETTES`).
+
+To compare a change, first copy that gallery to a different folder. Then run `tools/make_before_after.py BEFORE AFTER OUT.png`.
+This script puts every screen of the two galleries side by side in one image (the UX review's, `docs/ux-review/`).
 
 ## Tests
 
@@ -119,33 +124,36 @@ screen of the two side by side in one image (the UX review's, `docs/ux-review/`)
 tests/run_tests.sh
 ```
 
-Runs the host tests (flash storage, user presets, MIDI parser, update entry, update
+This script runs the host tests (flash storage, user presets, MIDI parser, update entry, update
 loader, a DSP render, the 8-track mix, project formats, the SLICER, the regression suite,
-the command-line installer) and, with Node.js, the web page tests. Run it after `scripts/build.sh`
-(it uses `build/` and needs `AC79_SDK` set as for the build).
+the command-line installer). With Node.js, it also runs the web page tests. Run it after `scripts/build.sh`.
+It uses `build/` and needs `AC79_SDK` set as for the build.
 
-The tests run in parallel, one job per test (its compile and its run), as many at once as the machine has
-CPUs: about 4 minutes on 4 cores, where one at a time took about 16. `TEST_JOBS=n` sets how many run at once
-(`TEST_JOBS=1`: one at a time). Each job's output is printed whole, in order, with its time, and is kept in
-`build/host/logs/`; the failed jobs are named at the end.
+The tests run in parallel, one job for each test (its compile and its run). The number of jobs at the same time is the number of
+CPUs of the machine. On 4 cores, the tests take about 4 minutes. One job at a time took about 16 minutes.
 
-Without the JieLi toolchain, `HOST_ONLY=1 sh tests/run_tests.sh` runs every test that does not need a firmware
-image and names the ones it skips (the update entry, the update loader, the target cost, the offline site).
+`TEST_JOBS=n` sets how many jobs run at the same time (`TEST_JOBS=1`: one at a time). The script prints the output of each job whole, in order, with its time.
+It also keeps this output in `build/host/logs/`. At the end, the script names the failed jobs.
+
+If you do not have the JieLi toolchain, use `HOST_ONLY=1 sh tests/run_tests.sh`. This command runs every test that does not need a firmware
+image. It names the tests that it skips (the update entry, the update loader, the target cost, the offline site).
 `python3 tools/proxy_size.py` estimates the code and RAM size with the host clang (see
 `docs/groovebox-architecture.md`).
 
-The regression suite (`tests/regress.c`) renders every engine and preset and compares a
-hash of each render with `tests/golden.txt`; it also checks levels, voices and the CPU
-cost (`tests/cpu_baseline.txt`, `tests/target_budget.txt`). The host CPU cost is relative
-to the idle + drums mix, counted by the kernel on macOS and under callgrind on Linux when
-valgrind is installed (exact, about 45 s more); without either it is timed, a rough check.
+The regression suite (`tests/regress.c`) renders every engine and preset. It compares a
+hash of each render with `tests/golden.txt`. It also does checks on levels, voices and the CPU
+cost (`tests/cpu_baseline.txt`, `tests/target_budget.txt`).
+
+The host CPU cost is relative to the idle + drums mix. On macOS, the kernel counts it. On Linux, if
+valgrind is installed, callgrind counts it (exact, about 45 s more). Without either, the tests time it. This is a rough check.
+
 After an intended change of the sound, `GOLDEN_UPDATE=1 sh tests/run_tests.sh` rewrites
-the hashes; `BUDGET_UPDATE=1` does the same for the cost files.
+the hashes. `BUDGET_UPDATE=1` does the same for the cost files.
 
 ## Browser audio preview
 
-The browser preview uses the firmware's DSP and sequencer with RAM-backed user samples.
-It requires Python 3, a host C compiler, Node.js for tests, and Emscripten (`brew install emscripten` on macOS).
+The browser preview uses the DSP and sequencer of the firmware, with RAM-backed user samples.
+It needs Python 3, a host C compiler, Node.js for tests, and Emscripten (`brew install emscripten` on macOS).
 It does not need the JieLi toolchain, AC79 SDK, Docker, or an FM-1.
 
 ```sh
@@ -153,9 +161,9 @@ python3 tools/build_preview.py
 tests/run_preview_tests.sh
 ```
 
-The build produces `build/preview/boopbox-preview.wasm`. The tests compare all twelve engines sample by sample
-against the same adapter compiled for the host and verify sequencing, live mixer changes, stop, and user samples.
-`web/make_site.py` includes the preview and caches it for the site app when the WASM build is present:
+The build makes `build/preview/boopbox-preview.wasm`. The tests compare all twelve engines, sample by sample,
+with the same adapter compiled for the host. The tests also make sure that sequencing, live mixer changes, stop, and user samples work.
+If the WASM build is present, `web/make_site.py` includes the preview and caches it for the site app:
 
 ```sh
 # Use a release package downloaded from isod89/sloop-fm1, or your own firmware build.
@@ -163,9 +171,9 @@ python3 web/make_site.py build/releases/boopbox-2.6.fwsc 2.6 build/site
 python3 -m http.server 8766 --bind 127.0.0.1 --directory build/site
 ```
 
-Open `http://localhost:8766/webapp/editor/?mock=1`, **Connect**, then **Play loop** to hear all four tracks.
-**Show preview** opens the piano/pads, volume and editable sequence; **Hide preview** folds them while
-playback continues. The piano keys and labeled computer keys audition the selected track.
+Open `http://localhost:8766/webapp/editor/?mock=1`. Select **Connect**. To hear all four tracks, select **Play loop**.
+**Show preview** opens the piano/pads, volume and editable sequence. **Hide preview** folds them, and
+playback continues. The piano keys and labelled computer keys audition the selected track.
 The audio controls are available only in simulated mode. The physical-device editor continues to use Web MIDI.
 The standalone downloaded HTML editor does not include the WASM asset.
 
@@ -174,15 +182,15 @@ The standalone downloaded HTML editor does not include the WASM asset.
 On Windows, `scripts/INSTALL-BOOPBOX.bat` builds and opens the web installer (Chrome or Edge). The
 `.fwsc` of each release is on the GitHub releases page.
 
-From the command line (needs `pip3 install mido python-rtmidi`):
+To install from the command line, you need `pip3 install mido python-rtmidi`:
 
 ```
 python3 tools/fm1_install.py build/felucca.fwsc
 python3 tools/fm1_install.py --info          # identity of the connected FM-1
 ```
 
-Or, to install your own build from the web installer, make a local copy of the site and open it from `localhost`
-(Web MIDI needs a secure context; `make_site.py` builds the pages with Node.js, see [The website](#the-website)):
+You can also install your own build from the web installer. To do this, make a local copy of the site. Then open it from `localhost`.
+Web MIDI needs a secure context. `make_site.py` builds the pages with Node.js (see [The website](#the-website)):
 
 ```
 python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
@@ -190,43 +198,45 @@ cd /tmp/felucca-site && python3 -m http.server 8000
 # open http://localhost:8000/webapp/installer/
 ```
 
-Installing firmware is at your own risk. If an install fails and the FM-1 no longer
-starts, recovery needs [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
+You install firmware at your own risk. If an install fails and the FM-1 does not start any more,
+you need [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter) for recovery.
 
 ## Release
 
-A release is published on GitHub when a PR that adds a new firmware binary is merged into `main`
+When a PR that adds a new firmware binary merges into `main`, GitHub publishes a release
 (`.github/workflows/release-on-merge.yml`):
 
-1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`) and build with
+1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`). Then build with
    `scripts/build.sh --release X.Y.Z`.
-2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This writes
-   `docs/firmware/boopbox-X.Y.Z.fwsc` (and removes the old package), and the installer and offline cache that
-   install it. The website is these committed files, so do not copy a binary into `docs/firmware/` by hand:
-   the *Changelog check* fails a PR whose site is not built for its new binary (`python3 tools/check_site.py
+2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This command writes
+   `docs/firmware/boopbox-X.Y.Z.fwsc` and deletes the old package. It also writes the installer and the offline cache that
+   install the package. Do not copy a binary into `docs/firmware/` by hand. The website is these committed files.
+   If the site of a PR is not built for its new binary, the PR fails the *Changelog check* (`python3 tools/check_site.py
    docs/firmware/boopbox-X.Y.Z.fwsc`).
-3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md), written for the people who install it.
-   It becomes the release notes. A PR that adds a binary without a section fails the
-   *Changelog check*, which also shows the notes it will publish on the run's summary page.
-   To see them locally: `python3 tools/changelog_section.py X.Y.Z`.
-4. Merge the PR. The release is tagged `vX.Y.Z` on the merge commit. It carries the `.fwsc`, the offline
-   editor (`boopbox-editor-X.Y.Z.html`) and `SHA256SUMS.txt`, and the notes give the package's SHA-256 and how to install
-   (edit that part in `.github/release-install.md`).
-   A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing,
-   and neither does a version that has a release already.
+3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md). Write it for the people who install the release.
+   This section becomes the release notes. If a PR adds a binary without a section, the PR fails the
+   *Changelog check*. The *Changelog check* also shows the notes that it will publish on the summary page of the run.
+   To see the notes locally, run `python3 tools/changelog_section.py X.Y.Z`.
+4. Merge the PR. The release gets the tag `vX.Y.Z` on the merge commit. It carries the `.fwsc`, the offline
+   editor (`boopbox-editor-X.Y.Z.html`) and `SHA256SUMS.txt`. The notes give the SHA-256 of the package and the install instructions.
+   To change that part, edit `.github/release-install.md`.
+   A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing.
+   A version that already has a release also releases nothing.
 
 ## The browser emulator
 
-`python3 tools/build_emu.py` compiles the whole firmware (`firmware/host/emu.c`: the UI, the sequencer, the sound, the
-storage on a memory flash) to WebAssembly with clang's wasm32 target and wasm-ld (or Emscripten), into `build/emu/`
-and the site's emulator page runs it: `cd web && npm run dev`, then open `http://localhost:5173/emu/` (the dev server
-serves `build/emu/boopbox-emu.wasm` there). `web/make_site.py` puts it in the site as `webapp/emu/` when it is built. Tests: `tests/emu_test.c` (the same core on the host) and
-`tests/emu_wasm_test.mjs` (the wasm in Node), both in `tests/run_tests.sh`.
+`python3 tools/build_emu.py` compiles the whole firmware to WebAssembly, into `build/emu/` (`firmware/host/emu.c`: the UI, the sequencer, the sound, the
+storage on a memory flash). It uses the wasm32 target of clang and wasm-ld (or Emscripten). The emulator page of the site runs it.
+To use this page, run `cd web && npm run dev`. Then open `http://localhost:5173/emu/` (the dev server
+serves `build/emu/boopbox-emu.wasm` there).
+
+If the emulator is built, `web/make_site.py` puts it in the site as `webapp/emu/`. The tests are `tests/emu_test.c` (the same core on the host) and
+`tests/emu_wasm_test.mjs` (the wasm in Node). Both are in `tests/run_tests.sh`.
 
 ## The website
 
-The installer, the editor and the emulator are React pages built with Vite and styled with Tailwind CSS, in `web/`
-(see [web/README.md](web/README.md)). They need Node.js 20 or newer:
+The installer, the editor and the emulator are React pages in `web/`
+(see [web/README.md](web/README.md)). They use Vite for the build and Tailwind CSS for the styles. They need Node.js 20 or newer:
 
 ```sh
 cd web
@@ -236,6 +246,6 @@ npm run build            # -> build/webapp-vite/ (and npm run build:offline: the
 node test_web.mjs        # the editor's protocol, formats and pages, the installer's update protocol (no browser)
 ```
 
-`web/make_site.py` runs both builds itself and writes the site (`docs/` for a release) with the package, the
-installer's checksums and the offline cache; `python3 tests/site_test.py` and `node tests/pwa_test.mjs SITE_DIR` check
+`web/make_site.py` runs both builds itself. Then it writes the site (`docs/` for a release) with the package, the
+checksums of the installer and the offline cache. `python3 tests/site_test.py` and `node tests/pwa_test.mjs SITE_DIR` do checks on
 what it makes.
