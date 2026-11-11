@@ -3,7 +3,8 @@
 // the firmware's code: assets/screens/fm1/), then the way to the installer, the editor and the emulator.
 // Served at the site's root (make_site.py writes it with <base href="webapp/home/">) and at webapp/home/: every link
 // and image is relative to webapp/home/.
-import { Logo, Strip } from "../shared/Brand.jsx";
+import { Strip } from "../shared/Brand.jsx";
+import SiteHeader from "../shared/SiteHeader.jsx";
 import tracks from "../../../assets/screens/fm1/tracks-1-4.png";
 import punch from "../../../assets/screens/fm1/layer-fx.png";
 import drums from "../../../assets/screens/fm1/drums.png";
@@ -91,20 +92,7 @@ const B = ({ children }) => <b className="text-fg">{children}</b>;
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-[16px] leading-[1.6] text-fg">
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-3 px-6 py-4">
-          <Hash to="top" aria-label="BoopBox home"><Logo className="w-[150px]" /></Hash>
-          <nav aria-label="Main" className="flex flex-auto flex-wrap gap-x-[22px] gap-y-1 text-[15px] [&_a]:text-[#b8b8c0] [&_a]:no-underline [&_a:hover]:text-fg">
-            <Hash to="features">Features</Hash>
-            <Hash to="editor">Web editor</Hash>
-            <Hash to="emulator">Try it</Hash>
-            <Hash to="install">Install</Hash>
-            <a href={`${GITHUB}/blob/main/GUIDE.md`}>Guide</a>
-            <a href={GITHUB}>GitHub</a>
-          </nav>
-          <a href="../installer/" className="inline-flex min-h-11 items-center bg-orange px-5 py-3 text-sm font-semibold uppercase tracking-[.08em] text-black no-underline hover:bg-fg">Install</a>
-        </div>
-      </header>
+      <SiteHeader current="home" Hash={Hash} />
 
       <main>
         <section id="top" className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-12 px-6 pt-[72px] pb-14">
@@ -116,7 +104,7 @@ export default function Home() {
               drum &amp; bass, lo-fi, ambient: it does not pick a style for you.</p>
             <div className="mb-5 flex flex-wrap gap-3">
               <a href="../installer/" className={PRIMARY}>Install from the browser</a>
-              <Hash to="emulator" className={SECONDARY}>Try it first</Hash>
+              <a href="../emu/" className={SECONDARY}>Try it first</a>
             </div>
             <p className="m-0 text-sm text-dim">Open source (GPL-3.0) · installs over USB in Chrome or Edge · go back to the official firmware any time</p>
           </div>

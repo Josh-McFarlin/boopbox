@@ -20,6 +20,13 @@ through the engines (as KNOB 2) and **ALGORITHM** through the sounds of the engi
 changes the track there. While the browser is open, **SAVE** (keep the sound) breathes, up to full brightness, and
 **HOME** (put the old sound back) is lit at half brightness. Projects, presets and settings open as they are.
 
+## 1.9.2
+
+- **A synth track's LEVEL reads 0–127**, as a drum track's LEVEL and REV do and as MIDI CC 7 sends it, on its page,
+  HOME's dials, the DRUMS screen, GLO's faders, the trainer and the editor (it read in dB: *-4.0dB* is now *104*).
+  The sound is the same: 112 is still unity (0 dB), each step still 1/2 dB, 127 is +7.5 dB. The preset TRIM, FM6's
+  MLVL and the effects' LEVEL stay in dB. Projects, presets and settings open as they are.
+
 ## 1.9.1
 
 **BoopBox Trainer has three levels again** ([the trainer](docs/trainer.md)): level 4 (*YOUR SONG*, a song made from an

@@ -368,20 +368,29 @@ skip "regression: target cost of the render loops"
 fi
 
 run "installer CLI (fm1_install.py) against a simulated FM-1" python3 tests/install_test.py
-run "the offline editor (one file, nothing next to it); the offline site (sw.js, manifest)" python3 tests/site_test.py
-
+# The site tests in one job, one after the other: each runs web/make_site.py, which builds the pages with Vite into
+# the same build/webapp-vite/ and build/webapp-offline/; two at once delete each other's files (FileNotFoundError on
+# build/webapp-offline/editor/index.html)
+pwa=
 if command -v node >/dev/null 2>&1; then
     if [ -z "$NOFW" ]; then
-    pwa() {
-        rm -rf "$OUT/pwa-site" && python3 web/make_site.py build/felucca.fwsc 2.7 "$OUT/pwa-site" >/dev/null &&
-            node tests/pwa_test.mjs "$OUT/pwa-site"
-    }
-    run "the site without internet in Chromium (skipped without Playwright)" pwa
+        pwa=1
     else
-    skip "the site without internet in Chromium"
+        skip "the site without internet in Chromium"
     fi
 else
     note "== skip web tests (no node)"
+fi
+site_tests() {
+    python3 tests/site_test.py || return 1
+    [ -n "$pwa" ] || return 0
+    rm -rf "$OUT/pwa-site" && python3 web/make_site.py build/felucca.fwsc 2.7 "$OUT/pwa-site" >/dev/null &&
+        NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" node tests/pwa_test.mjs "$OUT/pwa-site"   # (a global Playwright too)
+}
+if [ -n "$pwa" ]; then
+    run "the offline editor (one file, nothing next to it); the offline site (sw.js, manifest); the site without internet in Chromium (skipped without Playwright)" site_tests
+else
+    run "the offline editor (one file, nothing next to it); the offline site (sw.js, manifest)" site_tests
 fi
 
 # the browser audio preview (web editor): the same engines in WASM as on the host, when it is built

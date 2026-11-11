@@ -2,7 +2,7 @@
 // The installer's strings, Japanese and English.
 export const TEXT = {
   ja: {
-    title: "FM-1 に BoopBox をインストール", home: "BoopBox でできること",
+    title: "FM-1 に BoopBox をインストール",
     intro: "FM-1 を USB で接続してください。（Chrome か Edge で使えます）",
     warn: "書き込み中は USB を抜かないでください。",
     install: "インストール", other: "English",
@@ -41,7 +41,7 @@ export const TEXT = {
     back: "公式ファームウェアに戻すには、M-VAVE 公式のアップデーター M-UPGRADE（Downloads → PC Software → M-UPGRADE）と公式ファームウェアを使ってください。FM-1 が見つからない場合は、MIDI を使う他のアプリとブラウザのタブを閉じてください。",
   },
   en: {
-    title: "Install BoopBox on your FM-1", home: "What BoopBox does",
+    title: "Install BoopBox on your FM-1",
     intro: "Connect the FM-1 by USB. (Works in Chrome or Edge.)",
     warn: "Do not unplug the USB cable while writing.",
     install: "Install", other: "日本語",

@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="480"></p>
 
-# BoopBox 1.1.0
+# BoopBox 1.9.1
 
 **A live groovebox firmware for the M-VAVE FM-1 — for any style.** Eight tracks — six synths and two drum machines by default, each drum machine with 16 sounds on the white keys (see [the groovebox controls](docs/groovebox-controls.md)) — thirteen synthesis engines (six-operator FM with DX7 patches, physical models, noise, and now OberVave's analog polysynth), 223 sounds, 37 drum kits (808, 909, trap, phonk, house, techno, UK garage, jungle, amapiano, reggaeton, synthwave, chiptune, ambient, jazz…), your own samples, ghost notes and ratchets, parameter locks, micro timing and fills, note repeat, one-key chords, 27 punch-in effects, a vinyl / sidechain / DJ-filter master, and a clear, colour-coded screen that always shows what your hands can do next. No factory patterns, nothing to load: everything you hear, you play.
 
@@ -8,65 +8,7 @@ BoopBox is free and open source (GPL-3.0), based on [SLOOP](https://github.com/i
 
 > **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide: every button, key combination, layer, page and editor page, with a [one-page cheat sheet](GUIDE.md#26-cheat-sheet).
 
-### New in 1.1.0
-
-- **A sound browser.** On TRACKS, PRESETS on a synth track opens the engines (or the kinds of sound) on the left
-  and their sounds on the right: PRESETS or KNOB 2 moves through the sounds (each one loads as
-  you land on it), SELECT or KNOB 1 jumps to the next group, KNOB 3 shows them by ENGINE or by KIND, KNOB 4 marks a
-  favourite. It closes by itself after 4 s; it replaces the SAVE > PRESETS page. The drum track's PRESETS is still the
-  kit.
-- **A new visualiser.** Six scenes at sunset and in neon replace the twelve styles, all built in beside the web
-  editor: PALMS (the mix's wave as the sea's front wave), NIGHT DRIVE (the spectrum as a city, a car on a road that
-  runs with the beat, its lights flaring on the kick; stopped, it slows down and parks), HORIZON (the spectrum as a
-  neon range over a floor that lights up on the beat in the tracks' colours), FLYOVER (the spectrum over time as a
-  terrain), DENSE CITY (the eight tracks and the mix as towers of 24 floors with peak holds) and KEY CITY (a tower per
-  key, lit in the colour of the track that plays it; a chord lights all its keys). See
-  [the visualiser](BOOPBOX.md#the-visualiser).
-- **The web editor has eight tracks.** The track bar, the Tracks page and the LIVE page show tracks 1–8 (tracks 5–8 in
-  their own shades); a drum track is any track whose kind is drums (4 and 8 by default), and its level and sends are its
-  own. LIVE solos any track (protocol v13: 32 bytes of firmware).
-- **A Patterns page in the editor:** each track's eight patterns (play one, copy, clear), its chain, FOLLOW, a pattern's
-  step components (with direction and seed) and the song's chord progression. The editor reads the FM-1's working
-  project, changes it, and sends it back whole; nothing changes until you press Send, and the song must be stopped.
-- **The Song page keeps the loop region** (it used to drop it when sending) and edits it: *Loop the entries* from … to ….
-- **SLOOP 2.8.4's fixes.** Clean fades (no distortion at the end of notes on the 3.5 mm output and USB), UNISON no
-  longer stacks its voices in phase, PHYS strings in tune, NOISE's NZ ARCADE, SAMPLE and GRAIN follow the top keys,
-  a firm press on a layer button opens its pages, on REC READY a knob changes only its own value, and more
-  ([SLOOP's releases](https://github.com/isod89/sloop-fm1)).
-- **Room in the flash.** Three tables (FM6's exponent, the sine, the screen font) are built in RAM when the FM-1
-  starts instead of stored in the flash: byte for byte the same, so the sound and the screens do not change, and the
-  build fits again with the fixes and the visualiser
-  ([docs/groovebox-performance.md](docs/groovebox-performance.md)).
-- Projects, backups, songs, presets and settings from 1.0.0 open as they are; the visualiser style kept with the
-  settings opens as one of the new six.
-
-### New in 1.0.0
-
-- **BoopBox.** SLOOP 2.8.3 under its own name: the boot screen, the ABOUT page, the USB device (*BoopBox*;
-  *BoopBox Update* while updating), the web editor and the installer. The installer also updates an FM-1 that runs
-  SLOOP or Felucca, and the editor still finds one. BoopBox keeps eight tracks in its own project format: projects,
-  sections and songs from SLOOP do not open in BoopBox, and SLOOP does not open BoopBox's. Presets, samples, the FM6
-  bank and themes carry over.
-- **Eight tracks.** Six synths and two drum machines by default (tracks 4 and 8); any track can be either
-  (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in (1–4 or 5–8). MIDI channels for
-  tracks 5–8 (MIDI 2).
-- **Each track its own colour.** Tracks 5–8 take a lighter shade of the colours of 1–4 (a darker one on a light
-  theme), your own theme's too.
-- **Patterns, step components, harmony, performance effects.** Eight patterns a track with chains and quantized
-  changes (the PATTERNS screen); 14 step components; 32 parameter locks a track and SLIDE; the song's key, scale and a
-  chord progression that tracks can follow (the CHORDS screen); punch-in effects with a target, latch and quantize.
-  See [the groovebox controls](docs/groovebox-controls.md).
-- **The visualiser,** with six styles: oscilloscope, spectrum, VU meters, circle, bounce, wires (tap HOME on TRACKS).
-- **Its own art:** a new logo, the parameter icons and the synthesized drums are drawn and made by code in this
-  repository (GPL-3.0); see [LICENSING.md](LICENSING.md).
-- **Left out to fit the flash:** six of the visualiser's twelve styles, the bitmap boot logo (the boot screen shows the
-  name as text) and the top recording of the BASS sample set
-  ([docs/groovebox-status.md](docs/groovebox-status.md)).
-- **Known limits:** the web editor shows tracks 1–4 only (its LIVE page and track list) and does not edit patterns 2–8,
-  step components or the chord progression (backups keep them). *Lifted in 1.1.0: see [New in 1.1.0](#new-in-110).*
-
-Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a feature; SLOOP's own release history
-is in [its repository](https://github.com/isod89/sloop-fm1).
+Version tags mark the release that brought a feature: *(1.8)* and other 1.x tags are BoopBox releases ([CHANGELOG.md](CHANGELOG.md)); *(2.6)* and other 2.x tags are SLOOP releases ([SLOOP's repository](https://github.com/isod89/sloop-fm1)).
 
 ---
 
@@ -80,7 +22,7 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 6. [Recording](#recording)
 7. [Layers in detail](#layers-in-detail)
 8. [Undo, clear, save, autosave](#undo-clear-save-autosave)
-9. [Master: DUST, DUCK, FILT](#master-dust-duck-filt)
+9. [Master: DUST, DUCK, FILT (and TEXTURE)](#master-dust-duck-filt-and-texture)
 10. [Punch-in effects](#punch-in-effects)
 11. [Screens](#screens)
 12. [The sound bank](#the-sound-bank)
@@ -99,11 +41,14 @@ is in [its repository](https://github.com/isod89/sloop-fm1).
 
 ## Install
 
-1. Double-click **`INSTALL-BOOPBOX.bat`** in the BoopBox folder. It builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`.
-2. In **Chrome or Edge**, connect the FM-1 to the computer by USB (a data cable, directly — no hub).
-3. Press **INSTALL**, allow MIDI access, and wait for *Done*. Keep the black window open until then.
+1. Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge** (or, from the source folder on Windows, double-click **`INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`; keep its black window open until the install is done).
+2. Connect the FM-1 to the computer by USB (a data cable, directly — no hub).
+3. Choose **BoopBox** (or **BoopBox Trainer**, below), press **INSTALL**, allow MIDI access, and wait for *Done*.
 
-The FM-1 restarts on the BoopBox logo. The editor is at `http://localhost:8766/webapp/editor/` (or **`OPEN-EDITOR.bat`**).
+The FM-1 restarts on the BoopBox logo. Updating keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) (or **`OPEN-EDITOR.bat`**).
+
+- **BoopBox Trainer** is a second firmware that teaches you three songs on the FM-1 itself, with a coach on the screen; everything else works as in BoopBox. Install the other one to switch back ([the trainer](docs/trainer.md)).
+- **No FM-1 at hand?** [The emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real firmware in the browser, with the FM-1 drawn on the page. [The home page](https://josh-mcfarlin.github.io/boopbox/) shows what BoopBox does.
 
 ## Sixty seconds to a beat
 
@@ -124,7 +69,7 @@ The FM-1 restarts on the BoopBox logo. The editor is at `http://localhost:8766/w
 | **yellow** | 3 · synth | KNOB 3 |
 | **orange** | 4 · drums | KNOB 4 |
 
-The four dials at the bottom of the screen show what KNOB 1–4 do now. White always means *what you are touching*. Red always means *recording*.
+Tracks **5–8** take a lighter shade of the same four colours (5–7 synths, 8 a second drum track, at power-on); any track can be a synth or a drum track (SAVE → TOOLS → KIND). The screens show the bank of four the selected track is in, 1–4 or 5–8. The four dials at the bottom of the screen show what KNOB 1–4 do now. White always means *what you are touching*. Red always means *recording*.
 
 ## The panel: tap, hold, layers
 
@@ -147,7 +92,7 @@ scenes ([details](docs/groovebox-controls.md#patterns)).
 | **ARP** — *roll* | note repeat on the grid | RATE · — · — · — | ARP pages |
 | **SEQ** — *steps* | steps 1–16 of the page — a step held: OCT+ its fill condition (normal · fill only · no fill), OCT− clears its nudge, locks and condition | SOUND / NOTE · DIV · SWING · LENGTH — a step held: SOUND / NOTE · LEVEL · RATCHET · NUDGE (PRESETS: the lock, ALGORITHM: its parameter) | SEQ pages: NOTES (drums: the grid), TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG |
 | **SEL** — *key* (between FX and ENV; not the SELECT knob) | the key of the song | CHORD · SCALE · KEYS · TRANSPOSE | SEL pages |
-| **GLO** — *mix* | 1–4 mute · 5–8 solo · 9 **fill** while held · 10 **fill bar** (the next bar) · 16 tap tempo | level of tracks 1 · 2 · 3 · 4 | GLO pages |
+| **GLO** — *mix* | 1–4 mute · 5–8 solo (the bank shown: tracks 1–4 or 5–8) · 9 **fill** while held · 10 **fill bar** (the next bar) · 16 tap tempo | the bank's four levels | GLO pages |
 | **SAVE** — *song* | 1–4 play section A–D (next bar; two or more tapped while SAVE stays held: a **chain** of them, looped) · 5–8 save the loop into A–D · 13 loop / song · 14 SONG REC · 16 the song screen | — | TRACKS: the SONG screen · else the SAVE pages |
 
 Other controls:
@@ -157,19 +102,19 @@ Other controls:
 | **PLAY** | start / stop all the tracks (works inside any layer) |
 | **REC** | playing: record now / stop · stopped: arm (the first note starts) · free take: close the loop |
 | hold **REC** | clear the selected track (a ring fills: keep holding ~2 s; let go before and nothing happens) |
-| **SAVE** | on TRACKS: the SONG screen · elsewhere: the SAVE pages |
+| **SAVE** | on TRACKS or DRUMS: the SONG screen · elsewhere: the SAVE pages (USER, SECTION, TOOLS) |
 | hold **SEQ** + tap **SAVE** | the **SCENES** page, from any page and track |
 | **EDIT + OCT− / OCT+** | undo / redo |
-| **ALGORITHM** | select the track, on every page (1.2.0; TRACKS, PATTERNS and CHORDS only before): the header names it |
+| **ALGORITHM** | select the track, 1–8, on every page but the sound browser (there: its sounds): the header names it |
 | **PRESETS** | the selected track's sound (the sound browser: there PRESETS moves through the engines, ALGORITHM through their sounds), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends; SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES) · drums: kit ↔ sound |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
-| **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, SYSTEM) · tapped while a layer is held: lock it open |
+| **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, KEYS, SEQ, SYSTEM) · tapped while a layer is held: lock it open |
 | **ENV / LFO** | their pages |
 
 ## The drum track
 
-Track 4 plays **16 sounds, one per white key** from the lowest F to the highest G; a black key plays the sound of the white key on its left (two fingers on one sound, for fast rolls).
+A drum track (4 and 8 at power-on) plays **16 sounds, one per white key** from the lowest F to the highest G; a black key plays the sound of the white key on its left (two fingers on one sound, for fast rolls).
 
 | Key | Sound | Key | Sound | Key | Sound | Key | Sound |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -203,13 +148,14 @@ BoopBox records live and layers every pass on top of the last (overdub). Notes g
 | KNOB 1 | **mode** (empty project only) | **free**: a free take, the tempo follows you · **tempo**: record at the tempo set (SELECT) |
 | KNOB 2 | **length** | the loop of the selected track: **1, 2 or 4 bars** |
 | KNOB 3 | **start** | **note**: your first note starts the loop · **count**: press **PLAY**, one bar of clicks (4, 3, 2, 1 on the screen), then the loop starts recording; notes played before only sound |
+| KNOB 4 | **quant** | **on**: what you record lands on the steps · **off**: it keeps your timing, as each step's nudge ([details](GUIDE.md#quant-off)) |
 
-MODE and START are settings of the FM-1: they stay as you left them. In a project with notes there is no MODE: it always records at the tempo set (a free take would change the tempo of what is already there). During the count-in, REC cancels it and PLAY goes back to *rec ready*.
+MODE, START and QUANT are settings of the FM-1: they stay as you left them. In a project with notes there is no MODE: it always records at the tempo set (a free take would change the tempo of what is already there). During the count-in, REC cancels it and PLAY goes back to *rec ready*.
 
 **Free take — the loop follows you.** On an empty project there is no tempo yet, so you set it by playing:
 
 1. REC, then play freely. The screen shows *free take*, the seconds, and the loop it would make right now (*2 bars · 92 bpm*).
-2. **Press REC on the "1" after your last bar.** The time from your first note to that press is the loop: BoopBox picks 1, 2 or 4 bars at the tempo nearest the one set (within 3 % the set tempo is kept), writes your notes into it with their lengths and levels, and plays it at once. All four tracks take that length.
+2. **Press REC on the "1" after your last bar.** The time from your first note to that press is the loop: BoopBox picks 1, 2 or 4 bars at the tempo nearest the one set (within 3 % the set tempo is kept), writes your notes into it with their lengths and levels, and plays it at once. Every track takes that length.
 3. **PLAY** during a free take drops it. A take closes by itself after 24 s.
 
 - While recording the REC light is solid and the track shows a red *rec*. Turn ALGORITHM and the take moves to the next track without stopping.
@@ -220,7 +166,7 @@ MODE and START are settings of the FM-1: they stay as you left them. In a projec
 
 ### FX — punch
 
-The 16 white keys and the 11 black keys are the [punch-in effects](#punch-in-effects); they run while the key is held. The knobs drive the [master](#master-dust-duck-filt): **KNOB 1 FILTER** (turn left: low-pass, right: high-pass, centre: off), **KNOB 2 DUST**, **KNOB 3 DUCK**; **KNOB 4 TRK FILT** is the same filter on the selected track only (its FILT, on the FX → FILTER page). Keys pressed while FX is held never play or record notes.
+The 16 white keys and the 11 black keys are the [punch-in effects](#punch-in-effects); they run while the key is held. The knobs drive the [master](#master-dust-duck-filt-and-texture): **KNOB 1 FILTER** (turn left: low-pass, right: high-pass, centre: off), **KNOB 2 DUST**, **KNOB 3 DUCK**; **KNOB 4 TRK FILT** is the same filter on the selected track only (its FILT, on the FX → FILTER page). Keys pressed while FX is held never play or record notes.
 
 ### EDIT — erase
 
@@ -246,13 +192,13 @@ The 16 white keys are the 16 steps of the page; the lit ones play. The first fou
 
 **Nudge (micro timing).** A step held + KNOB 4 moves it off the grid: −32 … +31 in 1/64 of a step, minus = early (the step plays before its grid time, inside the previous step), plus = late. The ratchets of the step move with it; the recording and the swing stay on the grid. On the drum track the whole step moves, every sound. A nudged step shows a dot in the corner of its tile.
 
-**Parameter locks.** A step held + **PRESETS** gives one sound parameter another value *for that step only* — the **lock parameter** starts as the last sound knob you turned on a page (ENV, LFO, FX, EDIT, VOICE…; *FLT* of ENV DEST until you turn one) and **ALGORITHM** steps through the others (wrapping round); the title line shows it: *lock dst 14*, *lock flt --* (no lock yet). The first click of PRESETS makes the lock at the track's current value, the next ones move it; at the next step without a lock on it the parameter comes back to what it was (notes still ringing follow, Elektron style). A knob turned on the page while a lock is in force wins: that value is kept as the new base. Several locks can sit on one step (one per parameter), 24 per track; the pattern, arp, key and voice-mode parameters cannot lock. A locked step shows the same dot as a nudged one; OCT− with the step held clears both (undo, EDIT + OCT−, is for the steps: it does not bring nudges and locks back). Locks and nudges are saved with the project and shown in the web editor (Sequencer tab, step detail).
+**Parameter locks.** A step held + **PRESETS** gives one sound parameter another value *for that step only* — the **lock parameter** starts as the last sound knob you turned on a page (ENV, LFO, FX, EDIT, VOICE…; *FLT* of ENV DEST until you turn one) and **ALGORITHM** steps through the others (wrapping round); the title line shows it: *lock dst 14*, *lock flt --* (no lock yet). The first click of PRESETS makes the lock at the track's current value, the next ones move it; at the next step without a lock on it the parameter comes back to what it was (notes still ringing follow, Elektron style). A knob turned on the page while a lock is in force wins: that value is kept as the new base. Several locks can sit on one step (one per parameter), 32 per track (a lock can also **SLIDE** to its value over the step: [details](docs/groovebox-controls.md#parameter-locks)); the pattern, arp, key and voice-mode parameters cannot lock. A locked step shows the same dot as a nudged one; OCT− with the step held clears both (undo, EDIT + OCT−, is for the steps: it does not bring nudges and locks back). Locks and nudges are saved with the project and shown in the web editor (Sequencer tab, step detail).
 
 **Fill conditions.** A step held + **OCT+** cycles its condition: *normal* → **FILL ONLY** (plays only during a fill) → **NO FILL** (silent during a fill) → normal. A fill is what you call while you play: hold **GLO** and hold white key **9** (*fill*) — the fill lasts as long as the key — or press key **10** (*bar*): the whole next bar plays as a fill, then it is over (press again before the bar to cancel). Build a beat whose rolls, crashes and pickup notes are FILL ONLY and whose main hat is NO FILL, and one finger brings the fill in and out on the bar. A skipped step is silent whole — no note, no MIDI, no ratchet, and no lock of its own (the sound goes back to its base, as at any step without a lock); the pattern runs on. On the drum track the condition is the step's, every sound in it. The tile of a FILL ONLY step carries a small **F** in its top left corner, a NO FILL step an **×** (the nudge / lock dot stays top right); the GLO tiles *fill* and *bar* light while they act. OCT− with the step held resets the condition with the nudge and locks; STOP ends any fill. Conditions are saved with the project and shown in the web editor (the step detail's *Fill* select, F / × on the grid). The arp and the rolls never mind a fill.
 
 ### SEL — key and chords
 
-- **Any key** sets the **key of the song**: the root of all three synth tracks (*KEY D*).
+- **Any key** sets the **key of the song**: the root of every synth track (*KEY D*).
 - **KNOB 1 CHORD** (selected synth track): OFF, TRIAD, 7TH, 9TH (1-3-7-9, the lo-fi / R&B voicing), SUS4, POWER. With a chord on, **the white keys walk the scale from C4** — C4 is the chord of the key's I, D4 the II, E4 the III… — and one finger plays the whole chord, recorded as a chord. With SCALE on CHR, the chords come from the minor scale.
 - **CHORD+ (2.4, after HiChord and minichord): the black keys change the chord.** With a chord mode on, hold a black key while you play a white one — or press it while the chord is held, and the chord changes under your finger: **F#** major ↔ minor, **G#** adds the 7th, **A#** sus4, **C#** adds the 9th, **D#** an inversion (both octaves of black keys; hold several to combine them; the 7th and 9th come from the scale: in C major, G4 (the V chord, G) with G# is G7, with F# + G# Gm7). What you play is recorded as it sounds. On the **SEL 2** page: **STRUM** spreads a chord's notes like a strummed guitar (1–60 ms a note; right: low to high, left: high to low), on the keys and on the chord steps the sequencer plays; **VLEAD** ON voices each chord nearest the last one, so a progression moves smoothly instead of jumping.
 - **KNOB 2 SCALE** for all synth tracks (16 scales: major, minor, dorian, mixolydian, pentatonics, harmonic, blues…).
@@ -263,18 +209,19 @@ Changing a sound (PRESETS, a user preset) never changes the key, the chord mode,
 
 ### GLO — mix
 
-- White keys **1–4 mute** tracks 1–4 (a muted track fades out in a few ms and plays no new notes; its pattern runs on in time), keys **5–8 solo** them (several solos add up). The tiles show what is heard.
+- White keys **1–4 mute** the four tracks of the bank shown (1–4, or 5–8 when the selected track is one of them; a muted track fades out in a few ms and plays no new notes; its pattern runs on in time), keys **5–8 solo** them (several solos add up). The screen shows the four levels as faders with each track's mute and solo.
 - The last white key (**G5**): **tap tempo** (two taps or more).
 - The first black key (**F#3**, 2.6): **MIDI LEARN** on / off (see [MIDI keyboards](#midi-keyboards)).
-- **KNOB 1–4: the levels** of tracks 1–4.
+- **KNOB 1–4: the levels** of the bank's four tracks.
 
 ## Undo, clear, save, autosave
 
 - **Undo / redo:** hold EDIT, press OCT− / OCT+. One level: the last recording pass, erase, clear, step or pattern edit; redo takes it back again.
 - **Clear a track:** hold REC. After 0.7 s the press is cancelled and a ring fills; keep holding ~1.3 s more and the selected track is cleared (*TRACK 2 CLEARED*). Let go before: nothing. Undo brings it back.
-- **Save:** SAVE + keys 5–8 save the loop into section / project A–D (= SLOT 1–4); SAVE → PROJECT has SLOT, LOAD, SAVE too.
+- **Save:** SAVE + keys 5–8 save the loop into section A–D; SAVE → SECTION has SECT, ERASE, LOAD and SAVE too.
 - **Autosave:** when the transport is stopped and you have not touched anything for 2.5 s (at most every 20 s), the working project is kept in flash; at power-on BoopBox comes back exactly as you left it.
-- **New project:** SAVE → TOOLS → NEW (turn to GO): every track back to its power-on sound, empty patterns (undoable).
+- **New loop:** SAVE → TOOLS → NEW (turn to GO): every track of the working loop back to its power-on sound, empty patterns; the sections A–D are kept.
+- **Synth ↔ drum track:** SAVE → TOOLS → KIND (GO): the selected track changes kind, and its pattern is cleared.
 
 ## Master: DUST, DUCK, FILT (and TEXTURE)
 
@@ -320,15 +267,17 @@ The screen shows the 27 keys as a keyboard: the white keys in four rows of four,
 
 - **TRACKS** (HOME) — the performance view: tempo, swing, transport, bar.beat; each track with its sound, its steps, the playhead, mute / solo / rec badges and its level. Dials: *swing · level · steps · pan* (KNOB 2 on a muted track unmutes it).
 - **Layers** — while a layer button is held: 16 tiles (the white keys) and the knobs' dials, in the layer's colour.
-- **DRUMS** (SEQ tapped with the drum track: the grid; EDIT tapped: the kit) — **grid**: the 16 sounds × 16 steps, levels as shades, ratchets as notches; dials *sound · step · hit · level* (KNOB 1 plays the sound it picks, KNOB 2 the step it moves to). The **keys** are the steps of the sound: a white key sets its step (heard) or clears it, the first four black keys pick the page of steps (1–16 … 49–64); the keys light the sound's steps. **kit**: 16 pads that flash on every hit; dials *kit · level · reverb · pan*. The grid is the first SEQ page (SEQ again or SELECT right: TIMING, PLAY, PATTERNS, CHAIN, SCENES); kit and **sound** are the drum track's EDIT pages (EDIT again or SELECT: kit ↔ sound; the kit page: the keys play the pads). The top right of the screen names the page and what comes next.
-- **REC READY / FREE TAKE** — while REC is armed: the tracks, then **mode**, **length** and **start** on KNOB 1–3 (4-3-2-1 during a count-in); during a free take: the seconds and the loop it makes.
+- **DRUMS** (SEQ tapped with the drum track: the grid; EDIT tapped: the kit) — **grid**: the 16 sounds × 16 steps, levels as shades, ratchets as notches; dials *sound · step · hit · level* (KNOB 1 plays the sound it picks, KNOB 2 the step it moves to). The **keys** are the steps of the sound: a white key sets its step or clears it, a black key picks the sound, OCT− / OCT+ the page of steps (1–16 … 49–64); the keys light the sound's steps. **kit**: 16 pads that flash on every hit; dials *kit · level · reverb · pan*. The grid is the first SEQ page (SEQ again or SELECT right: TIMING, PLAY, PATTERNS, CHAIN, SCENES); kit and **sound** are the drum track's EDIT pages (EDIT again or SELECT: kit ↔ sound; the kit page: the keys play the pads). The top right of the screen names the page and what comes next.
+- **REC READY / FREE TAKE** — while REC is armed: the tracks, then **mode**, **length**, **start** and **quant** on KNOB 1–4 (4-3-2-1 during a count-in); during a free take: the seconds and the loop it makes.
 - **Holds** — the ring of REC (clear) while held.
 - **SONG** — the section chain.
+- **PATTERNS, CHAIN, SCENES** — the SEQ pages after PLAY: the track's eight patterns, its chain (a playlist with repeats) and the song's scenes; the keys are pads ([details](docs/groovebox-controls.md#patterns)).
+- **CHORDS** — after SEL's pages: the song's chord and progression, the keys play the chord live ([details](docs/groovebox-controls.md#harmony)).
 - **Sound pages** (ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO, SAVE) — the full synth, colour-coded.
 
 ## The sound bank
 
-223 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the thirteen engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (KNOB 3 VIEW groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs); your favourites come first and your own presets last. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
+223 starting points for any style: house and techno, hip-hop, trap and plugg, drum & bass, amapiano, synthwave, lo-fi, ambient, soul. Every one is a full patch on one of the thirteen engines: change it, save your own (32 user presets), or load your own samples. **PRESETS** on a synth track opens the **sound browser**: the engines on the left, every sound of the selected one on the right (SELECT, the VIEW, groups them **by kind** instead — basses, keys, organs, pads, leads, plucks and bells, stabs, FX); your favourites come first and your own presets last. **SAVE** keeps the sound you are on and closes it; **HOME** puts back the one you had. See [the sound browser](GUIDE.md#the-sound-browser). Every sound is level-matched: they all come out as loud at the same LEVEL. BoopBox starts (on a new project) at **90 BPM** with *808 BOOM* on track 1, *RHODES* on track 2, *LOFI FLUTE* on track 3 and the 808 kit on track 4.
 
 | Kind | Sounds (engine) |
 | --- | --- |
@@ -425,51 +374,54 @@ A song is up to 16 steps of 4 sections, **A–D** (each holds every track: sound
 3. **Record the song as you play it:** SAVE + key **14** (*rec*): from the next bar, every section you play and how many bars it plays are written into the song. Press it again, or STOP, to end: *SONG PARTS 5*. It is saved by itself once you stop.
 4. **Play it back:** SAVE + key **13** switches *loop* / *song*; in song mode **PLAY** plays the whole song and stops at the end (your loop is back afterwards).
 
-The **SONG screen** (SAVE tapped on TRACKS, or SAVE + key 16) shows the chain and edits it by hand: **KNOB 1** the step, **KNOB 2** its section, **KNOB 3** its bars, **KNOB 4** the number of steps; **REC** stores the loop into the step's section; **SAVE** (tap) saves the chain; **OCT−** loop / song; **OCT+ twice** loads a section. The four sections are the four project slots.
+The **SONG screen** (SAVE tapped on TRACKS, or SAVE + key 16) shows the chain and edits it by hand: **KNOB 1** the step, **KNOB 2** its section, **KNOB 3** its bars, **KNOB 4** the number of steps; **REC** stores the loop into the step's section; **SAVE** (tap) saves the chain; **OCT−** loop / song; **OCT+ twice** loads a section.
 
 ## The web editor
 
-Open it from the installer page, or with **`OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`), in Chrome or Edge with the FM-1 on USB, and press **Connect**. It follows the device live (turn a knob on the FM-1, the editor moves).
+Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the installer page, or with **`OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`), in Chrome or Edge with the FM-1 on USB, and press **Connect**. It follows the device live (turn a knob on the FM-1, the editor moves).
 
-**Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer, `boopbox-editor-2.6.html`, also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it: it opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online one. Its sound library (kept in the browser) is its own, apart from the online editor's: move sounds between them with Export / Import, or a backup.
+**Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer, `boopbox-editor-<version>.html`, also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it: it opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online one. Its sound library (kept in the browser) is its own, apart from the online editor's: move sounds between them with Export / Import, or a backup.
 
 **As an app, also on Android (2.6).** Open the [online editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) or the installer once with internet, then *Install the app* (under Connect, or on the installer page; or Chrome's menu → *Install app* / *Add to Home screen*). From then on the BoopBox app opens the editor without internet, and its link to the installer works offline too (with the firmware it installs). It stays the online site kept by the browser, so it uses the same sound library as the online editor, and it takes each new BoopBox version by itself the next time it opens online. On Android, use the app rather than the downloaded file: Chrome on Android does not allow MIDI in a downloaded file.
 
-It looks like the FM-1 (its black screen, the four track colours, its own Terminus font). The side bar has the pages — **Track**: Sound, Sequencer, Tracks; **Sounds**: Library, Samples, Drum kit; **Device**: Projects, Settings — and the FM-1's connection. On top: the page, the messages and the **four tracks** (number, sound, engine): click one to edit it; the selected track's colour is the editor's.
+It looks like the FM-1 (its black screen, the tracks' colours, its own Terminus font). The side bar groups the pages by what you came to do — **Play**: LIVE; **Make a loop**: Sound, Sequencer, Patterns, Mixer; **Song**: Song order, Save & load; **Your sounds**: Library, Samples, Drum kit, Drum synth; **FM-1**: Settings, Theme — with the FM-1's connection at the bottom. On top: the page, the messages and the **eight tracks** (number, sound, engine): click one to edit it; the selected track's colour is the editor's.
 
 - **Sound** — every parameter of the selected track, as on the device: a card per button (ENV, LFO, EDIT, VOICE, FX, SEL, ARP), its pages as rows of four knobs, one colour per knob. Drag a value up or down like a knob (Shift: fine), or use its bar (click, then the wheel or the arrow keys; double-click: the default). The engines and presets, files; on an FM6 track the **FM6** panel (the patch, the bank, SysEx import and export).
 - **Sequencer** — the pattern settings and the steps, as the device's tiles (click one; the **step list** below takes typed note names). On the **drum track**: a grid of the 16 sounds × the steps, with the **kit**. Choose a **level** (GHOST, SOFT, NORM, HARD) and a **roll** (x1–x4), then click: a hit; click it again (same level and roll): cleared; Shift+click: one level louder. Click a step (a cell of the grid, a drum column): its **nudge** and its **parameter locks** (add one, pick the parameter, set or delete it) below the grid; a step with either carries a mark.
 - **Patterns** — each track's eight patterns (play, copy, clear), its chain and FOLLOW, a pattern's step components, direction and seed, and the song's chord progression: read from the FM-1, changed, sent back (the song stopped).
-- **Tracks** — the eight channel strips (level, pan, mute; SOLO and REC shown as on the device).
-- **Library**, **Samples** (with CHOP), **Drum kit** (your own kits, [above](#your-own-drum-kits-kit-usr1usr4-usr34)), **Projects**, **Settings** (GLOBAL, **MASTER**: DUST, DUCK, FILT, ROLL; DRUMS).
-- **Backup** (Projects tab): **Save a backup** writes everything on the FM-1 to one file (BoopBox-backup-DATE.json): the music you are working on, the sections A–D, the 32 user presets, the FM6 bank, the samples USR1–USR4 (your drum kits with them) and the settings (colours, calibration, the song order, the lights, SYNC, MIDI OUT). **Restore from a file** puts it all back — what is on the FM-1 is replaced. A damaged file is refused before anything is written, every object is checked as a load checks it, and each one is written as a save writes it (a cut-off restore never leaves half an object). Stop the song (PLAY) before restoring.
+- **LIVE** — the whole FM-1 on one screen for a show: transport, sections, mixer, punch-in effects, keys, scenes and a playlist ([the guide](GUIDE.md#live)).
+- **Mixer** — the eight channel strips (level, pan, mute; SOLO and REC shown as on the device).
+- **Song order** — the SONG screen's order of sections, with the loop region.
+- **Library**, **Samples** (with CHOP), **Drum kit** (your own kits, [above](#your-own-drum-kits-kit-usr1usr4-usr34)), **Drum synth** (SYN1–SYN4), **Save & load** (the sections, song files, the backup), **Settings** (GLOBAL, **MASTER**: DUST, DUCK, FILT, ROLL; DRUMS), **Theme** (your own screen colours).
+- **Backup** (Save & load page): **Save a backup** writes everything on the FM-1 to one file (BoopBox-backup-DATE.json): the music you are working on, the sections A–D, the 32 user presets, the FM6 bank, the samples USR1–USR4 (your drum kits with them) and the settings (colours, calibration, the song order, the lights, SYNC, MIDI OUT). **Restore from a file** puts it all back — what is on the FM-1 is replaced. A damaged file is refused before anything is written, every object is checked as a load checks it, and each one is written as a save writes it (a cut-off restore never leaves half an object). Stop the song (PLAY) before restoring.
 
-The protocol is documented in [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) (v9). The editor writes presets and the FM6 bank to flash only while the song is stopped, as the FM-1 does.
+The protocol is documented in [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md). The editor writes presets and the FM6 bank to flash only while the song is stopped, as the FM-1 does.
 
 ## Sound design pages
 
-The full Felucca engine is underneath (all of it in [GUIDE.md](GUIDE.md#16-every-page-knob-by-knob)): thirteen synthesis engines (analog, 4-op FM, 6-op FM with DX7 patches, phase distortion, lo-fi chip, sampler, formant voice, three-oscillator, tonewheel organ, granular, physical models, noise, OBERVAVE (1.7)), envelopes (with a pitch punch for the 808s), LFO, arpeggiator, scales and chords, glide and voice modes, per-track drive, INSERT effect (2.6: SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR), slicer and HP / LP filter, ANALOG's filter as LP, BP or HP (2.6), tempo-synced envelope (ENV SYNC) and LFO (LFO 2: SYNC, TRIG, POL) (2.6), chorus / delay / reverb sends (a stereo chorus, a tempo delay — 1/4 to 1/32, triplets, dotted 1/8 and 1/16 — a stereo reverb built as a feedback delay network: dense, no metallic ring), 32 user presets, 4 projects.
+The full Felucca engine is underneath (all of it in [GUIDE.md](GUIDE.md#16-every-page-knob-by-knob)): thirteen synthesis engines (analog, 4-op FM, 6-op FM with DX7 patches, phase distortion, lo-fi chip, sampler, formant voice, three-oscillator, tonewheel organ, granular, physical models, noise, OBERVAVE), envelopes (with a pitch punch for the 808s), LFO, arpeggiator, scales and chords, glide and voice modes, per-track drive, INSERT effect (2.6: SOFT, HARD, FOLD, FUZZ, CRUSH, PHASR, FLANG, CHOR), slicer and HP / LP filter, ANALOG's filter as LP, BP or HP (2.6), tempo-synced envelope (ENV SYNC) and LFO (LFO 2: SYNC, TRIG, POL) (2.6), chorus / delay / reverb sends (a stereo chorus, a tempo delay — 1/4 to 1/32, triplets, dotted 1/8 and 1/16 — a stereo reverb built as a feedback delay network: dense, no metallic ring), 32 user presets, 4 song sections.
 
 ## MIDI keyboards
 
 BoopBox takes MIDI from two places at once:
 
 - **The MIDI IN jack** (3.5 mm TRS, on the FM-1): a keyboard or a pad controller with a MIDI output, through a TRS-to-DIN MIDI adapter. If nothing plays, try the other type of adapter (type A / type B).
-- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works with HOME menu → **KEYS** → **USB HOST** = ON (1.7; the section was called USB before 1.8) and a **powered hub** (the FM-1 does not power it): see [the guide](GUIDE.md#usb-keyboards-usb-host). While it is on there is no editor, no USB audio and no MIDI to a computer; every start is OFF again.
+- **USB**, from a computer or a phone (a DAW, a MIDI routing app) or a USB MIDI host box. A USB keyboard plugged straight into the FM-1 works with HOME menu → **KEYS** → **USB HOST** = ON and a **powered hub** (the FM-1 does not power it): see [the guide](GUIDE.md#usb-keyboards-usb-host). While it is on there is no editor, no USB audio and no MIDI to a computer; every start is OFF again.
 
 | MIDI channel | Plays |
 | --- | --- |
-| 1, 2, 3 | synth tracks 1, 2, 3 (2.6: MIDI → CH1, CH2, CH3 set any channel for each) |
+| 1, 2, 3 | synth tracks 1, 2, 3 (MIDI → CH1–CH3 set any channel for each) |
 | 10 | the drum track (the nearest of its 16 sounds; MIDI → CH4 changes the channel) |
-| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (2.6: MIDI → OTHER = OFF ignores them) |
+| channels of tracks 5–8 | tracks 5–8 (MIDI 2 → CH5–CH8, OFF by default) |
+| the others | the selected track: set your keyboard to channel 4 and it follows ALGORITHM (MIDI 3 → OTHER = OFF ignores them) |
 
-**Your own channels (2.6).** For an external sequencer with its own channels (drums 10, bass 2, pad 11, lead 8…): GLO → **MIDI** sets each track's channel (CH1, CH2, CH3, CH4 the drums: OFF or 1–16, in and out; two tracks never share one) and GLO → **MIDI 2** the rest: **IN**, **OTHER** (SEL: the channels no track has play the selected track; OFF: ignored), **OUT**, **BEND**. Notes, CCs and MIDI out follow. Settings of the FM-1, kept through power-off.
+**The MIDI pages.** Hold **HOME** for the menu, SELECT to **SEQ**, cursor on **MIDI SETTINGS**, **OCT+**. **MIDI** sets the channel of tracks 1–4 (CH4 the drums), **MIDI 2** of tracks 5–8 (OFF or 1–16, in and out; two tracks never share one); **MIDI 3**: **IN**, **OTHER** (SEL: the channels no track has play the selected track; OFF: ignored), **OUT**, **BEND**; **MIDI 4**: **FX CH** (the punch-in effects over MIDI), **DR MAP** (GM or 1-16 for the drums), **REMOTE** (the buttons over MIDI), **CLOCK** (OUT: BoopBox sends the clock); **SYSTEM**: **SYNC** and the CPU load. Settings of the FM-1, kept through power-off. All of it in [the guide](GUIDE.md#21-midi).
 
 Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 … CH 16** (2.6): BoopBox then answers that one channel only, on the selected track, and ignores the rest.
 
 **MIDI clock in:** SYSTEM → **SYNC** = **USB** or **TRS** (INT: BoopBox's own tempo). START plays from the top, CONTINUE carries on where it stopped, STOP stops; the tempo (BPM) follows the master, and the steps follow its 24 pulses a beat, so BoopBox cannot drift away from it. When the clock stops for half a second, PLAY on the FM-1 plays at its own tempo again. SYNC is a setting of the FM-1: it stays when you load a project.
 
-**MIDI out:** what you play on the keys always goes out on USB MIDI (each track on its channel: 1–3 the synths, 10 the drums). MIDI 3 → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too — every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back (no MIDI loop). Set a DAW track to record the FM-1's MIDI and you get the pattern as notes; or let BoopBox drive another synth. Like SYNC, MIDI is a setting of the FM-1. The SYSTEM page reads, on KNOB 1 to 4: **OUT** (KEYS / SEQ), **SYNC**, **IN** and **CPU** (while no computer is connected: the **USB** link's state instead).
+**MIDI out:** what you play on the keys always goes out on USB MIDI (each track on its channel). MIDI 3 → **OUT** = **SEQ** sends what the sequencer, the arp and the rolls play too — every note is ended, STOP ends whatever was still on, and notes that came in from a computer or the jack are never sent back (no MIDI loop). Set a DAW track to record the FM-1's MIDI and you get the pattern as notes; or let BoopBox drive another synth. MIDI 4 → **CLOCK** = OUT makes BoopBox the clock master on USB.
 
 **MIDI CCs (2.5, the standard map of Felucca 1.1.5):** the knobs of a MIDI controller set the sound of the track the channel plays (as the notes), 0–127 over the parameter's range, as a knob would. Other CCs (mod wheel…) are ignored. **Sustain** (CC 64) and **pitch bend** work from 2.6: the pedal holds the notes you let go until it is up (recorded as heard); the bend's range is MIDI 3 → BEND (1–12 semitones, default 2).
 
@@ -480,12 +432,15 @@ Your sequencer uses the other channels for other gear? MIDI 3 → **IN = CH 1 �
 | 10 | PAN |
 | 71 | the engine's resonance (RES or Q: ANALOG, TRIO, VOICE, NOISE; the others ignore it) |
 | 72 · 73 · 75 | release · attack · decay |
-| 74 | the track's FILTER: 64 off, lower a low-pass, higher a high-pass (every engine, the drums too) |
+| 74 | the engine's own cutoff or brightness (ANALOG / SAMPLE CUT, TRIO CUT, PHASE DCW, LOFI / GRAIN TONE, FM6 MLVL, PHYS BRIT, NOISE FREQ); DIGITAL, VOICE, WHEEL and the drums: the track's FILTER (64 off) |
+| 11 | expression: a volume pedal over the track's LEVEL |
 | 91 · 93 · 94 | the reverb, chorus and delay sends (on the drum channel 91 and 94 are GLO → DRUMS → REV and DLY) |
 
 **MIDI LEARN (2.6, after Felucca 1.5):** any knob of your controller onto any parameter of a track. **GLO + F#3** (the top line shows *LEARN*), turn the knob of BoopBox you want (*T1 CUT: SEND A CC*), move the controller's knob (*CC 21 = T1 CUT*); more knobs if you like; **GLO + F#3** again to finish. A learned CC sets that track's parameter on any channel and no longer does what the map above gave it; up to 16. Bank select, mod wheel, data entry, expression, sustain and the channel-mode CCs are never learned. Kept through power-off and projects, and in the web editor's backups; HOME menu → SYSTEM → **MIDI LEARN CLEAR** (OCT+) forgets them all.
 
 **Clock only:** MIDI 3 → **IN** = **CLOCK** makes BoopBox take only the clock and START / CONTINUE / STOP from MIDI, and ignore every incoming note (and CC) — for a DAW or a sequencer that sends notes to other gear on the same cable. **NOTES** (the default): notes and clock, as before. A note-off still gets through, so nothing held when you switch is left hanging. A setting of the FM-1, as SYNC.
+
+**NRPN (1.8):** every parameter of a track, with 14 bits: CC 99 = 0, CC 98 the parameter's number, then CC 6 and CC 38 ([the map](docs/NRPN.md)).
 
 Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio on.
 
@@ -493,12 +448,12 @@ Bluetooth MIDI is not supported: BoopBox, like Felucca, never switches the radio
 
 On USB the FM-1 is also an audio input, named **BoopBox**: 44.1 or 48 kHz (2.5: the host picks; phones and apps that only take 48 kHz work too), 16-bit stereo, class compliant, so no driver is needed. In your DAW or in Audacity, choose that input and record: you get the master output, exactly what the headphones play (after DUST, DUCK and FILT; the click and the count-in too, if they are on).
 
-**Its level: HOME menu → USB AUDIO.**
+**Its level: HOME menu → AUDIO → USB AUDIO.**
 
 - **MASTER** (default): the recording follows the MASTER knob, as the headphones do. Keep MASTER well up while you record.
 - **FULL**: a fixed level, as with MASTER all the way up, kept from clipping by the output limiter, whatever the knob. MASTER then only sets the headphones: the right choice for an audio interface or a computer input with no level control of its own.
 
-USB AUDIO is a setting of the FM-1: it stays as you left it. MIDI, the web editor and the installer keep working on the same cable while the computer records.
+USB AUDIO is a setting of the FM-1: it stays as you left it. **USB RATE** (AUDIO, KNOB 3) offers AUTO, 44.1 KHZ or 48 KHZ, from the next start: if a phone records the FM-1 distorted, try 44.1 KHZ. MIDI, the web editor and the installer keep working on the same cable while the computer records.
 
 - The first time, the computer sees the FM-1 as a slightly different device (MIDI + audio) and sets it up again; the MIDI port keeps its name.
 - The audio input comes from Felucca 1.0 (Leo Kuroshita): the same code, adapted to BoopBox.
@@ -520,7 +475,9 @@ It sees the mix as if **MASTER** were all the way up, so the picture does not fo
 
 ## Lights
 
-Hold **HOME** for the menu: **LIGHTS**, **KEYS** and **NOTES** are together there (with **USB AUDIO**, the level of the USB audio input: see [USB audio](#usb-audio-record-on-a-computer), and **USB SERIAL**, a serial console for developers: OFF by default, as macOS 13–15 do not show the USB audio input while it is on; a change takes effect at the next start). The menu is in four sections, as the pages are — **SCREEN** (COLOR, ZOOM), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (LOWCUT, USB AUDIO, USB SERIAL), **SYSTEM** (HARDWARE CALIBRATION, ABOUT): **SELECT** goes from one to the next, **KNOB 1, 2, 3** set the section's rows (each row shows its knob's colour), PRESETS moves the cursor, OCT+ steps the cursor's setting round or opens it, OCT− closes. They are saved with the settings of the FM-1, not with a project: loading a project or NEW PROJECT does not change them.
+Hold **HOME** for the menu. It has six sections — **SCREEN** (COLOR, ZOOM, KNOB ACCEL), **LIGHTS** (LIGHTS, KEYS, NOTES), **AUDIO** (SPEAKER LOWCUT, USB AUDIO, USB RATE, FILTER RESO), **KEYS** (VELOCITY, AFTERTOUCH, VEL LEARN, USB HOST), **SEQ** (STEP ADVANCE, DRUM PREVIEW, REC KNOBS, MIDI SETTINGS) and **SYSTEM** (2ND CORE, HARDWARE CALIBRATION, MIDI LEARN CLEAR, ABOUT): **SELECT** goes from one to the next, the knobs set the section's rows (each row shows its knob's colour), PRESETS moves the cursor, OCT+ steps the cursor's setting round or opens it, OCT− closes. They are saved with the settings of the FM-1, not with a project: loading a section or NEW does not change them. Every setting is in [the guide](GUIDE.md#20-the-home-menu-and-the-lights).
+
+**Key velocity and aftertouch (1.8, after JIANT FM and Velo):** HOME menu → **KEYS**. **VELOCITY** SOFT / NORMAL / HARD reads how hard you press the keys F3..C5 (synths play and record it, drums pick ghost to hard); **AFTERTOUCH** opens the filter or adds vibrato as you keep pressing; **VEL LEARN** lets each key learn your touch. Both are OFF by default ([details](GUIDE.md#key-velocity-and-aftertouch-18)).
 
 - **LIGHTS** — OFF, LOW, MID, HIGH: every button glows at that level, so its label can be read in the dark (on a black FM-1 the labels are unreadable unlit). What is on — the page, PLAY, REC, an octave — stays at full light and still blinks as before.
 - **KEYS** — OFF, C KEYS, WHITE KEYS, ALL KEYS: the Cs, every white key, or every key (2.4), glow at the LIGHTS level too (KEYS turns LIGHTS on at LOW if it was off). Played keys and the layer landmarks keep their own light.
@@ -532,22 +489,22 @@ The glow is a short pulse on every scan of the panel (about 900 times a second):
 
 | | |
 | --- | --- |
-| Tracks | 3 synth parts (20 voices shared) + drums (16 sounds, 6 voices) |
-| Sounds | 223 presets on 13 engines (browsed by kind, level-matched), 6-operator FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4) |
-| Sequencer | 64 steps per track, own length and division each (1/32 to two bars); chords with a level and ratchet per note; drums with a level and ratchet per sound; ties, slide; per-step nudge (±½ step in 1/64), parameter locks (24 per track, any sound parameter) and fill conditions (fill only / no fill); swing 0 (straight) to 100 (MPC 75 %); one sample-accurate clock for steps, arp, rolls, slicer and song (no drift) |
+| Tracks | 8: six synths (20 voices shared) and two drum machines (16 sounds each, 6 voices) by default; any track can be either |
+| Sounds | 223 presets on 13 engines (browsed by engine or kind, level-matched; OBERVAVE's 70 programs among them), 6-operator FM with DX7 SysEx import and a 27-patch bank, 8 sampled sets (CC0), 4 slots for your own samples (USR1–USR4) |
+| Sequencer | 64 steps per track, own length and division each (1/32 to two bars); chords with a level and ratchet per note; drums with a level and ratchet per sound; ties, slide; per-step nudge (±½ step in 1/64), parameter locks (32 per track, any sound parameter, with SLIDE); eight patterns a track, chains with repeats, scenes, step components, beats from the keys, a song key and chord progression and fill conditions (fill only / no fill); swing 0 (straight) to 100 (MPC 75 %); one sample-accurate clock for steps, arp, rolls, slicer and song (no drift) |
 | Performance | layers (hold a button: keys and knobs change job): punch-in FX, erase, note repeat, step entry, key / chords, mute / solo / fill / tap tempo; live sections on the bar and a quick chain of up to 8 |
 | Drum kits | 37 (5 sampled, 32 synthesised, 16 sounds each), plus your own: USR1–USR4 and USR3+4 (about 15 s) |
 | Effects | 27 punch-in effects (DJ kills, rewind, freeze…); master DUST, DUCK, DJ filter; per track drive, slicer, a one-knob HP / LP filter, sends to a stereo chorus, a tempo delay (dotted 1/8 and 1/16 too) and a stereo reverb; master limiter |
 | Recording | live, quantised as heard (latency-compensated), overdub; records at once while playing; free take sets loop length and tempo, or the tempo set, from the first note or a one-bar count-in |
-| Memory | undo / redo, 4 projects, 32 user presets, 27 FM6 patches, autosave of the working project, song of 4 sections × 16 steps × 1–64 bars |
+| Memory | undo / redo, 4 song sections, 32 user presets, 27 FM6 patches, autosave of the working project, song of 4 sections × 16 steps × 1–64 bars |
 | Audio | 44.1 kHz, fixed-point DSP; USB audio input (the master output, 16-bit stereo at 44.1 or 48 kHz, class compliant) |
-| MIDI | USB class-compliant in / out; TRS MIDI IN (3.5 mm jack); channels 1–3 the synths, 10 the drums, 4–16 the selected track (2.6: each track's channel in MIDI); MIDI clock in (USB or TRS), with or without the notes (IN = CLOCK); the sequencer to MIDI out (MIDI 3 → OUT = SEQ) |
+| MIDI | USB class-compliant in / out; TRS MIDI IN (3.5 mm jack); USB HOST for a USB-MIDI keyboard; each track its own channel (1–3 the synths and 10 the drums by default, the others the selected track); MIDI clock in (USB or TRS) and out; the sequencer to MIDI out; CCs, NRPN, MIDI LEARN, Program Change |
 | Update | over USB from the browser (package SHA-256 and CRC checked) |
 
 ## Rescue, going back, credits
 
 - **USB rescue:** hold **OCT−** alone while switching on (*BoopBox USB RESCUE*), then install again.
 - **Interrupted install:** the FM-1 stays in update mode; press Install again and it finishes. A damaged package is refused, and the FM-1 keeps waiting for a good one.
-- **Back to the official firmware:** on the installer page, open **Return to the official firmware (V15)**: save a backup with the editor first, download FM-1 V15 from m-vave.com, select its FM-1.fwsc (only that exact file is accepted) and install it. M-VAVE's own updater, M-UPGRADE, works too (close every other app that uses MIDI first). To come back to BoopBox, install it again and restore your backup.
+- **Back to the official firmware:** use M-VAVE's own updater, **M-UPGRADE** (m-vave.com → Downloads → PC Software), with the official FM-1 firmware (**V16**, `FM-1.fwsc`); close every other app that uses MIDI first, and save a backup with the editor before you go. To come back to BoopBox, install it again and restore your backup ([the guide](GUIDE.md#going-back-to-the-official-firmware)).
 - **Credits:** BoopBox is based on SLOOP by isod89, itself based on Felucca by Leo Kuroshita (@kurogedelic), Hügelton Instruments — engines, sequencer, editor and installer. Played-note key lights: @renebohne (pull request #11). The web editor's local audio preview (the firmware's engines in the browser, WebAssembly): @ordenador, Mario Faúndez Vidal (pull request #120). The knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide in 2.7: after JIANT FM by juanjiant-bit. MIDI CC 74 on each engine's cutoff in 2.7: after @renebohne (pull request #71). The second core and 38 KB of RAM in 2.7: andrerezemini (pull request #111), on the dual-core start of Charles Vestal (X0X) and keremimo (Melodee). TRS MIDI input buffer fix: Felucca [Salt] by ChanceTheMaker, found by keremimo. Knob reading, MIDI input, overload shedding, LED glow, key debounce, MIDI clock, the USB audio input and the return to the official firmware after Felucca 1.0 / 1.0.1. INSERT, LFO SYNC / TRIG / POL, ENV SYNC, the ANALOG filter types, note LEN, MIDI LEARN and the latched-arp fix (#191) after Felucca 1.4 / 1.4.1 / 1.5; the live drum mutes after Felucca 1.4.1; Program Change (@renebohne, Felucca PR #179), the 1/4D delay and the REV / ECHO THROW after Felucca 1.5.1; in 2.7 the arp modes REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK and CHORD after Felucca 1.5.1. These Felucca features were first asked for by Wulgaren, etyrnal, benjaminguerrer, gospodindilly-ops, Armstrong1980, oMauNaProducer, lostfictions and planist79 (Felucca discussions #78, #104, #154, #170, #173, #175, #177, #178; issue #191). And thanks to everyone who commented, tested and reported on BoopBox: most of 2.6 comes from you. Font: Terminus and Terminus Bold (SIL OFL 1.1). Samples: Versilian Studios VSCO-2 CE and VCSL, Sonic Pi (all CC0). PHASE: CrispyZebra (GPL). FM6: msfa from Dexed by Google Inc. and Pascal Gauthier (Apache-2.0), ported to integer C for Felucca 1.0 by Leo Kuroshita. VOICE after klattsch (MIT). Interface ideas after Elektron's step entry and Akai's MPC (swing, note repeat, erase) — BoopBox is not affiliated with any of them.
 - **Licence:** GPL-3.0, no warranty. M-VAVE and FM-1 are trademarks of their owners; BoopBox is not affiliated with them. Drum kit names describe styles; they do not refer to any product.
