@@ -3,7 +3,7 @@
 //
 // Node checks of the web pages' JS (no browser, no hardware). Run from the repo root:
 //   node web/test_web.mjs
-// - editor.html: the protocol section (between PROTO-BEGIN/END) against its mock device (v1 commands,
+// - src/editor/lib/proto.js: the editor's protocol and formats against its mock device (v1 commands,
 //   the user preset bank / librarian, library files, live pushes, older-firmware fallback, the v3 tracks
 //   and the mixer), its tab layout and ja/en strings,
 //   and the user-sample pipeline byte for byte against tools/sampleio.py
@@ -395,7 +395,7 @@ async function editorTracks() {
 
 /* ------------------------------- editor 2.6: SET coalescing per control (SetGate) --- */
 /* a user report: DIV 1/8 on the drum track, then 1/8 on a synth track: the second SET never left (the coalescing kept the
-   last value sent per control, whatever the track). userSet as editor.html has it, on the mock */
+   last value sent per control, whatever the track). userSet as core/device.js has it, on the mock */
 async function editorSetGate() {
   const C = E.CMD;
   const { link, rq, sent, done } = attachMock({});
@@ -404,7 +404,7 @@ async function editorSetGate() {
   for (let i = 0; i < info.pcount && div < 0; i++) if (E.parse[C.DESC](await rq(E.req.desc(0, i))).label === "DIV") div = i;
   const gate = new E.SetGate(), k = "0:" + div;
   const pending = (key) => link.hasQueued(key) || (!!link.cur && link.cur.key === key);
-  const user = (v) => {                               /* editor.html userSet / sendSet */
+  const user = (v) => {                               /* core/device.js userSet / sendSet */
     if (!gate.user(k, v, pending(k), Date.now())) return null;
     gate.get(k).sent = v;
     return rq(E.req.set(0, div, v), { key: k });

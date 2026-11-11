@@ -35,7 +35,7 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
 - **Web editor:** it shows all eight tracks (the track bar, the Tracks page, the LIVE page: protocol v13 adds tracks 5..8
   to LIVE's state and a solo of any track, 32 bytes of flash). Its **Patterns** page edits patterns 1..8, chains, FOLLOW,
   step components, direction and seed, and the chord progression, by reading the working project (backup object 0,
-  format 7), changing it in the browser (`web/editor.html` PROJ7, checked against the firmware's own capture and load by
+  format 7), changing it in the browser (`web/src/editor/lib/proto.js` PROJ7, checked against the firmware's own capture and load by
   `tests/proj7_tool.c`) and sending it back whole: no new command, and only while the song is stopped (the FM-1 loads
   it at once). The Song page keeps and edits the loop region. The Patterns page (patterns, chains with repeats, scenes) edits the working project only: a
   section A..D is edited by loading it on the FM-1, editing, and saving it into its section again.

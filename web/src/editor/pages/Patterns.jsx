@@ -147,6 +147,7 @@ function ScenesCard({ P }) {
   return (
     <Card title={t("scnTitle")} ic="symbol_grid">
       <Help>{t("scnHelp")}</Help>
+      <div className="max-w-full overflow-x-auto">
       <table id="scntab" className="[&_select]:px-0.5 [&_select]:py-0 [&_td]:px-1 [&_td]:py-0.5 [&_td]:text-center [&_th]:px-1 [&_th]:py-0.5 [&_th]:text-center">
         <thead><tr><th>#</th><th>{t("scnName")}</th>
           {P.tracks.map((x) => <th key={x.i} style={{ color: tcol(x.i) }}>{String(x.i + 1)}</th>)}</tr></thead>
@@ -164,7 +165,7 @@ function ScenesCard({ P }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       <p className="bar"><button type="button" id="scnreset" disabled={!P.scenes || PROJ7.scenesIsDefault(P.scenes)}
         onClick={() => ptEdit(() => { P.scenes = null; })}>{t("scnReset")}</button></p>
     </Card>

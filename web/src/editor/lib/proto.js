@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
 // The editor's protocol, file formats, sample pipeline and mock device: no DOM. Moved verbatim out of the old
-// editor.html (between PROTO-BEGIN and PROTO-END); web/test_web.mjs runs this file in a vm context (the export
+// editor.html (between PROTO-BEGIN and PROTO-END, before the React editor); web/test_web.mjs runs this file in a vm context (the export
 // list at the end is stripped there), the React editor imports it.
 /*PROTO-BEGIN*/
 /* ---------------------------------------------------------------- protocol --- */
