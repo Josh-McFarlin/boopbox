@@ -3,6 +3,7 @@
 // a touch screen or the computer's keyboard (engine.js runs the firmware).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Strip } from "../shared/Brand.jsx";
+import SiteHeader from "../shared/SiteHeader.jsx";
 import {
   B, BLACK, BTNMAP, BUTTONS, KEYMAP, KNOBMAP, KNOBS, NKEYS, NOTE, download, drawScreen, flashErase, flashSave, powerOn,
 } from "./engine.js";
@@ -213,6 +214,8 @@ export default function Emulator() {
   const help = "text-fg font-semibold";
 
   return (
+    <>
+    <SiteHeader current="emu" />
     <main className="mx-auto max-w-[1280px] px-4 pt-6 pb-12">
       <h1 className="m-0 mb-1.5 text-[13px] font-medium uppercase tracking-[.12em] text-dim">BoopBox emulator</h1>
       <p className="mb-[18px] max-w-[46em] text-[17px] leading-[1.35] min-[481px]:text-[19px]">The real BoopBox firmware, running in your browser:
@@ -281,5 +284,6 @@ export default function Emulator() {
         USB and MIDI, USB audio, the web editor's link, your own samples, the keys' own velocity sensing. After JIANT FM's
         emulator. <a href="../installer/">Install BoopBox on your FM-1</a> · GPL-3.0.</p>
     </main>
+    </>
   );
 }

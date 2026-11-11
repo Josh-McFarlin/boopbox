@@ -40,8 +40,8 @@ UI_SMALL static void drum_black_pick(uint32_t b)          /* black key b: its so
 UI_SMALL static void drum_hear(uint32_t lane) { if (drum_preview) audition_lane(lane); }   /* (2.7.1) menu DRUM PREVIEW */
 static void trk_short_name(uint32_t c, char *b);
 static void sound_name(char *pn);                   /* (ui_draw.c) */
-/* (1.4.2) a track's LEVEL, REV or PAN as its page shows it (a synth's LEVEL in dB, PAN in %; the drums' 0..127), the
- * unit after it: the same value on every screen ("-8dB", "-31%"), b holds 8 */
+/* (1.4.2) a track's LEVEL, REV or PAN as its page shows it (LEVEL and REV 0..127 on every track, PAN in %), the
+ * unit after it: the same value on every screen ("104", "-31%"), b holds 8 */
 UI_SMALL static void mix_fmt(char *b, const track_t *t, uint32_t pid, int32_t v)   /* (v: the value shown) */
 {
     const char *u;
