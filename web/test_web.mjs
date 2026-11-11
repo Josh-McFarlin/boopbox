@@ -1043,8 +1043,11 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
     && js(ARR.decode(await get1())) === js(ARR.decode(now)), "song: mock: read, send (rc 0), a bad one (rc 2), a new one while playing (rc 3)");
   done();
   /* the page */
-  ok(/id="lenval" type="number" min="1" max="64"/.test(editorSrc) && /if \(!s && id === pSlen\(\)\) lenChanged\(\);/.test(editorSrc) && /if \(!\$\("roll"\)\.hidden\) renderRoll\(\);/.test(editorSrc),
-    "editor: the LEN control (1..64), the grid and roll redrawn when LEN changes");
+  {   /* the LEN control (1..the device's steps); the grid renders from LEN, the roll redraws in an effect */
+    const seq = readFileSync(join(HERE, "src/editor/pages/Sequencer.jsx"), "utf8");
+    ok(/type="number" id="lenval" min="1" max=\{dev\.info\.nstep\}/.test(seq) && /pSlen\(\)/.test(editorSrc) && /useEffect\(/.test(seq),
+      "editor: the LEN control (1..64), the grid and roll redrawn when LEN changes");
+  }
 }
 
 /* ------------------------------------- SLOOP 2.5: the DRUM SYNTH page (v10) --- */

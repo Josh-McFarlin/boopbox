@@ -43,7 +43,7 @@ export function useDrop(onFiles, stop = false) {
 /* the text of a slot's name: 8 printable characters, upper case */
 export function NameInput({ value, onChange }) {
   return (
-    <input type="text" className="name w-[110px] uppercase" maxLength="8" spellCheck="false" placeholder="NAME" value={value}
+    <input type="text" maxLength="8" spellCheck="false" placeholder="NAME" value={value}
       onChange={(e) => onChange(e.target.value.toUpperCase().replace(/[^\x20-\x7E]/g, "").slice(0, 8))} />
   );
 }

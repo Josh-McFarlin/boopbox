@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CHOP, SMP, chopEqual, chopGrid, chopHits, chopSnap, noteName } from "../../lib/proto.js";
 import { notify, pickFile, t, useApp } from "../../core/app.js";
-import { Ic, barVars } from "../../ui/kit.jsx";
+import { Ic } from "../../ui/kit.jsx";
 import {
   CH, chSecs, chopAdd, chopAudition, chopChops, chopDraw, chopFitAll, chopKeep, chopKeepAll, chopKeyName, chopLoad, chopOpt, chopOver,
   chopPlay, chopPlaying, chopRegion, chopSetLen, chopSetMarks, chopStop, chopTap, chopTransport, chopUsed, chopZip,
@@ -140,7 +140,7 @@ export default function Chop() {
       </Head>
       <Head>
         <button type="button" onClick={() => { if (CH.x) chopSetMarks(chopHits(CH.x, CH.nov, CH.sens)); }}>{t("chopHits")}</button>
-        <input type="range" className="w-[110px]" min="1" max="10" value={CH.sens} title={t("chopSens")} style={barVars({ min: 1, max: 10 }, CH.sens)}
+        <input type="range" className="w-[110px]" min="1" max="10" value={CH.sens} title={t("chopSens")}
           onChange={(e) => { CH.sens = +e.target.value; notify(); }} />
         <Sep />
         <button type="button" onClick={() => { if (CH.x) { const [a, b] = chopRegion(); chopSetMarks(chopGrid(a, b, Math.max(40, +CH.bpm || 90), CH.div)); } }}>{t("chopGrid")}</button>
@@ -196,7 +196,7 @@ export default function Chop() {
           <b className="selname min-w-12 font-normal text-fg">{`${t("chopSel")} ${CH.sel + 1}${chopKeyName(U, CH.sel)}`}</b>
           <label><input type="checkbox" checked={!c.off} onChange={(e) => chopKeep(CH.sel, e.target.checked)} /> {t("chopKeep")}</label>
           <span>{t("chopLen")}</span>
-          <input type="range" className="len w-[180px]" min="10" max={lenMax} step="1" title={t("chopLen")} value={lenV} style={barVars({ min: 10, max: lenMax }, lenV)}
+          <input type="range" className="len w-[180px]" min="10" max={lenMax} step="1" title={t("chopLen")} value={lenV}
             onChange={(e) => { const ms = +e.target.value; chopSetLen(CH.sel, ms >= Math.floor(full / SMP.RATE * 1000) ? 0 : ms * SMP.RATE / 1000); }} />
           <span className="dim">{`${chSecs(c.end - c.start)} / ${chSecs(full)}`}</span>
           <button type="button" onClick={() => chopAudition(CH.sel)}>▶</button>
