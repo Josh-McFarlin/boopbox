@@ -105,7 +105,7 @@ The boot splash itself (`build/gen/boopbox_logo.h`) is made by the build from `t
 The README's screenshots are made the same way, from the code: `python3 tools/make_screens.py` draws the FM-1's
 screens with the firmware's own drawing code (`tools/screens_demo.c`, the host tests' harness, a demo project on the
 eight tracks; it needs `build/gen`), and `node tools/make_editor_screens.mjs` takes the web editor's pages in its
-mock mode (Playwright and Chromium). Both write into `assets/screens/`.
+mock mode (Playwright and Chromium; build the pages first: `cd web && npm ci && npm run build`). Both write into `assets/screens/`.
 `python3 tools/make_all_screens.py` draws every screen of the firmware the same way (`tools/screens_all.c`: every
 page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser) into `assets/screens/all/`, a PNG a
 screen and a contact sheet a group, listed in its `README.md`. Both draw in SYNTHWAVE, the palette the FM-1 starts
@@ -182,7 +182,7 @@ python3 tools/fm1_install.py --info          # identity of the connected FM-1
 ```
 
 Or, to install your own build from the web installer, make a local copy of the site and open it from `localhost`
-(Web MIDI needs a secure context):
+(Web MIDI needs a secure context; `make_site.py` builds the pages with Node.js, see [The website](#the-website)):
 
 ```
 python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
@@ -219,6 +219,23 @@ A release is published on GitHub when a PR that adds a new firmware binary is me
 
 `python3 tools/build_emu.py` compiles the whole firmware (`firmware/host/emu.c`: the UI, the sequencer, the sound, the
 storage on a memory flash) to WebAssembly with clang's wasm32 target and wasm-ld (or Emscripten), into `build/emu/`
-with the page from `web/emu/`. Serve that folder (`python3 -m http.server -d build/emu`) and open it. `web/make_site.py`
-puts it in the site as `webapp/emu/` when it is built. Tests: `tests/emu_test.c` (the same core on the host) and
+and the site's emulator page runs it: `cd web && npm run dev`, then open `http://localhost:5173/emu/` (the dev server
+serves `build/emu/boopbox-emu.wasm` there). `web/make_site.py` puts it in the site as `webapp/emu/` when it is built. Tests: `tests/emu_test.c` (the same core on the host) and
 `tests/emu_wasm_test.mjs` (the wasm in Node), both in `tests/run_tests.sh`.
+
+## The website
+
+The installer, the editor and the emulator are React pages built with Vite and styled with Tailwind CSS, in `web/`
+(see [web/README.md](web/README.md)). They need Node.js 20 or newer:
+
+```sh
+cd web
+npm ci                   # once
+npm run dev              # http://localhost:5173/installer/, /editor/ (?mock=1: a simulated FM-1), /emu/
+npm run build            # -> build/webapp-vite/ (and npm run build:offline: the one-file editor)
+node test_web.mjs        # the editor's protocol, formats and pages, the installer's update protocol (no browser)
+```
+
+`web/make_site.py` runs both builds itself and writes the site (`docs/` for a release) with the package, the
+installer's checksums and the offline cache; `python3 tests/site_test.py` and `node tests/pwa_test.mjs SITE_DIR` check
+what it makes.

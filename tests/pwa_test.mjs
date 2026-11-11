@@ -49,8 +49,8 @@ try {
   await page.goto(base + "editor/");
   await page.waitForTimeout(500);
   ok(!perr.length, "the editor loads without a script error" + (perr.length ? ": " + perr.join("; ") : ""));
-  ok(await page.evaluate(() => { const b = document.getElementById("install"); return !!b && b.hidden; }),
-     "the editor: its Install the app button, hidden until Chrome offers to install");
+  ok(await page.evaluate(() => !document.getElementById("install") && !!document.getElementById("connect")),
+     "the editor: no Install the app button until Chrome offers to install");
   await page.goto(base + "installer/");
   await page.waitForTimeout(300);
   ok(!perr.length, "the installer loads without a script error" + (perr.length ? ": " + perr.join("; ") : ""));
@@ -67,7 +67,7 @@ try {
     return (await c.keys()).map((r) => new URL(r.url).pathname);
   });
   ok(cached.includes("/webapp/editor/") && cached.includes("/webapp/installer/") &&
-     cached.some((p) => /^\/firmware\/boopbox-.*\.fwsc$/.test(p)) && cached.includes("/webapp/editor/fukiai.ttf"),
+     cached.some((p) => /^\/firmware\/boopbox-.*\.fwsc$/.test(p)) && cached.some((p) => /^\/webapp\/assets\/fukiai-[\w-]+\.ttf$/.test(p)),
      "kept: the installer, the editor, its font, the firmware");
 
   const cdp = await ctx.newCDPSession(page);

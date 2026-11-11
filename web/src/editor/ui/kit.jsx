@@ -28,7 +28,7 @@ export function Ic({ ic, children }) {
 /* a card: a box with its title in the big font (and an icon, a note on the right) */
 export function Card({ title, ic, sub, id, className = "", children, hidden }) {
   return (
-    <div id={id} hidden={hidden} className={`mb-4 min-w-0 border border-line bg-s1 px-4 pt-3.5 pb-4 ${className}`}>
+    <div id={id} hidden={hidden} data-card="" className={`mb-4 min-w-0 border border-line bg-s1 px-4 pt-3.5 pb-4 ${className}`}>
       {title != null ? <CardTitle ic={ic} sub={sub}>{title}</CardTitle> : null}
       {children}
     </div>
@@ -45,10 +45,10 @@ export function CardTitle({ ic, sub, children }) {
 /* a card's line of help under its title */
 export const Help = ({ children, className = "" }) => <p className={`dim mt-0 mb-3 ${className}`}>{children}</p>;
 /* the parameter cards of a page: two columns on a wide screen */
-export const Groups = ({ children }) => <div className="columns-2 gap-4 [column-width:520px]">{children}</div>;
+export const Groups = ({ children }) => <div className="groups columns-2 gap-4 [column-width:520px]">{children}</div>;
 export function Group({ title, ic, sub, children }) {
   return (
-    <div className="mb-4 min-w-0 break-inside-avoid border border-line bg-s1 px-4 pt-3.5 pb-3">
+    <div data-card="" className="mb-4 min-w-0 break-inside-avoid border border-line bg-s1 px-4 pt-3.5 pb-3">
       <CardTitle ic={ic} sub={sub}>{title}</CardTitle>
       {children}
     </div>

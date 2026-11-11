@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The README's screenshots of the web editor, taken from web/editor.html in its mock mode (?mock=1: a simulated FM-1,
-// no hardware) in Chromium (Playwright).
+// The README's screenshots of the web editor, taken from its build (cd web && npm run build: build/webapp-vite/) in its
+// mock mode (?mock=1: a simulated FM-1, no hardware) in Chromium (Playwright).
 //   node tools/make_editor_screens.mjs [OUT_DIR]      (default: assets/screens)
 // Writes editor-sound.png, editor-midi-texture.png, editor-drumsynth.png, editor-pianoroll.png, editor-backup.png.
 // (editor-cartridge.png needs a DX7 cartridge dropped on the FM6 panel: not made here.)
@@ -14,19 +14,19 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(process.argv[2] || join(ROOT, "assets", "screens"));
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".png": "image/png", ".ttf": "font/ttf",
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ttf": "font/ttf",
   ".wasm": "application/wasm", ".txt": "text/plain" };
 
 const server = createServer(async (q, r) => {
   try {
-    const p = join(ROOT, "web", decodeURIComponent(q.url.split("?")[0]));
+    const p = join(ROOT, "build", "webapp-vite", decodeURIComponent(q.url.split("?")[0]));
     const d = await readFile(p);
     r.setHeader("content-type", TYPES[extname(p)] || "application/octet-stream");
     r.end(d);
   } catch (e) { r.statusCode = 404; r.end(); }
 });
 await new Promise((ok) => server.listen(0, "127.0.0.1", ok));
-const url = `http://127.0.0.1:${server.address().port}/editor.html?mock=1`;
+const url = `http://127.0.0.1:${server.address().port}/editor/index.html?mock=1`;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 1100 }, deviceScaleFactor: 1 });
@@ -41,7 +41,7 @@ async function boxOf(panel, names) {
   return page.evaluate(([panel, names]) => {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     if (names[0] === "*") {                             /* the panel's visible cards and groups, all of them */
-      for (const c of document.querySelectorAll(`#${panel} .card, #${panel} .group`)) {
+      for (const c of document.querySelectorAll(`#${panel} [data-card]`)) {
         if (!c.offsetParent) continue;
         const r = c.getBoundingClientRect();
         x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top + scrollY); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom + scrollY);
@@ -52,7 +52,7 @@ async function boxOf(panel, names) {
       if (!h.offsetParent || !(h.closest(`#${panel}`) || h.closest(".groups"))) continue;
       const t = h.textContent.replace(/[^\x20-\x7E]/g, "").trim().toUpperCase();   /* (the icon glyph before it out) */
       if (!names.some((n) => t.startsWith(n.toUpperCase()))) continue;
-      const r = h.closest(".group, .card").getBoundingClientRect();
+      const r = h.closest("[data-card]").getBoundingClientRect();
       x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top + scrollY); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom + scrollY);
     }
     return x0 === Infinity ? null : { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };

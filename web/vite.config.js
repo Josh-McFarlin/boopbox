@@ -7,6 +7,7 @@
 //   npm run build                    -> ../build/webapp-vite/        (make_site.py copies it into webapp/)
 //   npm run build:offline            -> ../build/webapp-offline/editor/index.html: the editor in one file, for the
 //                                    disk (fonts and scripts inlined, no service worker, no download link)
+import { createReadStream, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
@@ -16,6 +17,23 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 const SITE = resolve(HERE, "site");
+const BUILD = resolve(HERE, "..", "build");
+
+/* the dev server also serves the WebAssembly built apart from the pages (make_site.py copies them into the site):
+   the emulator's (tools/build_emu.py) at /emu/, the editor's audio preview (tools/build_preview.py) at /editor/ */
+const WASM = { "/emu/boopbox-emu.wasm": resolve(BUILD, "emu/boopbox-emu.wasm"),
+               "/editor/boopbox-preview.wasm": resolve(BUILD, "preview/boopbox-preview.wasm") };
+const devWasm = {
+  name: "boopbox-dev-wasm",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const f = WASM[(req.url || "").split("?")[0]];
+      if (!f || !existsSync(f)) return next();
+      res.setHeader("Content-Type", "application/wasm");
+      createReadStream(f).pipe(res);
+    });
+  },
+};
 
 export default defineConfig(({ mode }) => {
   const offline = mode === "offline";
@@ -23,7 +41,7 @@ export default defineConfig(({ mode }) => {
     root: SITE,
     base: "./",
     publicDir: offline ? false : resolve(SITE, "public"),
-    plugins: [react(), tailwindcss(), ...(offline ? [viteSingleFile({ removeViteModuleLoader: true })] : [])],
+    plugins: [react(), tailwindcss(), devWasm, ...(offline ? [viteSingleFile({ removeViteModuleLoader: true })] : [])],
     define: { __OFFLINE__: JSON.stringify(offline) },
     server: { fs: { allow: [HERE] } },
     build: {

@@ -1043,7 +1043,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
     && js(ARR.decode(await get1())) === js(ARR.decode(now)), "song: mock: read, send (rc 0), a bad one (rc 2), a new one while playing (rc 3)");
   done();
   /* the page */
-  ok(/id="lenval" type="number" min="1" max="64"/.test(html) && /if \(!s && id === pSlen\(\)\) lenChanged\(\);/.test(html) && /if \(!\$\("roll"\)\.hidden\) renderRoll\(\);/.test(html),
+  ok(/id="lenval" type="number" min="1" max="64"/.test(editorSrc) && /if \(!s && id === pSlen\(\)\) lenChanged\(\);/.test(editorSrc) && /if \(!\$\("roll"\)\.hidden\) renderRoll\(\);/.test(editorSrc),
     "editor: the LEN control (1..64), the grid and roll redrawn when LEN changes");
 }
 
@@ -1512,55 +1512,66 @@ async function editorTheme() {
   ok(oi.proto === 10 && r10 === 5 && !l10.some((x) => x.id === 11), "theme: a v10 FM-1 (2.6): INFO 10, object 11 unknown (5, as editor.c answers), a 2.7 backup restores without it");
   old.done();
   /* the page */
-  ok(/data-tab="theme"/.test(html) && /id="thprev"/.test(html) && /const thOk = \(\) => !!dev && !!dev\.info && dev\.info\.proto >= 11;/.test(html),
+  ok(/data-tab="theme"/.test(editorSrc) && /id="thprev"/.test(editorSrc) && /const thOk = \(\) => !!dev && !!dev\.info && dev\.info\.proto >= 11;/.test(editorSrc),
     "theme: the Theme page (preview, works without an FM-1, Send from protocol 11)");
 }
 
 function editorTabs() {
-  const tabs = [...html.matchAll(/<button role="tab" data-tab="(\w+)"/g)].map((x) => x[1]);
-  const panels = [...html.matchAll(/<section class="panel" id="p-(\w+)" data-tab="(\w+)"/g)].map((x) => [x[1], x[2]]);
-  const TABS = JSON.parse((/const TABS = (\[[^\]]*\]);/.exec(html) || [])[1] || "[]");
-  ok(tabs.length === 13 && js(tabs) === js(TABS) && js(panels.map((x) => x[1])) === js(TABS) && panels.every(([a, b]) => a === b),
-    `editor: ${tabs.length} tabs, one panel each (${tabs.join(" ")})`);
-  ok(/localStorage\.setItem\(TAB_KEY/.test(html) && /try \{ localStorage/.test(html) && /history\.replaceState\([^)]*"#" \+ name\)/.test(html)
-    && /addEventListener\("hashchange"/.test(html), "editor: last tab in localStorage (try/catch) and in the URL hash");
-  /* every string key in both languages */
-  const tb = html.slice(html.indexOf("const TEXT = {"), html.indexOf("\n};", html.indexOf("const TEXT = {")) + 2);
-  const TEXT = vm.runInNewContext(tb.replace("const TEXT =", "(") + ")");
+  /* the pages: core/tabs.js TABS, the side bar (NAV) in that order, a page module each (pages/index.js), none a stub */
+  const tabsSrc = readFileSync(join(HERE, "src/editor/core/tabs.js"), "utf8");
+  const TABS = JSON.parse((/export const TABS = (\[[^\]]*\]);/.exec(tabsSrc) || [])[1] || "[]");
+  const nav = [...tabsSrc.matchAll(/\["(\w+)", "(\w+)", "(\w+)"\]/g)];
+  const pagesSrc = readFileSync(join(HERE, "src/editor/pages/index.js"), "utf8");
+  const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.jsx";/gm)].map((x) => [x[1], x[2]]));
+  const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/editor/pages", f + ".jsx"), "utf8")));
+  ok(TABS.length === 13 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
+    `editor: ${TABS.length} tabs, one page each (${TABS.join(" ")})${stubs.length ? ", stubs: " + stubs : ""}`);
+  ok(/localStorage\.setItem\(TAB_KEY/.test(tabsSrc) && /try \{ localStorage/.test(tabsSrc) && /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc)
+    && /addEventListener\("hashchange"/.test(tabsSrc), "editor: last tab in localStorage (try/catch) and in the URL hash");
+  /* every string key in both languages: the ones the source names (t("k"), tf("k"), sayK("k"), hint = "k"), the side bar's,
+     and the ones the core builds (tabd_/tabh_ of each tab) */
+  const TEXT = vm.runInNewContext(readFileSync(join(HERE, "src/editor/lib/text.js"), "utf8").replace("export const TEXT =", "(").trim().replace(/;$/, "") + ")");
   const ja = new Set(Object.keys(TEXT.ja)), en = new Set(Object.keys(TEXT.en));
-  const used = new Set([...html.matchAll(/data-t="(\w+)"|\bt\("(\w+)"\)|sayK\("(\w+)"|hint = "(\w+)"/g)].map((x) => x[1] || x[2] || x[3] || x[4]));
-  for (const k of ["needDevice", "smpNone", "bankConnect", "bankNone", "selectedTrack", "selectTrack", "drumHelp", "notesHelp", "live", "polling"]) used.add(k);
+  const used = new Set([...editorSrc.matchAll(/\bt\("(\w+)"\)|\btf\("(\w+)"|sayK\("(\w+)"|hint = "(\w+)"/g)].map((x) => x[1] || x[2] || x[3] || x[4]));
+  for (const x of nav) used.add(x[2]);
+  for (const x of tabsSrc.matchAll(/\["(nav\w+)", \[/g)) used.add(x[1]);
+  for (const x of TABS) { used.add("tabd_" + x); used.add("tabh_" + x); }
+  for (const k of ["needDevice", "smpNone", "bankConnect", "bankNone", "selectedTrack", "selectTrack", "drumHelp", "notesHelp", "live", "polling",
+    "previewLocalConnect"]) used.add(k);
   const miss = [...used].filter((k) => !ja.has(k) || !en.has(k));
   const odd = [...ja].filter((k) => !en.has(k)).concat([...en].filter((k) => !ja.has(k)));
   ok(!miss.length && !odd.length, `editor: every string in ja and en (${used.size} used${miss.length ? ", missing " + miss : ""}${odd.length ? ", one language only " + odd : ""})`);
-  /* the page script parses (the browser's view of it) */
-  const script = html.slice(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
-  let err = null;
-  try { new vm.Script(script); } catch (e) { err = e.message; }
-  ok(!err, "editor: page script compiles" + (err ? ` (${err})` : ""));
-  {   /* 2.4: the device's palette as tokens (:root), used through var(--...); outside them only #000 (text on a colour) */
-    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>")).replace(/:root\s*\{[^}]*\}/g, "");
-    const hex = [...css.matchAll(/#[0-9a-f]{3,6}\b/gi)].map((m) => m[0].toLowerCase()).filter((c) => c !== "#000");
-    ok(!hex.length && /--t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a;/.test(html),
-      "editor: the track colours of the device (gfx.c UI_COL_DEF), colours only as tokens" + (hex.length ? ` (${hex.join(" ")})` : ""));
+  {   /* 2.4: the device's palette as tokens (:root, the Tailwind theme), used through them; outside them only #000 (text on a colour) */
+    const css = readFileSync(join(HERE, "src/editor/editor.css"), "utf8");
+    const pageCss = srcFiles(join(HERE, "src/editor")).filter((f) => f.endsWith(".css")).map((f) => readFileSync(f, "utf8")).join("\n");
+    const hex = [...pageCss.replace(/:root\s*\{[^}]*\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/#[0-9a-f]{3,8}\b/gi)]
+      .map((m) => m[0].toLowerCase()).filter((c) => c !== "#000");
+    const jsxHex = [...editorSrc.matchAll(/-\[#[0-9a-f]{3,8}\]|(?:color|background|fill|stroke(?:Style)?|fillStyle)\s*[:=]\s*["'`]#[0-9a-f]{3,8}\b/gi)]
+      .map((m) => m[0]).filter((c) => !/#000\b/i.test(c));
+    ok(!hex.length && !jsxHex.length && /--t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a;/.test(css),
+      "editor: the track colours of the device (gfx.c UI_COL_DEF), colours only as tokens" + (hex.length || jsxHex.length ? ` (${hex.concat(jsxHex).join(" ")})` : ""));
     const te = readFileSync(join(HERE, "../firmware/src/gfx.c"), "utf8");   /* (2.7: UI_COL_DEF, a theme may change them) */
     ok(/UI_COL_DEF\[4\] = \{RGB\(40, 124, 255\), RGB\(30, 204, 112\), RGB\(255, 198, 24\), RGB\(255, 98, 26\)\}/.test(te),
       "editor: ... the same four as the firmware's UI_COL");
-    ok(/SLOOP-FONT\*\/url\(data:font\/ttf;base64,[A-Za-z0-9+\/=]{20000,}\)/.test(html), "editor: the device's Terminus font inlined (tools/gen_webfont.py)");
+    const font = join(HERE, "src/editor/assets/terminus.ttf");
+    ok(existsSync(font) && readFileSync(font).length > 20000 && readFileSync(font).readUInt32BE(0) === 0x00010000 && /url\("\.\/assets\/terminus\.ttf"\)/.test(css),
+      "editor: the device's Terminus font (tools/gen_webfont.py)");
   }
 }
 
 /* ------------------------------------------------- editor icons (Fukiai) --- */
 function editorIcons() {
-  const blk = html.slice(html.indexOf("const GLYPH = {"), html.indexOf("};", html.indexOf("const GLYPH = {")));
+  const glyphs = readFileSync(join(HERE, "src/editor/lib/glyphs.js"), "utf8");
+  const blk = glyphs.slice(glyphs.indexOf("const GLYPH = {"), glyphs.indexOf("};", glyphs.indexOf("const GLYPH = {")));
   const names = new Set([...blk.matchAll(/(\w+): 0x[0-9A-F]{4}/g)].map((m) => m[1]));
-  const used = new Set([...html.matchAll(/data-ic="(\w+)"|ic: "(\w+)"|: "((?:waveform|function|symbol|control|port|ui|note)_\w+)"/g)].map((m) => m[1] || m[2] || m[3]));
+  const used = new Set([...(editorSrc + glyphs.slice(blk.length)).matchAll(/\bic="(\w+)"|\bname="(\w+_\w+)"|ic: "(\w+)"|: "((?:waveform|function|symbol|control|port|ui|note)_\w+)"|"((?:waveform|function|symbol|control|port|ui|note)_\w+)"\]/g)]
+    .map((m) => m[1] || m[2] || m[3] || m[4] || m[5]));
   const missing = [...used].filter((n) => !names.has(n));
   ok(names.size > 0 && !missing.length, `editor: every icon name is in GLYPH (${used.size} used${missing.length ? ", missing " + missing : ""})`);
-  const ttf = existsSync(join(HERE, "fukiai.ttf")) && readFileSync(join(HERE, "fukiai.ttf"));
-  ok(ttf && ttf.readUInt32BE(0) === 0x00010000 && existsSync(join(HERE, "FUKIAI-LICENSE.txt")) && html.includes('href="FUKIAI-LICENSE.txt"'),
-    "editor: fukiai.ttf and FUKIAI-LICENSE.txt next to editor.html");
-  ok(/html:not\(\.fk\) \.ic \{ display: none; \}/.test(html) && html.includes('classList.add("fk")'), "editor: icons hidden until the font has loaded");
+  const ttf = join(HERE, "src/editor/assets/fukiai.ttf"), lic = join(HERE, "site/public/editor/FUKIAI-LICENSE.txt");
+  ok(existsSync(ttf) && readFileSync(ttf).readUInt32BE(0) === 0x00010000 && existsSync(lic) && /href=\{[^}]*"FUKIAI-LICENSE\.txt"/.test(editorSrc),
+    "editor: fukiai.ttf and FUKIAI-LICENSE.txt (served beside the editor)");
+  ok(/html:not\(\.fk\) \.ic \{ display: none; \}/.test(editorSrc) && editorSrc.includes('classList.add("fk")'), "editor: icons hidden until the font has loaded");
 }
 
 /* ------------------------------------------- user samples: JS == sampleio.py --- */

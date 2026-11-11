@@ -1,6 +1,13 @@
 {
+  "name": "boopbox-site",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:offline": "vite build --mode offline",
+    "test": "node test_web.mjs"
+  },
   "dependencies": {
     "react": "19.3.1",
     "react-dom": "19.3.1"

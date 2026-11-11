@@ -87,7 +87,7 @@ function DeviceCard() {
         <button type="button" className="bg-transparent p-0 normal-case text-dim underline hover:bg-transparent hover:text-fg"
           onClick={() => setLang(app.lang === "ja" ? "en" : "ja")}>{t("other")}</button>
       </div>
-      {canInstall ? <button type="button" className="pri" onClick={install}>{t("install")}</button> : null}
+      {canInstall ? <button id="install" type="button" className="pri" onClick={install}>{t("install")}</button> : null}
       {__OFFLINE__ ? null : <a className="dim" href="boopbox-editor.html" download={OFFLINE_NAME}>{t("offline")}</a>}
     </div>
   );
