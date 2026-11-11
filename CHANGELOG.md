@@ -13,6 +13,13 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**The sound browser's knobs and lights.** In the [sound browser](GUIDE.md#the-sound-browser), **PRESETS** now moves
+through the engines (as KNOB 2) and **ALGORITHM** through the sounds of the engine (as KNOB 3); ALGORITHM no longer
+changes the track there. While the browser is open, **SAVE** (keep the sound) breathes, up to full brightness, and
+**HOME** (put the old sound back) is lit at half brightness. Projects, presets and settings open as they are.
+
 ## 1.9.1
 
 **BoopBox Trainer has three levels again** ([the trainer](docs/trainer.md)): level 4 (*YOUR SONG*, a song made from an

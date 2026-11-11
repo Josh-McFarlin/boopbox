@@ -238,8 +238,8 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer · held + **SAVE** tapped: the **SCENES** page |
 | **GLO** | GLO pages (GLOBAL, MASTER, SYSTEM, DRUMS) | mix layer |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
-| **ALGORITHM** | select the track, on every screen but SONG (its loop start); on DRUMS a synth track goes to its NOTES, on NOTES a drum track to its DRUMS grid (1.4.2). Inside a layer it waits; not during a free take | — |
-| **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **sound** in it (a drum track: its **kits**) · on the DRUMS screen: the kit | — |
+| **ALGORITHM** | select the track, on every screen but SONG (its loop start) and the sound browser (its sounds); on DRUMS a synth track goes to its NOTES, on NOTES a drum track to its DRUMS grid (1.4.2). Inside a layer it waits; not during a free take | — |
+| **PRESETS** | on TRACKS and HOME: opens the **[sound browser](#the-sound-browser)** (the first click; the sound stays), then the next / previous **engine** in it (a drum track: its kinds of kit); ALGORITHM moves through the sounds there · on the DRUMS screen: the kit | — |
 | **SELECT** | on TRACKS, inside a layer and on the REC screen: the **tempo** · on a page: previous / next page of its button (stops at the ends; SEQ: NOTES or the DRUMS grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES) · DRUMS kit / sound: kit ↔ sound · visualiser: the style · menu: the section | — |
 | **KNOB 1–4** | the four dials at the bottom of the screen | — |
 | **MASTER** | output volume (the visualiser ignores it) | — |
@@ -847,15 +847,16 @@ scroll bar shows where you are in a long engine. Each sound loads as you land on
 | Control | In the browser |
 | --- | --- |
 | **KNOB 1 TYPE** | right **DRUMS**, left **SYNTH**: the track becomes a drum track or a synth track (see below) |
-| **KNOB 2 ENG** | the next / previous engine of the type: its first sound. It stops at the first and last engine |
-| **PRESETS** · **KNOB 3 SOUND** | the next / previous sound of the engine. It stops at the first and last sound: it never scrolls into the next engine |
+| **PRESETS** · **KNOB 2 ENG** | the next / previous engine of the type: its first sound. It stops at the first and last engine |
+| **ALGORITHM** · **KNOB 3 SOUND** | the next / previous sound of the engine. It stops at the first and last sound: it never scrolls into the next engine. (ALGORITHM does not change the track here) |
 | **SELECT** | the VIEW: right **KIND** (basses, keys, organs, pads, leads, plucks and bells, stabs, FX: the order of the list before), left **ENG** (the thirteen engines in order, each with its sounds) |
 | **KNOB 4 FAV** | right adds the sound to your favourites, left removes it (synth sounds) |
 
 **SYNTH** starts with your favourites (**FAV**) and ends with your user presets (**USER**), in both views. **DRUMS** has
 no engines: its kits are grouped by kind instead. **GM KIT** is the sampled kit and its treatments, **MACHINE** the
 synthesised kits (808, 909, TRAP…), **USR SMP** your sample kits (USR1–4, USR3+4) and **USR SYN** your synth kits
-(SYN1–4). When you change the TYPE, the track changes kind (as SAVE → TOOLS → KIND does), and that clears its pattern.
+(SYN1–4). While the browser is open, **SAVE** breathes (tap it to keep the sound and close) and **HOME** glows at half
+brightness (tap it to put the sound you had back). When you change the TYPE, the track changes kind (as SAVE → TOOLS → KIND does), and that clears its pattern.
 If the track has a pattern, the first click says *AGAIN* and a second click within about 1.5 s changes it. On an
 empty track, it changes at once.
 

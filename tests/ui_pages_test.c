@@ -41,6 +41,9 @@ static int32_t enc_late[7];                         /* a detent the timer ISR co
 static int32_t fm1_enc_take(uint32_t e) { int32_t s = encs[e]; encs[e] = enc_late[e]; enc_late[e] = 0; return s; }
 static uint8_t fm1_led[16], fm1_led_dim[16], fm1_led_bg[16];
 static volatile uint16_t fm1_led_bg_ns;
+#define FM1_PWM_N 64u
+static uint8_t fm1_led_pwm[2][16];
+static volatile uint8_t fm1_led_pwm_lvl[2];
 #define FM1_NCOL 16u
 static const int8_t FM1_KEYMAP[5][16];
 static void fm1_led_key(uint32_t id, int on) { (void)id; (void)on; }
@@ -2039,7 +2042,7 @@ int main(int argc, char **argv)
         preset_go(0); frames(2);                       /* the first favourite: the list stands there */
         cur = preset_pos(&total1);
         ok &= cur == 0u && trk[1].eng_req == e0 && trk[1].preset == p0;
-        encs[panel.enc[EN_PRESET]] = 1; frames(4);    /* PRESETS: the next one in the list, the second favourite */
+        encs[panel.enc[EN_ALGO]] = 1; frames(4);      /* ALGORITHM: the next one in the list, the second favourite */
         cur = preset_pos(&total1);
         ok &= cur == 1u;
         encs[panel.enc[EN_K4]] = -1; frames(2);      /* removed: the first one moves up */
@@ -2096,15 +2099,19 @@ int main(int argc, char **argv)
         check(br_pos(&total, &nf) == cur, "browser: a detent just after it opened (the same flick) moves nothing");
         frames(10);
         k = (uint32_t)gs[cg + 1u] - 1u;                     /* (the engine's last sound) */
-        encs[panel.enc[EN_PRESET]] = 1; frames(2);
-        ok = br_pos(&total, &nf) == (cur < k ? cur + 1u : cur);
+        {   /* ALGORITHM is the sound here, not the track */
+            uint32_t sel0 = song.sel;
+            encs[panel.enc[EN_ALGO]] = 1; frames(2);
+            ok = song.sel == sel0;
+        }
+        ok &= br_pos(&total, &nf) == (cur < k ? cur + 1u : cur);
         if (cur < k) { encs[panel.enc[EN_K3]] = -1; frames(2); }
         ok &= br_pos(&total, &nf) == cur;
-        check(ok, "browser: PRESETS / KNOB 3 the next / previous sound of the engine");
+        check(ok, "browser: ALGORITHM / KNOB 3 the next / previous sound of the engine");
         e0 = trk[1].eng_req;
         br_step(100, BR_SOUND); frames(2);
         ok = br_pos(&total, &nf) == k && trk[1].eng_req == e0;
-        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        encs[panel.enc[EN_ALGO]] = 1; frames(2);
         ok &= br_pos(&total, &nf) == k && trk[1].eng_req == e0 && !is_drum(&trk[1]);
         br_step(-100, BR_SOUND); frames(2);
         ok &= br_pos(&total, &nf) == gs[cg] && trk[1].eng_req == e0;
@@ -2124,9 +2131,16 @@ int main(int argc, char **argv)
         ok &= cur >= gs[NENGINES - 1u] && cur < total - BR_ND && !is_drum(&trk[1]);   /* (the end of SYNTH: never into
                                                                                     * DRUMS) */
         check(ok, "browser: KNOB 2 the first sound of the next / previous engine, stopping at the ends of SYNTH");
+        for (i = 0; i < 20u; i++) { encs[panel.enc[EN_PRESET]] = -1; frames(2); }
+        ok = br_pos(&total, &nf) == 0u && trk[1].eng_req == 0u;
+        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        cur = br_pos(&total, &nf);
+        ng = br_groups(gs, gid, cur, total, nf, &cg);
+        ok &= cg == 1u && cur == gs[1] && trk[1].eng_req == gid[1] - 1u && !ui.home && cur_page()->graph == GR_BROWSE;
+        check(ok, "browser: PRESETS the first sound of the next / previous engine, as KNOB 2");
         br_step(-1, BR_ENG); frames(2);
         set_engine_of(&trk[1], e0); apply_preset_to(&trk[1], p0); frames(2);
-        for (i = 0; i < 9u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(1); }
+        for (i = 0; i < 9u; i++) { encs[panel.enc[EN_ALGO]] = 1; frames(1); }
         ui.force = 1; frame(); ppm("page-browser-scroll");
         e0 = trk[1].eng_req; p0 = trk[1].preset;
         encs[panel.enc[EN_SELECT]] = 1; frames(2);
@@ -2142,13 +2156,13 @@ int main(int argc, char **argv)
         e0 = trk[1].eng_req; p0 = trk[1].preset;
         encs[panel.enc[EN_PRESET]] = 1; frames(12);
         ok &= !ui.home && cur_page()->graph == GR_BROWSE;
-        for (i = 0; i < 3u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(2); }
+        for (i = 0; i < 3u; i++) { encs[panel.enc[EN_ALGO]] = 1; frames(2); }
         ok &= trk[1].preset != p0 || trk[1].eng_req != e0;
         tap(B_HOME); frames(3);
         check(ok && !ui.home && cur_page()->scope == SC_TRK && !br_back && trk[1].eng_req == e0 && trk[1].preset == p0,
               "browser: open after 4.8 s untouched; HOME back to TRACKS, the sound it opened on put back");
         encs[panel.enc[EN_PRESET]] = 1; frames(2);
-        for (i = 0; i < 2u; i++) { encs[panel.enc[EN_PRESET]] = 1; frames(2); }
+        for (i = 0; i < 2u; i++) { encs[panel.enc[EN_ALGO]] = 1; frames(2); }
         e0 = trk[1].eng_req; p0 = trk[1].preset;
         tap(B_SAVE); frames(3);
         check(!ui.home && cur_page()->scope == SC_TRK && trk[1].eng_req == e0 && trk[1].preset == p0,
@@ -2172,15 +2186,15 @@ int main(int argc, char **argv)
              gid[cg] == BR_GDRUM + br_kitg(k) && page_for_drum(cur_page());
         ui.force = 1; frame(); ppm("page-browser-drums");
         frames(10);
-        encs[panel.enc[EN_PRESET]] = k ? -1 : 1; frames(2);   /* (the last kit at power-on: one back) */
+        encs[panel.enc[EN_ALGO]] = k ? -1 : 1; frames(2);   /* (the last kit at power-on: one back) */
         ok &= trk[3].p[P_E0] == (int16_t)(k ? k - 1u : 1u) && is_drum(&trk[3]);
         br_step(100, BR_SOUND); frames(2);
         ok &= trk[3].p[P_E0] == DRUM_KITS - 1 && is_drum(&trk[3]);
-        encs[panel.enc[EN_PRESET]] = 1; frames(2);
+        encs[panel.enc[EN_ALGO]] = 1; frames(2);
         ok &= trk[3].p[P_E0] == DRUM_KITS - 1;              /* (the last kit: no further) */
         for (i = 0; i < 10u; i++) { encs[panel.enc[EN_K2]] = -1; frames(2); }
         ok &= trk[3].p[P_E0] == 0 && is_drum(&trk[3]);       /* (the GM kit: the first kind; never into SYNTH) */
-        encs[panel.enc[EN_PRESET]] = -1; frames(2);
+        encs[panel.enc[EN_ALGO]] = -1; frames(2);
         ok &= trk[3].p[P_E0] == 0 && is_drum(&trk[3]);
         encs[panel.enc[EN_K2]] = 1; frames(2);
         ok &= trk[3].p[P_E0] == DRUM_SAMPLED;

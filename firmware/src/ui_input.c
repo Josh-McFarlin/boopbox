@@ -222,17 +222,36 @@ UI_SMALL static uint32_t lights_keys_mask(void)
 static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl);
 static void tr_pick_open(void);
 #endif
+/* the sound browser's two ways out: SAVE keeps the sound (it breathes, up to full), HOME puts the old one back (half).
+ * The duty layers (hal/fm1_input.h fm1_led_pwm): lit LED_HALF frames of 64; the breath LED_BREATH_LO .. 64 over
+ * LED_BREATH_MS, the triangle squared (the eye: an even swell), the glow beneath it (no gap at its foot) */
+#define LED_HALF 8u                                /* 1/8 of a lit LED: reads about half as bright */
+#define LED_BREATH_LO 6u
+#define LED_BREATH_MS 2400u
+UI_SMALL static uint32_t led_breath(void)
+{
+    uint32_t t = fm1_ms % LED_BREATH_MS, x = (t < LED_BREATH_MS / 2u ? t : LED_BREATH_MS - t) * 256u / (LED_BREATH_MS / 2u);
+    return LED_BREATH_LO + (FM1_PWM_N - LED_BREATH_LO) * x * x / 65536u;
+}
+
 UI_SMALL static void ui_leds(void)
 {
-    uint8_t nl[FM1_NCOL] = {0}, dl[FM1_NCOL] = {0}, bl[FM1_NCOL] = {0};
-    uint32_t k, c, keys, guide, back;
+    uint8_t nl[FM1_NCOL] = {0}, dl[FM1_NCOL] = {0}, bl[FM1_NCOL] = {0}, hl[FM1_NCOL] = {0}, br[FM1_NCOL] = {0};
+    uint32_t k, c, keys, guide, back, btn = ui.layer != LY_PLAY ? LAYER_BTN[ui.layer] : cur_btn();
+    int browse = ui.layer == LY_PLAY && !ui.menu && !ui.home && cur_page()->graph == GR_BROWSE;
     static uint8_t ready;
     if (!ready) {
         led_pos_init();
         ready = 1;
     }
-    led_put(nl, panel.btn[ui.layer != LY_PLAY ? LAYER_BTN[ui.layer] : cur_btn()],
-            ly_lock == LY_PLAY || ((fm1_ms / 300u) & 1u) != 0u || (fm1_in.buttons & ly_bit[ly_lock % LY_COUNT]) != 0u);   /* locked: blinks */
+    if (browse) {                                  /* the sound browser: SAVE breathes, HOME half */
+        led_put(br, panel.btn[B_SAVE], 1);
+        led_put(dl, panel.btn[B_SAVE], 1);
+        led_put(hl, panel.btn[B_HOME], 1);
+    } else {
+        led_put(nl, panel.btn[btn], ly_lock == LY_PLAY || ((fm1_ms / 300u) & 1u) != 0u ||
+                                        (fm1_in.buttons & ly_bit[ly_lock % LY_COUNT]) != 0u);   /* locked: blinks */
+    }
     led_put(nl, panel.btn[B_PLAY], play_led() || (song.playing && !song.rec && ft_on) ||
                                       (ci_on && ci_u % BEAT_U < BEAT_U / 4u));   /* (the count-in's beats) */
     led_put(nl, panel.btn[B_REC], song.rec != 0u || ft_on || (rec_wait && ((fm1_ms / 125u) & 1u)) ||
@@ -265,8 +284,12 @@ UI_SMALL static void ui_leds(void)
         fm1_led[c] = nl[c];
         fm1_led_dim[c] = dl[c];
         fm1_led_bg[c] = (uint8_t)(bl[c] & ~nl[c]);
+        fm1_led_pwm[0][c] = (uint8_t)(hl[c] & ~nl[c]);
+        fm1_led_pwm[1][c] = (uint8_t)(br[c] & ~nl[c]);
     }
     fm1_led_bg_ns = LIGHTS_NS[lights_lvl % LIGHTS_N];
+    fm1_led_pwm_lvl[0] = (uint8_t)LED_HALF;
+    fm1_led_pwm_lvl[1] = (uint8_t)led_breath();
 }
 
 /* ---------------------------------------------------------- input --- */
@@ -1416,14 +1439,18 @@ UI_SMALL static void ui_input(void)
     if ((s = panel_enc(EN_PRESET)) != 0 && (ui.home || cur_page()->graph == GR_BROWSE || cur_fam() == FAM_TRK)) {
         /* PRESETS browses the selected part's presets (all engines, the drum kits, then user presets) on HOME, the
          * PRESETS page and TRACKS only; elsewhere a stray turn would throw away the sound being edited. On TRACKS the
-         * first detent opens the sound browser (the sound stays, a drum track's kit too); on the browser every detent
-         * counts, in its VIEW's order, up to the ends of the group */
+         * first detent opens the sound browser (the sound stays, a drum track's kit too); on the browser it moves
+         * through the engines (the group of its VIEW: the first sound of the next / previous one), ALGORITHM through
+         * the sounds of the engine */
         if ((ui.home || cur_page()->graph != GR_BROWSE) && !rec_wait && !ft_on)
             br_open();                                  /* TRACKS: the first detent opens the browser, the sound stays */
         else if (fm1_ms - br_t0 > BR_OPEN_MS)           /* (the rest of the turn that opened it: nothing) */
-            br_step(s, BR_SOUND);
+            br_step(s, BR_ENG);
     }
-    if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* ALGORITHM: the selected track (not in a take). 1.2: on every
+    if (!ui.home && cur_page()->graph == GR_BROWSE) {   /* the sound browser: ALGORITHM the sound, the track stays */
+        if ((s = panel_enc(EN_ALGO)) != 0 && !rec_wait && !ft_on)
+            br_step(s, BR_SOUND);
+    } else if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* ALGORITHM: the selected track (not in a take). 1.2: on every
                                                      * page too (TRACKS, PATTERNS and CHORDS only before): the page stays
                                                      * and shows the new track, the header names it a moment */
         uint32_t was = song.sel, notes_pg = !ui.home && cur_page()->scope == SC_STEP;
