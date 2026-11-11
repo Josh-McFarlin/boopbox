@@ -1523,7 +1523,7 @@ function editorTabs() {
   /* the pages: core/tabs.js TABS, the side bar (NAV) in that order, a page module each (pages/index.js), none a stub */
   const tabsSrc = readFileSync(join(HERE, "src/editor/core/tabs.js"), "utf8");
   const TABS = JSON.parse((/export const TABS = (\[[^\]]*\]);/.exec(tabsSrc) || [])[1] || "[]");
-  const nav = [...tabsSrc.matchAll(/\["(\w+)", "(\w+)", "(\w+)"\]/g)];
+  const nav = [...tabsSrc.slice(tabsSrc.indexOf("export const NAV")).matchAll(/\["(\w+)", "(\w+)", "(\w+)"\]/g)];
   const pagesSrc = readFileSync(join(HERE, "src/editor/pages/index.js"), "utf8");
   const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.jsx";/gm)].map((x) => [x[1], x[2]]));
   const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/editor/pages", f + ".jsx"), "utf8")));

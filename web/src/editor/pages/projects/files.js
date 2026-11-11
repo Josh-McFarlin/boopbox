@@ -10,7 +10,7 @@ import { bkDone, bkProgress, bkReport, smpInfo, songLoadUI } from "../../core/sh
 export async function project(o, slot) {
   const dev = A.dev;
   if (!dev) return;
-  if (!confirm(t(o ? "confirmSave" : "confirmLoad").replace("{n}", "ABCD"[slot]))) return;
+  if (!confirm(t(o ? "confirmSave" : "confirmLoad").replaceAll("{n}", "ABCD"[slot]))) return;
   A.busy++;
   notify();
   try {

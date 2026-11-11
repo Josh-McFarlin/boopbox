@@ -165,7 +165,7 @@ function ScenesCard({ P }) {
           ))}
         </tbody>
       </table>
-      <p className="bar mt-2"><button type="button" id="scnreset" disabled={!P.scenes || PROJ7.scenesIsDefault(P.scenes)}
+      <p className="bar"><button type="button" id="scnreset" disabled={!P.scenes || PROJ7.scenesIsDefault(P.scenes)}
         onClick={() => ptEdit(() => { P.scenes = null; })}>{t("scnReset")}</button></p>
     </Card>
   );
@@ -240,7 +240,7 @@ function DetailCard({ P, tr, drum, ctx }) {
           })}
         </tbody>
       </table>
-      <p className="bar mt-2" id="patcadd">
+      <p className="bar" id="patcadd">
         <button type="button" disabled={pv.comps.length >= PROJ7.NCOMP} onClick={() => ptEdit(() => {
           const ty = PT.addType, r = PROJ7.CP[ty];
           own().comps.push({ step: PT.step, type: ty, a: ty === PROJ7.CP_PARAM ? PROJ7.codeOf(r[5], pe0) : r[5], b: r[6] });
@@ -276,7 +276,7 @@ function ChordsCard({ P }) {
           ))}
         </tbody>
       </table>
-      <p className="bar mt-2">
+      <p className="bar">
         <button type="button" id="chadd" disabled={h.length >= PROJ7.NHPROG}
           onClick={() => ptEdit(() => { const x = (P.harm || [{ deg: 0, bars: 4 }]).map((c) => ({ ...c })); const l = x[x.length - 1]; x.push({ deg: (l.deg + 3) % 7, bars: l.bars }); P.harm = x; })}>{t("songAdd")}</button>{" "}
         <button type="button" id="chreset" onClick={() => ptEdit(() => { P.harm = null; })}>{t("chReset")}</button>
