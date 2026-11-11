@@ -15,7 +15,7 @@ import { TEXT } from "../lib/text.js";
 const QS = new URLSearchParams(typeof location !== "undefined" ? location.search : "");
 
 export const A = {
-  lang: (typeof navigator !== "undefined" && (navigator.language || "en").toLowerCase().startsWith("ja")) ? "ja" : "en",
+  lang: "en",
   tab: "sound",         /* the page showing (core/tabs.js) */
   access: null,         /* MIDIAccess (or the mock's) */
   dev: null,            /* {link, input, output, info, pdesc[], gdesc[], names[][], titles[][], dump, steps[], dsteps[], slotUsed[],
@@ -75,14 +75,9 @@ export function useApp() {
 export const t = (k) => TEXT[A.lang][k] ?? k;
 /* t() with {name} placeholders filled */
 export const tf = (k, vars) => String(t(k)).replace(/\{(\w+)\}/g, (m, n) => (vars && n in vars ? vars[n] : m));
-export function setLang(l) {
-  A.lang = l;
-  document.documentElement.lang = l;
-  notify();
-}
 
 const ERR_KEYS = /fail|error|denied|nomidi|nodevice|noreply|lost|refused|full|bad/i;
-/* the status line (top right): a string key and what follows it, shown in the language chosen */
+/* the status line (top right): a string key and what follows it,  */
 export function sayK(k, arg = "") {
   A.status = { key: k, arg, err: ERR_KEYS.test(k) };
   notify();

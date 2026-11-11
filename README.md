@@ -8,7 +8,6 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/installer/"><b>Install from the browser</b></a> ·
 <a href="GUIDE.md">Complete guide</a> ·
 <a href="BOOPBOX.md">Manual</a> ·
-<a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/editor/">Web editor</a> ·
 <a href="https://josh-mcfarlin.github.io/boopbox/webapp/emu/">Try it in the browser</a> ·
 <a href="../../releases">Releases</a> ·
@@ -174,7 +173,6 @@ For more problems and solutions, read [Guide §25](GUIDE.md#25-backup-rescue-goi
 
 - [GUIDE.md](GUIDE.md) — **the complete guide**: every button, combination, layer, page, engine and editor page, with a cheat sheet
 - [BOOPBOX.md](BOOPBOX.md) — the manual: every page, layer, sound and kit
-- [DEMARRAGE-RAPIDE-FR.md](DEMARRAGE-RAPIDE-FR.md) — guide de démarrage en français
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release
 - [CREDITS.md](CREDITS.md) — the people and projects that BoopBox uses
 - [BUILDING.md](BUILDING.md) — building, build options, the local audio preview, and tests

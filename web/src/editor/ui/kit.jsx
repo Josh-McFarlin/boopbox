@@ -231,7 +231,7 @@ const shown = (s, id) => { const d = s ? A.dev.gdesc[id] : A.dev.pdesc[id]; retu
    pattern settings), "setgroups" (Settings: globals and drums); a card per button of the device (ENV, LFO, EDIT ...),
    its pages as rows of four knobs */
 export function ParamGroups({ where }) {
-  const { lang, dev } = useApp();
+  const { dev } = useApp();
   const { info } = dev;
   const known = EXPECT.pcount.indexOf(info.pcount);
   const out = [];
@@ -254,7 +254,7 @@ export function ParamGroups({ where }) {
       if (!pages.length) continue;
       out.push(
         <Group key={g.t} ic={HEAD_IC[g.t]} title={g.engine ? `EDIT ${info.engines[dev.dump.engine] || ""}` : g.t}
-          sub={pages.length > 1 ? `${pages.length} ${lang === "ja" ? "ページ" : "pages"}` : null}>{pages}</Group>,
+          sub={pages.length > 1 ? `${pages.length} pages` : null}>{pages}</Group>,
       );
     }
   } else {

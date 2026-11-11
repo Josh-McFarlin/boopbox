@@ -5,7 +5,7 @@
 //   node web/test_web.mjs
 // - src/editor/lib/proto.js: the editor's protocol and formats against its mock device (v1 commands,
 //   the user preset bank / librarian, library files, live pushes, older-firmware fallback, the v3 tracks
-//   and the mixer), its tab layout and ja/en strings,
+//   and the mixer), its tab layout and strings,
 //   and the user-sample pipeline byte for byte against tools/sampleio.py
 // - fm1pkg.js: productOf and logicalImage on build/felucca.fwsc (skipped without a build)
 // - fm1ota.js: a full install and an unplug during the write against a simulated FM-1
@@ -1531,19 +1531,18 @@ function editorTabs() {
     `editor: ${TABS.length} tabs, one page each (${TABS.join(" ")})${stubs.length ? ", stubs: " + stubs : ""}`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(tabsSrc) && /try \{ localStorage/.test(tabsSrc) && /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc)
     && /addEventListener\("hashchange"/.test(tabsSrc), "editor: last tab in localStorage (try/catch) and in the URL hash");
-  /* every string key in both languages: the ones the source names (t("k"), tf("k"), sayK("k"), hint = "k"), the side bar's,
+  /* every string key the editor uses is in TEXT.en: the ones the source names (t("k"), tf("k"), sayK("k"), hint = "k"), the side bar's,
      and the ones the core builds (tabd_/tabh_ of each tab) */
   const TEXT = vm.runInNewContext(readFileSync(join(HERE, "src/editor/lib/text.js"), "utf8").replace("export const TEXT =", "(").trim().replace(/;$/, "") + ")");
-  const ja = new Set(Object.keys(TEXT.ja)), en = new Set(Object.keys(TEXT.en));
+  const en = new Set(Object.keys(TEXT.en));
   const used = new Set([...editorSrc.matchAll(/\bt\("(\w+)"\)|\btf\("(\w+)"|sayK\("(\w+)"|hint = "(\w+)"/g)].map((x) => x[1] || x[2] || x[3] || x[4]));
   for (const x of nav) used.add(x[2]);
   for (const x of tabsSrc.matchAll(/\["(nav\w+)", \[/g)) used.add(x[1]);
   for (const x of TABS) { used.add("tabd_" + x); used.add("tabh_" + x); }
   for (const k of ["needDevice", "smpNone", "bankConnect", "bankNone", "selectedTrack", "selectTrack", "drumHelp", "notesHelp", "live", "polling",
     "previewLocalConnect"]) used.add(k);
-  const miss = [...used].filter((k) => !ja.has(k) || !en.has(k));
-  const odd = [...ja].filter((k) => !en.has(k)).concat([...en].filter((k) => !ja.has(k)));
-  ok(!miss.length && !odd.length, `editor: every string in ja and en (${used.size} used${miss.length ? ", missing " + miss : ""}${odd.length ? ", one language only " + odd : ""})`);
+  const miss = [...used].filter((k) => !en.has(k));
+  ok(!miss.length && Object.keys(TEXT).join() === "en", `editor: every string in en, the only language (${used.size} used${miss.length ? ", missing " + miss : ""})`);
   {   /* 2.4: the device's palette as tokens (:root, the Tailwind theme), used through them; outside them only #000 (text on a colour) */
     const css = readFileSync(join(HERE, "src/editor/editor.css"), "utf8");
     const pageCss = srcFiles(join(HERE, "src/editor")).filter((f) => f.endsWith(".css")).map((f) => readFileSync(f, "utf8")).join("\n");
