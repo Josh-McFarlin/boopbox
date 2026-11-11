@@ -26,6 +26,11 @@ const WASM = { "/emu/boopbox-emu.wasm": resolve(BUILD, "emu/boopbox-emu.wasm"),
 const devWasm = {
   name: "boopbox-dev-wasm",
   configureServer(server) {
+    /* the pages load ../../src/...: in the dev server that URL is /src/... (above the root, site/): serve web/src */
+    server.middlewares.use((req, res, next) => {
+      if (req.url && req.url.startsWith("/src/")) req.url = "/@fs" + resolve(HERE, req.url.slice(1)).replace(/\\/g, "/");
+      next();
+    });
     server.middlewares.use((req, res, next) => {
       const f = WASM[(req.url || "").split("?")[0]];
       if (!f || !existsSync(f)) return next();

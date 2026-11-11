@@ -1512,7 +1512,7 @@ async function editorTheme() {
   ok(oi.proto === 10 && r10 === 5 && !l10.some((x) => x.id === 11), "theme: a v10 FM-1 (2.6): INFO 10, object 11 unknown (5, as editor.c answers), a 2.7 backup restores without it");
   old.done();
   /* the page */
-  ok(/data-tab="theme"/.test(editorSrc) && /id="thprev"/.test(editorSrc) && /const thOk = \(\) => !!dev && !!dev\.info && dev\.info\.proto >= 11;/.test(editorSrc),
+  ok(/\["theme", "tabTheme", "ui_knob"\]/.test(readFileSync(join(HERE, "src/editor/core/tabs.js"), "utf8")) && /id="thprev"/.test(editorSrc) && /const thOk = \(\) => !!A\.dev && !!A\.dev\.info && A\.dev\.info\.proto >= 11;/.test(editorSrc),
     "theme: the Theme page (preview, works without an FM-1, Send from protocol 11)");
 }
 

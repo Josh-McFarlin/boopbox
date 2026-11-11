@@ -204,7 +204,7 @@
   .lvhelp p { margin: 0 0 6px; }
   .lvhelp p:last-child { margin: 0; }
   .lvguide { border: 1px solid var(--t3); }
-  .lvsteps { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 6px; }
+  .lvsteps { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 6px; list-style: decimal; }
   .lvguidebtn { margin: 0 0 12px; }
   .lvtabsub { margin: 0 0 4px; }
   #lv.simple .lvadv { display: none !important; }

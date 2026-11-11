@@ -250,7 +250,7 @@ function installKeys() {
   window.addEventListener("keydown", (e) => {
     if (!A.MOCK || !A.dev?.dump || A.tab === "live" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || previewEditing(e)) return;
     if (e.code === "Space") { e.preventDefault(); playPreview().catch(previewError); return; }
-    const i = PREVIEW_KEYS.indexOf(e.key.toLowerCase());
+    const i = PREVIEW_KEYS.indexOf(String(e.key).toLowerCase());
     if (i < 0) return;
     e.preventDefault(); previewNoteOn(`key:${e.code}`, i).catch(previewError);
   });

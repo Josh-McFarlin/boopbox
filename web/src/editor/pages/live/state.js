@@ -14,7 +14,7 @@ import {
   A, drumFocus, drumLvGlobal, gEng, getDescOrNull, isDrumTrk, notify, nTrk, report, rq, sayK, selfLoad,
 } from "../../core/app.js";
 import { userSet } from "../../core/device.js";
-import { H } from "../../core/hooks.js";
+import { PV, previewLiveState, startPreview } from "../preview/state.js";
 
 export const LV = {
   built: null, timer: 0, polling: false, s: null, at: 0,        /* s: the last state (parse[CMD.LIVE]) */
@@ -44,7 +44,13 @@ export const LVP = () => ({ pan: lvP("PAN", 39), filt: lvP("FILT", 50), rev: lvP
 export const LVG = () => ({ bpm: lvGany("BPM", 0), swing: lvGany("SWING", 1), filt: lvG("FILT", 29), dust: lvG("DUST", 27), duck: lvG("DUCK", 28),
   drRev: lvG("REV", 26), drDly: lvG("DLY", 32), ch: [lvG("CH1", 33), lvG("CH2", 34), lvG("CH3", 35)], drCh: lvG("CH4", 24),
   other: lvG("OTHER", 36), route: lvGany("IN", 14), fxCh: lvG("FX CH", 45), drMap: lvG("DR MAP", 46), remote: lvG("REMOTE", 47) });
-export const lvDrum = (i) => isDrumTrk(i);
+/* a track's kind: from what the page read of it (TRACK_DUMP) first: the selected track's DUMP, which isDrumTrk trusts,
+   is not read again while the page shows (another track selected here kept the old one's kind) */
+export const lvDrum = (i) => {
+  const o = LV.tr[i], dev = A.dev;
+  if (o && o.engine !== undefined && dev && dev.info) return o.engine >= dev.info.nengines;
+  return isDrumTrk(i);
+};
 export const lvDrumLv = (i) => lvDrum(i) && drumLvGlobal();   /* a level that is G_DRLVL (four-track firmware) */
 export const lvNum = (i) => (lvDrum(i) ? (nTrk() >= 8 ? "D" + (i + 1) : "D") : String(i + 1));   /* (eight tracks: two drum tracks) */
 export const lvGv = (id) => (A.dev && A.dev.dump ? A.dev.dump.g[id] : 0);
@@ -140,8 +146,7 @@ export function lvApply(s) {
   });
   LV.solo = s.solo;
   if (s.sel !== dev.sel) { dev.sel = s.sel; LV.stale = true; }
-  /* the mock: its local audio follows PLAY, the mutes and solos (the Preview page's, when it offers it) */
-  if (A.MOCK && H.previewLive) H.previewLive(s, was);
+  if (A.MOCK) previewLiveState(s, was);              /* the mock: its local audio follows PLAY, the mutes and solos */
   lvTicks.state();
   notify();
 }
@@ -263,7 +268,7 @@ export function lvNoteOn(token, track, note, vel, lit) {
   dev.output.send([0x90 | c.ch, note & 127, Math.max(1, Math.min(127, vel | 0))]);
   LV.held.set(token, { ch: c.ch, note, track, lit });
   if (!lvDrum(track)) LV.lastNote = note & 127;          /* (LIVE pro: a step the grid adds plays this note) */
-  if (A.MOCK && H.previewNote) H.previewNote(track, note, true, () => LV.held.has(token));
+  if (A.MOCK) startPreview().then((ok) => { if (ok && LV.held.get(token)) PV.audio.note(track, note, true); }).catch(() => {});
 }
 export function lvNoteOff(token) {
   const h = LV.held.get(token);
@@ -275,7 +280,7 @@ export function lvNoteOff(token) {
     return;
   }
   try { if (A.dev) A.dev.output.send([0x80 | h.ch, h.note & 127, 0]); } catch (e) { /* unplugged */ }
-  if (A.MOCK && H.previewNote) H.previewNote(h.track, h.note, false);
+  if (A.MOCK) PV.audio?.note(h.track, h.note, false);
 }
 export function lvAllOff() {
   for (const tok of [...LV.held.keys()]) lvNoteOff(tok);
