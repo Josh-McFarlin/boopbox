@@ -1,0 +1,52 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The Samples and Drum kit pages: what reads better as CSS than as utilities (the file rows' narrow-screen layout,
+   the meter turning red, the destination buttons' states). Colours: the theme's tokens only. */
+
+/* the room a kit / a slot takes: red when over */
+.kitmeter.over progress::-webkit-progress-value { background: var(--red); }
+.kitmeter.over progress::-moz-progress-bar { background: var(--red); }
+.kitmeter.over span { color: var(--red); }
+
+/* where it goes: a slot (or USR3+4, the big kit) */
+.dest button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; background: var(--bg);
+               border: 1px solid var(--s3); text-transform: none; white-space: normal; text-align: left; min-height: 92px; }
+.dest button b { font-weight: 400; font-size: 32px; line-height: 32px; color: var(--fg); }
+.dest button .cap { color: var(--dim); }
+.dest button .now { color: var(--s3); overflow-wrap: anywhere; }
+.dest button.full .now { color: var(--fg2); }
+.dest button.big { border-color: var(--t4); }
+.dest button.big b { color: var(--t4); }
+.dest button:hover:not(:disabled) { background: var(--s3); }   /* (unlayered: the base hover again) */
+.dest button[aria-checked="true"] { background: var(--s2); border-color: var(--trk); box-shadow: inset 0 0 0 1px var(--trk); }
+.dest button[aria-checked="true"] b { color: var(--trk); }
+.dest button:disabled { opacity: .35; }
+.dest button progress { width: 100%; height: 4px; }
+
+/* a file of the slot: ▶ file note keys length loop gain × (narrow: ▶ file note ×, then loop and gain) */
+.frow { --c: var(--t1); display: grid; grid-template-columns: 40px minmax(0, 1fr) 80px 120px 80px 120px 150px 40px; gap: 8px; align-items: center;
+        background: var(--bg); padding: 4px 8px; border-left: 4px solid var(--c); }
+.frow.fhead { background: none; border-left-color: transparent; color: var(--dim); text-transform: lowercase; }
+.frow .fn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.frow input.root { width: 72px; }
+.frow button { padding: 3px 0; }
+.frow select { width: 100%; min-width: 0; }
+.floop { --c: var(--t1); display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; background: var(--bg); padding: 6px 8px 8px 48px;
+         border-left: 4px solid var(--c); }
+.floop .lpt { display: grid; grid-template-columns: 90px minmax(0, 1fr) 64px; gap: 8px; align-items: center; }
+
+/* a track's button: its colour */
+.seg button.trk[aria-pressed], .seg button.trk { color: var(--c); }
+.seg button.trk:hover:not(:disabled) { background: var(--c); color: #000; }
+.seg button.trk:disabled { color: var(--s3); }
+
+@media (max-width: 860px) {
+  .frow { grid-template-columns: 28px minmax(0, 1fr) 72px 32px; gap: 6px; }
+  .frow input.root { width: 100%; }
+  .frow > :nth-child(6) { grid-column: 2; grid-row: 2; }
+  .frow > :nth-child(7) { grid-column: 3 / 5; grid-row: 2; }
+  .frow > :nth-child(8) { grid-column: 4; grid-row: 1; }
+  .frow > :nth-child(4), .frow > :nth-child(5) { display: none; }
+  .floop { padding-left: 8px; }
+  .floop .lpt { grid-template-columns: 80px minmax(0, 1fr) 56px; }
+  .dest button.big { grid-column: 1 / -1; }
+}

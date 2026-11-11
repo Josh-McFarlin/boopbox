@@ -1,3 +1,207 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// TODO(port): the Kits page.
-export default function Kits() { return null; }
+// The Drum kit page (2.4): 1 the 16 pads (files dropped on them, or a ZIP opened), 2 where the kit goes (one slot, or
+// USR3+4: the big kit), 3 send it and play it on the drum track. (Shows only when the FM-1 reported its sample flash.)
+import { useEffect, useRef } from "react";
+import { DRUM_LANES, KIT, SMP, kitBytes, kitFit, kitLen } from "../lib/proto.js";
+import { hasTracks, notify, pickFile, t, useApp } from "../core/app.js";
+import { Card, Help, Ic, barVars } from "../ui/kit.jsx";
+import { SB } from "./samples/smp.js";
+import { Meter, NameInput, Step, useDrop } from "./samples/ui.jsx";
+import {
+  KEY_OF_LANE, KIT_PAIR, kitAddFiles, kitDest, kitDraft, kitHas4, kitIndexOf, kitMatch, kitOver, kitPlayPad, kitRoom, kitSend, kitSlots, kitUse, kitZip,
+} from "./kits/kit.js";
+
+const ACCEPT = ".wav,.zip,audio/*";
+const pick = async (lane = -1) => { const fs = await pickFile(ACCEPT, true); if (fs && fs.length) kitAddFiles(fs, lane); };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function kitDrawWave(cv, p) {
+  const w = cv.width = Math.max(60, cv.clientWidth || 200), h = cv.height = 48, g = cv.getContext("2d");
+  g.clearRect(0, 0, w, h);
+  const s = p.s, n = s.length, keep = kitLen(p) * (p.tune ? Math.pow(2, p.tune / 12) : 1);
+  const col = getComputedStyle(cv).getPropertyValue("--c").trim() || css("--t4"), S3 = css("--s3");
+  for (let x = 0; x < w; x++) {
+    const a = Math.floor(x / w * n), b = Math.max(a + 1, Math.floor((x + 1) / w * n));
+    let pk = 0;
+    for (let i = a; i < b && i < n; i += 4) pk = Math.max(pk, Math.abs(s[i]));
+    const y = Math.max(1, Math.round(pk / 32768 * (h / 2 - 2)));
+    g.fillStyle = a < keep ? col : S3;
+    g.fillRect(x, h / 2 - y, 1, y * 2);
+  }
+}
+
+/* a pad's control: a label, a slider, its value */
+function Row3({ label, min, max, step, value, onInput, onDone, text }) {
+  return (
+    <div className="row3 grid grid-cols-[auto_1fr_auto] items-center gap-1.5 text-dim">
+      <span>{label}</span>
+      <input type="range" min={min} max={max} step={step} value={value} style={barVars({ min, max }, value)}
+        onChange={(e) => onInput(+e.target.value, +e.target.max)} onPointerUp={onDone} onKeyUp={onDone} />
+      <span className="val min-w-16 text-right text-fg2">{text}</span>
+    </div>
+  );
+}
+
+function Pad({ l }) {
+  useApp();
+  const p = kitDraft.pads[l], cv = useRef(null);
+  const [over, drop] = useDrop((fs) => kitAddFiles(fs, l), true);
+  useEffect(() => { if (p && cv.current) kitDrawWave(cv.current, p); });
+  useEffect(() => {
+    const r = () => { const q = kitDraft.pads[l]; if (q && cv.current) kitDrawWave(cv.current, q); };
+    window.addEventListener("resize", r);
+    return () => window.removeEventListener("resize", r);
+  }, [l]);
+  let body = null;
+  if (!p) {
+    body = (
+      <div className="empty grid flex-1 cursor-pointer place-content-center border border-dashed border-s3 text-center text-s3 hover:border-dim hover:text-fg2"
+        onClick={() => pick(l)}>
+        {t("kitEmptyPad").split("\n").flatMap((x, i) => (i ? [<br key={i} />, x] : [x]))}
+      </div>
+    );
+  } else {
+    const full = kitLen({ ...p, len: 0 });
+    const lenMax = 10 + Math.max(0, Math.ceil((full / SMP.RATE * 1000 - 10) / 5)) * 5;   /* (on the step grid: the end reachable) */
+    const lenV = p.len ? Math.round(p.len / SMP.RATE * 1000) : lenMax;
+    const play = () => kitPlayPad(l);
+    body = (
+      <>
+        <canvas ref={cv} title={t("kitPlay")} onClick={play}
+          className={`block h-12 w-full cursor-pointer bg-s1 ${kitDraft.playing === l ? "outline outline-c" : ""}`} />
+        <div className="fn truncate text-fg2" title={p.fname}>{p.fname}</div>
+        <div>
+          <Row3 label={t("kitTune")} min={-KIT.TUNE} max={KIT.TUNE} step={1} value={p.tune} onDone={play}
+            onInput={(v) => { p.tune = v; notify(); }} text={(p.tune > 0 ? "+" : "") + p.tune + " st"} />
+          <Row3 label={t("kitGain")} min={KIT.GAIN_MIN} max={0} step={1} value={p.gain} onDone={play}
+            onInput={(v) => { p.gain = v; notify(); }} text={p.gain + " dB"} />
+          <Row3 label={t("kitLen")} min={10} max={lenMax} step={5} value={lenV} onDone={play}
+            onInput={(v, mx) => { p.len = v >= mx ? 0 : Math.round(v / 1000 * SMP.RATE); notify(); }} text={(kitLen(p) / SMP.RATE).toFixed(2) + " s"} />
+        </div>
+        <div className="acts flex gap-1">
+          <button type="button" className="px-2 py-[3px]" onClick={play}>{"▶ " + t("kitPlay")}</button>
+          <button type="button" className="warn px-2 py-[3px]" onClick={() => { kitDraft.pads[l] = null; notify(); }}>×</button>
+        </div>
+      </>
+    );
+  }
+  return (
+    <div data-l={l} {...drop} style={{ "--c": "var(--t4)" }}
+      className={`pad relative flex min-h-[170px] min-w-0 flex-col gap-1.5 border border-line bg-bg p-2.5
+        ${over ? "over outline-2 -outline-offset-2 outline-c outline-dashed" : ""}`}>
+      <div className="ph flex items-baseline gap-2">
+        <b className="font-normal text-c uppercase">{DRUM_LANES[l][1]}</b>
+        <span className="key ml-auto text-s3">{KEY_OF_LANE[l]}</span>
+      </div>
+      {body}
+    </div>
+  );
+}
+
+function Meter2() {
+  useApp();
+  const n = kitSlots().length, cap = SMP.MAX_DATA * n, bytes = kitBytes(kitDraft.pads), secs = kitDraft.pads.reduce((a, p) => a + (p ? kitLen(p) : 0), 0) / SMP.RATE;
+  const over = kitOver();
+  return (
+    <Meter max={cap} value={Math.min(bytes, cap)} over={over}>
+      {(over ? t("kitOver") + " · " : "") + t("kitUsed").replace("{s}", secs.toFixed(1)).replace("{t}", (cap * 2 / SMP.RATE).toFixed(1))}
+    </Meter>
+  );
+}
+
+/* where the kit goes: one slot (about 7 s), or USR3+4 (about 15 s, the big kit) */
+function Dest() {
+  const { dev } = useApp();
+  const ok = !!dev && !!dev.smp;
+  return (
+    <div className="dest mb-2.5 grid grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-2 max-wide:grid-cols-2" role="radiogroup" aria-label={t("kitStep2")}>
+      {[KIT_PAIR, 0, 1, 2, 3].map((d) => {
+        const sl = kitSlots(d).map((k) => ok && dev.smp.slots[k]);
+        const now = !ok ? "" : sl.every((x) => !x || !x.zones) ? t("empty")
+          : sl.filter((x) => x && x.zones).map((x) => x.name || "—").filter((x, i, a) => a.indexOf(x) === i).join(" + ");
+        return (
+          <button key={d} type="button" role="radio" data-d={d} aria-checked={d === kitDraft.slot ? "true" : "false"}
+            className={`${d === KIT_PAIR ? "big" : ""} ${ok && sl.some((x) => x && x.zones) ? "full" : ""}`}
+            disabled={ok && !kitHas4() && (d === KIT_PAIR || d === 3)}
+            onClick={() => { kitDraft.slot = d; notify(); }}>
+            <b>{kitDest(d)}</b>
+            <span className="cap">{d === KIT_PAIR ? t("kitCapBig") : t("kitCapOne")}</span>
+            <span className="now">{now}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function Kits() {
+  const { dev } = useApp();
+  const ok = !!dev && !!dev.smp;
+  if (!kitHas4() && ok && kitDraft.slot >= 3) kitDraft.slot = 2;   /* (a firmware without USR4) */
+  const any = kitDraft.pads.some(Boolean), over = kitOver();
+  const sl = kitSlots().map((k) => ok && dev.smp.slots[k]);
+  const used = sl.filter((x) => x && x.zones);
+  const up = SB.up && SB.up.where === "kit" ? SB.up : null;
+  const [, cardDrop] = useDrop((fs) => kitAddFiles(fs));
+  return (
+    <div id="kit">
+      <Card title={t("kitTitle")} ic="symbol_drum">
+        <div onDragOver={(e) => e.preventDefault()} onDrop={cardDrop.onDrop}>
+          <Help>{t("kitHelp")}</Help>
+          <Step n={1} title={t("kitStep1")}>
+            <p className="dim my-4">{t("kitStep1Help")}</p>
+            <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3 max-wide:grid-cols-1">
+              <div className="bar m-0">
+                <button type="button" onClick={() => pick(-1)}><Ic ic="symbol_folder_open">{t("kitAdd")}</Ic></button>
+                <button type="button" disabled={!any} onClick={kitZip}><Ic ic="symbol_download">{t("kitZip")}</Ic></button>
+                <button type="button" className="warn" onClick={() => { kitDraft.pads = Array(16).fill(null); kitDraft.sel = -1; notify(); }}>
+                  <Ic ic="symbol_trash">{t("kitClear")}</Ic>
+                </button>
+              </div>
+              <Meter2 />
+            </div>
+            <div className="pads my-4 grid grid-cols-4 gap-2.5 max-wide:grid-cols-2">
+              {Array.from({ length: 16 }, (_, l) => <Pad key={l} l={l} />)}
+            </div>
+            <div className="bar">
+              <button type="button" disabled={kitDraft.pads.filter(Boolean).length < 2} onClick={kitMatch}><Ic ic="symbol_audio">{t("matchLevels")}</Ic></button>
+              <span className="dim">{t("matchHelp")}</span>
+            </div>
+            <div className="bar">
+              <button type="button" disabled={!over} onClick={() => { if (kitFit(kitDraft.pads, kitRoom(), kitSlots().length)) notify(); }}>{t("kitFit")}</button>
+              <span className="dim">{t("kitFitHelp")}</span>
+            </div>
+          </Step>
+          <Step n={2} title={t("kitStep2")}>
+            <Dest />
+            <p className="destnote mt-0 mb-2.5 text-fg2">
+              {t(kitDraft.slot === KIT_PAIR ? "kitNotePair" : "kitNoteOne").replace("{x}", kitDest())}
+              {used.length ? <>{" "}<span className="text-t3">{t("kitReplaces").replace("{x}", used.map((x) => x.name || "—").join(" + "))}</span></> : null}
+              {ok && !kitHas4() ? <>{" "}<span className="dim">{t("kitNo4")}</span></> : null}
+            </p>
+            <div className="bar">
+              <span className="dim">{t("kitName")}</span>
+              <NameInput value={kitDraft.name} onChange={(v) => { kitDraft.name = v; notify(); }} />
+            </div>
+          </Step>
+          <Step n={3} title={t("kitStep3")}>
+            <div className="bar">
+              <button type="button" className="pri" onClick={kitSend}
+                disabled={!ok || SB.busy || !any || over || !kitDraft.name || (!kitHas4() && kitDraft.slot >= 3)}>
+                <Ic ic="symbol_upload">{t("kitSend").replace("{x}", kitDest())}</Ic>
+              </button>
+              <progress className="w-[180px]" max="1" value={up ? up.v : 0} hidden={!up} />
+              <button type="button" onClick={() => kitUse(kitDraft.slot)}
+                disabled={!ok || SB.busy || !sl.some((x) => x && x.zones) || !hasTracks()}
+                title={dev && dev.kitNames && kitIndexOf(kitDraft.slot) < 0 ? t("kitNoKit") : ""}>
+                <Ic ic="symbol_drum">{t("kitUse").replace("{x}", kitDest())}</Ic>
+              </button>
+            </div>
+            <p className="dim my-4">{t("kitWhereFM1").replace("{x}", kitDest())}</p>
+          </Step>
+        </div>
+      </Card>
+    </div>
+  );
+}
+

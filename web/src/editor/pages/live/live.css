@@ -1,0 +1,250 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The LIVE page (2.7) and LIVE pro. Plain CSS: the page's widgets are state-classed (cur / next / empty / on / act / ph
+   ...), the page has modes (#lv.learn / .locked / .simple / .nopro, html.lvfocus) and blinking keyframes. In the base
+   layer, after the editor's own control styles (as the old page had them: a plain button's hover and disabled look
+   still win where they did); the few rules that must beat .tog / .seg are in the components layer, at the end. */
+@layer base {
+  /* ---- 2.7: the LIVE page (the FM-1 under the hands: transport, sections, mixer, effects, keys) ---- */
+  #lv { --c: var(--trk); }
+  #lv .lvcard { background: var(--s1); border: 1px solid var(--line); padding: 14px 16px 16px; margin: 0 0 12px; min-width: 0; }
+  #lv .lvcard > p.dim { margin: 0 0 12px; }
+  #lv .lvcard > h2, #lv .lvhead h2 { display: flex; align-items: center; gap: 8px; color: var(--fg); text-transform: uppercase; font-size: 16px; line-height: 20px; margin: 0 0 10px; }
+  #lv .lvhead h2 { margin: 0; }
+  #lv .lvhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-bottom: 10px; }
+  #lv .lvhint { margin: 8px 0 0; }
+  #lv button { touch-action: manipulation; }
+  .lvneeds { color: var(--t3); border: 1px solid var(--t3); padding: 8px 12px; margin: 0 0 12px; }
+  .lvgrp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .lvtrans { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; }
+  html.lvfocus #lv .lvtrans { position: sticky; top: 0; z-index: 4; }
+  .lvright { margin-left: auto; }
+  .lvbig { font-size: 32px; line-height: 32px; min-width: 132px; height: 64px; padding: 0 16px; }
+  .lvplay { background: var(--s2); color: var(--t2); border: 2px solid var(--t2); }
+  .lvplay.on { background: var(--t2); color: #000; }
+  .lvrec { height: 64px; min-width: 96px; color: var(--red); border: 2px solid var(--red); background: var(--s2); }
+  .lvrec.on { background: var(--red); color: #000; }
+  .lvrec.wait { animation: lvblink .5s steps(1) infinite; }
+  .lvundo { display: flex; flex-direction: column; gap: 2px; }
+  .lvundo button { padding: 4px 10px; }
+  .lvpos { display: grid; gap: 2px; min-width: 128px; }
+  .lvpos b { font-size: 32px; line-height: 32px; color: var(--fg); font-weight: 400; }
+  .lvbeat { display: flex; gap: 4px; }
+  .lvbeat i { width: 14px; height: 6px; background: var(--s3); }
+  .lvbeat i.on { background: var(--fg); }
+  .lvfill { display: grid; height: 64px; min-width: 88px; place-content: center; text-align: center; border: 2px solid var(--s3); color: var(--t3); background: var(--s2); touch-action: none; }
+  .lvfill small { color: var(--dim); }
+  .lvfill.on, .lvfill.act { background: var(--t3); color: #000; }
+  .lvfill.on small, .lvfill.act small { color: #000; }
+  .lvcpu { min-width: 6ch; }
+  @keyframes lvblink { 50% { opacity: .35; } }
+  /* a knob: drag up / down (Shift: fine), the wheel, the arrow keys; double-click: its default */
+  .lk { display: grid; justify-items: center; gap: 0; width: 64px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .lk svg { width: 48px; height: 48px; display: block; }
+  .lk .kb { fill: none; stroke: var(--s3); stroke-width: 4; }
+  .lk .kf { fill: none; stroke: var(--c, var(--trk)); stroke-width: 4; }
+  .lk .kl { color: var(--dim); text-transform: lowercase; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .lk .kv { color: var(--fg); white-space: nowrap; }
+  .lk.drag .kv, .lk:focus-visible .kv { color: var(--c, var(--trk)); }
+  .lvtrans .lk { width: 76px; }
+  .lvbpm { width: 80px; }
+  .lvbpm svg { width: 64px; height: 64px; }
+  .lvbpm .kv { font-size: 32px; line-height: 32px; }
+  /* sections A..D */
+  .lvsecrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .lvsec { height: 84px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 8px 12px;
+           border: 2px solid var(--c); background: var(--bg); color: var(--fg); text-transform: none; }
+  .lvsec b { font-size: 32px; line-height: 32px; font-weight: 400; color: var(--c); }
+  .lvsec small { color: var(--dim); text-transform: lowercase; }
+  .lvsec.cur { background: var(--c); }
+  .lvsec.cur b, .lvsec.cur small { color: #000; }
+  .lvsec.next { animation: lvblink .5s steps(1) infinite; }
+  .lvsec.empty { border-color: var(--s3); }
+  .lvsec.empty b { color: var(--s3); }
+  .lvstorerow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 10px 0 0; }
+  .lvstorerow span { margin-right: 6px; }
+  .lvstore { padding: 2px 10px; }
+  /* mixer, master fx, effects */
+  .lvcols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+  .lvknobs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+  .lvstrips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .lstrip { background: var(--bg); border: 1px solid var(--line); border-top: 4px solid var(--c); padding: 8px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .lstrip.target { border-color: var(--c); }
+  .lstrip.muted .lsbody { opacity: .4; }
+  .lstrip.rec .lsnum { background: var(--red); }
+  .lshead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .lsnum { background: var(--c); color: #000; padding: 0 6px; flex: none; }
+  .lsname { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lssnd { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px; }
+  .lssound { width: 100%; color: var(--fg); }
+  .lsnav { padding: 3px 8px; }
+  .lsprog { height: 3px; background: var(--s2); }
+  .lsprog i { display: block; height: 100%; width: 0; background: var(--c); }
+  .lsbody { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 6px; align-items: start; }
+  .lsknobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 0; justify-items: center; }
+  .lstrip .lk { width: 100%; min-width: 0; }
+  .lstrip .lk .kl { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .lstrip .lk svg { width: 40px; height: 40px; }
+  .lsbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .lsbtns .lssel { grid-column: 1 / 3; }
+  #lv .lsbtns button { padding: 8px 4px; }
+  /* a fader: drag, a click on its track, the wheel, the keys; the track's meter beside it */
+  .lfd { display: flex; gap: 4px; height: 216px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .lfd .ft { position: relative; width: 22px; background: var(--s2); }
+  .lfd .ff { position: absolute; left: 0; right: 0; bottom: 0; background: var(--c); opacity: .85; }
+  .lfd .fc { position: absolute; left: -3px; right: -3px; height: 6px; background: var(--fg); }
+  .lfd .fm { position: relative; width: 6px; background: var(--s2); }
+  .lfd .fm i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--t2); transition: height 80ms linear; }
+  .lfd:focus-visible .fc { background: var(--c); }
+  .lvfxg { margin-top: 10px; }
+  .lvfxg > .dim { display: block; margin-bottom: 4px; text-transform: lowercase; }
+  .lvfxpads { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; }
+  .lvfx { height: 56px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 6px 8px;
+          white-space: normal; text-align: left; text-transform: none; border: 1px solid var(--s3); background: var(--bg); color: var(--fg); touch-action: none; }
+  .lvfx b { font-weight: 400; }
+  .lvfx kbd { font: inherit; color: var(--dim); }
+  #lv .lvfx.on, #lv .lvfx.act { background: var(--t4); border-color: var(--t4); color: #000; }
+  #lv .lvfx.on kbd, #lv .lvfx.act kbd { color: #000; }
+  /* the keys: two octaves and a C; the drum track: 16 pads */
+  .lvplaybox .seg button { min-width: 36px; }
+  .lvoct { min-width: 9ch; text-align: center; color: var(--fg); }
+  .lvplaybox input[type=range] { width: 120px; }
+  .lvchan { color: var(--red); margin: 0 0 8px; }
+  .lvkeys { position: relative; display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 2px; height: 168px; touch-action: none; }
+  .lvkeys .wk { height: 168px; background: var(--fg2); border: 0; border-bottom: 4px solid var(--dim); padding: 0 0 8px; display: flex; align-items: flex-end; justify-content: center; color: var(--s3); touch-action: none; }
+  .lvkeys .wk:hover { background: var(--fg); }
+  .lvkeys .bk { position: absolute; top: 0; z-index: 1; height: 100px; width: calc(100% / 15 * .62); left: calc((var(--x) + 1) * 100% / 15 - 100% / 15 * .31);
+                background: #000; border: 1px solid var(--s3); padding: 0 0 6px; display: flex; align-items: flex-end; justify-content: center; color: var(--dim); touch-action: none; }
+  .lvkeys .bk:hover { background: var(--s2); }
+  .lvkeys kbd { font: inherit; }
+  #lv .lvkeys .wk.on, #lv .lvkeys .bk.on { background: var(--trk); color: #000; }
+  .lvpads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-width: 760px; }
+  .lvpad { height: 76px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 8px 10px;
+           border: 1px solid var(--s3); background: var(--bg); color: var(--fg); text-transform: none; touch-action: none; }
+  .lvpad b { font-weight: 400; }
+  .lvpad kbd { font: inherit; color: var(--dim); }
+  #lv .lvpad.on { background: var(--t4); border-color: var(--t4); color: #000; }
+  #lv .lvpad.on kbd { color: #000; }
+  .lvkeyshelp { margin: 4px 0 0; }
+  /* the playlist */
+  .lvpl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; counter-reset: pl; }
+  .lvpl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; counter-increment: pl; }
+  .lvplgo { display: grid; grid-template-columns: 2.5ch minmax(0, 1fr) auto; align-items: center; gap: 8px; text-align: left; text-transform: none;
+            background: var(--bg); border: 1px solid var(--s3); color: var(--fg); padding: 8px 10px; }
+  .lvplgo::before { content: counter(pl); color: var(--dim); }
+  .lvplgo b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lvplgo small { color: var(--dim); }
+  .lvpl li.cur .lvplgo { border-color: var(--t2); box-shadow: inset 4px 0 var(--t2); }
+  .lvpl li.at .lvplgo { animation: lvblink .5s steps(1) infinite; }
+  .lvplact { display: flex; gap: 2px; }
+  .lvplact button { padding: 4px 8px; }
+  .lvplbar { margin: 10px 0 0; }
+  /* ---- LIVE pro: scenes, the PERFORM card, the steps, MIDI learn, the stage tools ---- */
+  .lvscnrow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .lvscn { position: relative; height: 72px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 6px 8px;
+           border: 2px solid var(--t1); background: var(--bg); color: var(--fg); text-transform: none; overflow: hidden; }
+  .lvscn b { font-size: 24px; line-height: 24px; font-weight: 400; color: var(--t1); }
+  .lvscn small { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .lvscn kbd { position: absolute; right: 6px; top: 6px; font: inherit; color: var(--dim); }
+  .lvscn.empty { border-color: var(--s3); }
+  .lvscn.empty b { color: var(--s3); }
+  .lvscn.cur { background: linear-gradient(90deg, var(--t1) var(--m, 100%), var(--bg) var(--m, 100%)); }
+  .lvscn.cur b, .lvscn.cur small, .lvscn.cur kbd { color: #000; }
+  .lvscn.store { border-style: dashed; border-color: var(--red); }
+  .lvxrow { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; margin-top: 10px; }
+  .lvxf { width: 100%; }
+  .lvperf { --c: var(--trk); border-top: 4px solid var(--c); }
+  .lvperftrk { color: var(--c); }
+  .lvptabs { display: flex; flex-wrap: wrap; gap: 2px; margin-left: auto; }
+  .lvptab { padding: 4px 10px; }
+  #lv .lvptab[aria-selected="true"] { background: var(--c); color: #000; }
+  .lvxgrp { margin-top: 8px; }
+  .lvxgrp > .dim { display: block; margin-bottom: 2px; text-transform: lowercase; }
+  .lvxsel { display: grid; gap: 2px; min-width: 96px; align-self: center; }
+  .lvperf .lvknobs { align-items: center; }
+  .lvxsel .dim { text-transform: lowercase; }
+  .lvgrid { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; overflow-x: auto; }
+  .lvgr { display: grid; grid-template-columns: repeat(16, minmax(28px, 1fr)); gap: 2px; }
+  .lvgrid.drum .lvgr { grid-template-columns: 9ch repeat(16, minmax(22px, 1fr)); }
+  .lvgl { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center; }
+  .lvgc { height: 34px; padding: 0; border: 1px solid var(--s3); background: var(--bg); color: var(--fg); font-size: inherit; text-transform: none; }
+  .lvgrid.drum .lvgc { height: 22px; }
+  .lvgc.beat { border-left-color: var(--dim); }
+  #lv .lvgc.on { background: var(--c); color: #000; border-color: var(--c); }
+  .lvgc.out { opacity: .3; }
+  .lvgc.ph { box-shadow: inset 0 0 0 2px var(--fg); }
+  .lvgc.fillonly { border-bottom: 3px solid var(--t3); }
+  .lvgc.nofill { border-bottom: 3px solid var(--red); }
+  .lsfav { margin-left: auto; padding: 0 6px; color: var(--t3); background: none; border: 0; }
+  .lvtools { flex-basis: 100%; }
+  .lvclock { display: grid; text-align: left; background: none; border: 0; padding: 0 8px 0 0; text-transform: none; }
+  .lvclock b { font-size: 24px; line-height: 24px; font-weight: 400; color: var(--fg); }
+  .lvrecset { --lv: 0%; background: linear-gradient(90deg, var(--s3) var(--lv), var(--s2) var(--lv)); border: 2px solid var(--red); color: var(--red); }
+  .lvrecset.on { color: var(--fg); animation: lvblink 1s steps(1) infinite; }
+  .lvlearnbar { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .lvlearnmsg { color: var(--t3); }
+  #lv.learn [data-lvm] { outline: 1px dashed var(--t3); outline-offset: 1px; }
+  /* (the mapped controls and the one waiting: a <style> the page writes, Live.jsx LearnStyle) */
+  #lv.locked .lvcard { pointer-events: none; }
+  #lv.locked .lvcard > * { opacity: .85; }
+  #lv.locked .lvlockbtn { pointer-events: auto; opacity: 1; }
+  .lvcue { margin: 0 0 8px; }
+  .lvcue p { margin: 0 0 2px; }
+  .lvcue p:first-child b { font-size: 20px; color: var(--t2); font-weight: 400; }
+  @media (max-width: 760px) {
+    .lvscnrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .lvxrow { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .lvxrow > .dim, .lvxrow > b { display: none; }
+  }
+  /* a page a newcomer can read: each card's line and "?", the first steps, the essentials view */
+  .lvsub { display: flex; align-items: center; gap: 8px; margin: -4px 0 10px; color: var(--dim); }
+  .lvtrans > .lvsub, .lvtrans > .lvhelp { flex-basis: 100%; margin: 0; }
+  .lvq { min-width: 28px; height: 24px; padding: 0 6px; border: 1px solid var(--s3); color: var(--fg); background: var(--bg); }
+  #lv .lvq[aria-expanded="true"] { background: var(--t3); border-color: var(--t3); color: #000; }
+  .lvhelp { border-left: 3px solid var(--t3); background: var(--s2); padding: 8px 12px; margin: 0 0 10px; }
+  .lvhelp p { margin: 0 0 6px; }
+  .lvhelp p:last-child { margin: 0; }
+  .lvguide { border: 1px solid var(--t3); }
+  .lvsteps { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 6px; }
+  .lvguidebtn { margin: 0 0 12px; }
+  .lvtabsub { margin: 0 0 4px; }
+  #lv.simple .lvadv { display: none !important; }
+  #lv.nopro .lvxpro { display: none !important; }
+  .lvthrow { height: 48px; min-width: 96px; border: 1px solid var(--t1); color: var(--t1); background: var(--bg); touch-action: none; }
+  #lv .lvthrow.on, #lv .lvthrow.act { background: var(--t1); color: #000; }
+  .lvchainlist { color: var(--fg); min-width: 10ch; padding: 0 6px; }
+  .lvchainlist.run { color: var(--t2); }
+  .lvpattools { margin: 6px 0 0; }
+  .lvkeys.roll .wk, .lvpads.roll .lvpad { box-shadow: inset 0 -4px var(--t3); }
+  .lvkeys.erase .wk, .lvpads.erase .lvpad { box-shadow: inset 0 -4px var(--red); }
+  .lvrollrate .lvxsel { min-width: 80px; }
+
+  /* full screen: the page alone (the side bar and the header go) */
+  html.lvfocus #root > div { grid-template-columns: minmax(0, 1fr); }
+  html.lvfocus #root > div > aside, html.lvfocus main > header { display: none !important; }
+  html.lvfocus main { padding: 12px 16px 16px; }
+  html.lvfocus #p-live { padding-top: 0; }
+  @media (max-width: 1180px) {
+    .lvcols { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .lvtrans { gap: 10px 16px; position: static; }
+    .lvright { margin-left: 0; }
+    .lvbig { min-width: 96px; height: 56px; }
+    .lvstrips { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+    .lstrip { flex: 0 0 168px; scroll-snap-align: start; }
+    .lvsec { height: 68px; }
+    .lvkeys, .lvkeys .wk { height: 136px; }
+    .lvkeys .bk { height: 80px; }
+    .lvkeys kbd, .lvpad kbd, .lvfx kbd, .lvkeyshelp { display: none; }
+    .lvpad { height: 64px; }
+    .lvfxpads { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}
+@layer components {
+  #lv .lsmute[aria-pressed="true"] { background: var(--red); color: #000; }
+  #lv .lssolo[aria-pressed="true"] { background: var(--fg); color: #000; }
+  #lv .lssel[aria-pressed="true"] { background: var(--c); color: #000; }
+  #lv .lvplaybox .seg button[aria-pressed="true"] { background: var(--trk); color: #000; }
+  #lv .lvlearnbtn[aria-pressed="true"] { background: var(--t3); color: #000; }
+  #lv .lvlockbtn[aria-pressed="true"] { background: var(--red); color: #000; }
+}
