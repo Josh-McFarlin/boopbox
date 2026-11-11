@@ -46,8 +46,8 @@ def main():
                     '--no-entry', '-sSTANDALONE_WASM=1', '-sFILESYSTEM=0', '-sINITIAL_MEMORY=16777216',
                     '-sSTACK_SIZE=131072', '-sEXPORTED_FUNCTIONS=' + str(['_preview_' + n for n in exports]),
                     '-o', str(OUT / 'boopbox-preview.wasm')], cwd=ROOT, check=True)
-    for name in ['preview.js', 'preview-worklet.js']:
-        shutil.copy(ROOT / 'web' / name, OUT / name)
+    # (the scripts that run it are in the React editor since the move to Vite: web/src/editor/lib/preview.js, bundled,
+    # and web/site/public/editor/preview-worklet.js, copied by Vite; only the wasm is built here)
     print('Browser audio built:', OUT / 'boopbox-preview.wasm')
 
 

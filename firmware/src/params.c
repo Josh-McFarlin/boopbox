@@ -75,7 +75,8 @@ static const char *const N_ENGNAME[] = {"ANALOG", "DIGITAL", "PHASE", "LOFI", "S
 #define PE(l, n, df) {l, F_ENUM, 0, (int16_t)(sizeof(n) / sizeof(n[0]) - 1), df, n, 0}
 
 static const param_desc_t TP[P_COUNT] = {
-    [P_LEVEL] = PD("LVL", F_DB, 0, 127, 104),
+    [P_LEVEL] = PD("LVL", F_INT, 0, 127, 104),   /* shown 0..127 as the drums' LEVEL and MIDI CC 7 (it was dB):
+                                                  * 112 = 0 dB, 1/2 dB a step (LEVEL_Q12) */
     [P_ATK] = PD("ATK", F_TIME, 0, 127, 10),
     [P_DEC] = PD("DEC", F_TIME, 0, 127, 70),
     [P_SUS] = PD("SUS", F_PCT, 0, 127, 90),
