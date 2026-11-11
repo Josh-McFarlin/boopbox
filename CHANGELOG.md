@@ -15,7 +15,12 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## 1.9.3
 
-Screen fixes; projects, presets and settings open as they are.
+**The sound browser's knobs and lights.** In the [sound browser](GUIDE.md#the-sound-browser), **PRESETS** now moves
+through the engines (as KNOB 2) and **ALGORITHM** through the sounds of the engine (as KNOB 3); ALGORITHM no longer
+changes the track there. While the browser is open, **SAVE** (keep the sound) breathes, up to full brightness, and
+**HOME** (put the old sound back) is lit at half brightness.
+
+Screen fixes:
 
 - **TRACKS: the section letter (A–D) no longer covers the transport.** It sat on *LOOP* / *SONG* when stopped and on
   the bar.beat counter while playing; it is now on the beat-light row, just right of the four lights.
@@ -23,6 +28,8 @@ Screen fixes; projects, presets and settings open as they are.
   into the icon: a small gap separates them.
 - **A stray line at the right edge** of 14 pages with four knob columns (SAVE > SECTION, ENV, LFO, FX, SEQ > NOTES …)
   is gone: opened from TRACKS, they kept a 1-pixel strip of its header there.
+
+Projects, presets and settings open as they are.
 
 ## 1.9.2
 

@@ -149,6 +149,23 @@ static uint8_t fm1_led[FM1_NCOL];
 static uint8_t fm1_led_dim[FM1_NCOL];   /* same layout as fm1_led: the glow */
 static uint8_t fm1_led_bg[FM1_NCOL];    /* same layout: the backlight (labels readable in the dark) */
 static volatile uint16_t fm1_led_bg_ns; /* the backlight pulse a frame (ns), 0 = off (menu LIGHTS) */
+/* two duty layers, between the glow and lit: an LED in fm1_led_pwm[c] (same layout as fm1_led) is fully lit on
+ * fm1_led_pwm_lvl[c] frames of every FM1_PWM_N, spread evenly (lit 1 frame in 8 still repeats at ~114 Hz: no
+ * flicker). FM1_PWM_N lit always. Free in the ISR: no pulse to time, a mask or two a column */
+#define FM1_PWM_N 64u
+static uint8_t fm1_led_pwm[2][FM1_NCOL];
+static volatile uint8_t fm1_led_pwm_lvl[2];
+static uint32_t fm1__lit(uint32_t p)               /* column p's lit lines this frame: lit, and the duty layers' turn */
+{
+    uint32_t m = fm1_led[p], c;
+    for (c = 0; c < 2u; c++) {
+        uint32_t d = fm1_led_pwm_lvl[c];
+        if (fm1_led_pwm[c][p] && ((fm1_in.frames * d) & (FM1_PWM_N - 1u)) + d >= FM1_PWM_N)
+            m |= fm1_led_pwm[c][p];
+    }
+    return m;
+}
+static uint8_t fm1__lit_p;                         /* (fm1_input_tick) what column p was lit with */
 
 static void fm1__led_lines(uint32_t rowmask)
 {
@@ -276,7 +293,7 @@ static void fm1_input_scan(void)
         fm1__wait(FM1_SETTLE_US);
         fm1_in.raw[p] = (uint8_t)fm1__rows();
         fm1__keys(p);
-        fm1__led_lines(fm1_led[p]);
+        fm1__led_lines(fm1__lit(p));
         fm1__wait(FM1_LED_US);
     }
     fm1__led_lines(0);
@@ -340,7 +357,7 @@ static void fm1_input_tick(void)
 {
     uint32_t p = fm1__tick_col, n = p + 1u == FM1_NCOL ? 0u : p + 1u, i;
     uint32_t w = 0xFFFFu ^ (1u << n) ^ (n < 2u ? 1u << (11u + n) : 0u);
-    uint32_t lit = fm1_led[p], a = fm1_led_dim[p] & ~lit, b = fm1_led_bg[p] & ~lit & ~a;
+    uint32_t lit = fm1__lit_p, a = fm1_led_dim[p] & ~lit, b = fm1_led_bg[p] & ~lit & ~a;
     uint32_t ta = a ? FM1__NS_T(FM1_GLOW_NS) : 0u, tb = b ? FM1__NS_T(fm1_led_bg_ns) : 0u;
     uint32_t tmax = ta > tb ? ta : tb;
     fm1__led_lines(0);
@@ -367,7 +384,8 @@ static void fm1_input_tick(void)
     }
     if (fm1_an.on)                                 /* (1.8) column n's PA7 / PA8 sample */
         fm1__an_start(n);
-    fm1__led_lines(fm1_led[n]);
+    fm1__lit_p = (uint8_t)fm1__lit(n);
+    fm1__led_lines(fm1__lit_p);
     fm1__tick_col = (uint8_t)n;
     fm1__keys(p);                                  /* its keys now: no wait for the frame's end */
     if (n == 0u)

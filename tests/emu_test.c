@@ -93,6 +93,23 @@ int main(int argc, char **argv)
     }
     tap(B_HOME);
     run_ms(500);
+    {   /* the sound browser (PRESETS from HOME): SAVE breathes (4) up to full, HOME half lit (3); HOME closes it */
+        uint32_t lo = 255u, hi = 0u, t, ok;
+        emu_knob(EN_PRESET, 1);
+        run_ms(300);
+        ok = !ui.home && cur_page()->graph == GR_BROWSE && emu_led(B_SAVE) == 4u && emu_led(B_HOME) == 3u &&
+             fm1_led_pwm_lvl[0] == LED_HALF;
+        for (t = 0; t < LED_BREATH_MS; t += 20u) {
+            run_ms(20);
+            lo = fm1_led_pwm_lvl[1] < lo ? fm1_led_pwm_lvl[1] : lo;
+            hi = fm1_led_pwm_lvl[1] > hi ? fm1_led_pwm_lvl[1] : hi;
+        }
+        ok &= lo <= LED_BREATH_LO + 2u && hi >= FM1_PWM_N - 2u;
+        tap(B_HOME);
+        run_ms(300);
+        ok &= emu_led(B_SAVE) != 4u && emu_led(B_HOME) != 3u;
+        check(ok, "the sound browser: SAVE breathes up to full, HOME half lit; gone once closed");
+    }
 
     tap(B_PLAY);
     check(song.playing, "PLAY starts the sequencer");

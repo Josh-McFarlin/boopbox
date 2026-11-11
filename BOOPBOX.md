@@ -105,8 +105,8 @@ Other controls:
 | **SAVE** | on TRACKS or DRUMS: the SONG screen · elsewhere: the SAVE pages (USER, SECTION, TOOLS) |
 | hold **SEQ** + tap **SAVE** | the **SCENES** page, from any page and track |
 | **EDIT + OCT− / OCT+** | undo / redo |
-| **ALGORITHM** | select the track, 1–8, on every page: the header names it |
-| **PRESETS** | the selected track's sound (the sound browser), or the drum kit |
+| **ALGORITHM** | select the track, 1–8, on every page but the sound browser (there: its sounds): the header names it |
+| **PRESETS** | the selected track's sound (the sound browser: there PRESETS moves through the engines, ALGORITHM through their sounds), or the drum kit |
 | **SELECT** | on HOME (and inside a layer): the tempo · on a page: the previous / next page of its group (it stops at the ends; SEQ: NOTES or the drum grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES) · drums: kit ↔ sound |
 | **OCT− / OCT+** | synth tracks: octave (both: back to 0) · drum track, held: ghost / hard hits |
 | **HOME** | the TRACKS screen · on the TRACKS screen: the [visualiser](#the-visualiser) (HOME again closes it) · hold: the menu (SCREEN, LIGHTS, AUDIO, KEYS, SEQ, SYSTEM) · tapped while a layer is held: lock it open |
