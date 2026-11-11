@@ -12,14 +12,6 @@ import { TEXT } from "./text.js";
 
 const NAMES = { boopbox: "BoopBox", trainer: "BoopBox Trainer" };
 const TOTAL = 74 + 1179;                               /* reads: step 1, step 2 (head + app area, SLOOP 2.0 loader) */
-const TILES = [
-  ["blue", "153", "sounds, 12 engines, your samples"],
-  ["green", "37", "drum kits, 909 to afro, + your own"],
-  ["yellow", "27", "punch-in fx: hold fx + key"],
-  ["orange", "rec", "no click: the loop follows you"],
-];
-const TILE_COLOR = { blue: "border-blue text-blue", green: "border-green text-green", yellow: "border-yellow text-yellow", orange: "border-orange text-orange" };
-
 const sha = async (pkg) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", pkg))]
   .map((b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -131,25 +123,15 @@ export default function Installer({ meta }) {
   return (
     <main className="mx-auto max-w-[560px] px-4 pt-8 pb-12">
       <div className="flex items-center justify-between gap-3">
-        <Logo className="w-[170px] min-[421px]:w-[220px]" />
+        <a href="../home/" aria-label={t("home")} className="block"><Logo className="w-[170px] min-[421px]:w-[220px]" /></a>
         <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs lowercase text-dim underline"
           onClick={() => setLang(lang === "ja" ? "en" : "ja")}>{t("other")}</button>
       </div>
-      <Strip className="mt-5 mb-6" />
+      <Strip className="mt-5 mb-4" />
+      <p className="m-0 mb-8 text-sm"><a href="../home/" className="text-dim underline hover:text-fg">← {t("home")}</a></p>
       {meta && meta.banner ? <div dangerouslySetInnerHTML={{ __html: meta.banner }} /> : null}
-      <h1 className="m-0 mb-2 text-[13px] font-medium uppercase tracking-[.12em] text-dim">Firmware for the M-VAVE FM-1</h1>
-      <p className="mb-6 text-xl leading-[1.35]">A groovebox you play live: eight tracks — six synths and two drum machines by default — 12 synth
-        engines (with six-operator FM and DX7 patches), 153 sounds, 37 drum kits from 808 to techno, amapiano and ambient, your own samples and
-        drum kits, 27 punch-in effects. House, techno, hip-hop, drum &amp; bass, synthwave, lo-fi, ambient: make what you want. No factory
-        patterns, nothing to load: everything you hear, you play.</p>
-      <div className="mb-7 grid grid-cols-2 gap-1.5 min-[421px]:grid-cols-4">
-        {TILES.map(([c, big, txt]) => (
-          <div key={c} className={`min-h-[92px] border-t-[3px] bg-tile px-2.5 pt-2.5 pb-3 ${TILE_COLOR[c]}`}>
-            <b className="block text-[22px] font-semibold leading-[1.1]">{big}</b>
-            <span className="mt-1 block text-xs lowercase text-dim">{txt}</span>
-          </div>
-        ))}
-      </div>
+      <p className="m-0 mb-2 text-[13px] font-medium uppercase tracking-[.12em] text-dim">{meta ? `Installer · ${meta.version}` : "Installer"}</p>
+      <h1 className="m-0 mb-4 text-[30px] leading-[1.15] font-bold">{t("title")}</h1>
       <p className="mb-3.5">{t("intro")}</p>
       <p className="mb-3.5">{t("warn")}</p>
       {meta && meta.trainer ? (

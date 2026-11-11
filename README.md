@@ -4,7 +4,8 @@
 Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/sloop-fm1">SLOOP</a> by isod89, itself based on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita / Hügelton Instruments.</p>
 
 <p align="center">
-<a href="https://josh-mcfarlin.github.io/boopbox/"><b>Install from the browser</b></a> ·
+<a href="https://josh-mcfarlin.github.io/boopbox/"><b>Website</b></a> ·
+<a href="https://josh-mcfarlin.github.io/boopbox/webapp/installer/"><b>Install from the browser</b></a> ·
 <a href="GUIDE.md">Complete guide</a> ·
 <a href="BOOPBOX.md">Manual</a> ·
 <a href="DEMARRAGE-RAPIDE-FR.md">Guide en français</a> ·
@@ -373,7 +374,7 @@ Every button can glow so its label is readable on a black FM-1; the C keys or ev
 
 ### From the browser (recommended)
 
-1. Open **[the BoopBox installer](https://josh-mcfarlin.github.io/boopbox/)** in **Chrome or Edge** on a computer.
+1. Open **[the BoopBox installer](https://josh-mcfarlin.github.io/boopbox/webapp/installer/)** in **Chrome or Edge** on a computer.
 2. Connect the FM-1 by USB — a **data** cable, directly (no hub).
 3. Press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo.
 
@@ -560,7 +561,7 @@ On USB the FM-1 is also an **audio input named "BoopBox"**: 44.1 or 48 kHz (2.5:
 
 ## The web editor
 
-Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/) (or the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/)) in Chrome or Edge, with the FM-1 on USB, and press **Connect**. It follows the device live: turn a knob on the FM-1 and the editor moves.
+Open it from the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) (or the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/)) in Chrome or Edge, with the FM-1 on USB, and press **Connect**. It follows the device live: turn a knob on the FM-1 and the editor moves.
 
 **Local audio preview.** Build the browser audio engine with `python3 tools/build_preview.py`
 (Emscripten required; see [BUILDING.md](BUILDING.md#browser-audio-preview)), generate and serve the local site,

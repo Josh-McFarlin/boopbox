@@ -79,7 +79,7 @@ await shot("sequencer", "p-sequencer", ["Steps"], "editor-pianoroll.png", async 
   await page.getByRole("button", { name: "Piano roll" }).click();
   await page.waitForTimeout(600);
 });
-await shot("projects", "p-projects", ["Song & sections", "Backup"], "editor-backup.png");
+await shot("projects", "p-projects", ["Songs", "Backup"], "editor-backup.png");
 
 await browser.close();
 server.close();

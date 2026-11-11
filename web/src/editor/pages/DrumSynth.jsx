@@ -68,7 +68,7 @@ function DsGroups() {
   return (
     <div id="dsgroups"><Groups>
       {DS_GROUPS.map(([title, ks]) => (
-        <div key={title} className="mb-4 min-w-0 break-inside-avoid border border-line bg-s1 px-4 pt-3.5 pb-3">
+        <div key={title} data-card="" className="mb-4 min-w-0 break-inside-avoid border border-line bg-s1 px-4 pt-3.5 pb-3">
           <GroupPage title={t(title)} />
           <Knobs>{ks.map((spec, i) => <DsKnob key={spec[0]} spec={spec} o={o} index={i} />)}</Knobs>
         </div>
