@@ -20,7 +20,7 @@ EXPORTS = ['init', 'boot', 'render', 'frames', 'rate', 'screen', 'screen_n', 'le
            'flash_dirty', 'key', 'button', 'knob', 'master']
 GENERATED = [('gen_tables.py', 'felucca_tables.h'), ('gen_samples.py', 'felucca_samples.h'),
              ('gen_drumkits.py', 'felucca_drumkits.h'), ('gen_fm6_patches.py', 'felucca_fm6.h'),
-             ('gen_obv.py', 'felucca_obv.h'), ('gen_font.py', 'felucca_font.h'), ('gen_icon_art.py', 'felucca_icons.h'),
+             ('gen_obv.py', 'felucca_obv.h'), ('gen_font.py', 'felucca_font.h'), ('gen_icons.py', 'felucca_icons.h'),
              ('gen_logo.py', 'boopbox_logo.h')]
 
 
