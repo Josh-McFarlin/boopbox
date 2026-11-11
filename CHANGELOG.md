@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.9.2
 
 - **A synth track's LEVEL reads 0–127**, as a drum track's LEVEL and REV do and as MIDI CC 7 sends it, on its page,
   HOME's dials, the DRUMS screen, GLO's faders, the trainer and the editor (it read in dB: *-4.0dB* is now *104*).

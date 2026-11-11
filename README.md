@@ -26,7 +26,7 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ## Contents
 
-1. [What's new in 1.9.1](#whats-new-in-191)
+1. [What's new in 1.9.2](#whats-new-in-192)
 2. [Screenshots](#screenshots)
 3. [Features](#features)
 4. [Install](#install)
@@ -46,7 +46,13 @@ BoopBox turns the FM-1 into an eight-track groovebox you play live: **six synths
 
 ---
 
-## What's new in 1.9.1
+## What's new in 1.9.2
+
+**A synth track's LEVEL reads 0–127,** as a drum track's LEVEL does and as MIDI CC 7 sends it, on every screen and in
+the editor (it read in dB: *-4.0dB* is now *104*). The sound is unchanged: 112 is unity, each step 1/2 dB ([all
+changes](CHANGELOG.md)).
+
+### 1.9.1
 
 **BoopBox Trainer has three levels again:** level 4 (a song made from an audio file) and its song page are gone from
 the trainer, the site and the installer. Progress in levels 1–3 is kept. BoopBox itself is as in 1.9.0 ([all
