@@ -5,7 +5,7 @@
   tools/make_screens.py [OUT_DIR]      (default: assets/screens)
 
 Builds and runs tools/screens_demo.c (the host tests' harness, a demo project on the eight tracks playing; it needs
-the generated headers in build/gen: ./build.sh, or HOST_ONLY=1 tests/run_tests.sh), then lays the screens out at 2x
+the generated headers in build/gen: scripts/build.sh, or HOST_ONLY=1 tests/run_tests.sh), then lays the screens out at 2x
 with a title and a line under each:
   boopbox-screens.png      the main screens
   boopbox-visualiser.png   the boot screen, a sound page, the menu and the visualiser's six styles

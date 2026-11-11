@@ -19,7 +19,7 @@ const sha = async (pkg) => [...new Uint8Array(await crypto.subtle.digest("SHA-25
 const A = (props) => <a target="_blank" rel="noopener" className="underline" {...props} />;
 
 export default function Installer({ meta }) {
-  const [lang, setLang] = useState(() => ((navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en"));
+  const lang = "en";
   const t = useCallback((k) => TEXT[lang][k], [lang]);
   /* the status line: a string key (+ an argument) shown in the language chosen, or a plain text */
   const [status, setStatus] = useState({ key: null, arg: "", text: "" });
@@ -37,7 +37,6 @@ export default function Installer({ meta }) {
   const writingRef = useRef(false);
   writingRef.current = writing;
 
-  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   useEffect(() => {
     const leave = (e) => { if (writingRef.current) { e.preventDefault(); e.returnValue = TEXT[lang].leave; } };
     window.addEventListener("beforeunload", leave);
@@ -125,10 +124,6 @@ export default function Installer({ meta }) {
     <>
     <SiteHeader current="installer" />
     <main className="mx-auto max-w-[560px] px-4 pt-8 pb-12">
-      <div className="flex justify-end">
-        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs lowercase text-dim underline"
-          onClick={() => setLang(lang === "ja" ? "en" : "ja")}>{t("other")}</button>
-      </div>
       <Strip className="mt-3 mb-8" />
       {meta && meta.banner ? <div dangerouslySetInnerHTML={{ __html: meta.banner }} /> : null}
       <p className="m-0 mb-2 text-[13px] font-medium uppercase tracking-[.12em] text-dim">{meta ? `Installer · ${meta.version}` : "Installer"}</p>

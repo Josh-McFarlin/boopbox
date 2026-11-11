@@ -69,8 +69,8 @@ record from before that was in level 4 opens on the three levels, their progress
 ## Building and testing
 
 ```
-./build.sh --trainer                    # build/trainer-fw/felucca-trainer.fwsc (version BOOPBOX TRAINER X.Y.Z)
-./build.sh --trainer --release 1.4.3    # build/trainer-fw/felucca-trainer-1.4.3.fwsc
+scripts/build.sh --trainer                    # build/trainer-fw/felucca-trainer.fwsc (version BOOPBOX TRAINER X.Y.Z)
+scripts/build.sh --trainer --release 1.4.3    # build/trainer-fw/felucca-trainer-1.4.3.fwsc
 tests/run_tests.sh                      # includes the trainer test
 python3 tools/trainer/render.py         # the songs to build/trainer/*.wav and .mp3
 ```

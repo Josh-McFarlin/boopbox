@@ -21,7 +21,7 @@ The app slot is 581,564 B (`APP_SLOT` 0x8DFBC). The 2.8.3 app is 570,176 B: **11
 
 | | Bytes |
 | --- | ---: |
-| App, default build (`./build.sh`) | **576,212** |
+| App, default build (`scripts/build.sh`) | **576,212** |
 | Free in the slot | **5,352** |
 
 To fit, three things that cost no feature of the groovebox upgrade were taken out (all measured on the real build):

@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # The editor protocol / external input fuzz (tests/editor_fuzz.c) under AddressSanitizer + UBSan.
-#   sh tests/editor_fuzz.sh [ITER] [SEED]     (from the repo root, after ./build.sh)
+#   sh tests/editor_fuzz.sh [ITER] [SEED]     (from the repo root, after scripts/build.sh)
 set -e
 cd "$(dirname "$0")/.."
 OUT=build/host/edfz

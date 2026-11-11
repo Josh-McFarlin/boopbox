@@ -1,17 +1,21 @@
-# BoopBox 1.1.0: build the firmware, then open the browser installer.
+# BoopBox: build the firmware, then open the browser installer.
 # Uses the dependencies already prepared (WSL MinUI-Build, JieLi toolchain, SDK files in build/deps/ac79).
 # SLICE stays out (FELUCCA_SLICE=0): with its built-in BREAK the image does not fit the app slot.
 $ErrorActionPreference = 'Stop'
-Set-Location $PSScriptRoot
+Set-Location (Split-Path $PSScriptRoot -Parent)   # the repository root
+# The version, from FELUCCA_VERSION in firmware/src/ui.c ("BOOPBOX 1.9.3" gives 1.9.3)
+$m = Select-String -Path firmware/src/ui.c -Pattern '#define FELUCCA_VERSION "BOOPBOX ([^"]+)"' | Select-Object -First 1
+if (-not $m) { throw "No FELUCCA_VERSION in firmware/src/ui.c" }
+$Version = $m.Matches[0].Groups[1].Value
 Write-Host ""
-Write-Host "  B O O P B O X   1.1.0" -ForegroundColor White
+Write-Host "  B O O P B O X   $Version" -ForegroundColor White
 Write-Host "  ---- ---- ---- ----" -ForegroundColor DarkGray
 Write-Host "== Building the firmware (WSL MinUI-Build)" -ForegroundColor Cyan
 Remove-Item Env:FELUCCA_SLICE -ErrorAction SilentlyContinue
 python tools/build_windows.py --distro MinUI-Build --toolchain /root/fm1-codex-deps/jieli/toolchain --sdk build/deps/ac79 --slice 0
 if ($LASTEXITCODE -ne 0) { throw "The build failed" }
 Write-Host "== Making the installer site" -ForegroundColor Cyan
-python web/make_site.py build/felucca.fwsc 1.1.0 build/boopbox-site
+python web/make_site.py build/felucca.fwsc $Version build/boopbox-site
 if ($LASTEXITCODE -ne 0) { throw "make_site failed" }
 Write-Host ""
 Write-Host "Installer: http://localhost:8766/webapp/installer/  (Chrome or Edge, FM-1 on USB)" -ForegroundColor Green

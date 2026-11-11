@@ -5,7 +5,7 @@ The controls are in `docs/groovebox-controls.md`, the design in `docs/groovebox-
 in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-performance.md`.
 
 **Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
-for the PC, with the FM-1's inputs simulated) and on an FM-1, and the default build (`./build.sh`, the JieLi toolchain) makes an
+for the PC, with the FM-1's inputs simulated) and on an FM-1, and the default build (`scripts/build.sh`, the JieLi toolchain) makes an
 image that fits the flash with 6,248 B to spare (1.3.1), the web editor and the visualiser's six styles included. To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
 three tables in RAM at power-on (section 2).
 
@@ -58,7 +58,7 @@ input, the M-UPGRADE update entry and the USB rescue are untouched (their host t
 
 ## 3. Test results
 
-After `./build.sh`, `SOAK_MIN=2 SKIP_CPU_VALGRIND=1 sh tests/run_tests.sh` passes on the final tree with nothing
+After `scripts/build.sh`, `SOAK_MIN=2 SKIP_CPU_VALGRIND=1 sh tests/run_tests.sh` passes on the final tree with nothing
 skipped: *ALL HOST TESTS PASSED* in 18 min 14 s on this machine. That includes the 182 golden renders unchanged, the
 two-core split under ThreadSanitizer (no race), the UBSan builds, a 2-minute soak, and the tests that need the
 firmware image: the M-UPGRADE entry and the update loader on the built package, the target cost of the render loops
@@ -82,11 +82,11 @@ three AC79 SDK files, Docker on macOS).
 tools/get_toolchain.sh                 # the JieLi toolchain, to ~/.jieli/toolchain
 git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
     https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
-./build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
+scripts/build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
 ```
 
 The default build fits (`app ... 576164 B`, 1.1.0). The bitmap boot logo can be built back in place of the visualiser
-with `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 ./build.sh`. When an image does not fit, `tools/build.py` fails and says so; it
+with `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 scripts/build.sh`. When an image does not fit, `tools/build.py` fails and says so; it
 leaves nothing out by itself. With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB
 rescue, USB-MIDI and USB audio still work.
 

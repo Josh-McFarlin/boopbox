@@ -137,7 +137,7 @@ def cost(insns):
 
 def main():
     if not os.path.exists(dis):
-        print(f"target: skip ({dis} missing: run ./build.sh)")
+        print(f"target: skip ({dis} missing: run scripts/build.sh)")
         return 0
     fns = functions(dis)
     res = {n: cost(fns[n]) for n in FUNCS if fns.get(n)}

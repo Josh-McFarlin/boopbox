@@ -21,7 +21,7 @@ node test_web.mjs        # the tests that need no browser
 | `site/public/` | files served as they are: the audio worklets, the icon font's licence |
 | `src/installer/` | the installer; `src/lib/fm1pkg.js` and `fm1ota.js`: packages and the update protocol |
 | `src/emu/` | the emulator page; `engine.js` starts the firmware's WebAssembly in an AudioWorklet |
-| `src/editor/lib/` | no React, no DOM: `proto.js` (the editor's SysEx protocol, file formats, sample pipeline and mock device, see `EDITOR_PROTOCOL.md`), `text.js` (every string, Japanese and English), `glyphs.js` (the icons), `preview.js` (the local audio) |
+| `src/editor/lib/` | no React, no DOM: `proto.js` (the editor's SysEx protocol, file formats, sample pipeline and mock device, see `EDITOR_PROTOCOL.md`), `text.js` (every string), `glyphs.js` (the icons), `preview.js` (the local audio) |
 | `src/editor/core/` | the editor's state and the FM-1 under it: `app.js` (the shared state, strings, helpers), `device.js` (connecting, SET, the pushes, polling), `tabs.js`, `hooks.js`, `shared.js` |
 | `src/editor/ui/kit.jsx` | cards, icons, and the device's parameter knobs |
 | `src/editor/pages/` | a page a tab (`Live.jsx`, `Sound.jsx` ...), each with its own folder for its parts |

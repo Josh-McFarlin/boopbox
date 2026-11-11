@@ -7,7 +7,7 @@
 --palette: the menu's COLOR, its number in gfx.c PALETTES (0 GREEN .. 4 MONO, 5 SYNTHWAVE, the default).
 
 Builds and runs tools/screens_all.c (tools/screens_demo.c's demo project on the eight tracks playing; it needs the
-generated headers in build/gen: ./build.sh, or HOST_ONLY=1 tests/run_tests.sh) and writes:
+generated headers in build/gen: scripts/build.sh, or HOST_ONLY=1 tests/run_tests.sh) and writes:
   OUT_DIR/<group>/<screen>.png   each screen at 2x
   OUT_DIR/<group>.png            a contact sheet a group (home, pages, drums, engines, layers, rec, system, visualiser)
   OUT_DIR/README.md              the list, with every screen

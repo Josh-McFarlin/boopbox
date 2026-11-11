@@ -4,7 +4,7 @@
 // The editor's frame: the site's header, the side bar (pages, the device), the page's title and status, the track selector, the
 // page itself, the footer.
 import { useEffect } from "react";
-import { A, hasTracks, isDrumTrk, ready, setLang, statusText, t, tcol, useApp } from "./core/app.js";
+import { A, hasTracks, isDrumTrk, ready, statusText, t, tcol, useApp } from "./core/app.js";
 import { selectTrack, toggleConnect } from "./core/device.js";
 import { DEV_TABS, NAV, TABS, TAB_NAME, TRACK_TABS, shownTab, showTab, tracksTabOk } from "./core/tabs.js";
 import { useInstallPrompt } from "../shared/pwa.js";
@@ -71,8 +71,6 @@ function DeviceCard() {
       <div className="flex justify-between gap-2">
         <a className="dim" href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/installer/" : "../installer/"}
           {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
-        <button type="button" className="bg-transparent p-0 normal-case text-dim underline hover:bg-transparent hover:text-fg"
-          onClick={() => setLang(app.lang === "ja" ? "en" : "ja")}>{t("other")}</button>
       </div>
       {canInstall ? <button id="install" type="button" className="pri" onClick={install}>{t("install")}</button> : null}
       {__OFFLINE__ ? null : <a className="dim" href="boopbox-editor.html" download={OFFLINE_NAME}>{t("offline")}</a>}
