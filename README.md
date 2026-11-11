@@ -176,6 +176,7 @@ For more problems and solutions, read [Guide §25](GUIDE.md#25-backup-rescue-goi
 - [BOOPBOX.md](BOOPBOX.md) — the manual: every page, layer, sound and kit
 - [DEMARRAGE-RAPIDE-FR.md](DEMARRAGE-RAPIDE-FR.md) — guide de démarrage en français
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release
+- [CREDITS.md](CREDITS.md) — the people and projects that BoopBox uses
 - [BUILDING.md](BUILDING.md) — building, build options, the local audio preview, and tests
 - [docs/NRPN.md](docs/NRPN.md) — the NRPN numbers and ranges
 - [web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md) — the SysEx protocol of the editor
@@ -202,25 +203,11 @@ Both commands build the firmware and serve the installer and the editor on `http
 
 ## Credits and thanks
 
-- **[SLOOP](https://github.com/isod89/sloop-fm1)** by **isod89**. BoopBox is SLOOP with a new name, and it continues SLOOP. All the credits that SLOOP gave stay here.
-- **[Felucca](https://github.com/hugelton/Felucca)** by **Leo Kuroshita** (@kurogedelic) / **Hügelton Instruments**. Felucca gave the engines, the sequencer, the editor and the installer. Later Felucca releases also gave:
-  - In 2.3: the USB audio input, the MIDI clock, the knob reading and many fixes.
-  - In 2.4: the FM6 engine and its DX7 patch editor (Felucca 1.0 / 1.0.1).
-  - In 2.6: the INSERT effects, LFO 2 (SYNC / TRIG / POL), ENV SYNC, the ANALOG filter types, note LEN and step velocity, MIDI LEARN, the live drum mutes, the latched-arp fix (#191), the 1/4D delay, and REV / ECHO THROW (Felucca 1.4 / 1.4.1 / 1.5 / 1.5.1).
-  - In 2.7: the arp modes REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK and CHORD, and ORD in the order that you pressed the keys (Felucca 1.4 / 1.5.1).
-- **The Felucca community, who asked for these features first** (Felucca discussions and issues): **Wulgaren** (insert effects with dry / wet, #78, and the arp report, #191), **etyrnal** (the lo-fi bit effect, #177, and envelopes in note values, #175), **benjaminguerrer** (LFO sync, #154), **gospodindilly-ops** (the ANALOG filter types, #104), **Armstrong1980** (#178) and **oMauNaProducer** (#173) (note length and step velocity), **lostfictions** and **planist79** (MIDI LEARN, #170).
-- **@renebohne** — the key lights for played notes (pull request #11). In 2.6, MIDI Program Change (Felucca pull request #179). In 2.7, MIDI CC 74 controls the cutoff or brightness of each engine, after his pull request #71 (the standard CC map of Felucca 1.1.5).
-- **ChanceTheMaker** and **keremimo** — the TRS MIDI input fix (Felucca Salt) and work on the MIDI clock.
-- **andrerezemini** ([sloop-lab](https://github.com/andrerezemini/sloop-lab)) — in 2.7, the sound on the second core of the FM-1 and 38 KB of RAM back (pull request #111). This work starts from the dual-core start of **Charles Vestal** ([X0X](https://github.com/charlesvestal/fm1-x0x)) and **keremimo** ([Melodee](https://github.com/keremimo/melodee)).
-- **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)):
-  - In 2.7: the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide.
-  - In 1.8: the support for the flash chip of newer FM-1s, the NRPN map, the key velocity and aftertouch (its model, calibration and tests), and the idea of the browser emulator.
-- **Charles Vestal** ([Velo](https://github.com/charlesvestal/fm1-velocity)) — in 1.8, the key velocity uses his discovery: how to drive and read the carbon key pills of the FM-1.
-- **@ordenador** (Mario Faúndez Vidal) — the local audio preview of the web editor (pull request #120). It runs the engines and the sequencer of the firmware in the browser (WebAssembly), with a playable piano / pads and inline sequence editing.
-- **Everyone who installed SLOOP, made music with it, sent comments, reported bugs or asked for features.** Most of each update comes from your messages. Some examples are parameter locks, DX7 patches, dotted delays and longer steps (2.4). In 2.6: a MIDI channel for each track, sustain and pitch bend, step entry from a MIDI keyboard, TEXTURE, the crackle fixes, the fix for the editor bug with the same value on two tracks, and the MIDI LEARN backup.
-- **Assets.** Samples: Versilian Studios VSCO-2 CE and VCSL, Sonic Pi (all CC0). Font: Terminus and Terminus Bold (SIL OFL 1.1). Icons: Fukiai (MIT, Hügelton Instruments) in the web editor. `tools/gen_icon_art.py` and `tools/gen_logo.py` draw the parameter icons of the FM-1 and the BoopBox logo (GPL-3.0).
-- **Engines.** PHASE engine after CrispyZebra (GPL). VOICE after klattsch (MIT). FM6: msfa from Dexed by Google Inc. and Pascal Gauthier (Apache-2.0).
-- **Interface ideas** come from the step entry of Elektron and from the MPC of Akai (swing, note repeat, erase).
+- **[SLOOP](https://github.com/isod89/sloop-fm1)** by **isod89**. BoopBox started as SLOOP 2.8.3 with a new name.
+- **[Felucca](https://github.com/hugelton/Felucca)** by **Leo Kuroshita** / **Hügelton Instruments**. SLOOP is based on Felucca, which gave the engines, the sequencer, the editor and the installer.
+- **Added in BoopBox:** the OBERVAVE engine from [OberVave](https://github.com/zvenson/obervave) by zvenson, and USB HOST from [Melodee](https://github.com/keremimo/melodee) by Kerem Kilic. Key velocity, aftertouch and NRPN come from [JIANT FM](https://github.com/juanjiant-bit/JIANT) by juanjiant-bit, after [Velo](https://github.com/charlesvestal/fm1-velocity) by Charles Vestal.
+
+[CREDITS.md](CREDITS.md) gives the full list. It includes the people whom SLOOP credited, and the samples, fonts and code from other projects.
 
 ## Licence
 
