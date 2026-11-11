@@ -1,33 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
-// The editor's frame: the side bar (logo, pages, the device), the page's title and status, the track selector, the
+// The editor's frame: the site's header, the side bar (pages, the device), the page's title and status, the track selector, the
 // page itself, the footer.
 import { useEffect } from "react";
-import logo from "../../../assets/logo/boopbox-logo.svg?raw";
 import { A, hasTracks, isDrumTrk, ready, setLang, statusText, t, tcol, useApp } from "./core/app.js";
 import { selectTrack, toggleConnect } from "./core/device.js";
 import { DEV_TABS, NAV, TABS, TAB_NAME, TRACK_TABS, shownTab, showTab, tracksTabOk } from "./core/tabs.js";
 import { useInstallPrompt } from "../shared/pwa.js";
+import SiteHeader from "../shared/SiteHeader.jsx";
 import { Ic } from "./ui/kit.jsx";
 import { PAGES, Preview } from "./pages/index.js";
-
-/* the logo, cropped to its drawing, on the page's black */
-const BRAND = logo.replace(/viewBox="[^"]*"/, 'viewBox="20 40 866 188"').replace(/ width="\d+" height="\d+"/, "")
-  .replace(/<rect width="900" height="260" fill="#000"\/>\s*/, "");
 
 /* the offline file's name: with the site's version (make_site.py writes window.BOOPBOX_VERSION) */
 const OFFLINE_NAME = typeof window !== "undefined" && window.BOOPBOX_VERSION
   ? `boopbox-editor-${String(window.BOOPBOX_VERSION).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
-
-function Brand() {
-  return (
-    <a href="#sound" aria-label="BoopBox" className="flex items-end gap-2.5 text-fg no-underline">
-      <span className="block w-24 wide:w-[150px] [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" aria-hidden="true" dangerouslySetInnerHTML={{ __html: BRAND }} />
-      <span className="pb-0.5 lowercase text-dim">editor</span>
-    </a>
-  );
-}
 
 function Tabs() {
   const app = useApp();
@@ -137,10 +124,11 @@ export default function App() {
   }
   const Page = PAGES[want];
   return (
+    <>
+    <SiteHeader current="editor" base={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/" : "../"} />
     <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] wide:grid-cols-[232px_minmax(0,1fr)]">
       <aside className="flex flex-row flex-wrap items-center gap-3 border-b border-line px-4 py-3 wide:sticky wide:top-0 wide:h-screen wide:flex-col
         wide:flex-nowrap wide:items-stretch wide:gap-4 wide:overflow-y-auto wide:border-r wide:border-b-0 wide:px-4 wide:py-5">
-        <Brand />
         <Tabs />
         <DeviceCard />
       </aside>
@@ -168,5 +156,6 @@ export default function App() {
         </footer>
       </main>
     </div>
+    </>
   );
 }
