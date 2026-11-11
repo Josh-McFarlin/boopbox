@@ -140,8 +140,8 @@ UI_SMALL static void draw_head(void)
         cv_icon(156, 2, ICON_TAPE, C_GRAY);
         b[0] = (char)('1' + song.sel);
         b[1] = 0;
-        cv_rect(168, 2, 12, 16, UI_COL[song.sel]);
-        cv_text(170, 1, &FONT_S, b, C_BLACK);
+        cv_rect(171, 2, 12, 16, UI_COL[song.sel]);       /* (a gap after the 12-px icon: it ends at 167) */
+        cv_text(173, 1, &FONT_S, b, C_BLACK);
     } else {
         b[0] = 'T';
         b[1] = (char)('1' + song.sel);
@@ -173,6 +173,8 @@ UI_SMALL static void draw_frame(void)
     lcd_fill(0, Y_GRAPH + H_GRAPH, 240, Y_FOOT - Y_GRAPH - H_GRAPH, C_BLACK);
     for (i = 0; i < 4u; i++)                            /* left inset of each column */
         lcd_fill(i * 60u, Y_LABEL, 4, Y_SEP_END - Y_LABEL, C_BLACK);
+    lcd_fill(239, Y_LABEL, 1, Y_SEP_END - Y_LABEL, C_BLACK);   /* the last column's right edge (its strip ends at 238;
+                                                                * no rule there): else TRACKS' header shows through */
     lcd_rule(H_HEAD, C_LINE);
     lcd_rule(Y_FOOT - 2, C_LINE);
     for (i = 1; i < 4u; i++)
