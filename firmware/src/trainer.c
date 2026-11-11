@@ -116,7 +116,7 @@ UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a 
 UI_SMALL static void tr_card_value(char *b, const tr_card_t *c, int32_t v)
 {
     if (c->goal == TG_PARAM && c->btn == B_HOME && (c->p == P_LEVEL || c->p == P_PAN)) {
-        mix_fmt(b, &trk[c->trk % NTRK], c->p, v);      /* (HOME's dials: ui_studio.c, "-7.0dB") */
+        mix_fmt(b, &trk[c->trk % NTRK], c->p, v);      /* (HOME's dials: ui_studio.c, "98") */
     } else if (c->goal == TG_PARAM && c->btn == B_SEQ && !c->data && c->p == P_SLEN)
         fmt_int(b, v);                                  /* (SEQ held: "steps 4", ui_layers.c) */
     else
