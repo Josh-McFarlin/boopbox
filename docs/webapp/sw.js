@@ -4,9 +4,9 @@
 // https, so Web MIDI asks as usual (a downloaded file on Android opens as content://, where Chrome refuses MIDI).
 // Online the network always wins (the page as published, never an old one); the copy is only the fallback.
 // A new site (any file changed) is a new sw.js: the new copy replaces the old one.
-const STAMP = "1.9.2-ecdc9d3a2d9e";                          // version + a hash of the files
+const STAMP = "1.9.2-f61836355931";                          // version + a hash of the files
 const CACHE = "boopbox-site-" + STAMP;
-const FILES = ["../firmware/boopbox-1.9.2.fwsc", "../firmware/boopbox-trainer-1.9.2.fwsc", "assets/Brand-hBrDJuYi.js", "assets/editor-_xUiCWXV.js", "assets/editor-n-2sZ685.css", "assets/fukiai-BZRgDyXV.ttf", "assets/installer-C4OlOy4K.js", "assets/jsx-runtime-MrmPCS7u.js", "assets/preview-DAmPIRby.js", "assets/pwa-mdzz7amb.js", "assets/site-DwMEI4IX.css", "assets/terminus-CfWn_mi8.ttf", "boopbox.webmanifest", "editor/", "editor/FUKIAI-LICENSE.txt", "editor/boopbox-preview.wasm", "editor/preview-worklet.js", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "installer/"];                          // relative to this file
+const FILES = ["../firmware/boopbox-1.9.2.fwsc", "../firmware/boopbox-trainer-1.9.2.fwsc", "assets/SiteHeader-9GRIIKKT.js", "assets/editor-DwD10TXO.css", "assets/editor-llRSfGNS.js", "assets/fukiai-BZRgDyXV.ttf", "assets/installer-CXKvKzDd.js", "assets/preview-DAmPIRby.js", "assets/pwa-tnfvi2mQ.js", "assets/site-fGpbOikS.css", "assets/terminus-CfWn_mi8.ttf", "boopbox.webmanifest", "editor/", "editor/FUKIAI-LICENSE.txt", "editor/boopbox-preview.wasm", "editor/preview-worklet.js", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "installer/"];                          // relative to this file
 const KEEP = new Set(FILES.map((f) => new URL(f, self.location).href));
 
 const key = (url) => {                              // the copy's name of a request: no query, index.html = the folder

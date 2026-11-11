@@ -7,7 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { logicalImage, productOf } from "../lib/fm1pkg.js";
 import { Updater } from "../lib/fm1ota.js";
 import { useInstallPrompt } from "../shared/pwa.js";
-import { Logo, Strip } from "../shared/Brand.jsx";
+import { Strip } from "../shared/Brand.jsx";
+import SiteHeader from "../shared/SiteHeader.jsx";
 import { TEXT } from "./text.js";
 
 const NAMES = { boopbox: "BoopBox", trainer: "BoopBox Trainer" };
@@ -121,14 +122,14 @@ export default function Installer({ meta }) {
   const tileBtn = "inline-block mt-2 px-3.5 py-2.5 bg-tile text-fg no-underline cursor-pointer";
 
   return (
+    <>
+    <SiteHeader current="installer" />
     <main className="mx-auto max-w-[560px] px-4 pt-8 pb-12">
-      <div className="flex items-center justify-between gap-3">
-        <a href="../home/" aria-label={t("home")} className="block"><Logo className="w-[170px] min-[421px]:w-[220px]" /></a>
+      <div className="flex justify-end">
         <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-xs lowercase text-dim underline"
           onClick={() => setLang(lang === "ja" ? "en" : "ja")}>{t("other")}</button>
       </div>
-      <Strip className="mt-5 mb-4" />
-      <p className="m-0 mb-8 text-sm"><a href="../home/" className="text-dim underline hover:text-fg">← {t("home")}</a></p>
+      <Strip className="mt-3 mb-8" />
       {meta && meta.banner ? <div dangerouslySetInnerHTML={{ __html: meta.banner }} /> : null}
       <p className="m-0 mb-2 text-[13px] font-medium uppercase tracking-[.12em] text-dim">{meta ? `Installer · ${meta.version}` : "Installer"}</p>
       <h1 className="m-0 mb-4 text-[30px] leading-[1.15] font-bold">{t("title")}</h1>
@@ -171,5 +172,6 @@ export default function Installer({ meta }) {
         M-VAVE and FM-1 are trademarks of their respective owners; BoopBox is not affiliated with them.<br />
         {t("license")} <A href="https://github.com/josh-mcfarlin/boopbox">github.com/josh-mcfarlin/boopbox</A></p>
     </main>
+    </>
   );
 }
