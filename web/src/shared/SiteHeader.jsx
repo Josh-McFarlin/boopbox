@@ -5,11 +5,12 @@
 import { Logo } from "./Brand.jsx";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
-/* [key, label, the home page's section, the page it leads to elsewhere (relative to webapp/)] */
+/* [key, label, the home page's section (null: the page, also from the home page), the page it leads to elsewhere
+   (relative to webapp/)] */
 const LINKS = [
   ["features", "Features", "features", "home/#features"],
   ["editor", "Web editor", "editor", "editor/"],
-  ["emu", "Try it", "emulator", "emu/"],
+  ["emu", "Try it", null, "emu/"],              // (always the emulator page itself)
   ["install", "Install", "install", "home/#install"],
 ];
 

@@ -104,7 +104,7 @@ export default function Home() {
               drum &amp; bass, lo-fi, ambient: it does not pick a style for you.</p>
             <div className="mb-5 flex flex-wrap gap-3">
               <a href="../installer/" className={PRIMARY}>Install from the browser</a>
-              <Hash to="emulator" className={SECONDARY}>Try it first</Hash>
+              <a href="../emu/" className={SECONDARY}>Try it first</a>
             </div>
             <p className="m-0 text-sm text-dim">Open source (GPL-3.0) · installs over USB in Chrome or Edge · go back to the official firmware any time</p>
           </div>
