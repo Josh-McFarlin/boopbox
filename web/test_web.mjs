@@ -11,13 +11,13 @@
 // - fm1ota.js: a full install and an unplug during the write against a simulated FM-1
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { logicalImage, productOf } from "./fm1pkg.js";
-import { Updater, pack7, unpack7, FM1_PORT } from "./fm1ota.js";
+import { logicalImage, productOf } from "./src/lib/fm1pkg.js";
+import { Updater, pack7, unpack7, FM1_PORT } from "./src/lib/fm1ota.js";
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
@@ -27,8 +27,14 @@ const py = (code, ...args) => execFileSync(PYTHON, ["-c", code, ...args], { maxB
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 
 /* ------------------------------------------------------------ editor protocol --- */
-const html = readFileSync(join(HERE, "editor.html"), "utf8");
-const proto = html.slice(html.indexOf("/*PROTO-BEGIN*/"), html.indexOf("/*PROTO-END*/"));
+/* the protocol, formats and mock device (src/editor/lib/proto.js), run as a script: its export list stripped */
+const protoSrc = readFileSync(join(HERE, "src/editor/lib/proto.js"), "utf8");
+const proto = protoSrc.slice(0, protoSrc.lastIndexOf("\nexport {"));
+/* the React editor's own source (src/editor/**, site/editor/index.html), for the checks on the page itself */
+const srcFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
+  d.isDirectory() ? srcFiles(join(dir, d.name)) : /\.(jsx?|css|html)$/.test(d.name) ? [join(dir, d.name)] : []);
+const editorSrc = [join(HERE, "site/editor/index.html"), ...srcFiles(join(HERE, "src/editor"))]
+  .filter((f) => existsSync(f)).map((f) => readFileSync(f, "utf8")).join("\n");
 const E = vm.runInNewContext(proto + `
 ;({ frame, unframe, parse, req, Link, parseWav, resample, normalize, rootFromName, buildSlot, makeMockDevice, CMD, SMP,
    CHOP, chopNovelty, chopHits, chopSnap, chopGrid, chopEqual, chopList, chopPick, chopFit, chopZones, wavFile, zipStore, crc32,
@@ -1829,7 +1835,7 @@ async function updater() {
   wrong.boot("ota-FM-1_015", "FM-1 Update");
   const e5 = await new Updater(wrong.access).resume(image, null, { product: "FM-1_015" }).then(() => null, (x) => x);
   ok(e5 && e5.code === "mismatch", "fm1ota.js: return to official: another firmware coming back is not 'done'");
-  const pk = await import(join(HERE, "fm1pkg.js"));
+  const pk = await import(join(HERE, "src/lib/fm1pkg.js"));
   const notStock = new Uint8Array(pk.STOCK_V15_SIZE);
   const e6 = await pk.validateStockPackage(notStock).then(() => null, (x) => x);
   ok(e6 && /official FM-1 V15/.test(e6.message), "fm1pkg.js: only the exact official V15 is accepted (SHA-256)");

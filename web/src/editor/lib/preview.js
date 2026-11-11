@@ -31,10 +31,10 @@ export class LocalPreview {
   }
   async load() {
     try {
-      const response = await fetch(new URL('./boopbox-preview.wasm', import.meta.url));
+      const response = await fetch(new URL('boopbox-preview.wasm', document.baseURI));
       if (!response.ok) throw new Error('Build the audio preview first: python3 tools/build_preview.py');
       const module = await WebAssembly.compile(await response.arrayBuffer());
-      await this.context.audioWorklet.addModule(new URL('./preview-worklet.js', import.meta.url));
+      await this.context.audioWorklet.addModule(new URL('preview-worklet.js', document.baseURI));
       this.node = new AudioWorkletNode(this.context, 'boopbox-preview', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { module },
       });
