@@ -7,8 +7,19 @@ import {
   B, BLACK, BTNMAP, BUTTONS, KEYMAP, KNOBMAP, KNOBS, NKEYS, NOTE, download, drawScreen, flashErase, flashSave, powerOn,
 } from "./engine.js";
 
-const KNOB_COLOR = { 3: "var(--color-blue)", 4: "var(--color-green)", 5: "var(--color-yellow)", 6: "var(--color-orange)" };
-const WHITE = Array.from({ length: NKEYS }, (_, k) => k).filter((k) => !BLACK(k)).length;
+/* what the FM-1 has printed: its knobs' names, the PLAY/STOP button, the upper keys' labels (the stock firmware's) */
+const KNOB_LABEL = { K1: "KNOB1", K2: "KNOB2", K3: "KNOB3", K4: "KNOB4" };
+const KEY_LABEL = ["OP1", "OP2", "OP3", "OP4", "OP5", "OP6", "PIT", "GLO", "MONO", "POLY", ""];
+/* the computer's key for each control, printed faintly on it where there is a keyboard (emu.css shows them) */
+const CODE_LABEL = { Comma: ",", Period: ".", Semicolon: ";", Slash: "/", Quote: "'", Space: "SPC", Enter: "↵",
+                     BracketLeft: "[", BracketRight: "]", Escape: "ESC", Minus: "-", Equal: "=" };
+const keyName = (code) => CODE_LABEL[code] ?? code.replace(/^(Key|Digit)/, "");
+const KEY_HINT = Object.fromEntries(Object.entries(KEYMAP).map(([c, k]) => [k, keyName(c)]));
+const BTN_HINT = Object.fromEntries(Object.entries(BTNMAP).map(([c, b]) => [b, keyName(c)]));
+const KNOB_HINT = { 0: "↑ ↓", 1: "← →", 2: "PGUP PGDN" };
+const OCTAVE_DOTS = [4, 7, 11, 14];                    // between B and C, E and F
+/* the left edge of the gap before white key i, in a row of 16 pills with gaps of g units */
+const gap = (i, g) => `calc(${i} * (100% - 15 * ${g} * var(--u)) / 16 + ${i - 0.5} * ${g} * var(--u))`;
 
 function PanelButton({ name, led, send, latched }) {
   const [down, setDown] = useState(false);
@@ -32,25 +43,27 @@ function PanelButton({ name, led, send, latched }) {
     if (!latched.current.has(b)) send({ t: "button", b, down: false });
   };
   return (
-    <button type="button" data-led={led} title={`${name}: hold for its layer; Shift-click keeps it held`}
-      className={`fm1-btn relative flex cursor-pointer touch-none flex-col items-center gap-1.5 border-0 bg-transparent p-0 text-[10.5px]
-        font-semibold leading-none tracking-[.05em] text-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg
-        ${down ? "down" : ""} ${held ? "held" : ""}`}
+    <button type="button" data-led={led} aria-label={name} title={`${name}: hold for its layer; Shift-click keeps it held`}
+      className={`fm1-btn ${down ? "down" : ""} ${held ? "held" : ""}`}
       onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={onUp}>
-      <i className="block aspect-[1.35] w-full max-w-[46px] rounded-[7px]" /><span>{name}</span>
+      {name === "PLAY" ? <><span className="play">PLAY</span><span>STOP</span></> : name}
+      {BTN_HINT[b] ? <kbd className="fm1-hint" aria-hidden="true">{BTN_HINT[b]}</kbd> : null}
     </button>
   );
 }
 
-function Knob({ name, e, send }) {
+/* a knob: endless (an encoder) unless value/onValue are given (MASTER, a potentiometer: 0..1023 over 300 degrees) */
+function Knob({ name, e, send, value, onValue }) {
+  const pot = onValue !== undefined;
   const [angle, setAngle] = useState(0);
   const drag = useRef({ y0: null, acc: 0 });
   const ref = useRef(null);
   const turn = useCallback((s) => {
     if (!s) return;
+    if (pot) { onValue(s); return; }
     setAngle((a) => a + s * 18);
     send({ t: "knob", e, s });
-  }, [e, send]);
+  }, [e, send, pot, onValue]);
   useEffect(() => {                                     /* (a wheel listener that may preventDefault: not passive) */
     const cap = ref.current;
     const wheel = (ev) => { ev.preventDefault(); turn(ev.deltaY < 0 ? 1 : -1); };
@@ -58,28 +71,30 @@ function Knob({ name, e, send }) {
     return () => cap.removeEventListener("wheel", wheel);
   }, [turn]);
   const end = () => { drag.current.y0 = null; };
+  const a = pot ? -150 + (300 * value) / 1023 : angle;
   return (
-    <div className="flex flex-col items-center gap-1 text-[10.5px] tracking-[.06em] text-dim" style={{ "--kc": KNOB_COLOR[e] }}>
-      <div ref={ref} tabIndex={0} role="slider" aria-label={name} aria-valuenow={0}
-        className="fm1-cap relative size-[38px] cursor-ns-resize touch-none rounded-full min-[481px]:size-[46px]
-          focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-fg"
-        style={{ "--a": angle + "deg" }}
+    <div className="fm1-knob">
+      <span className="fm1-print">{name}</span>
+      <div ref={ref} tabIndex={0} role="slider" aria-label={name} aria-valuenow={pot ? value : 0}
+        {...(pot ? { "aria-valuemin": 0, "aria-valuemax": 1023 } : {})}
+        className="fm1-cap" style={{ "--a": a + "deg" }}
         onPointerDown={(ev) => { drag.current = { y0: ev.clientY, acc: 0 }; ev.currentTarget.setPointerCapture(ev.pointerId); }}
         onPointerMove={(ev) => {
           const d = drag.current;
           if (d.y0 === null) return;
           d.acc += d.y0 - ev.clientY;
           d.y0 = ev.clientY;
-          while (Math.abs(d.acc) >= 10) { const s = Math.sign(d.acc); turn(s); d.acc -= s * 10; }
+          const step = pot ? 3 : 10;
+          while (Math.abs(d.acc) >= step) { const s = Math.sign(d.acc); turn(s); d.acc -= s * step; }
         }}
         onPointerUp={end} onPointerCancel={end}
         onKeyDown={(ev) => {
           if (ev.key === "ArrowUp" || ev.key === "ArrowRight") { turn(1); ev.preventDefault(); ev.stopPropagation(); }
           if (ev.key === "ArrowDown" || ev.key === "ArrowLeft") { turn(-1); ev.preventDefault(); ev.stopPropagation(); }
         }}>
-        <b className="absolute top-[5px] left-1/2 -ml-[1.5px] h-3 w-[3px] rounded-[2px]" style={{ background: "var(--kc, #ddd)" }} />
+        <b />
+        {KNOB_HINT[e] ? <kbd className="fm1-hint" aria-hidden="true">{KNOB_HINT[e]}</kbd> : null}
       </div>
-      <span>{name}</span>
     </div>
   );
 }
@@ -99,6 +114,13 @@ export default function Emulator() {
   const screen = useRef(null);
 
   const send = useCallback((m) => { if (node.current) node.current.port.postMessage(m); }, []);
+  const masterRef = useRef(master);
+  const setMasterBy = useCallback((s) => {
+    const v = Math.max(0, Math.min(1023, masterRef.current + s * 24));
+    masterRef.current = v;
+    setMaster(v);
+    send({ t: "master", v });
+  }, [send]);
 
   useEffect(() => {
     const g = canvas.current.getContext("2d");
@@ -170,58 +192,69 @@ export default function Emulator() {
     ev.currentTarget.setPointerCapture?.(ev.pointerId);
     noteOn(k, vel);
   };
-  let wi = 0;
-  const keys = Array.from({ length: NKEYS }, (_, k) => {
+  /* the keybed: white keys in the lower row, the black ones above, each over the gap it sits on */
+  let wi = 0, bi = 0;
+  const top = [], bottom = [];
+  for (let k = 0; k < NKEYS; k++) {
     const black = BLACK(k);
-    const style = black ? { left: `calc(${(wi / WHITE) * 100}% - var(--bw) / 2)` } : undefined;
-    if (!black) wi++;
-    return (
-      <button key={k} type="button" data-led={leds[14 + k]} aria-label={NOTE[k % 12] + (3 + Math.floor((k + 5) / 12))} style={style}
-        className={`cursor-pointer touch-none border-0 p-0 ${black ? "fm1-black absolute top-0 z-[1] h-[60%] rounded-b" : "fm1-white h-full rounded-b-md"}
-          ${held.has(k) ? "down" : ""}`}
-        onPointerDown={keyDown(k)} onPointerUp={() => noteOff(k)} onPointerCancel={() => noteOff(k)} />
+    const label = black ? KEY_LABEL[bi++] : "";
+    const key = (
+      <button key={k} type="button" data-led={leds[14 + k]} aria-label={NOTE[k % 12] + (3 + Math.floor((k + 5) / 12))}
+        className={`fm1-key ${label ? "labelled" : ""} ${held.has(k) ? "down" : ""}`} style={black ? { left: gap(wi, "var(--kg)") } : undefined}
+        onPointerDown={keyDown(k)} onPointerUp={() => noteOff(k)} onPointerCancel={() => noteOff(k)}>
+        <i />{label ? <span>{label}</span> : null}
+        {KEY_HINT[k] ? <kbd className="fm1-hint" aria-hidden="true">{KEY_HINT[k]}</kbd> : null}
+      </button>
     );
-  });
+    if (black) top.push(key);
+    else { bottom.push(key); wi++; }
+  }
   const btn = (name) => <PanelButton key={name} name={name} led={leds[B[name]]} send={send} latched={latched} />;
   const help = "text-fg font-semibold";
 
   return (
-    <main className="mx-auto max-w-[1040px] px-4 pt-6 pb-12">
+    <main className="mx-auto max-w-[1280px] px-4 pt-6 pb-12">
       <h1 className="m-0 mb-1.5 text-[13px] font-medium uppercase tracking-[.12em] text-dim">BoopBox emulator</h1>
       <p className="mb-[18px] max-w-[46em] text-[17px] leading-[1.35] min-[481px]:text-[19px]">The real BoopBox firmware, running in your browser:
         the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
       <Strip className="mb-5" />
 
-      <div className="fm1-body relative touch-manipulation select-none rounded-[18px] p-3.5 min-[861px]:p-[22px]">
+      <div className="fm1-wrap relative">
+        <div className="fm1 touch-manipulation select-none">
+          <div className="fm1-left">
+            <div className="fm1-knobs4">
+              <Knob name="MASTER" value={master} onValue={setMasterBy} />
+              {["SELECT", "PRESETS", "ALGORITHM"].map((n) => <Knob key={n} name={n} e={Object.fromEntries(KNOBS)[n]} send={send} />)}
+            </div>
+            <div className="fm1-oct fm1-well">{btn("OCT-")}{btn("OCT+")}</div>
+          </div>
+          <div className="fm1-screen">
+            <canvas ref={canvas} width="240" height="240" aria-label="The FM-1's screen" />
+          </div>
+          <div className="fm1-right">
+            <div className="fm1-knobrow">
+              {KNOBS.filter(([, e]) => e >= 3).map(([n, e]) => <Knob key={n} name={KNOB_LABEL[n]} e={e} send={send} />)}
+            </div>
+            <div className="fm1-pad fm1-well">{BUTTONS.slice(0, 12).map(btn)}</div>
+          </div>
+          <div className="fm1-keyscroll">
+            <div className="fm1-keys fm1-well">
+              <div className="fm1-row top">{top}</div>
+              <div className="fm1-row">
+                {OCTAVE_DOTS.map((i) => <b key={i} className="fm1-dot" style={{ left: gap(i, "var(--kg)") }} />)}
+                {bottom}
+              </div>
+            </div>
+          </div>
+        </div>
         {!on ? (
-          <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 rounded-[18px] bg-[#0b0b0dd9] p-4 text-center">
+          <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 rounded-[24px] bg-[#0b0b0dcc] p-4 text-center">
             <button type="button" disabled={starting} onClick={power}
               className="cursor-pointer border-0 bg-orange px-8 py-4 text-[15px] font-semibold uppercase leading-none tracking-[.08em] text-black">
               {starting ? "Starting…" : "Power on"}</button>
             <p className="m-0 text-[13px] text-dim">Sound needs a click to start. Best with headphones.</p>
           </div>
         ) : null}
-        <div className="grid grid-cols-1 items-start gap-[22px] min-[861px]:grid-cols-[auto_minmax(0,480px)_1fr]">
-          <div className="order-2 flex flex-row items-center justify-center gap-[22px] min-[861px]:order-none min-[861px]:flex-col min-[861px]:gap-3.5">
-            {KNOBS.filter(([, e]) => e < 3).map(([n, e]) => <Knob key={n} name={n} e={e} send={send} />)}
-          </div>
-          <div className="order-1 mx-auto w-full max-w-[480px] min-[861px]:order-none">
-            <canvas ref={canvas} width="240" height="240" aria-label="The FM-1's screen" className="fm1-screen block aspect-square w-full rounded bg-black" />
-            <div className="mt-[18px] grid grid-cols-4 gap-2">
-              {KNOBS.filter(([, e]) => e >= 3).map(([n, e]) => <Knob key={n} name={n} e={e} send={send} />)}
-            </div>
-          </div>
-          <div className="order-3 flex flex-col gap-4 min-[861px]:order-none">
-            <div className="grid grid-cols-6 gap-x-1.5 gap-y-2 min-[481px]:gap-x-2 min-[481px]:gap-y-2.5">{BUTTONS.slice(0, 12).map(btn)}</div>
-            <label className="flex items-center gap-2.5 text-[10.5px] tracking-[.06em] text-dim">MASTER
-              <input type="range" min="0" max="1023" value={master} className="flex-1 accent-orange"
-                onChange={(ev) => { setMaster(+ev.target.value); send({ t: "master", v: +ev.target.value }); }} /></label>
-          </div>
-        </div>
-        <div className="mt-[22px] grid grid-cols-[auto_1fr] items-end gap-[18px]">
-          <div className="flex w-20 flex-col gap-2 min-[861px]:w-[110px] min-[861px]:flex-row">{btn("OCT-")}{btn("OCT+")}</div>
-          <div className="relative grid h-24 gap-[3px] min-[481px]:h-[120px] min-[861px]:h-[150px]" style={{ gridTemplateColumns: `repeat(${WHITE}, 1fr)` }}>{keys}</div>
-        </div>
       </div>
 
       <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-dim">
@@ -236,15 +269,15 @@ export default function Emulator() {
 
       <div className="mt-[26px] grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-x-[22px] gap-y-1.5 text-[13px] text-dim">
         <div><b className={help}>Keys</b>: click them (lower on a key plays harder, with MENU › KEYS › VELOCITY on), or{" "}
-          <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5.</div>
+          <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5. On a phone, swipe the case under the keys to scroll them.</div>
         <div><b className={help}>Buttons</b>: hold them for their layer. <kbd>Shift</kbd>-click keeps one held, so the keyboard can play its
           layer. <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Esc</kbd> HOME, <kbd>[</kbd> <kbd>]</kbd> OCT− OCT+.</div>
-        <div><b className={help}>Knobs</b>: drag up or down, or scroll. <kbd>↑</kbd> <kbd>↓</kbd> SELECT, <kbd>←</kbd> <kbd>→</kbd> ALGORITHM,{" "}
+        <div><b className={help}>Knobs</b>: drag up or down, or scroll (MASTER is the volume). <kbd>↑</kbd> <kbd>↓</kbd> SELECT, <kbd>←</kbd> <kbd>→</kbd> ALGORITHM,{" "}
           <kbd>PgUp</kbd> <kbd>PgDn</kbd> PRESETS.</div>
         <div><b className={help}>More buttons</b>: <kbd>1</kbd> FX, <kbd>2</kbd> SEL, <kbd>5</kbd> ENV, <kbd>7</kbd> LFO, <kbd>8</kbd> EDIT,{" "}
           <kbd>9</kbd> GLO, <kbd>0</kbd> SAVE, <kbd>-</kbd> ARP, <kbd>=</kbd> SEQ.</div>
       </div>
-      <p className="mt-[22px] text-[12.5px] text-dim">The panel is drawn, not photographed: the controls are the FM-1's, their places close to it. Not here:
+      <p className="mt-[22px] text-[12.5px] text-dim">The panel is drawn, not photographed, to the FM-1's own layout and proportions. Not here:
         USB and MIDI, USB audio, the web editor's link, your own samples, the keys' own velocity sensing. After JIANT FM's
         emulator. <a href="../installer/">Install BoopBox on your FM-1</a> · GPL-3.0.</p>
     </main>

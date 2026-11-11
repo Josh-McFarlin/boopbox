@@ -1,27 +1,141 @@
 /* SPDX-License-Identifier: GPL-3.0-only
-   The emulator page: the site's Tailwind theme, plus the FM-1's skin (its body, knob caps, buttons and keys), which
-   are gradients and shadows easier to read as a few component classes than as utilities. */
+   The emulator page: the site's Tailwind theme, plus the FM-1 itself. The panel is laid out as the real device is:
+   every size and place below is in --u, one unit being one pixel of an 840-unit-wide FM-1 (its photo, measured),
+   so the whole panel scales with the width it is given and keeps the device's proportions. On a phone the same parts
+   stack (the screen first, then the knobs and buttons, the keys at the bottom). */
 @import "../styles/site.css";
 
-:root { --bg: #0b0b0d; --body: #1c1c21; --body2: #26262c; --cap: #303038; --bw: 4.2%; }
+:root { --bg: #0b0b0d; }
 
 @layer components {
-  .fm1-body { background: linear-gradient(var(--body2), var(--body)); box-shadow: 0 1px 0 #3a3a42 inset, 0 18px 40px #0008; }
-  .fm1-screen { box-shadow: 0 0 0 6px #000, 0 0 0 7px #3a3a42; image-rendering: pixelated; }
-  .fm1-cap { --a: 0deg; background: radial-gradient(circle at 35% 30%, #4a4a54, var(--cap));
-             box-shadow: 0 2px 5px #000a, 0 0 0 2px var(--kc, #44444c); transform: rotate(var(--a)); }
-  .fm1-btn i { background: var(--cap); box-shadow: 0 2px 0 #000c, 0 0 0 1px #45454e inset; transition: transform .03s; }
-  .fm1-btn[data-led="1"] i { box-shadow: 0 2px 0 #000c, 0 0 0 1px #45454e inset, 0 0 0 2px #ff621a55 inset; }
-  .fm1-btn[data-led="2"] i { background: #ff7a3a; box-shadow: 0 0 12px #ff621a99, 0 2px 0 #000c; }
-  .fm1-btn.down i, .fm1-btn.held i { transform: translateY(2px); box-shadow: 0 0 0 1px #45454e inset; }
-  .fm1-btn.held span { color: var(--color-orange); }
-  .fm1-white { background: linear-gradient(#f4f4f0, #dcdcd6); box-shadow: 0 3px 0 #9a9a94; }
-  .fm1-black { width: var(--bw); background: linear-gradient(#2c2c32, #111114); box-shadow: 0 3px 0 #000; }
-  .fm1-white.down { background: #cfcfc8; box-shadow: 0 1px 0 #9a9a94; }
-  .fm1-black.down { background: #000; box-shadow: 0 1px 0 #000; }
-  .fm1-white[data-led="1"] { background: linear-gradient(#fff3e6, #ffd9b8); }
-  .fm1-white[data-led="2"] { background: linear-gradient(#ffd0a8, #ff9a5a); }
-  .fm1-black[data-led="1"] { background: linear-gradient(#4a3020, #24160e); }
-  .fm1-black[data-led="2"] { background: linear-gradient(#ff7a3a, #b8481c); }
+  .fm1-wrap { container-type: inline-size; }
+
+  /* ---- the case */
+  .fm1 {
+    --u: calc(100cqw / 840);
+    --case: #3a3a3d; --case-hi: #47474b; --case-lo: #2f2f32;
+    --well: #29292b; --rubber: #1d1d1f; --rubber-hi: #2c2c2f; --ink: #c8c8cc;
+    position: relative; display: grid; aspect-ratio: 840 / 500; padding: calc(30 * var(--u)) calc(27 * var(--u)) calc(28 * var(--u));
+    grid-template-columns: calc(188 * var(--u)) calc(200 * var(--u)) 1fr;
+    grid-template-rows: calc(255 * var(--u)) 1fr;
+    grid-template-areas: "left screen right" "keys keys keys";
+    column-gap: calc(18 * var(--u)); row-gap: calc(10 * var(--u));
+    border-radius: calc(40 * var(--u));
+    background: radial-gradient(120% 90% at 30% 0%, var(--case-hi), var(--case) 45%, var(--case-lo));
+    box-shadow: 0 0 0 1px #000 inset, 0 1px 0 #5a5a5f inset, 0 -2px 0 #222 inset, 0 30px 60px #000c, 0 6px 14px #0008;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  @container (max-width: 639px) {
+    .fm1 {
+      --u: calc(100cqw / 420);
+      aspect-ratio: auto; row-gap: calc(22 * var(--u)); column-gap: 0;
+      padding: calc(22 * var(--u)) calc(14 * var(--u)) calc(16 * var(--u));
+      grid-template-columns: 1fr; grid-template-rows: auto;
+      grid-template-areas: "screen" "right" "left" "keys";
+      border-radius: calc(30 * var(--u));
+    }
+  }
+
+  /* a label printed on the case */
+  .fm1-print { color: var(--ink); font-size: calc(12.5 * var(--u)); letter-spacing: .03em; line-height: 1; white-space: nowrap; }
+
+  /* a sunken well (the OCT pair, the button block, the keybed) */
+  .fm1-well { background: var(--well); box-shadow: 0 0 0 1px #1a1a1c inset, 0 2px 4px #000a inset, 0 1px 0 #4a4a4f; }
+
+  /* ---- left: MASTER, SELECT, PRESETS, ALGORITHM, OCT- OCT+ */
+  .fm1-left { grid-area: left; display: flex; flex-direction: column; align-items: center; padding-top: calc(3 * var(--u)); }
+  .fm1-knobs4 { display: grid; grid-template-columns: repeat(2, calc(90 * var(--u))); row-gap: calc(22 * var(--u)); justify-items: center; }
+  .fm1-oct { display: flex; gap: calc(8 * var(--u)); margin-top: calc(28 * var(--u)); padding: calc(6 * var(--u)); border-radius: calc(9 * var(--u)); }
+  .fm1-oct .fm1-btn { width: calc(56 * var(--u)); height: calc(31 * var(--u)); }
+
+  /* ---- the screen in its bezel */
+  .fm1-screen { grid-area: screen; align-self: start; width: 100%; aspect-ratio: 1; padding: calc(18 * var(--u)); border-radius: calc(24 * var(--u));
+    background: #050505; box-shadow: 0 0 0 1px #000, 0 0 0 calc(2 * var(--u)) #2a2a2c, 0 calc(2 * var(--u)) calc(6 * var(--u)) #0009; }
+  .fm1-screen canvas { display: block; width: 100%; height: 100%; border-radius: calc(3 * var(--u)); background: #000; image-rendering: pixelated; }
+  @container (max-width: 639px) {
+    .fm1-screen { width: calc(330 * var(--u)); justify-self: center; padding: calc(16 * var(--u)); }
+  }
+
+  /* ---- right: KNOB1-4 and the twelve buttons */
+  .fm1-right { grid-area: right; display: flex; flex-direction: column; align-items: stretch; padding-top: calc(3 * var(--u)); }
+  .fm1-knobrow { display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; padding: 0 calc(4 * var(--u)) 0 calc(4 * var(--u)); }
+  .fm1-pad { display: grid; grid-template-columns: repeat(6, 1fr); gap: calc(10 * var(--u)) calc(8 * var(--u));
+    margin-top: calc(40 * var(--u)); padding: calc(12 * var(--u)) calc(12 * var(--u)); border-radius: calc(14 * var(--u)); }
+  .fm1-pad .fm1-btn { height: calc(42 * var(--u)); }
+  @container (max-width: 639px) {
+    .fm1-pad { margin-top: calc(18 * var(--u)); }
+    .fm1-left { flex-direction: row; justify-content: center; gap: calc(26 * var(--u)); align-items: center; }
+    .fm1-oct { flex-direction: column; margin-top: 0; }
+  }
+
+  /* ---- a knob: the label above, a knurled black cap with a white mark */
+  .fm1-knob { display: flex; flex-direction: column; align-items: center; gap: calc(12 * var(--u)); }
+  .fm1-cap { --a: 0deg; position: relative; width: calc(40 * var(--u)); aspect-ratio: 1; border-radius: 50%; cursor: ns-resize; touch-action: none;
+    background:
+      radial-gradient(circle at 50% 50%, #1b1b1d 0 58%, transparent 59%),
+      repeating-conic-gradient(from var(--a), #0e0e10 0 6deg, #2a2a2e 6deg 12deg);
+    box-shadow: 0 0 0 calc(2.5 * var(--u)) #161618, 0 calc(3 * var(--u)) calc(6 * var(--u)) #000c, 0 0 0 calc(3.5 * var(--u)) #4a4a4f55; }
+  .fm1-cap::before { content: ""; position: absolute; inset: 21%; border-radius: 50%;
+    background: radial-gradient(circle at 40% 30%, #3a3a3e, #19191b 70%); }
+  .fm1-cap b { position: absolute; inset: 0; transform: rotate(var(--a)); }
+  .fm1-cap b::after { content: ""; position: absolute; left: 50%; top: 6%; width: calc(3 * var(--u)); height: 30%;
+    margin-left: calc(-1.5 * var(--u)); border-radius: calc(2 * var(--u)); background: #f2f2f2; }
+  .fm1-cap:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 4px; }
+
+  /* ---- a button: black rubber, its name printed on it (lit orange when the firmware lights it) */
+  .fm1-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; border: 0;
+    border-radius: calc(8 * var(--u)); cursor: pointer; touch-action: none; color: #f4f4f4;
+    font: 700 calc(11 * var(--u)) / 1.05 "Helvetica Neue", Arial, sans-serif; letter-spacing: .02em;
+    background: linear-gradient(var(--rubber-hi), var(--rubber) 60%);
+    box-shadow: 0 0 0 1px #0c0c0d, 0 calc(2 * var(--u)) 0 #0c0c0d, 0 1px 0 #3d3d41 inset; transition: transform .03s; }
+  .fm1-btn .play { padding-bottom: calc(1.5 * var(--u)); margin-bottom: calc(1.5 * var(--u)); border-bottom: calc(1.3 * var(--u)) solid currentColor; }
+  .fm1-btn[data-led="1"] { color: #ffb48a; }
+  .fm1-btn[data-led="2"] { color: #fff; background: linear-gradient(#ff8a4c, var(--color-orange)); text-shadow: 0 0 4px #7a2a00;
+    box-shadow: 0 0 0 1px #0c0c0d, 0 calc(2 * var(--u)) 0 #0c0c0d, 0 0 calc(14 * var(--u)) #ff621a88; }
+  .fm1-btn.down, .fm1-btn.held { transform: translateY(calc(2 * var(--u))); box-shadow: 0 0 0 1px #0c0c0d, 0 1px 0 #3d3d41 inset; }
+  .fm1-btn.held { outline: calc(2 * var(--u)) solid var(--color-orange); outline-offset: calc(2 * var(--u)); }
+  .fm1-btn:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+
+  /* ---- the keybed: two rows of rubber pills, each with its light strip; the upper row sits over the gaps */
+  .fm1-keyscroll { grid-area: keys; display: grid; }
+  .fm1-keys { position: relative; padding: calc(13 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u));
+    border-radius: calc(30 * var(--u)); display: grid; grid-template-rows: 1fr 1fr; row-gap: calc(4 * var(--u)); }
+  .fm1-row { --kg: 5; position: relative; display: grid; grid-template-columns: repeat(16, 1fr); column-gap: calc(var(--kg) * var(--u)); }
+  .fm1-key { position: relative; display: flex; flex-direction: column; align-items: center; padding: 0; border: 0; border-radius: 999px;
+    cursor: pointer; touch-action: none; color: #e8e8e8;
+    background: linear-gradient(90deg, #121214, var(--rubber) 25%, #232326 55%, var(--rubber) 85%, #121214);
+    box-shadow: 0 0 0 1px #0a0a0b, 0 calc(3 * var(--u)) calc(4 * var(--u)) #000a, 0 1px 0 #3a3a3e inset; }
+  .fm1-key i { position: absolute; left: 50%; top: 22%; width: calc(5 * var(--u)); height: 56%; margin-left: calc(-2.5 * var(--u));
+    border-radius: 99px; background: #e9e9e6; box-shadow: 0 0 calc(2 * var(--u)) #fff4; transition: background .05s, box-shadow .05s; }
+  .fm1-key[data-led="1"] i { background: #ffb488; box-shadow: 0 0 calc(5 * var(--u)) #ff8a4c99; }
+  .fm1-key[data-led="2"] i { background: #ff7a3a; box-shadow: 0 0 calc(9 * var(--u)) #ff621a, 0 0 calc(3 * var(--u)) #ffc29a; }
+  .fm1-key.down { transform: translateY(calc(2 * var(--u))); box-shadow: 0 0 0 1px #0a0a0b, 0 1px 0 #3a3a3e inset; filter: brightness(.85); }
+  .fm1-key:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+  .fm1-row.top .fm1-key { position: absolute; top: 0; bottom: 0; width: calc((100% - 15 * var(--kg) * var(--u)) / 16); transform: translateX(-50%); }
+  .fm1-row.top .fm1-key.down { transform: translate(-50%, calc(2 * var(--u))); }
+  .fm1-row.top .fm1-key.labelled i { top: 18%; height: 40%; }
+  .fm1-key span { position: absolute; bottom: 14%; font-size: calc(9.5 * var(--u)); letter-spacing: .02em; color: #d8d8d8; pointer-events: none; }
+  .fm1-dot { position: absolute; top: calc(-3.5 * var(--u)); width: calc(4 * var(--u)); height: calc(4 * var(--u)); margin-left: calc(-2 * var(--u));
+    border-radius: 50%; background: #6a6a70; }
+  @container (max-width: 639px) {
+    /* the keybed at its own size (as wide as on a 840-unit FM-1), in a box that scrolls sideways: the keys play,
+       so it scrolls from the strip of case under them (or its scrollbar) */
+    .fm1-keyscroll { display: block; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #6a6a70 transparent;
+      margin: 0 calc(-14 * var(--u)) calc(-16 * var(--u)); padding: 0 calc(14 * var(--u)) calc(30 * var(--u)); }
+    .fm1-keys { width: calc(786 * var(--u)); height: calc(177 * var(--u)); }
+  }
+
+  /* the computer's key on each control: faint, and only where there is likely a keyboard (a mouse, not a touch screen) */
+  .fm1-hint { display: none; position: absolute; pointer-events: none; border: 0; padding: 0; background: none;
+    font: 600 calc(9 * var(--u)) / 1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; color: #fff; opacity: .38; white-space: nowrap; }
+  @media (hover: hover) and (pointer: fine) {
+    .fm1-hint { display: block; }
+  }
+  .fm1-btn .fm1-hint { top: calc(3 * var(--u)); right: calc(4.5 * var(--u)); font-size: calc(8 * var(--u)); }
+  .fm1-key .fm1-hint { top: 5%; left: 50%; transform: translateX(-50%); }
+  .fm1-row.top .fm1-key.labelled i { top: 20%; }
+  .fm1-cap .fm1-hint { top: calc(100% + 7 * var(--u)); left: 50%; transform: translateX(-50%); font-size: calc(8 * var(--u)); }
+  @container (max-width: 639px) { .fm1-hint { display: none !important; } }
+
   kbd { @apply border border-line px-1 font-mono text-[11px] font-semibold text-fg; }
 }
