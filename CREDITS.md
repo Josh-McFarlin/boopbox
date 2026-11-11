@@ -42,7 +42,7 @@ SLOOP took these features from Felucca releases:
 
 | SLOOP | What | Felucca |
 | --- | --- | --- |
-| 2.3 | The USB audio input, the MIDI clock, the knob reading, and many fixes | 1.0 |
+| 2.3 | The USB audio input, the MIDI clock, the knob reading, the MIDI input, overload shedding, the LED glow, key debounce, and many fixes | 1.0 / 1.0.1 |
 | 2.4 | The FM6 engine and its DX7 patch editor | 1.0 / 1.0.1 |
 | 2.6 | The INSERT effects, LFO 2 (SYNC / TRIG / POL), ENV SYNC, the ANALOG filter types, note LEN and step velocity, MIDI LEARN, the live drum mutes, the latched-arp fix (#191), the 1/4D delay, and REV / ECHO THROW | 1.4 / 1.4.1 / 1.5 / 1.5.1 |
 | 2.7 | The arp modes REPEAT, DNUP, UP+8, CONV, DIVG, PINKY, THUMB, WALK and CHORD, and ORD (the order in which you pressed the keys) | 1.4 / 1.5.1 |
@@ -59,7 +59,7 @@ These people asked for those features first, in the Felucca discussions and issu
 ### SLOOP contributors
 
 - **@renebohne:** the key lights for played notes (pull request #11). In 2.6, MIDI Program Change (Felucca pull request #179). In 2.7, MIDI CC 74 on the cutoff or brightness of each engine (pull request #71).
-- **ChanceTheMaker** and **keremimo:** the TRS MIDI input fix (Felucca Salt) and work on the MIDI clock.
+- **ChanceTheMaker** and **keremimo:** the TRS MIDI input buffer fix (Felucca Salt by ChanceTheMaker, found by keremimo) and work on the MIDI clock.
 - **andrerezemini** ([sloop-lab](https://github.com/andrerezemini/sloop-lab)): in 2.7, the sound on the second core of the FM-1 and 38 KB of RAM back (pull request #111). This work starts from the dual-core start of **Charles Vestal** ([X0X](https://github.com/charlesvestal/fm1-x0x)) and **keremimo** ([Melodee](https://github.com/keremimo/melodee)).
 - **juanjiant-bit** ([JIANT FM](https://github.com/juanjiant-bit/JIANT)): in 2.7, the progressive knob acceleration (KNOB ACCEL) and the LEVEL / PAN glide.
 - **@ordenador** (Mario Faúndez Vidal): the local audio preview of the web editor (pull request #120). It runs the engines and the sequencer of the firmware in the browser (WebAssembly).
@@ -74,7 +74,7 @@ The users of SLOOP asked for, tested and reported most of each SLOOP update. Som
 
 - **Samples:** Versilian Studios VSCO-2 CE and VCSL, and Sonic Pi (CC0). Wurlitzer EP200 samples by Greg Sullivan (CC BY 3.0).
 - **Fonts and icons:** Terminus and Terminus Bold (SIL OFL 1.1). Fukiai by Hügelton Instruments (MIT), in the web editor.
-- **Engines:** PHASE after CrispyZebra by Leo Kuroshita (GPL-3.0). VOICE after klattsch by Tony Gies (MIT). FM6 uses msfa from Dexed, by Google Inc. and Pascal Gauthier (Apache-2.0). PHYS uses models from DaisySP and Rings, by Electrosmith and Emilie Gillet (MIT).
+- **Engines:** PHASE after CrispyZebra by Leo Kuroshita (GPL-3.0). VOICE after klattsch by Tony Gies (MIT). FM6 uses msfa from Dexed, by Google Inc. and Pascal Gauthier (Apache-2.0). Leo Kuroshita ported it to integer C for Felucca 1.0. PHYS uses models from DaisySP and Rings, by Electrosmith and Emilie Gillet (MIT).
 - **BoopBox art:** `tools/gen_icon_art.py` and `tools/gen_logo.py` draw the parameter icons and the logo (GPL-3.0).
 
 ## Interface ideas
