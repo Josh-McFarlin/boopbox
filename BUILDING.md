@@ -10,7 +10,7 @@ The build makes three files in `build/`:
 
 ## Windows (WSL)
 
-`INSTALL-BOOPBOX.bat` builds in a WSL distribution and opens the installer on
+`scripts/INSTALL-BOOPBOX.bat` builds in a WSL distribution and opens the installer on
 `http://localhost:8766/webapp/installer/`. It needs Python 3 with Pillow on Windows, a WSL
 distribution with the JieLi toolchain, and the three SDK files (below) in `build/deps/ac79`.
 Set `SLOOP_WSL_DISTRO` (default `Ubuntu`) and `SLOOP_TOOLCHAIN` (a Linux path, default
@@ -43,13 +43,13 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 ## Build
 
 ```
-./build.sh
+scripts/build.sh
 ```
 
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 1.2.0` makes a release build: the package identity becomes `FM-1_912` and the version
+`scripts/build.sh --release 1.2.0` makes a release build: the package identity becomes `FM-1_912` and the version
 string `BOOPBOX 1.2.0`; the package is `build/felucca-1.2.0.fwsc`. A suffix is kept: `--release 1.2.0-beta`
 gives `BOOPBOX 1.2.0-BETA`.
 
@@ -74,7 +74,7 @@ says so; it leaves nothing out by itself. See `docs/groovebox-performance.md` fo
 
 ## The trainer build
 
-`./build.sh --trainer` builds BoopBox Trainer, a separate firmware that teaches three songs on the FM-1 itself
+`scripts/build.sh --trainer` builds BoopBox Trainer, a separate firmware that teaches three songs on the FM-1 itself
 (`docs/trainer.md`). It has no web editor and three sample sets fewer (HORNS, STRGS, SCRCH), and it writes everything,
 generated headers included, to `build/trainer-fw/`. Its package is `felucca-trainer.fwsc` (`felucca-trainer-X.Y.Z.fwsc`
 with `--release X.Y.Z`; version string `BOOPBOX TRAINER X.Y.Z`). The normal build is unchanged by it, byte for byte.
@@ -121,7 +121,7 @@ tests/run_tests.sh
 
 Runs the host tests (flash storage, user presets, MIDI parser, update entry, update
 loader, a DSP render, the 8-track mix, project formats, the SLICER, the regression suite,
-the command-line installer) and, with Node.js, the web page tests. Run it after `./build.sh`
+the command-line installer) and, with Node.js, the web page tests. Run it after `scripts/build.sh`
 (it uses `build/` and needs `AC79_SDK` set as for the build).
 
 The tests run in parallel, one job per test (its compile and its run), as many at once as the machine has
@@ -171,7 +171,7 @@ The standalone downloaded HTML editor does not include the WASM asset.
 
 ## Install
 
-On Windows, `INSTALL-BOOPBOX.bat` builds and opens the web installer (Chrome or Edge). The
+On Windows, `scripts/INSTALL-BOOPBOX.bat` builds and opens the web installer (Chrome or Edge). The
 `.fwsc` of each release is on the GitHub releases page.
 
 From the command line (needs `pip3 install mido python-rtmidi`):
@@ -199,7 +199,7 @@ A release is published on GitHub when a PR that adds a new firmware binary is me
 (`.github/workflows/release-on-merge.yml`):
 
 1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`) and build with
-   `./build.sh --release X.Y.Z`.
+   `scripts/build.sh --release X.Y.Z`.
 2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This writes
    `docs/firmware/boopbox-X.Y.Z.fwsc` (and removes the old package), and the installer and offline cache that
    install it. The website is these committed files, so do not copy a binary into `docs/firmware/` by hand:

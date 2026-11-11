@@ -41,11 +41,11 @@ Version tags mark the release that brought a feature: *(1.8)* and other 1.x tags
 
 ## Install
 
-1. Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge** (or, from the source folder on Windows, double-click **`INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`; keep its black window open until the install is done).
+1. Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge** (or, from the source folder on Windows, double-click **`scripts/INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`; keep its black window open until the install is done).
 2. Connect the FM-1 to the computer by USB (a data cable, directly — no hub).
 3. Choose **BoopBox** (or **BoopBox Trainer**, below), press **INSTALL**, allow MIDI access, and wait for *Done*.
 
-The FM-1 restarts on the BoopBox logo. Updating keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) (or **`OPEN-EDITOR.bat`**).
+The FM-1 restarts on the BoopBox logo. Updating keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) (or **`scripts/OPEN-EDITOR.bat`**).
 
 - **BoopBox Trainer** is a second firmware that teaches you three songs on the FM-1 itself, with a coach on the screen; everything else works as in BoopBox. Install the other one to switch back ([the trainer](docs/trainer.md)).
 - **No FM-1 at hand?** [The emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real firmware in the browser, with the FM-1 drawn on the page. [The home page](https://josh-mcfarlin.github.io/boopbox/) shows what BoopBox does.
@@ -378,7 +378,7 @@ The **SONG screen** (SAVE tapped on TRACKS, or SAVE + key 16) shows the chain an
 
 ## The web editor
 
-Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the installer page, or with **`OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`), in Chrome or Edge with the FM-1 on USB, and press **Connect**. It follows the device live (turn a knob on the FM-1, the editor moves).
+Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the installer page, or with **`scripts/OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`), in Chrome or Edge with the FM-1 on USB, and press **Connect**. It follows the device live (turn a knob on the FM-1, the editor moves).
 
 **Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer, `boopbox-editor-<version>.html`, also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it: it opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online one. Its sound library (kept in the browser) is its own, apart from the online editor's: move sounds between them with Export / Import, or a backup.
 

@@ -14,7 +14,7 @@ Each source file keeps the copyright lines it came with; changes made for BoopBo
 ## What is GPL-3.0-only
 
 - the firmware: `firmware/` (app, HAL, update loader)
-- the build script and tools: `build.sh`, `tools/`
+- the build script and tools: `scripts/`, `tools/`
 - the web pages (installer, editor) and their tests: `web/` (not the Fukiai font, below)
 - the host tests: `tests/`
 - BoopBox's own assets, all made by code in this tree:

@@ -1,6 +1,6 @@
 @echo off
 title BoopBox editor
-cd /d "%~dp0"
+cd /d "%~dp0.."
 if not exist build\boopbox-site\webapp\editor\index.html (
   echo The editor is not built yet: run INSTALL-BOOPBOX.bat first.
   pause

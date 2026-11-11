@@ -2,7 +2,7 @@
 # Uses the dependencies already prepared (WSL MinUI-Build, JieLi toolchain, SDK files in build/deps/ac79).
 # SLICE stays out (FELUCCA_SLICE=0): with its built-in BREAK the image does not fit the app slot.
 $ErrorActionPreference = 'Stop'
-Set-Location $PSScriptRoot
+Set-Location (Split-Path $PSScriptRoot -Parent)   # the repository root
 Write-Host ""
 Write-Host "  B O O P B O X   1.1.0" -ForegroundColor White
 Write-Host "  ---- ---- ---- ----" -ForegroundColor DarkGray

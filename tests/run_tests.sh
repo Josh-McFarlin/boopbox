@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-# Host tests (no hardware). Run from the repo root after ./build.sh:
+# Host tests (no hardware). Run from the repo root after scripts/build.sh:
 #   tests/run_tests.sh
 #
 # Regression suite (tests/regress.c, tests/target_budget.py; details at the top of regress.c):
@@ -101,7 +101,7 @@ GH="$G -Ifirmware/hal"
 skip() { note "== SKIPPED (HOST_ONLY, no firmware build): $1"; skipped=$((skipped + 1)); }
 skipped=0
 if [ ! -f build/felucca.fwsc ]; then
-    [ -n "$HOST_ONLY" ] || { echo "run ./build.sh first (or HOST_ONLY=1 for the tests that need no firmware build)"; exit 1; }
+    [ -n "$HOST_ONLY" ] || { echo "run scripts/build.sh first (or HOST_ONLY=1 for the tests that need no firmware build)"; exit 1; }
     NOFW=1
     # the generated headers a firmware build would have made (fonts, tables, samples, kits): no toolchain needed
     [ -f build/gen/felucca_samples.h ] || python3 -c "import sys; sys.path.insert(0, 'tools'); import build; build.generate()" ||

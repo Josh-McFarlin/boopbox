@@ -84,7 +84,7 @@ You do not need to download or compile anything. BoopBox keeps your projects, us
 ### Other ways
 
 - **Python:** get the `.fwsc` file of a [release](../../releases). Then run `python tools/fm1_install.py boopbox-X.Y.Z.fwsc`. This script needs `pip install mido python-rtmidi`.
-- **Build it yourself:** see [Building and tests](#building-and-tests). On Windows, `INSTALL-BOOPBOX.bat` builds BoopBox and opens the installer locally.
+- **Build it yourself:** see [Building and tests](#building-and-tests). On Windows, `scripts/INSTALL-BOOPBOX.bat` builds BoopBox and opens the installer locally.
 
 ### Going back
 
@@ -186,8 +186,8 @@ The version tags in the guides, for example *(2.6)*, show the SLOOP release that
 
 For the full steps, read [BUILDING.md](BUILDING.md). You need the JieLi toolchain and three files of the AC79 SDK. Then:
 
-- On Linux or macOS, run `./build.sh`.
-- On Windows with WSL, run `INSTALL-BOOPBOX.bat`.
+- On Linux or macOS, run `scripts/build.sh`.
+- On Windows with WSL, run `scripts/INSTALL-BOOPBOX.bat`.
 
 Both commands build the firmware and serve the installer and the editor on `http://localhost:8766`.
 

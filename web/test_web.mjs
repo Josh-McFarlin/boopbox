@@ -1691,7 +1691,7 @@ print(",".join(i.filename + ":" + str(i.file_size) for i in z.infolist()))`, zp)
 async function packages() {
   const pkg = join(HERE, "../build/felucca.fwsc");
   if (!existsSync(pkg)) {
-    console.log("packages: skipped (run ./build.sh first)");
+    console.log("packages: skipped (run scripts/build.sh first)");
     return;
   }
   const raw = readFileSync(pkg);

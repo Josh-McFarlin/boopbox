@@ -357,7 +357,7 @@ buffers or arenas (-8 KB each: one fewer track in STUT or on a big engine at onc
 5. The sample options of section 4 only when a feature needs more than this gives, starting with the metal at
    22.05 kHz.
 
-Every step: `./build.sh` (the real sizes), `sh tests/run_tests.sh` (golden renders, budgets), and for the UI steps the
+Every step: `scripts/build.sh` (the real sizes), `sh tests/run_tests.sh` (golden renders, budgets), and for the UI steps the
 screenshot gallery. Each proxy figure should be re-measured on the pi32v2 build before it is counted on.
 
 ## 7. How to measure again
@@ -377,7 +377,7 @@ llvm-readelf -S -W build/new.o                          # per-function / per-obj
 - The `minsize` experiment of 3.1: add `__attribute__((minsize))` to the `static` function definitions of the files
   named (a regex over lines that start with `static`, skip `inline` and existing attributes), proxy-build, and
   check with `llvm-nm -S` that the functions of `tests/target_budget.py`'s `FUNCS` list did not change size.
-- The real figures: `./build.sh` prints `image ... B; RAM .data+.bss ... B of 98304; lowram ...; pool ...`, and
+- The real figures: `scripts/build.sh` prints `image ... B; RAM .data+.bss ... B of 98304; lowram ...; pool ...`, and
   `sh tests/run_tests.sh` without `HOST_ONLY` runs `tests/target_budget.py` on `build/felucca.dis`.
 - The real 1.3.0 app image can be decoded from `docs/firmware/boopbox-1.3.0.fwsc` with the ciphers in
   `tools/fm1pkg_make.py` (undo the `.fwsc` marker bytes, take `flash.bin`, `sfc()` the area from 0x4000 with

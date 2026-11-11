@@ -69,7 +69,7 @@ Version tags mark the release that brought a feature: *(1.8)* and other 1.x tags
 
 **From the browser (recommended).** Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge**, connect the FM-1 by USB (a data cable, plugged straight in, no hub), press **INSTALL**, allow MIDI access, and wait for *Done*. The FM-1 restarts on the BoopBox logo.
 
-**From the source folder (Windows).** Double-click **`INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep the black window open until the install is done. **`OPEN-EDITOR.bat`** opens the web editor.
+**From the source folder (Windows).** Double-click **`scripts/INSTALL-BOOPBOX.bat`**: it builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep the black window open until the install is done. **`scripts/OPEN-EDITOR.bat`** opens the web editor.
 
 **Updating** keeps your projects, presets, samples, kits and settings. The installer checks the package (SHA-256), BoopBox's update loader checks it again (CRC) before it starts the new firmware, and a damaged package is refused before anything is written.
 
@@ -1201,7 +1201,7 @@ SLOOP 2.5: the editor's **Drum synth** page changes every value of a synthesised
 
 ## 24. The web editor
 
-Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/), the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/), or **`OPEN-EDITOR.bat`**, in **Chrome or Edge** with the FM-1 on USB, and press **Connect** (allow MIDI). It follows the device live: turn a knob on the FM-1, the editor moves. It looks like the FM-1: the black screen, the tracks' colours, the FM-1's own pixel font.
+Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/), the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/), or **`scripts/OPEN-EDITOR.bat`**, in **Chrome or Edge** with the FM-1 on USB, and press **Connect** (allow MIDI). It follows the device live: turn a knob on the FM-1, the editor moves. It looks like the FM-1: the black screen, the tracks' colours, the FM-1's own pixel font.
 
 **Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer, `boopbox-editor-<version>.html` (`boopbox-editor-1.9.1.html`), also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it: it opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online one. Its sound library (kept in the browser) is its own, apart from the online editor's: move sounds between them with Export / Import, or a backup.
 
