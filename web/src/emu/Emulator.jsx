@@ -10,6 +10,13 @@ import {
 /* what the FM-1 has printed: its knobs' names, the PLAY/STOP button, the upper keys' labels (the stock firmware's) */
 const KNOB_LABEL = { K1: "KNOB1", K2: "KNOB2", K3: "KNOB3", K4: "KNOB4" };
 const KEY_LABEL = ["OP1", "OP2", "OP3", "OP4", "OP5", "OP6", "PIT", "GLO", "MONO", "POLY", ""];
+/* the computer's key for each control, printed faintly on it where there is a keyboard (emu.css shows them) */
+const CODE_LABEL = { Comma: ",", Period: ".", Semicolon: ";", Slash: "/", Quote: "'", Space: "SPC", Enter: "↵",
+                     BracketLeft: "[", BracketRight: "]", Escape: "ESC", Minus: "-", Equal: "=" };
+const keyName = (code) => CODE_LABEL[code] ?? code.replace(/^(Key|Digit)/, "");
+const KEY_HINT = Object.fromEntries(Object.entries(KEYMAP).map(([c, k]) => [k, keyName(c)]));
+const BTN_HINT = Object.fromEntries(Object.entries(BTNMAP).map(([c, b]) => [b, keyName(c)]));
+const KNOB_HINT = { 0: "↑ ↓", 1: "← →", 2: "PGUP PGDN" };
 const OCTAVE_DOTS = [4, 7, 11, 14];                    // between B and C, E and F
 /* the left edge of the gap before white key i, in a row of 16 pills with gaps of g units */
 const gap = (i, g) => `calc(${i} * (100% - 15 * ${g} * var(--u)) / 16 + ${i - 0.5} * ${g} * var(--u))`;
@@ -40,6 +47,7 @@ function PanelButton({ name, led, send, latched }) {
       className={`fm1-btn ${down ? "down" : ""} ${held ? "held" : ""}`}
       onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={onUp}>
       {name === "PLAY" ? <><span className="play">PLAY</span><span>STOP</span></> : name}
+      {BTN_HINT[b] ? <kbd className="fm1-hint" aria-hidden="true">{BTN_HINT[b]}</kbd> : null}
     </button>
   );
 }
@@ -85,6 +93,7 @@ function Knob({ name, e, send, value, onValue }) {
           if (ev.key === "ArrowDown" || ev.key === "ArrowLeft") { turn(-1); ev.preventDefault(); ev.stopPropagation(); }
         }}>
         <b />
+        {KNOB_HINT[e] ? <kbd className="fm1-hint" aria-hidden="true">{KNOB_HINT[e]}</kbd> : null}
       </div>
     </div>
   );
@@ -194,6 +203,7 @@ export default function Emulator() {
         className={`fm1-key ${label ? "labelled" : ""} ${held.has(k) ? "down" : ""}`} style={black ? { left: gap(wi, "var(--kg)") } : undefined}
         onPointerDown={keyDown(k)} onPointerUp={() => noteOff(k)} onPointerCancel={() => noteOff(k)}>
         <i />{label ? <span>{label}</span> : null}
+        {KEY_HINT[k] ? <kbd className="fm1-hint" aria-hidden="true">{KEY_HINT[k]}</kbd> : null}
       </button>
     );
     if (black) top.push(key);

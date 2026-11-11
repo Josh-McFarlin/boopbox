@@ -125,5 +125,17 @@
     .fm1-keys { width: calc(786 * var(--u)); height: calc(177 * var(--u)); }
   }
 
+  /* the computer's key on each control: faint, and only where there is likely a keyboard (a mouse, not a touch screen) */
+  .fm1-hint { display: none; position: absolute; pointer-events: none; border: 0; padding: 0; background: none;
+    font: 600 calc(9 * var(--u)) / 1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0; color: #fff; opacity: .38; white-space: nowrap; }
+  @media (hover: hover) and (pointer: fine) {
+    .fm1-hint { display: block; }
+  }
+  .fm1-btn .fm1-hint { top: calc(3 * var(--u)); right: calc(4.5 * var(--u)); font-size: calc(8 * var(--u)); }
+  .fm1-key .fm1-hint { top: 5%; left: 50%; transform: translateX(-50%); }
+  .fm1-row.top .fm1-key.labelled i { top: 20%; }
+  .fm1-cap .fm1-hint { top: calc(100% + 7 * var(--u)); left: 50%; transform: translateX(-50%); font-size: calc(8 * var(--u)); }
+  @container (max-width: 639px) { .fm1-hint { display: none !important; } }
+
   kbd { @apply border border-line px-1 font-mono text-[11px] font-semibold text-fg; }
 }
