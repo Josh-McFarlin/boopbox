@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import vm from 'node:vm';
-import { FirmwareAudio } from '../web/preview-worklet.js';
+import { FirmwareAudio } from '../web/site/public/editor/preview-worklet.js';
 
-const html = readFileSync('web/editor.html', 'utf8');
-const proto = html.slice(html.indexOf('/*PROTO-BEGIN*/'), html.indexOf('/*PROTO-END*/'));
+const src = readFileSync('web/src/editor/lib/proto.js', 'utf8');
+const proto = src.slice(0, src.lastIndexOf('\nexport {'));
 const E = vm.runInNewContext(proto + ';({makeMockDevice, previewSnapshot, previewToggleStep, previewSetStepNotes, previewToggleDrum, CMD, req, frame, unframe, FM6, buildSlot})',
   { setTimeout, clearTimeout, setInterval, clearInterval, console, TextEncoder, TextDecoder, Blob, Response, DecompressionStream });
 const module = await WebAssembly.compile(readFileSync('build/preview/boopbox-preview.wasm'));

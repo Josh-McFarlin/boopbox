@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Compile the BoopBox emulator for the browser: the whole firmware (UI, sequencer, sound, storage) as WebAssembly
-(firmware/host/emu.c), run by web/emu/ (1.8, after JIANT FM's emulator).
+(firmware/host/emu.c), run by the site's emulator page (web/src/emu/, 1.8, after JIANT FM's emulator).
 
 python3 tools/build_emu.py
-Writes build/emu/boopbox-emu.wasm and copies web/emu/ beside it. Needs clang with the wasm32 target and wasm-ld (lld),
+Writes build/emu/boopbox-emu.wasm (the Vite dev server serves it at /emu/: cd web && npm run dev; web/make_site.py
+puts it in the site). Needs clang with the wasm32 target and wasm-ld (lld),
 or Emscripten. No JieLi SDK, Docker or FM-1.
 """
 from pathlib import Path
@@ -50,9 +51,6 @@ def main():
                                                 '-sINITIAL_MEMORY=33554432', '-sSTACK_SIZE=262144',
                                                 '-sEXPORTED_FUNCTIONS=' + str(['_emu_' + n for n in EXPORTS]),
                                                 '-o', str(wasm)], cwd=ROOT, check=True)
-    for f in (ROOT / 'web' / 'emu').iterdir():
-        if f.is_file():
-            shutil.copy(f, OUT / f.name)
     print('Emulator built:', wasm, f'({wasm.stat().st_size} B)')
 
 

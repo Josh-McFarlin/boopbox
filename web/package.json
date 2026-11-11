@@ -1,4 +1,22 @@
 {
+  "name": "boopbox-site",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:offline": "vite build --mode offline",
+    "test": "node test_web.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.1.2",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.5",
+    "vite-plugin-singlefile": "2.3.4"
+  }
 }

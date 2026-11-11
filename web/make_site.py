@@ -7,12 +7,15 @@
   firmware/boopbox-VER.fwsc   the package
   firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (tools/build.py --trainer), offered as a
                               second choice in the installer
-  webapp/installer/index.html index_pkg.html with fm1pkg.js, fm1ota.js and the metadata inlined
-  webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
-  webapp/emu/index.html       (1.8) the browser emulator: web/emu/ and build/emu/boopbox-emu.wasm (tools/build_emu.py)
-  webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6): its icon font inlined,
-                              its links to the installer and the font licence online; opened from the disk in
-                              Chrome / Edge (file:// is a secure context: Web MIDI asks for permission)
+  webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
+                              the React pages (web/site/, web/src/), built by Vite (npm run build, into
+                              build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
+                              editor's version are written into their index.html here
+  webapp/emu/                 (1.8) the browser emulator: only with build/emu/boopbox-emu.wasm (tools/build_emu.py)
+  webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6; npm run build:offline): its
+                              fonts and scripts inlined, its links to the installer and the font licence online;
+                              opened from the disk in Chrome / Edge (file:// is a secure context: Web MIDI asks for
+                              permission)
   webapp/sw.js, webapp/boopbox.webmanifest, webapp/icon-*.png  the site without internet (SLOOP 2.6): an app to
                               install; opened once online, the installer, the editor and the firmware are kept
                               by the browser and work offline, still on https (on Android a downloaded file opens
@@ -21,58 +24,84 @@
 
   web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta] [--trainer build/trainer-fw/felucca-trainer-X.Y.fwsc]
   (--beta: web/beta_banner.html at the top of the installer: the beta channel, docs/beta)
+  Needs Node.js: the pages are built with npm (npm ci in web/ the first time).
 
 The package identity (FM-1_9xx) is read from the package; the device reports it
 after the install.
 """
-import base64
 import hashlib
 import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ONLINE = "https://josh-mcfarlin.github.io/boopbox/"                 # (the offline editor's links)
+
+
+BUILD = HERE.parent / "build"
+_built = False
+
+
+def build_pages():
+    """the React pages with Vite: build/webapp-vite/ (the site's webapp/) and build/webapp-offline/editor/index.html
+    (the editor in one file); once per run"""
+    global _built
+    if _built:
+        return
+    npm = shutil.which("npm") or shutil.which("npm.cmd")
+    if not npm:
+        raise SystemExit("make_site: Node.js (npm) is needed to build the pages")
+    if not (HERE / "node_modules").is_dir():
+        subprocess.run([npm, "ci"], cwd=HERE, check=True)
+    for script in ("build", "build:offline"):
+        subprocess.run([npm, "run", "--silent", script], cwd=HERE, check=True, stdout=subprocess.DEVNULL)
+    _built = True
 
 
 def emu_page(emu):
-    """(1.8) webapp/emu: the browser emulator (web/emu/ and build/emu/boopbox-emu.wasm from tools/build_emu.py); without
-    its wasm none at all, never an old one"""
-    wasm = HERE.parent / "build" / "emu" / "boopbox-emu.wasm"
-    if emu.exists():
-        shutil.rmtree(emu)
+    """(1.8) webapp/emu: the browser emulator (its page from Vite, build/emu/boopbox-emu.wasm from tools/build_emu.py);
+    without its wasm none at all, never an old one"""
+    wasm = BUILD / "emu" / "boopbox-emu.wasm"
     if not wasm.exists():
+        if emu.exists():
+            shutil.rmtree(emu)
         print("site: no emulator (python3 tools/build_emu.py first)")
         return
-    emu.mkdir(parents=True)
-    for f in (HERE / "emu").iterdir():
-        if f.is_file():
-            shutil.copy(f, emu / f.name)
     shutil.copy(wasm, emu / wasm.name)
 
 
-def offline_editor(html):
-    """editor.html as one file for the disk: the icon font inlined, the download link out, the relative links online"""
-    font = base64.b64encode((HERE / "fukiai.ttf").read_bytes()).decode()
-    for a, b in (('url("fukiai.ttf")', 'url(data:font/ttf;base64,' + font + ')'),
-                 ('href="../installer/"', 'href="' + ONLINE + 'webapp/installer/" target="_blank" rel="noopener"'),
-                 ('href="FUKIAI-LICENSE.txt"', 'href="' + ONLINE + 'webapp/editor/FUKIAI-LICENSE.txt" target="_blank" rel="noopener"')):
-        if html.count(a) != 1:
-            raise SystemExit(f"editor.html must contain {a} once; update make_site.py")
-        html = html.replace(a, b)
-    for pat, what in ((r"<!--DL-->.*?<!--/DL-->", "<!--DL-->...<!--/DL-->"),       # (the file has no site
-                      (r"<!--PWA-->.*?<!--/PWA-->", "<!--PWA-->...<!--/PWA-->"),    # around it: no app to
-                      (r"/\*PWA\*/.*?/\*/PWA\*/", "/*PWA*/.../*/PWA*/"),           # install, no copy kept)
-                      (r'<button id="install"[^>]*></button>\s*', '<button id="install">')):
-        html, n = re.subn(pat, "", html, flags=re.S)
-        if n != 1:
-            raise SystemExit(f"editor.html must contain {what} once; update make_site.py")
-    return html
+def offline_editor(html, version):
+    """the one-file editor (Vite's offline build: fonts and scripts inlined) for the disk: no app to install, no copy
+    kept (a file has no site around it), its version for the download name"""
+    html, n = re.subn(r"<!--PWA-->.*?<!--/PWA-->", "", html, flags=re.S)
+    if n != 1:
+        raise SystemExit("the offline editor must contain <!--PWA-->...<!--/PWA--> once; update make_site.py")
+    return set_version(html, version)
+
+
+def set_version(html, version):
+    if html.count("/*VERSION*/null") != 1:
+        raise SystemExit("the editor must contain /*VERSION*/null once; update make_site.py")
+    return html.replace("/*VERSION*/null", json.dumps(version))
 
 
 ICONS = ("icon-192.png", "icon-512.png", "icon-maskable-512.png")
+
+
+def page_assets(app, page):
+    """the built files a page needs (webapp/assets/...): its scripts, styles and fonts, and theirs, by name"""
+    names = {f.name for f in (app / "assets").iterdir()} if (app / "assets").is_dir() else set()
+    todo, seen = [app / page / "index.html"], set()
+    while todo:
+        text = todo.pop().read_text(encoding="utf-8", errors="replace")
+        for n in set(re.findall(r"[\w.-]+\.(?:js|css|ttf|woff2?|svg|png)", text)) & names:
+            if n not in seen:
+                seen.add(n)
+                if n.endswith((".js", ".css")):
+                    todo.append(app / "assets" / n)
+    return ["assets/" + n for n in sorted(seen)]
 
 
 def app_files(out, version, fw_name, more=()):
@@ -94,10 +123,10 @@ def app_files(out, version, fw_name, more=()):
             "../firmware/" + fw_name: out / "firmware" / fw_name, "boopbox.webmanifest": app / "boopbox.webmanifest"}
     for f in more:                                   # (the trainer's package)
         keep["../firmware/" + f] = out / "firmware" / f
-    for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt"):
-        if (app / "editor" / f).exists():
-            keep["editor/" + f] = app / "editor" / f
-    for f in ("preview.js", "preview-worklet.js", "boopbox-preview.wasm"):
+    for page in ("installer", "editor"):             # their scripts, styles and fonts
+        for f in page_assets(app, page):
+            keep[f] = app / f
+    for f in ("FUKIAI-LICENSE.txt", "preview-worklet.js", "boopbox-preview.wasm"):
         if (app / "editor" / f).exists():
             keep["editor/" + f] = app / "editor" / f
     for f in ICONS:
@@ -113,11 +142,6 @@ def app_files(out, version, fw_name, more=()):
     (app / "sw.js").write_text(sw, encoding="utf-8")
     return sorted(keep)
 BLOCKS, BLK, KEEP = 20, 0x30, 0x2F
-
-
-def strip_module(src):
-    src = re.sub(r"^export\s+", "", src, flags=re.M)
-    return re.sub(r"^import .*?;\n", "", src, flags=re.M)
 
 
 def product_of(raw):
@@ -138,9 +162,6 @@ def check_pkg(pkg):
 def main(pkg, version, out, trainer=None):
     pkg, out = Path(pkg), Path(out)
     raw, product = check_pkg(pkg)
-    html = (HERE / "index_pkg.html").read_text(encoding="utf-8")
-    lib = strip_module((HERE / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
-        strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8"))
     name = f"boopbox-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
     meta = {"version": version, "product": product, "pkg": "../../firmware/" + name,
             "sha256": hashlib.sha256(raw).hexdigest()}   # the page checks the download against it
@@ -150,60 +171,43 @@ def main(pkg, version, out, trainer=None):
         tname = f"boopbox-trainer-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
         meta["trainer"] = {"version": version, "product": tproduct, "pkg": "../../firmware/" + tname,
                            "sha256": hashlib.sha256(traw).hexdigest()}
-    meta = json.dumps(meta)
-    for mark in ("/*LIB*/", "/*META*/"):
-        if html.count(mark) != 1:
-            raise SystemExit(f"index_pkg.html must contain {mark} once; update make_site.py")
-    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta)
-    logo = HERE.parent / "assets" / "logo" / "boopbox-logo.svg"   # the BoopBox logo, inline
-    html = html.replace("<!--LOGO-->", logo.read_text(encoding="utf-8") if logo.exists() else "<b>BoopBox</b>")
-    inst, ed, fw = out / "webapp" / "installer", out / "webapp" / "editor", out / "firmware"
-    for d in (inst, ed, fw):
-        d.mkdir(parents=True, exist_ok=True)
-    guide = HERE.parent / "output/pdf/Studio-0.3-guide-rapide-FR.pdf"
-    guide_link = ""
-    if guide.exists() and "--studio-guide" in sys.argv:   # LIVE: that guide describes the removed RYTHME tab
-        shutil.copy(guide, out / guide.name)
-        guide_link = '<p lang="fr"><a href="../../' + guide.name + '">Guide rapide illustré (PDF, 4 pages)</a></p>'
-    html = html.replace("<!--STUDIO_GUIDE-->", guide_link)
-    banner = ""
     if "--beta" in sys.argv:                       # the beta channel (docs/beta): what it is, what it implies
         notes = HERE / "beta_banner.html"
-        banner = notes.read_text(encoding="utf-8") if notes.exists() else "<p><b>BETA</b></p>"
-    html = html.replace("<!--BANNER-->", banner)
+        meta["banner"] = notes.read_text(encoding="utf-8") if notes.exists() else "<p><b>BETA</b></p>"
+
+    build_pages()
+    app, fw = out / "webapp", out / "firmware"
+    for d in ("installer", "editor", "emu", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
+        if (app / d).exists():
+            shutil.rmtree(app / d)
+    shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)
+    fw.mkdir(parents=True, exist_ok=True)
+
+    inst = app / "installer" / "index.html"          # the package it installs (tools/check_site.py reads this line)
+    html = inst.read_text(encoding="utf-8")
+    if html.count("const meta = /*META*/null;") != 1:
+        raise SystemExit("installer/index.html must contain 'const meta = /*META*/null;' once; update make_site.py")
+    inst.write_text(html.replace("const meta = /*META*/null;", "const meta = " + json.dumps(meta) + ";"), encoding="utf-8")
+    ed = app / "editor" / "index.html"
+    ed.write_text(set_version(ed.read_text(encoding="utf-8"), version), encoding="utf-8")
+    offline = (BUILD / "webapp-offline" / "editor" / "index.html").read_text(encoding="utf-8")
+    (app / "editor" / "boopbox-editor.html").write_text(offline_editor(offline, version), encoding="utf-8")
+
     for old in list(fw.glob("felucca-*.fwsc")) + list(fw.glob("sloop-*.fwsc")) + list(fw.glob("boopbox-*.fwsc")):   # one package: the current one
         old.unlink()
     shutil.copy(pkg, fw / name)
     if tname:
         shutil.copy(trainer, fw / tname)
-    ed_html = (HERE / "editor.html").read_text(encoding="utf-8")
-    dl = f'download="boopbox-editor-{re.sub(r"[^A-Za-z0-9.-]", "-", version)}.html"'
-    if ed_html.count('download="boopbox-editor.html"') != 1 or html.count('download="boopbox-editor.html"') != 1:
-        raise SystemExit('editor.html and index_pkg.html must link download="boopbox-editor.html" once; update make_site.py')
-    (ed / "index.html").write_text(ed_html.replace('download="boopbox-editor.html"', dl), encoding="utf-8")
-    (ed / "boopbox-editor.html").write_text(offline_editor(ed_html), encoding="utf-8")
-    (inst / "index.html").write_text(html.replace('download="boopbox-editor.html"', dl), encoding="utf-8")
-    for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt"):
-        if (HERE / f).exists():
-            shutil.copy(HERE / f, ed / f)
-    # Optional browser DSP, built separately without the hardware toolchain.
-    for f in ("preview.js", "preview-worklet.js"):
-        shutil.copy(HERE / f, ed / f)
-    dsp = HERE.parent / "build" / "preview" / "boopbox-preview.wasm"
+    dsp = BUILD / "preview" / "boopbox-preview.wasm"   # optional browser DSP, built separately without the hardware toolchain
     if dsp.exists():
-        shutil.copy(dsp, ed / dsp.name)
-    elif (ed / dsp.name).exists():
-        (ed / dsp.name).unlink()  # never serve an old audio build as the current one
-    emu_page(out / "webapp" / "emu")
-    song = out / "webapp" / "song"                  # (the trainer's song page, level 4: gone in 1.9.1)
-    if song.exists():
-        shutil.rmtree(song)
+        shutil.copy(dsp, app / "editor" / dsp.name)
+    emu_page(app / "emu")
     app_files(out, version, name, (tname,) if tname else ())
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>BoopBox</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
         '<a href="webapp/installer/">BoopBox installer</a>\n', encoding="utf-8")
-    print(f"site: {out}: webapp/installer ({len(html)} B), webapp/editor, firmware/{name} ({len(raw)} B, {product})"
+    print(f"site: {out}: webapp/installer, webapp/editor, firmware/{name} ({len(raw)} B, {product})"
           + (f", firmware/{tname}" if tname else ""))
 
 

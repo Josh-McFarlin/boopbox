@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The Tracks page: a strip's level fader stands up (the device's TRACKS strips); its bar fills from the bottom to --p
+   in the track's colour (--c). */
+input.fader { writing-mode: vertical-lr; direction: rtl; width: 32px; height: 180px; }
+input.fader::-webkit-slider-runnable-track { width: 6px; height: 100%; background: linear-gradient(0deg, var(--c) var(--p, 0%), var(--s3) var(--p, 0%)); }
+input.fader::-moz-range-track { width: 6px; background: linear-gradient(0deg, var(--c) var(--p, 0%), var(--s3) var(--p, 0%)); }
+input.fader::-webkit-slider-thumb { width: 18px; height: 8px; margin-top: 0; margin-left: -6px; }
+input.fader::-moz-range-thumb { width: 18px; height: 8px; }

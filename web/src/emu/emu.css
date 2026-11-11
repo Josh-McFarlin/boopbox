@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The emulator page: the site's Tailwind theme, plus the FM-1's skin (its body, knob caps, buttons and keys), which
+   are gradients and shadows easier to read as a few component classes than as utilities. */
+@import "../styles/site.css";
+
+:root { --bg: #0b0b0d; --body: #1c1c21; --body2: #26262c; --cap: #303038; --bw: 4.2%; }
+
+@layer components {
+  .fm1-body { background: linear-gradient(var(--body2), var(--body)); box-shadow: 0 1px 0 #3a3a42 inset, 0 18px 40px #0008; }
+  .fm1-screen { box-shadow: 0 0 0 6px #000, 0 0 0 7px #3a3a42; image-rendering: pixelated; }
+  .fm1-cap { --a: 0deg; background: radial-gradient(circle at 35% 30%, #4a4a54, var(--cap));
+             box-shadow: 0 2px 5px #000a, 0 0 0 2px var(--kc, #44444c); transform: rotate(var(--a)); }
+  .fm1-btn i { background: var(--cap); box-shadow: 0 2px 0 #000c, 0 0 0 1px #45454e inset; transition: transform .03s; }
+  .fm1-btn[data-led="1"] i { box-shadow: 0 2px 0 #000c, 0 0 0 1px #45454e inset, 0 0 0 2px #ff621a55 inset; }
+  .fm1-btn[data-led="2"] i { background: #ff7a3a; box-shadow: 0 0 12px #ff621a99, 0 2px 0 #000c; }
+  .fm1-btn.down i, .fm1-btn.held i { transform: translateY(2px); box-shadow: 0 0 0 1px #45454e inset; }
+  .fm1-btn.held span { color: var(--color-orange); }
+  .fm1-white { background: linear-gradient(#f4f4f0, #dcdcd6); box-shadow: 0 3px 0 #9a9a94; }
+  .fm1-black { width: var(--bw); background: linear-gradient(#2c2c32, #111114); box-shadow: 0 3px 0 #000; }
+  .fm1-white.down { background: #cfcfc8; box-shadow: 0 1px 0 #9a9a94; }
+  .fm1-black.down { background: #000; box-shadow: 0 1px 0 #000; }
+  .fm1-white[data-led="1"] { background: linear-gradient(#fff3e6, #ffd9b8); }
+  .fm1-white[data-led="2"] { background: linear-gradient(#ffd0a8, #ff9a5a); }
+  .fm1-black[data-led="1"] { background: linear-gradient(#4a3020, #24160e); }
+  .fm1-black[data-led="2"] { background: linear-gradient(#ff7a3a, #b8481c); }
+  kbd { @apply border border-line px-1 font-mono text-[11px] font-semibold text-fg; }
+}

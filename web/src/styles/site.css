@@ -1,0 +1,30 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The installer's and the emulator's look: black, the FM-1's four track colours. Tailwind, with the palette as
+   theme tokens (bg-bg, text-dim, bg-tile, border-line, text-blue ...). */
+@import "tailwindcss";
+@source "..";
+
+@theme {
+  --font-sans: "Helvetica Neue", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --color-blue: #287cff;
+  --color-green: #1ecc70;
+  --color-yellow: #ffc618;
+  --color-orange: #ff621a;
+  --color-red: #ff2c34;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-dim: var(--dim);
+  --color-tile: var(--tile);
+  --color-line: var(--line);
+}
+
+:root { --bg: #000; --fg: #f2f2f2; --dim: #8a8a92; --tile: #16161a; --line: #2a2a30; }
+:root[data-theme="light"] { --bg: #f4f4f2; --fg: #111; --dim: #666; --tile: #e6e6e2; --line: #d0d0cc; }
+
+@layer base {
+  body { @apply m-0 bg-bg text-fg font-sans text-[15px] leading-[1.6]; }
+  a { color: inherit; }
+}
