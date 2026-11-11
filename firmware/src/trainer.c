@@ -521,10 +521,10 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
 static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
 UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
 /* ALGORITHM picks the track here (ui_input.c; the DRUMS screen too since 1.4.2): not on the SONG screen (its loop), not
- * while a button is held, nor in a take; there HOME comes first */
+ * in the sound browser (its sounds), not while a button is held, nor in a take; there HOME comes first */
 UI_SMALL static int tr_algo_ok(void)
 {
-    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page();
+    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page() && !tr_browsing();
 }
 UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first */
 {

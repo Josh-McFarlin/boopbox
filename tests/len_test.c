@@ -38,6 +38,9 @@ static int32_t enc_late[7];                         /* a detent the timer ISR co
 static int32_t fm1_enc_take(uint32_t e) { int32_t s = encs[e]; encs[e] = enc_late[e]; enc_late[e] = 0; return s; }
 static uint8_t fm1_led[16], fm1_led_dim[16], fm1_led_bg[16];
 static volatile uint16_t fm1_led_bg_ns;
+#define FM1_PWM_N 64u
+static uint8_t fm1_led_pwm[2][16];
+static volatile uint8_t fm1_led_pwm_lvl[2];
 #define FM1_NCOL 16u
 static const int8_t FM1_KEYMAP[5][16];
 static void fm1_led_key(uint32_t id, int on) { (void)id; (void)on; }

@@ -97,6 +97,9 @@ static int32_t fm1_enc_take(uint32_t e) { int32_t s = emu_enc[e % 7u]; emu_enc[e
 #define FM1_NCOL 11u
 static uint8_t fm1_led[FM1_NCOL], fm1_led_dim[FM1_NCOL], fm1_led_bg[FM1_NCOL];
 static volatile uint16_t fm1_led_bg_ns;
+#define FM1_PWM_N 64u
+static uint8_t fm1_led_pwm[2][FM1_NCOL];
+static volatile uint8_t fm1_led_pwm_lvl[2];
 /* key id at (physical column, packed row bit): hal/fm1_input.h's (the LEDs sit on the same places) */
 static const int8_t FM1_KEYMAP[6][FM1_NCOL] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -282,7 +285,8 @@ void emu_master(uint32_t v)
     emu_pot = (int32_t)(v > 1023u ? 1023u : v);
     song.master_q12 = ((uint32_t)emu_pot * (uint32_t)emu_pot) >> 8;
 }
-/* the LED of button b (panel.c B_*, its label: 0..13) / note key k (14 + k), lit (2), glowing (1) or off (0) */
+/* the LED of button b (panel.c B_*, its label: 0..13) / note key k (14 + k), lit (2), glowing (1) or off (0); the duty
+ * layers (hal/fm1_input.h fm1_led_pwm): half (3), breathing (4), drawn by the page */
 uint32_t emu_led(uint32_t id)
 {
     uint32_t p, r;
@@ -291,6 +295,7 @@ uint32_t emu_led(uint32_t id)
     for (p = 0; p < FM1_NCOL; p++)
         for (r = 1; r < 5u; r++)
             if (FM1_KEYMAP[r][p] == (int8_t)id)
-                return (fm1_led[p] >> r) & 1u ? 2u : ((fm1_led_dim[p] | fm1_led_bg[p]) >> r) & 1u ? 1u : 0u;
+                return (fm1_led[p] >> r) & 1u ? 2u : (fm1_led_pwm[1][p] >> r) & 1u ? 4u : (fm1_led_pwm[0][p] >> r) & 1u ? 3u
+                     : ((fm1_led_dim[p] | fm1_led_bg[p]) >> r) & 1u ? 1u : 0u;
     return 0;
 }

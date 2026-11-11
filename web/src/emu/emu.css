@@ -92,6 +92,13 @@
   .fm1-btn[data-led="1"] { color: #ffb48a; }
   .fm1-btn[data-led="2"] { color: #fff; background: linear-gradient(#ff8a4c, var(--color-orange)); text-shadow: 0 0 4px #7a2a00;
     box-shadow: 0 0 0 1px #0c0c0d, 0 calc(2 * var(--u)) 0 #0c0c0d, 0 0 calc(14 * var(--u)) #ff621a88; }
+  /* the duty layers: half lit (3), breathing up to lit (4; the sound browser's HOME and SAVE) */
+  .fm1-btn[data-led="3"], .fm1-btn[data-led="4"] { color: #fff; isolation: isolate; }
+  .fm1-btn[data-led="3"]::before, .fm1-btn[data-led="4"]::before { content: ""; position: absolute; inset: 0; z-index: -1;
+    border-radius: inherit; background: linear-gradient(#ff8a4c, var(--color-orange)); opacity: .45; pointer-events: none; }
+  .fm1-btn[data-led="4"]::before { animation: fm1-breathe 2.4s ease-in-out infinite; }
+  @keyframes fm1-breathe { 0%, 100% { opacity: .1; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .fm1-btn[data-led="4"]::before { animation: none; opacity: 1; } }
   .fm1-btn.down, .fm1-btn.held { transform: translateY(calc(2 * var(--u))); box-shadow: 0 0 0 1px #0c0c0d, 0 1px 0 #3d3d41 inset; }
   .fm1-btn.held { outline: calc(2 * var(--u)) solid var(--color-orange); outline-offset: calc(2 * var(--u)); }
   .fm1-btn:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
