@@ -227,11 +227,13 @@ export default function Emulator() {
             </div>
             <div className="fm1-pad fm1-well">{BUTTONS.slice(0, 12).map(btn)}</div>
           </div>
-          <div className="fm1-keys fm1-well">
-            <div className="fm1-row top">{top}</div>
-            <div className="fm1-row">
-              {OCTAVE_DOTS.map((i) => <b key={i} className="fm1-dot" style={{ left: gap(i, "var(--kg)") }} />)}
-              {bottom}
+          <div className="fm1-keyscroll">
+            <div className="fm1-keys fm1-well">
+              <div className="fm1-row top">{top}</div>
+              <div className="fm1-row">
+                {OCTAVE_DOTS.map((i) => <b key={i} className="fm1-dot" style={{ left: gap(i, "var(--kg)") }} />)}
+                {bottom}
+              </div>
             </div>
           </div>
         </div>
@@ -257,7 +259,7 @@ export default function Emulator() {
 
       <div className="mt-[26px] grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-x-[22px] gap-y-1.5 text-[13px] text-dim">
         <div><b className={help}>Keys</b>: click them (lower on a key plays harder, with MENU › KEYS › VELOCITY on), or{" "}
-          <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5.</div>
+          <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5. On a phone, swipe the case under the keys to scroll them.</div>
         <div><b className={help}>Buttons</b>: hold them for their layer. <kbd>Shift</kbd>-click keeps one held, so the keyboard can play its
           layer. <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Esc</kbd> HOME, <kbd>[</kbd> <kbd>]</kbd> OCT− OCT+.</div>
         <div><b className={help}>Knobs</b>: drag up or down, or scroll (MASTER is the volume). <kbd>↑</kbd> <kbd>↓</kbd> SELECT, <kbd>←</kbd> <kbd>→</kbd> ALGORITHM,{" "}

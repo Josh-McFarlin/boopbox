@@ -97,7 +97,8 @@
   .fm1-btn:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
 
   /* ---- the keybed: two rows of rubber pills, each with its light strip; the upper row sits over the gaps */
-  .fm1-keys { grid-area: keys; position: relative; padding: calc(13 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u));
+  .fm1-keyscroll { grid-area: keys; display: grid; }
+  .fm1-keys { position: relative; padding: calc(13 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u));
     border-radius: calc(30 * var(--u)); display: grid; grid-template-rows: 1fr 1fr; row-gap: calc(4 * var(--u)); }
   .fm1-row { --kg: 5; position: relative; display: grid; grid-template-columns: repeat(16, 1fr); column-gap: calc(var(--kg) * var(--u)); }
   .fm1-key { position: relative; display: flex; flex-direction: column; align-items: center; padding: 0; border: 0; border-radius: 999px;
@@ -117,9 +118,11 @@
   .fm1-dot { position: absolute; top: calc(-3.5 * var(--u)); width: calc(4 * var(--u)); height: calc(4 * var(--u)); margin-left: calc(-2 * var(--u));
     border-radius: 50%; background: #6a6a70; }
   @container (max-width: 639px) {
-    .fm1-keys { height: calc(230 * var(--u)); padding: calc(10 * var(--u)) calc(8 * var(--u)); border-radius: calc(20 * var(--u)); }
-    .fm1-row { --kg: 3; }
-    .fm1-key span { display: none; }
+    /* the keybed at its own size (as wide as on a 840-unit FM-1), in a box that scrolls sideways: the keys play,
+       so it scrolls from the strip of case under them (or its scrollbar) */
+    .fm1-keyscroll { display: block; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #6a6a70 transparent;
+      margin: 0 calc(-14 * var(--u)) calc(-16 * var(--u)); padding: 0 calc(14 * var(--u)) calc(30 * var(--u)); }
+    .fm1-keys { width: calc(786 * var(--u)); height: calc(177 * var(--u)); }
   }
 
   kbd { @apply border border-line px-1 font-mono text-[11px] font-semibold text-fg; }
