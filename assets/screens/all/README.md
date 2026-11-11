@@ -4,7 +4,7 @@ Drawn by the firmware's own code on the host (`python3 tools/make_all_screens.py
 of `tools/screens_demo.c` on the eight tracks playing. Each screen is 240 × 240 on the FM-1, 2x here.
 MENU → SCREEN → COLOR: **SYNTHWAVE** (`python3 tools/make_all_screens.py --palette 5`).
 
-111 screens in 8 groups.
+114 screens in 8 groups.
 
 ## Home (2)
 
@@ -94,7 +94,7 @@ The drum track: the grid's KIT and SOUND views, a hit's sheet, and the pages it 
 | SEQ > PLAY (drum track) | [`drums/drum-seq-play.png`](drums/drum-seq-play.png) | a page the drum track shares |
 | ENV (drum track) | [`drums/drum-env-no-sound.png`](drums/drum-env-no-sound.png) | a page of a synth sound: DRUM TRACK |
 
-## Engines (24)
+## Engines (26)
 
 EDIT 1 and EDIT 2 of every engine (its first factory preset, on track 2)
 
@@ -126,6 +126,8 @@ EDIT 1 and EDIT 2 of every engine (its first factory preset, on track 2)
 | PHYS: EDIT 2 | [`engines/engine-phys-edit2.png`](engines/engine-phys-edit2.png) | BELL TREE |
 | NOISE: EDIT 1 | [`engines/engine-noise-edit1.png`](engines/engine-noise-edit1.png) | WIND |
 | NOISE: EDIT 2 | [`engines/engine-noise-edit2.png`](engines/engine-noise-edit2.png) | WIND |
+| OBERVAVE: EDIT 1 | [`engines/engine-obervave-edit1.png`](engines/engine-obervave-edit1.png) | DARK ARP |
+| OBERVAVE: EDIT 2 | [`engines/engine-obervave-edit2.png`](engines/engine-obervave-edit2.png) | DARK ARP |
 
 ## Layers (8)
 
@@ -158,7 +160,7 @@ REC: armed, the free take's screens, the clear ring
 | REC: count-in | [`rec/rec-count-in.png`](rec/rec-count-in.png) | after a bar's count-in |
 | REC held: CLEAR | [`rec/rec-hold-clear.png`](rec/rec-hold-clear.png) | the ring: held to the end, cleared |
 
-## System (7)
+## System (8)
 
 The boot screen, the menu's five sections (HOME held) and ABOUT
 
@@ -170,6 +172,7 @@ The boot screen, the menu's five sections (HOME held) and ABOUT
 | MENU: SCREEN | [`system/menu-screen.png`](system/menu-screen.png) | HOME held; SELECT the section |
 | MENU: LIGHTS | [`system/menu-lights.png`](system/menu-lights.png) | HOME held; SELECT the section |
 | MENU: AUDIO | [`system/menu-audio.png`](system/menu-audio.png) | HOME held; SELECT the section |
+| MENU: KEYS | [`system/menu-keys.png`](system/menu-keys.png) | HOME held; SELECT the section |
 | MENU: SEQ | [`system/menu-seq.png`](system/menu-seq.png) | HOME held; SELECT the section |
 | MENU: SYSTEM | [`system/menu-system.png`](system/menu-system.png) | HOME held; SELECT the section |
 | ABOUT | [`system/menu-about.png`](system/menu-about.png) | the version, the credits |

@@ -244,9 +244,9 @@ UI_SMALL static void ui_header(const char *title, uint16_t tc, uint32_t *cache, 
         cv_text(tx, 5, &FONT_S, title, tc);
         if (sect >= 0) {                               /* (2.7.2) which section (A..D) is playing, SONG-layer colours */
             char sb[2] = {(char)('A' + (sect & 3)), 0};
-            int32_t bw = text_w(&FONT_S, sb) + 8, bx = tx - bw - 6;
-            cv_rect(bx, 3, bw, 14, playing ? UI_COL[sect & 3] : UI_DIM[sect & 3]);
-            cv_text(bx + 4, 5, &FONT_S, sb, C_BLACK);
+            int32_t bw = text_w(&FONT_S, sb) + 8, bx = 104 + 4 * 9 + 4;   /* after the beat lights */
+            cv_rect(bx, 21, bw, 14, playing ? UI_COL[sect & 3] : UI_DIM[sect & 3]);
+            cv_text(bx + 4, 23, &FONT_S, sb, C_BLACK);
         }
         if (song.solo)
             ui_text_r(22, "solo", C_WHITE);
