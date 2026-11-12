@@ -34,7 +34,12 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5099
+externalPort = 3000
+
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
 run = ["node", "server.js"]
+ignorePorts = false
