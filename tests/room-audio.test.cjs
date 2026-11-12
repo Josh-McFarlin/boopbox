@@ -136,6 +136,36 @@ test("FM-1 preset reloads automatically share the new voice and later edits", as
   }
 });
 
+test("sound-edit pause survives switching away from and back to an FM-1", async () => {
+  const { createSoundEditSharingController } = await import("../web/src/rooms/edit-sharing.js");
+  const sharing = createSoundEditSharingController();
+  const first = await connectMockFm1();
+  let second;
+  try {
+    sharing.attachDevice(first.device);
+    assert.equal(sharing.setPaused(true), true);
+    const firstValue = first.mock.state.tracks[0].p[68] + 1;
+    first.mock.sim.param(0, 68, firstValue);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(first.edits, []);
+
+    sharing.attachDevice(null);
+    assert.equal(sharing.paused, true);
+    first.close();
+
+    second = await connectMockFm1();
+    sharing.attachDevice(second.device);
+    const secondValue = second.mock.state.tracks[0].p[68] + 1;
+    second.mock.sim.param(0, 68, secondValue);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(second.edits, []);
+    assert.equal(sharing.paused, true);
+  } finally {
+    if (second) second.close();
+    else first.close();
+  }
+});
+
 test("FM-1 connection snapshots all factory tracks and routes keyboard notes", async () => {
   const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
   const { connectFm1 } = await import("../web/src/rooms/device.js");

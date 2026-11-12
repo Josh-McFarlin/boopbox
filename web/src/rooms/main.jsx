@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
 import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
+import { createSoundEditSharingController } from "./edit-sharing.js";
 import RoomChat from "./chat-ui/RoomChat.jsx";
 import config from "../../../shared/room-config.json";
 import "../styles/site.css";
@@ -65,6 +66,8 @@ function RoomPage() {
   const [emulatorReady, setEmulatorReady] = useState(false);
   const [status, setStatus] = useState("Connecting to the room server…");
   const [error, setError] = useState("");
+  const soundEditSharingRef = useRef(null);
+  if (!soundEditSharingRef.current) soundEditSharingRef.current = createSoundEditSharingController();
   const socketRef = useRef(null);
   const selfPlayerIdRef = useRef(null);
   const fm1Ref = useRef(null);
@@ -74,7 +77,6 @@ function RoomPage() {
   const emulatorHasPerformanceRef = useRef(false);
   const audioRef = useRef(null);
   const roomRef = useRef(room);
-  const soundEditsPausedRef = useRef(soundEditsPaused);
   const voiceStateRef = useRef(new Map());
   const performanceStateRef = useRef(new Map());
   const heldRef = useRef(new Set());
@@ -183,7 +185,7 @@ function RoomPage() {
           const occupiedSlots = new Set((message.players || []).map((player) => player.slot));
           setMutedSlots((current) => current.filter((slot) => occupiedSlots.has(slot)));
           setSoloSlot((current) => current !== null && occupiedSlots.has(current) ? current : null);
-          if (soundEditsPausedRef.current) send({ type: "sound_edit_sharing", paused: true });
+          if (soundEditSharingRef.current.paused) send({ type: "sound_edit_sharing", paused: true });
           if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
           setStatus(`In a ${GENRES.find((item) => item.id === message.room.genre)?.label || "music"} room.`);
           const currentIds = new Set((message.players || []).map((player) => player.id));
@@ -310,7 +312,7 @@ function RoomPage() {
         setFm1State(state);
         if (state === "disconnected") stopAllNotes();
       }, (track, param, value) => {
-        if (roomRef.current && !soundEditsPausedRef.current) send({ type: "sound_edit", track, param, value });
+        if (roomRef.current && !soundEditSharingRef.current.paused) send({ type: "sound_edit", track, param, value });
       }, (performance) => {
         if (roomRef.current && !send({ type: "performance", performance })) {
           setError("Wait for the room server to reconnect.");
@@ -320,6 +322,7 @@ function RoomPage() {
       }, () => {
         setError("The FM-1 performance could not be synced. Check the USB connection and try again.");
       });
+      soundEditSharingRef.current.attachDevice(fm1Ref.current);
       setStatus("FM-1 connected. Sharing its stock-sound performance with the room.");
     } catch (err) {
       setFm1State("disconnected");
@@ -331,6 +334,7 @@ function RoomPage() {
   const useEmulator = () => {
     fm1Ref.current?.close();
     fm1Ref.current = null;
+    soundEditSharingRef.current.attachDevice(null);
     setFm1State("disconnected");
     setDeviceMode("emulator");
     setEmulatorReady(false);
@@ -394,10 +398,8 @@ function RoomPage() {
   }, [deviceMode, playNote, send, stopAllNotes]);
 
   const toggleSoundEditSharing = () => {
-    const paused = !soundEditsPausedRef.current;
-    soundEditsPausedRef.current = paused;
+    const paused = soundEditSharingRef.current.setPaused(!soundEditSharingRef.current.paused);
     setSoundEditsPaused(paused);
-    fm1Ref.current?.setSoundEditsPaused(paused);
     if (roomRef.current && !send({ type: "sound_edit_sharing", paused })) {
       setError("Wait for the room server to reconnect.");
     } else {
@@ -450,9 +452,7 @@ function RoomPage() {
     setEmulatorReady(false);
     emulatorHasPerformanceRef.current = false;
     setRoom(null);
-    soundEditsPausedRef.current = false;
-    setSoundEditsPaused(false);
-    fm1Ref.current?.setSoundEditsPaused(false);
+    setSoundEditsPaused(soundEditSharingRef.current.setPaused(false));
     setPlayers([]);
     setChatMessages([]);
     setNameError("");

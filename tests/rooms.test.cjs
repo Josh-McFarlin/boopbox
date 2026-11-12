@@ -43,6 +43,9 @@ function createClient(url) {
         waiters.push(waiter);
       });
     },
+    has(type, predicate = () => true) {
+      return inbox.some((message) => message.type === type && predicate(message));
+    },
     close() {
       if (ws.readyState === WebSocket.CLOSED) return Promise.resolve();
       return new Promise((resolve) => {
@@ -285,6 +288,49 @@ test("pausing live sound edits preserves shared sounds while notes continue", as
     owner.send({ type: "sound_edit_sharing", paused: false });
     owner.send({ type: "sound_edit", track: 0, param: 68, value: 100 });
     assert.equal((await peer.next("sound_edit")).value, 100);
+  } finally {
+    await app.close(clients);
+  }
+});
+
+test("a rejoining player reapplies paused sound sharing before later edits", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const peer = createClient(app.url);
+    clients.push(owner, peer);
+    await Promise.all([owner.ready, peer.ready]);
+    const created = await createRoom(owner);
+    peer.send({ type: "join", roomId: created.room.id });
+    const peerState = await peer.next("room_state");
+    const peerId = peerState.players.find((player) => player.id !== created.players[0].id).id;
+
+    const initial = roomPerformance();
+    initial.tracks[0].voice.params[68] = 92;
+    owner.send({ type: "performance", performance: initial });
+    await peer.next("performance");
+    owner.send({ type: "sound_edit_sharing", paused: true });
+
+    await owner.close();
+    const reconnect = createClient(app.url);
+    clients.push(reconnect);
+    await reconnect.ready;
+    reconnect.send({ type: "join", roomId: created.room.id });
+    const rejoined = await reconnect.next("room_state");
+    assert.equal(rejoined.room.id, created.room.id);
+
+    // The UI resends its retained pause after receiving this rejoin state.
+    reconnect.send({ type: "sound_edit_sharing", paused: true });
+    const reconnectId = rejoined.players.find((player) => player.id !== peerId).id;
+    const restoredPerformance = roomPerformance();
+    restoredPerformance.tracks[0].voice.params[68] = 92;
+    reconnect.send({ type: "performance", performance: restoredPerformance });
+    await peer.next("performance", (message) => message.playerId === reconnectId);
+    reconnect.send({ type: "sound_edit", track: 0, param: 68, value: 100 });
+    reconnect.send({ type: "note_on", track: 0, note: 64, velocity: 96 });
+    assert.equal((await peer.next("note_on")).note, 64);
+    assert.equal(peer.has("sound_edit", (message) => message.playerId === reconnectId), false);
   } finally {
     await app.close(clients);
   }
