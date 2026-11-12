@@ -442,7 +442,8 @@
   }
 
   .room-emulator iframe {
-    height: 760px;
+    height: 1000px;
+    height: clamp(900px, calc(100svh + 180px), 1100px);
     min-height: 0;
   }
 

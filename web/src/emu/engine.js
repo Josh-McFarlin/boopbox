@@ -91,6 +91,9 @@ export function drawScreen(g, img, buf) {
    -> {node, ctx, flash} */
 export async function powerOn(onMessage, fw = "main", { roomMode = false } = {}) {
   const ctx = new AudioContext({ sampleRate: FS, latencyHint: "interactive" });
+  // Resume immediately while the Power On click/tap still carries user activation
+  // (not after the firmware and worklet have finished loading).
+  const resumed = ctx.resume();
   const [module, flash] = await Promise.all([
     fetch(FIRMWARE[fw].wasm).then((r) => { if (!r.ok) throw new Error(FIRMWARE[fw].wasm + ": " + r.status); return r.arrayBuffer(); })
       .then((b) => WebAssembly.compile(b)),
@@ -101,6 +104,6 @@ export async function powerOn(onMessage, fw = "main", { roomMode = false } = {})
                                                           processorOptions: { module, flash, roomMode } });
   node.port.onmessage = ({ data }) => onMessage(data);
   node.connect(ctx.destination);
-  await ctx.resume();
+  await resumed;
   return { node, ctx, flash };
 }

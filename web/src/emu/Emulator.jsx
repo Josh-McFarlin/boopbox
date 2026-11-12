@@ -346,7 +346,7 @@ export default function Emulator() {
             <button type="button" disabled={starting} onClick={() => power()}
               className="arcade-btn min-h-[60px] bg-green px-9 text-[24px] [--shadow:var(--color-orange)]">
               {starting ? "Starting…" : "▶ Power on"}</button>
-            <p className="m-0 text-[14px] text-body">Sound needs a click to start. Best with headphones.</p>
+            <p className="m-0 text-[14px] text-body">Tap or click to enable sound. Best with headphones.</p>
           </div>
         ) : null}
       </div>
