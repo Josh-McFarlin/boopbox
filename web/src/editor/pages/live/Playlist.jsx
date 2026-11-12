@@ -96,9 +96,9 @@ export default function Playlist() {
   /* the cue: the song playing and its note, then the next one */
   const cur = pl.songs[pl.cur], nx = pl.songs.length ? pl.songs[pl.cur + 1 < pl.songs.length ? pl.cur + 1 : 0] : null;
   return (
-    <LvCard k="playlist" className="lvplbox lvadv"
-      head={<div className="lvhead"><h2>{t("plTitle")}</h2>
-        <button type="button" className="pri" data-lvm="pl:next" disabled={!pl.songs.length || pl.loading} onClick={lvSongNext}>{t("plNext")} ▶</button></div>}>
+    <LvCard k="playlist" className="lvplbox lvadv" title={t("plTitle")}
+      head={<button type="button" className="pri" data-lvm="pl:next" disabled={!pl.songs.length || pl.loading} title={pl.songs.length ? undefined : t("plEmpty")}
+        onClick={lvSongNext}>{t("plNext")} ▶</button>}>
       {cur || nx ? (
         <div className="lvcue">
           {cur ? <p><b>{cur.name || "SONG"}</b><span>{cur.live && cur.live.note ? " — " + cur.live.note : ""}</span></p> : null}

@@ -2,13 +2,12 @@
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
 /* ============================================================ LIVE pro === */
-/* Editor only: the 2.7 firmware as it is. Scenes (8, recalled at once or morphed over bars, the A / B crossfader), a
-   PERFORM card for the track the keys play (its sound, arp and key, INSERT and the master bus, its steps), sounds with
+/* Editor only: the 2.7 firmware as it is. Scenes (8, recalled at once or morphed over bars, the A / B crossfader), sounds with
    favourites and the USER presets, MIDI learn (any control on any controller), and the stage tools (lock, the clock and
    the set's time, the set recorded from the FM-1's USB audio, the setlist's tempo and cue). Kept in this browser
    (IndexedDB "lvpro"); the scenes travel with a saved setlist */
-import { CMD, FM1_PORT, LVX, bank, fillGet, fillSet, parse, previewToggleDrum, previewToggleStep, req } from "../../lib/proto.js";
-import { A, downloadBytes, getDescOrNull, notify, report, rq, rqf, sayK, selfLoad, t, today } from "../../core/app.js";
+import { FM1_PORT, LVX, bank } from "../../lib/proto.js";
+import { A, downloadBytes, notify, report, rq, rqf, sayK, selfLoad, t, today } from "../../core/app.js";
 import { store } from "../../core/shared.js";
 import {
   LV, lvDrum, lvGlobal, lvGv, lvParam, lvReadTrack, lvReadTracks, lvSetMix, lvSound, lvTicks, lvTouch,
@@ -18,11 +17,9 @@ export const LVS = {
   scenes: new Array(LVX.NSCENE).fill(null), names: [], morph: 0, store: false, sounds: false, tempo: false,
   xa: 0, xb: 1, xf: 0, anim: 0, cur: -1, curF: null, busy: false,
   learn: false, target: null, map: {}, edge: new Map(), ins: new Set(),
-  lock: false, rec: null, setStart: 0, tab: "sound", favs: new Set(), edesc: {}, keyAll: false, all: null,
-  grid: { track: -1, page: 0, steps: [], fill: null, at: 0, loading: false },
+  lock: false, rec: null, setStart: 0, favs: new Set(), all: null,
   restored: false, saveT: 0,
 };
-export const LVX_TABS = ["sound", "arp", "fx", "steps"];
 export async function lvxRestore() {
   if (LVS.restored) return;
   LVS.restored = true;
@@ -32,7 +29,7 @@ export async function lvxRestore() {
       if (Array.isArray(v.scenes)) v.scenes.slice(0, LVX.NSCENE).forEach((s, k) => { LVS.scenes[k] = s && s.v === 1 ? s : null; });
       LVS.names = Array.isArray(v.names) ? v.names.slice(0, LVX.NSCENE) : [];
       for (const k of ["morph", "xa", "xb"]) if (Number.isInteger(v[k])) LVS[k] = v[k];
-      LVS.sounds = !!v.sounds; LVS.tempo = !!v.tempo; LVS.keyAll = !!v.keyAll;
+      LVS.sounds = !!v.sounds; LVS.tempo = !!v.tempo;
       if (v.map && typeof v.map === "object") LVS.map = v.map;
       if (Array.isArray(v.favs)) LVS.favs = new Set(v.favs);
     }
@@ -43,7 +40,7 @@ export function lvxSave() {
   clearTimeout(LVS.saveT);
   LVS.saveT = setTimeout(() => {
     store.setMeta("lvpro", { scenes: LVS.scenes, names: LVS.names, morph: LVS.morph, xa: LVS.xa, xb: LVS.xb, sounds: LVS.sounds, tempo: LVS.tempo,
-      keyAll: LVS.keyAll, map: LVS.map, favs: [...LVS.favs] }).catch((e) => console.warn(e));
+      map: LVS.map, favs: [...LVS.favs] }).catch((e) => console.warn(e));
   }, 300);
 }
 
@@ -126,78 +123,9 @@ export function lvxCross(f) {
   lvxSend(v, false);
 }
 
-/* ---- PERFORM: the track the keys play */
-export async function lvxEdesc(i) {                   /* the engine's 8 values' DESC (the selected track's engine) */
-  const o = LV.tr[i], dev = A.dev;
-  if (!o || lvDrum(i) || LVS.edesc[o.engine] || dev.sel !== i) return;
-  const out = [];
-  for (let k = 0; k < LVX.NE; k++) out.push(await getDescOrNull(0, dev.info.pe0 + k));
-  LVS.edesc[o.engine] = out;
-  notify();
-}
-
-/* ---- the steps of the track the keys play: 16 a page (a drum lane a row), a tap toggles, a right-click its fill */
-export async function lvxLoadGrid() {
-  const g = LVS.grid, i = g.track, d = A.dev;
-  if (!d || g.loading || i < 0) return;
-  g.loading = true;
-  g.at = Date.now();
-  try {
-    const drum = lvDrum(i), out = [];
-    for (let k = 0; k < 16; k++) {
-      const idx = g.page * 16 + k;
-      if (idx >= (d.info.nstep || 64)) break;
-      out.push(drum ? parse[CMD.DRUM_STEP](await rq(req.drumStep(idx), { key: "lvg:" + idx, quiet: true }))
-        : parse[CMD.TRACK_STEP](await rq(req.trackStep(i, idx), { key: "lvg:" + idx, quiet: true })));
-      if (d !== A.dev || g.track !== i) return;
-    }
-    g.steps = out;
-    if (d.info.proto >= 8) g.fill = parse[CMD.FILL_GET](await rq(req.fillGet(i), { key: "lvg:fill", quiet: true })).fill;
-    g.at = Date.now();
-  } catch (e) { if (e.message !== "closed") report(e); }
-  finally { g.loading = false; }
-  notify();
-}
-/* the grid shows the track the keys play (a new track: its first page, read again) */
-export function lvxGridFor(i) {
-  const g = LVS.grid;
-  if (g.track !== i) { g.track = i; g.page = 0; g.steps = []; g.fill = null; }
-  if (!g.steps.length || g.at < Date.now() - 2500) lvxLoadGrid();
-}
-export async function lvxToggle(idx, lane) {
-  const g = LVS.grid, i = g.track, k = idx - g.page * 16, st = g.steps[k], dev = A.dev;
-  if (!st || !dev) return;
-  try {
-    if (lvDrum(i)) {
-      const nd = previewToggleDrum(st, lane);
-      g.steps[k] = { ...nd, index: idx };
-      notify();
-      g.steps[k] = parse[CMD.DRUM_STEP](await rq(req.drumStep(idx, nd), { key: "dstep:" + idx, front: true }));
-    } else {
-      const ns = previewToggleStep(st, LV.lastNote ?? 60);
-      g.steps[k] = { ...ns, index: idx };
-      notify();
-      g.steps[k] = parse[CMD.TRACK_STEP](await rq(req.trackStep(i, idx, ns), { key: "tstep:" + idx, front: true }));
-    }
-    if (i === dev.sel) LV.stale = true;
-  } catch (e) { report(e); }
-  notify();
-}
-export async function lvxFill(idx) {
-  const g = LVS.grid, dev = A.dev;
-  if (!g.fill || !dev || dev.info.proto < 8) return;
-  const c = (fillGet(g.fill, idx) % 3 + 1) % 3;
-  fillSet(g.fill, idx, c);
-  notify();
-  try { const r = parse[CMD.FILL_SET](await rq(req.fillSet(g.track, idx, c), { key: "fill:" + idx, front: true })); fillSet(g.fill, idx, r.cond); }
-  catch (e) { report(e); }
-  notify();
-}
-/* each state read: the set's time starts with PLAY; what the FM-1 recorded shows in the grid */
+/* each state read: the set's time starts with PLAY */
 lvTicks.state = () => {
   if (LV.s && LV.s.playing && !LVS.setStart) LVS.setStart = Date.now();
-  const g = LVS.grid;
-  if (LVS.tab === "steps" && LVS.all !== false && g.track >= 0 && Date.now() - g.at > 3000 && !g.loading && A.tab === "live") lvxLoadGrid();
 };
 
 /* ---- sounds: favourites (this browser) and the USER presets (the FM-1's bank) in each track's list */
@@ -326,21 +254,16 @@ export function lvxRecStop() {
 
 /* ---- a tip on every control (a hover on a computer; the "?" of each card says more) */
 export function lvxTipOf(id) {
-  const P = { 39: "pan", 50: "filt", 36: "send", 35: "send", 34: "send", 33: "drive", 5: "macro", 6: "macro", 7: "macro", 1: "env", 2: "env", 3: "env",
-    4: "env", 38: "glide", 9: "lfo", 13: "lfo", 14: "lfo", 15: "lfo", 16: "lfo", 53: "ins", 54: "ins", 55: "ins", 56: "ins", 57: "ins", 17: "arp",
-    18: "arp", 19: "arp", 20: "arp", 21: "arp", 23: "hold", 24: "arp", 25: "key", 26: "key", 49: "key", 28: "key", 29: "len", 30: "len", 31: "len", 32: "len" };
-  const G = { 0: "bpm", 1: "swing", 29: "mfilt", 27: "dust", 28: "duck", 26: "send", 32: "send", 4: "bus", 5: "bus", 6: "bus", 7: "bus", 8: "bus",
-    9: "bus", 10: "bus", 11: "bus", 37: "tex", 38: "tex", 39: "tex", 40: "tex", 41: "tex", 42: "tex", 43: "tex", 2: "click" };
+  const P = { 39: "pan", 50: "filt", 36: "send", 35: "send", 34: "send", 33: "drive" };
+  const G = { 0: "bpm", 1: "swing", 29: "mfilt", 27: "dust", 28: "duck", 26: "send", 32: "send" };
   let m;
   if ((m = /^g:(\d+)$/.exec(id))) return G[+m[1]];
-  if ((m = /^(?:s\d+|perf):(\d+)$/.exec(id))) return +m[1] >= LVX.E0 ? "engine" : P[+m[1]];
+  if ((m = /^s\d+:(\d+)$/.exec(id))) return P[+m[1]];
   if ((m = /^s\d+:(\w+)$/.exec(id))) return { lvl: "lvl", mute: "mute", solo: "solo", sel: "sel", prev: "snd", next: "snd" }[m[1]];
   if ((m = /^(sec|scene|fx|pad):\d+$/.exec(id))) return m[1];
   if (/^chain:\d$/.test(id)) return "chain";
   if (/^kmode:/.test(id)) return "kmode";
-  if (/^pat:/.test(id)) return "pat";
   if (/^throw:/.test(id)) return "throw";
-  if (id === "pad:tune" || id === "pad:dec") return "padtw";
   return { master: "vol", "master:knob": "volknob", "chain:play": "chainplay", "chain:stop": "chainplay", play: "play", rec: "rec", undo: "undo", redo: "undo", tap: "tap", loop: "loop", song: "loop", songrec: "songrec", fill: "fill", fillbar: "fillbar",
     "panic": "panic", latch: "latch", "pl:next": "next", "scene:store": "store", "scene:morph": "morph", "scene:xf": "xf" }[id];
 }
@@ -353,9 +276,10 @@ export function lvxTips(root) {
   });
 }
 
-/* the view: the essentials (transport, sections, mixer, keys, effects) or everything (+ scenes, PERFORM, the setlist, the stage tools) */
+/* the view: the essentials (a first visit's) or everything (+ the scenes' options, the playlist, record set, MIDI learn);
+   the user's choice is kept */
 export function lvxViewAll() {
-  if (LVS.all == null) { let v = null; try { v = localStorage.getItem("sloop-live-view"); } catch (e) { /* no storage */ } LVS.all = v !== "simple"; }
+  if (LVS.all == null) { let v = null; try { v = localStorage.getItem("sloop-live-view"); } catch (e) { /* no storage */ } LVS.all = v === "all"; }
   return LVS.all;
 }
 export function lvxView(all) {
