@@ -5,29 +5,28 @@
 import { Logo } from "./Brand.jsx";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
-/* [key, label, the home page's section (null: the page, also from the home page), the page it leads to elsewhere
-   (relative to webapp/)] */
+/* [key (the page it marks as current), label, the page it opens (relative to webapp/)]: always a page, never a section
+   of the home page */
 const LINKS = [
-  ["features", "Features", "features", "home/#features"],
-  ["editor", "Web editor", "editor", "editor/"],
-  ["emu", "Try it", null, "emu/"],              // (always the emulator page itself)
-  ["installer", "Install", null, "installer/"],  // (always the installer page itself)
+  ["home", "Features", "home/"],
+  ["editor", "Web editor", "editor/"],
+  ["emu", "Try it", "emu/"],
+  ["installer", "Install", "installer/"],
 ];
 
 /* current: the page shown ("home", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline
-   editor); Hash: the home page's in-page link, for its own sections */
-export default function SiteHeader({ current, base = "../", Hash }) {
-  const home = current === "home" && Hash;
-  const A = ({ k, section, page, children, ...p }) => {
+   editor) */
+export default function SiteHeader({ current, base = "../" }) {
+  const A = ({ k, page, children, ...p }) => {
     const cur = k === current ? { "aria-current": "page", className: "!text-[#f2f2f2]" } : {};
-    return home && section ? <Hash to={section} {...cur} {...p}>{children}</Hash> : <a href={base + page} {...cur} {...p}>{children}</a>;
+    return <a href={base + page} {...cur} {...p}>{children}</a>;
   };
   return (
     <header className="border-b border-[#2a2a30] bg-black text-[16px] leading-[1.6] [font-family:'Helvetica_Neue',-apple-system,BlinkMacSystemFont,Arial,sans-serif]">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-3 px-6 py-4">
-        <A k="home" section="top" page="home/" aria-label="BoopBox home" className="block"><Logo className="w-[150px]" /></A>
+        <A page="home/" aria-label="BoopBox home" className="block"><Logo className="w-[150px]" /></A>
         <nav aria-label="Main" className="flex flex-auto flex-wrap gap-x-[22px] gap-y-1 text-[15px] [&_a]:text-[#b8b8c0] [&_a]:no-underline [&_a:hover]:text-[#f2f2f2]">
-          {LINKS.map(([k, label, section, page]) => <A key={k} k={k} section={section} page={page}>{label}</A>)}
+          {LINKS.map(([k, label, page]) => <A key={k} k={k} page={page}>{label}</A>)}
           <a href={`${GITHUB}/blob/main/GUIDE.md`}>Guide</a>
           <a href={GITHUB}>GitHub</a>
         </nav>

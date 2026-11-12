@@ -52,14 +52,6 @@ const STEPS = [
   ["3", "Press Install", "About a minute. Do not unplug the cable while it writes.", "yellow"],
 ];
 
-/* (the root page has <base href="webapp/home/">: a "#x" link would go there; set the hash itself) */
-const jump = (e) => {
-  const id = e.currentTarget.getAttribute("href").slice(1);
-  e.preventDefault();
-  location.hash = id;
-};
-const Hash = ({ to, ...p }) => <a href={"#" + to} onClick={jump} {...p} />;
-
 const btn = "inline-flex min-h-[52px] items-center px-7 py-4 text-[15px] font-semibold uppercase tracking-[.08em] no-underline";
 const PRIMARY = `${btn} bg-orange text-black hover:bg-fg`;
 const SECONDARY = `${btn} border border-[#3a3a42] text-fg hover:border-fg`;
@@ -92,7 +84,7 @@ const B = ({ children }) => <b className="text-fg">{children}</b>;
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-[16px] leading-[1.6] text-fg">
-      <SiteHeader current="home" Hash={Hash} />
+      <SiteHeader current="home" />
 
       <main>
         <section id="top" className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-12 px-6 pt-[72px] pb-14">
