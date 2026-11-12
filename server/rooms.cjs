@@ -7,7 +7,7 @@ const config = require("../shared/room-config.json");
 const GENRES = new Set(config.genres.map(({ id }) => id));
 const ENGINE_COUNT = config.presetCounts.length;
 const SHAREABLE_DRUM_KITS = new Set(config.shareableDrumKits);
-const MAX_BUFFERED_BYTES = 64 * 1024;
+const MAX_BUFFERED_BYTES = 1024 * 1024;
 const MAX_PROTOCOL_ERRORS = 5;
 const MAX_ROOM_CREATES_PER_MINUTE = 3;
 
@@ -47,6 +47,144 @@ function normalizeVoice(value) {
   const params = normalizeParameters(value.engine, value.params);
   if (!params) return null;
   return { engine: value.engine, preset: value.preset, params };
+}
+
+function exactObject(value, keys) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).length === keys.length
+    && keys.every((key) => Object.hasOwn(value, key));
+}
+
+function normalizeSparsePairs(value, length, min, max) {
+  if (!Array.isArray(value) || value.length > length) return null;
+  const seen = new Set();
+  const result = [];
+  for (const pair of value) {
+    if (!Array.isArray(pair) || pair.length !== 2
+      || !isIntegerInRange(pair[0], 0, length - 1)
+      || !isIntegerInRange(pair[1], min, max) || seen.has(pair[0])) return null;
+    seen.add(pair[0]);
+    result.push([pair[0], pair[1]]);
+  }
+  return result;
+}
+
+function normalizeRoomPattern(value, drum) {
+  if (!exactObject(value, ["id", "length", "steps", "micro", "fill", "locks", "components", "dir", "seed"])
+    || !isIntegerInRange(value.id, 0, 7) || !isIntegerInRange(value.length, 1, 64)
+    || !Array.isArray(value.steps) || value.steps.length > 64
+    || !Array.isArray(value.locks) || value.locks.length > 32
+    || !Array.isArray(value.components) || value.components.length > 16
+    || !isIntegerInRange(value.dir, 0, 3) || !isIntegerInRange(value.seed, 0, 255)) return null;
+
+  const steps = [];
+  const seenSteps = new Set();
+  for (const step of value.steps) {
+    if (!Array.isArray(step) || !isIntegerInRange(step[0], 0, 63) || seenSteps.has(step[0])) return null;
+    const index = step[0];
+    if (drum) {
+      if (step.length !== 4 || !isIntegerInRange(step[1], 0, 65535)
+        || !Array.isArray(step[2]) || step[2].length !== 16
+        || !step[2].every((n) => isIntegerInRange(n, 0, 3))
+        || !Array.isArray(step[3]) || step[3].length !== 16
+        || !step[3].every((n) => isIntegerInRange(n, 0, 3))) return null;
+      steps.push([index, step[1], [...step[2]], [...step[3]]]);
+    } else {
+      if (step.length !== 2 || !Array.isArray(step[1]) || step[1].length !== 10
+        || !step[1].slice(0, 4).every((n) => isIntegerInRange(n, 0, 127))
+        || !isIntegerInRange(step[1][4], 0, 4) || !isIntegerInRange(step[1][5], 0, 2)
+        || !isIntegerInRange(step[1][6], 0, 127) || !isIntegerInRange(step[1][7], 0, 127)
+        || !isIntegerInRange(step[1][8], 0, 127) || !isIntegerInRange(step[1][9], 0, 127)) return null;
+      steps.push([index, [...step[1]]]);
+    }
+    seenSteps.add(index);
+  }
+
+  const micro = normalizeSparsePairs(value.micro, 64, -32, 31);
+  const fill = normalizeSparsePairs(value.fill, 64, 0, 2);
+  if (!micro || !fill) return null;
+
+  const locks = [];
+  for (const lock of value.locks) {
+    if (!Array.isArray(lock) || lock.length !== 4
+      || !isIntegerInRange(lock[0], 0, 63) || typeof lock[1] !== "boolean"
+      || !config.lockableParameters.includes(lock[2]) || !isIntegerInRange(lock[3], -32768, 32767)) return null;
+    locks.push([...lock]);
+  }
+
+  const components = [];
+  for (const component of value.components) {
+    if (!Array.isArray(component) || component.length !== 4
+      || !isIntegerInRange(component[0], 0, 63) || !isIntegerInRange(component[1], 1, 14)
+      || !isIntegerInRange(component[2], -128, 127) || !isIntegerInRange(component[3], -128, 127)) return null;
+    const [aMin, aMax, bMin, bMax] = config.componentRanges[component[1]] || [];
+    if (!isIntegerInRange(component[2], aMin, aMax) || !isIntegerInRange(component[3], bMin, bMax)) return null;
+    if (component[1] === 12 && !config.lockableParameters.includes(component[2])) return null;
+    if (component[1] === 13 && component[2] === 0) return null;
+    components.push([...component]);
+  }
+  return {
+    id: value.id, length: value.length, steps, micro, fill, locks, components,
+    dir: value.dir, seed: value.seed,
+  };
+}
+
+function normalizeRoomPerformance(value) {
+  if (!exactObject(value, ["tempo", "playing", "currentScene", "tracks", "scenes"])
+    || !isIntegerInRange(value.tempo, 40, 240) || typeof value.playing !== "boolean"
+    || !(value.currentScene === null || isIntegerInRange(value.currentScene, 0, 7))
+    || !Array.isArray(value.tracks) || value.tracks.length !== 8
+    || !exactObject(value.scenes, ["names", "patterns"])
+    || !Array.isArray(value.scenes.names) || value.scenes.names.length !== 8
+    || !value.scenes.names.every((name) => isIntegerInRange(name, 0, 18))
+    || !Array.isArray(value.scenes.patterns) || value.scenes.patterns.length !== 8
+    || !value.scenes.patterns.every((scene) => Array.isArray(scene) && scene.length === 8
+      && scene.every((pattern) => isIntegerInRange(pattern, 0, 8)))) return null;
+
+  const tracks = [];
+  for (let index = 0; index < 8; index += 1) {
+    const track = value.tracks[index];
+    if (!exactObject(track, ["index", "kind", "voice", "parameters", "currentPattern", "chain", "chainEnabled", "patterns"])
+      || track.index !== index || !isIntegerInRange(track.kind, 0, 1)
+      || !isIntegerInRange(track.currentPattern, 0, 7) || typeof track.chainEnabled !== "boolean"
+      || !Array.isArray(track.chain) || track.chain.length > 16
+      || !track.chain.every((slot) => isIntegerInRange(slot, 0, 0x7F) && (slot & 0x08) === 0 && (slot & 0x0F) < 8)
+      || !Array.isArray(track.patterns) || track.patterns.length !== 8) return null;
+    const voice = track.voice === null ? null : normalizeVoice(track.voice);
+    if (track.voice !== null && !voice) return null;
+    if (voice && ((track.kind === 1) !== (voice.engine === ENGINE_COUNT))) return null;
+    if (!Array.isArray(track.parameters) || track.parameters.length > 63) return null;
+    const params = [];
+    const seenParams = new Set();
+    for (const param of track.parameters) {
+      if (!Array.isArray(param) || param.length !== 2
+        || !isIntegerInRange(param[0], 0, config.sequenceLengthParameter + 33)
+        || !isIntegerInRange(param[1], -128, 127) || seenParams.has(param[0])) return null;
+      seenParams.add(param[0]);
+      params.push([...param]);
+    }
+    const patterns = [];
+    for (let pattern = 0; pattern < 8; pattern += 1) {
+      if (track.patterns[pattern] === null) {
+        patterns.push(null);
+        continue;
+      }
+      const normalized = normalizeRoomPattern(track.patterns[pattern], track.kind === 1);
+      if (!normalized || normalized.id !== pattern) return null;
+      patterns.push(normalized);
+    }
+    tracks.push({
+      index, kind: track.kind, voice, parameters: params,
+      currentPattern: track.currentPattern, chain: [...track.chain],
+      chainEnabled: track.chainEnabled, patterns,
+    });
+  }
+  const performance = {
+    tempo: value.tempo, playing: value.playing, currentScene: value.currentScene, tracks,
+    scenes: { names: [...value.scenes.names], patterns: value.scenes.patterns.map((scene) => [...scene]) },
+  };
+  if (Buffer.byteLength(JSON.stringify(performance), "utf8") > config.maxPerformanceBytes) return null;
+  return performance;
 }
 
 function createRoomService(server, options = {}) {
@@ -92,10 +230,16 @@ function createRoomService(server, options = {}) {
     return {
       type: "room_state",
       room: roomSummary(room),
+      clock: {
+        tempo: room.tempo,
+        beat: room.anchorBeat + (Date.now() - room.anchorAt) * room.tempo / 60_000,
+        serverAt: Date.now(),
+      },
       players: [...room.players.values()].map((player) => ({
         id: player.id,
         slot: player.slot,
         voice: player.voice,
+        hasPerformance: !!player.performance,
       })),
     };
   }
@@ -113,14 +257,37 @@ function createRoomService(server, options = {}) {
     for (const player of room.players.values()) safeSend(player.ws, message);
   }
 
+  function sendPerformances(room, ws) {
+    for (const player of room.players.values()) {
+      if (!player.performance) continue;
+      safeSend(ws, {
+        type: "performance",
+        playerId: player.id,
+        slot: player.slot,
+        performance: player.performance,
+        clock: {
+          tempo: room.tempo,
+          beat: room.anchorBeat + (Date.now() - room.anchorAt) * room.tempo / 60_000,
+          serverAt: Date.now(),
+        },
+      });
+    }
+  }
+
+  function noteKey(track, note) {
+    return `${track}:${note}`;
+  }
+
   function releaseNotes(player) {
     if (!player.room) return;
-    for (const [note, timer] of player.activeNotes) {
+    for (const [key, timer] of player.activeNotes) {
       clearTimeout(timer);
+      const [track, note] = key.split(":").map(Number);
       broadcast(player.room, {
         type: "note_off",
         playerId: player.id,
         slot: player.slot,
+        track,
         note,
       });
     }
@@ -141,9 +308,13 @@ function createRoomService(server, options = {}) {
     room.players.delete(player.id);
     player.room = null;
     player.voice = null;
+    player.performance = null;
     player.slot = null;
     if (room.players.size === 0) {
       room.expiresAt = Date.now() + roomTtlMs;
+      room.anchorBeat = 0;
+      room.anchorAt = Date.now();
+      room.tempo = config.defaultTempo;
       room.expiryTimer = setTimeout(() => removeEmptyRoom(room), roomTtlMs);
       room.expiryTimer.unref?.();
     } else {
@@ -181,8 +352,10 @@ function createRoomService(server, options = {}) {
     player.room = room;
     player.slot = findFreeSlot(room);
     player.voice = null;
+    player.performance = null;
     room.players.set(player.id, player);
     safeSend(player.ws, roomState(room));
+    sendPerformances(room, player.ws);
     broadcast(room, roomState(room));
     broadcastRoomList();
   }
@@ -222,6 +395,9 @@ function createRoomService(server, options = {}) {
         const room = {
           id: randomUUID(),
           genre: message.genre,
+          tempo: config.defaultTempo,
+          anchorBeat: 0,
+          anchorAt: now,
           players: new Map(),
           expiryTimer: null,
           expiresAt: null,
@@ -262,74 +438,158 @@ function createRoomService(server, options = {}) {
         break;
       }
       case "sound_edit": {
-        if (!validEnvelope(message, ["param", "value"])) return protocolError(player);
+        if (!validEnvelope(message, ["track", "param", "value"])
+          || !isIntegerInRange(message.track, 0, 7)) return protocolError(player);
         if (!player.room) return sendError(player, "not_in_room");
-        if (!player.voice || player.voice.engine === ENGINE_COUNT) return sendError(player, "voice_not_set");
-        const allowlist = config.shareableParameters[player.voice.engine];
+        const voice = player.performance?.tracks[message.track]?.voice
+          || (message.track === 0 ? player.voice : null);
+        if (!voice || voice.engine === ENGINE_COUNT) return sendError(player, "voice_not_set");
+        const allowlist = config.shareableParameters[voice.engine];
         const range = Number.isSafeInteger(message.param) ? allowlist?.[message.param] : null;
         if (!range || !isIntegerInRange(message.value, range[0], range[1])) {
           return protocolError(player, "unsupported_sound_edit");
         }
-        player.voice = {
-          ...player.voice,
-          params: { ...(player.voice.params || {}), [message.param]: message.value },
-        };
+        if (player.performance) {
+          const track = player.performance.tracks[message.track];
+          track.voice = {
+            ...track.voice,
+            params: { ...(track.voice.params || {}), [message.param]: message.value },
+          };
+        }
+        if (message.track === 0) {
+          player.voice = {
+            ...player.voice,
+            params: { ...(player.voice?.params || {}), [message.param]: message.value },
+          };
+        }
         broadcast(player.room, {
           type: "sound_edit",
           playerId: player.id,
           slot: player.slot,
+          track: message.track,
           param: message.param,
           value: message.value,
         });
         break;
       }
-      case "note_on": {
-        if (!validEnvelope(message, ["note", "velocity"])) return protocolError(player);
+      case "performance": {
+        if (!validEnvelope(message, ["performance"])) return protocolError(player);
         if (!player.room) return sendError(player, "not_in_room");
-        if (!player.voice) return sendError(player, "voice_not_set");
+        const performance = normalizeRoomPerformance(message.performance);
+        if (!performance) return protocolError(player, "invalid_performance");
+        const now = Date.now();
+        if (now - player.lastPerformanceAt < 1000) return sendError(player, "rate_limited");
+        player.lastPerformanceAt = now;
+        const room = player.room;
+        if (room.tempo !== performance.tempo) {
+          room.anchorBeat += (now - room.anchorAt) * room.tempo / 60_000;
+          room.anchorAt = now;
+          room.tempo = performance.tempo;
+        }
+        player.performance = performance;
+        player.voice = performance.tracks.find((track) => track.voice)?.voice || null;
+        for (const member of room.players.values()) {
+          if (member.performance) member.performance.tempo = room.tempo;
+        }
+        broadcast(room, {
+          type: "performance",
+          playerId: player.id,
+          slot: player.slot,
+          performance,
+          clock: {
+            tempo: room.tempo,
+            beat: room.anchorBeat + (now - room.anchorAt) * room.tempo / 60_000,
+            serverAt: now,
+          },
+        });
+        break;
+      }
+      case "transport": {
+        if (!validEnvelope(message, ["playing", "tempo"]) || typeof message.playing !== "boolean"
+          || !isIntegerInRange(message.tempo, 40, 240)) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        if (!player.performance) return sendError(player, "performance_not_set");
+        const now = Date.now();
+        if (now - player.lastTransportAt < 80) return sendError(player, "rate_limited");
+        player.lastTransportAt = now;
+        const room = player.room;
+        if (room.tempo !== message.tempo) {
+          room.anchorBeat += (now - room.anchorAt) * room.tempo / 60_000;
+          room.anchorAt = now;
+          room.tempo = message.tempo;
+          for (const member of room.players.values()) {
+            if (member.performance) member.performance.tempo = room.tempo;
+          }
+        }
+        player.performance.playing = message.playing;
+        broadcast(room, {
+          type: "transport",
+          playerId: player.id,
+          slot: player.slot,
+          playing: message.playing,
+          clock: {
+            tempo: room.tempo,
+            beat: room.anchorBeat + (now - room.anchorAt) * room.tempo / 60_000,
+            serverAt: now,
+          },
+        });
+        break;
+      }
+      case "note_on": {
+        if (!validEnvelope(message, ["track", "note", "velocity"])
+          || !isIntegerInRange(message.track, 0, 7)) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        if (!player.performance?.tracks[message.track]?.voice
+          && !(message.track === 0 && player.voice)) return sendError(player, "voice_not_set");
         if (!isIntegerInRange(message.note, 0, 127) || !isIntegerInRange(message.velocity, 1, 127)) {
           return protocolError(player);
         }
-        if (!player.activeNotes.has(message.note) && player.activeNotes.size >= config.maxActiveNotesPerPlayer) {
+        const key = noteKey(message.track, message.note);
+        if (!player.activeNotes.has(key) && player.activeNotes.size >= config.maxActiveNotesPerPlayer) {
           return sendError(player, "too_many_notes");
         }
-        clearTimeout(player.activeNotes.get(message.note));
+        clearTimeout(player.activeNotes.get(key));
         const timer = setTimeout(() => {
-          if (player.activeNotes.get(message.note) !== timer) return;
-          player.activeNotes.delete(message.note);
+          if (player.activeNotes.get(key) !== timer) return;
+          player.activeNotes.delete(key);
           if (player.room) {
             broadcast(player.room, {
               type: "note_off",
               playerId: player.id,
               slot: player.slot,
+              track: message.track,
               note: message.note,
             });
           }
         }, noteTimeoutMs);
         timer.unref?.();
-        player.activeNotes.set(message.note, timer);
+        player.activeNotes.set(key, timer);
         broadcast(player.room, {
           type: "note_on",
           playerId: player.id,
           slot: player.slot,
+          track: message.track,
           note: message.note,
           velocity: message.velocity,
         });
         break;
       }
       case "note_off": {
-        if (!validEnvelope(message, ["note"]) || !isIntegerInRange(message.note, 0, 127)) {
+        if (!validEnvelope(message, ["track", "note"]) || !isIntegerInRange(message.track, 0, 7)
+          || !isIntegerInRange(message.note, 0, 127)) {
           return protocolError(player);
         }
         if (!player.room) return sendError(player, "not_in_room");
-        const timer = player.activeNotes.get(message.note);
+        const key = noteKey(message.track, message.note);
+        const timer = player.activeNotes.get(key);
         if (timer) {
           clearTimeout(timer);
-          player.activeNotes.delete(message.note);
+          player.activeNotes.delete(key);
           broadcast(player.room, {
             type: "note_off",
             playerId: player.id,
             slot: player.slot,
+            track: message.track,
             note: message.note,
           });
         }
@@ -362,11 +622,14 @@ function createRoomService(server, options = {}) {
       room: null,
       slot: null,
       voice: null,
+      performance: null,
       activeNotes: new Map(),
       messageTimes: [],
       createTimes: [],
       protocolErrors: 0,
       lastVoiceAt: 0,
+      lastPerformanceAt: 0,
+      lastTransportAt: 0,
       lastListAt: 0,
     };
     safeSend(ws, { type: "connected", playerId: player.id });
@@ -454,4 +717,4 @@ function createRoomService(server, options = {}) {
   };
 }
 
-module.exports = { createRoomService, normalizeVoice };
+module.exports = { createRoomService, normalizeVoice, normalizeRoomPerformance };

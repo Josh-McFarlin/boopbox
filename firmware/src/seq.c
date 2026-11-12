@@ -2763,7 +2763,17 @@ CTL_SMALL static void seq_reset_tracks(uint32_t pos)
     }
     for (i = 0; i < NROLL; i++)
         roll[i].last = SEQ_NONE - 1u;               /* (a roll held over the start: on the grid from here) */
+#ifdef PREVIEW_HOST
+    if (preview_room_phase_set) {
+        clk_beat = preview_room_beat;
+        pos = preview_room_pos;
+        preview_room_phase_set = 0;
+    } else {
+        clk_beat = 0;
+    }
+#else
     clk_beat = 0;
+#endif
     clk_pos = pos;
 #if FELUCCA_ARRANGER
     live_bar = 0xFFFFFFFFu;                        /* (bar 0 is a new bar: SONG REC can start on it) */

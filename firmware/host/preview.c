@@ -3,6 +3,9 @@
  * hardware inputs and user flash are replaced by RAM, never by Web MIDI. */
 #include <stdint.h>
 #include <string.h>
+static uint32_t preview_room_beat, preview_room_pos;
+static uint8_t preview_room_phase_set;
+#define PREVIEW_HOST 1
 #define memset felucca_memset
 #define memcpy felucca_memcpy
 #define memcmp felucca_memcmp
@@ -151,6 +154,53 @@ void preview_locks(uint32_t k, uint32_t count)
         lock_set(t, v[0], v[1], value);
     }
 }
+void preview_sequence_reset(uint32_t k, uint32_t current)
+{
+    if (k >= NTRK || current >= NPAT) return;
+    track_t *t = &trk[k];
+    pb_drop_track(k);
+    steps_clear(t);
+    t->pat = (uint8_t)current;
+    t->pat_req = t->pat_arm = 0;
+    t->pat_nchain = t->pat_ci = t->pat_cr = t->pat_coff = 0;
+    t->seq_org = 0;
+}
+int32_t preview_pattern(uint32_t k, uint32_t pat, uint32_t len, uint32_t size)
+{
+    if (k >= NTRK || pat >= NPAT || len < 1u || len > NSTEP || size > 2048u) return 0;
+    track_t *t = &trk[k], saved = *t;
+    pr_t r = {transfer, size, 0, 0};
+    steps_clear(t);
+    pat_get(&r, t);
+    if (r.bad || r.i != r.n) {
+        *t = saved;
+        return 0;
+    }
+    t->p[P_SLEN] = (int16_t)len;
+    if (pat != t->pat) {
+        int ok = pb_store(k, pat);
+        *t = saved;
+        return ok;
+    }
+    return 1;
+}
+void preview_chain(uint32_t k, uint32_t count, uint32_t enabled)
+{
+    if (k >= NTRK || count > NCHAIN) return;
+    track_t *t = &trk[k];
+    pat_chain_set(t, transfer, count);
+    t->pat_coff = enabled ? 0u : 1u;
+}
+void preview_scene(uint32_t scene, uint32_t track, uint32_t pattern, uint32_t name)
+{
+    if (scene >= NSCENE || track >= NTRK || pattern > SCN_KEEP || name >= NSCN_NAMES) return;
+    scn_pat[scene][track] = (uint8_t)pattern;
+    scn_name[scene] = (uint8_t)name;
+}
+void preview_scene_launch(uint32_t scene)
+{
+    if (scene < NSCENE) scn_launch(scene);
+}
 void preview_fm6(uint32_t k)
 {
     if (k < NPART) {
@@ -188,6 +238,12 @@ void preview_note(uint32_t k, uint32_t note, uint32_t on)
     else input_off(&trk[k], note);
 }
 void preview_play(uint32_t on) { transport_req = on ? 1 : 2; }
+void preview_phase(uint32_t beat, uint32_t pos)
+{
+    preview_room_beat = beat;
+    preview_room_pos = (uint32_t)(((uint64_t)BEAT_U * (pos > 999999u ? 999999u : pos)) / 1000000u);
+    preview_room_phase_set = 1;
+}
 int32_t preview_position(uint32_t k)
 {
     if (k >= NTRK || !song.playing || trk[k].seq_abs == SEQ_NONE) return -1;

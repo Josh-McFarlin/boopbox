@@ -5,7 +5,7 @@ const { createServer } = require("node:http");
 const { once } = require("node:events");
 const test = require("node:test");
 const { WebSocket } = require("ws");
-const { createRoomService, normalizeVoice } = require("../server/rooms.cjs");
+const { createRoomService, normalizeVoice, normalizeRoomPerformance } = require("../server/rooms.cjs");
 const config = require("../shared/room-config.json");
 
 function createClient(url) {
@@ -25,7 +25,7 @@ function createClient(url) {
     ws,
     ready: once(ws, "open"),
     send(message) {
-      ws.send(JSON.stringify({ v: 1, ...message }));
+      ws.send(JSON.stringify({ v: config.protocolVersion, ...message }));
     },
     next(type, predicate = () => true, timeoutMs = 1500) {
       const index = inbox.findIndex((message) => message.type === type && predicate(message));
@@ -77,6 +77,36 @@ async function createRoom(client, genre = "house") {
   return client.next("room_state");
 }
 
+function roomPattern(id) {
+  return { id, length: 16, steps: [], micro: [], fill: [], locks: [], components: [], dir: 0, seed: 0 };
+}
+
+function roomPerformance() {
+  const tracks = Array.from({ length: 8 }, (_, index) => ({
+    index,
+    kind: index === 3 || index === 7 ? 1 : 0,
+    voice: index === 0 ? { engine: 0, preset: 2, params: { 68: 64 } }
+      : index === 3 ? { engine: 13, kit: 5 } : null,
+    parameters: [],
+    currentPattern: 0,
+    chain: [],
+    chainEnabled: false,
+    patterns: Array.from({ length: 8 }, (_, id) => roomPattern(id)),
+  }));
+  tracks[0].patterns[0].steps.push([0, [60, 0, 0, 0, 1, 0, 0, 100, 0, 0]]);
+  tracks[3].patterns[0].steps.push([0, 1, Array(16).fill(0), Array(16).fill(0)]);
+  return {
+    tempo: 120,
+    playing: false,
+    currentScene: null,
+    tracks,
+    scenes: {
+      names: Array(8).fill(0),
+      patterns: Array.from({ length: 8 }, (_, scene) => Array(8).fill(scene)),
+    },
+  };
+}
+
 test("voice descriptors allow only factory presets and factory drum kits", () => {
   assert.deepEqual(normalizeVoice({ engine: 0, preset: 14 }), { engine: 0, preset: 14 });
   assert.deepEqual(normalizeVoice({ engine: 13, kit: 36 }), { engine: 13, kit: 36 });
@@ -103,6 +133,63 @@ test("voice descriptors allow only factory presets and factory drum kits", () =>
   }
 });
 
+test("room performance validation accepts typed sequences and rejects arbitrary fields", () => {
+  const performance = roomPerformance();
+  assert.deepEqual(normalizeRoomPerformance(performance), performance);
+  const arbitrary = roomPerformance();
+  arbitrary.tracks[0].patterns[0].steps[0].push("raw payload");
+  assert.equal(normalizeRoomPerformance(arbitrary), null);
+  const unsafeComponent = roomPerformance();
+  unsafeComponent.tracks[0].patterns[0].components.push([0, 1, 999, 0]);
+  assert.equal(normalizeRoomPerformance(unsafeComponent), null);
+  const customSound = roomPerformance();
+  customSound.tracks[0].voice = { engine: 4, preset: 0 };
+  assert.equal(normalizeRoomPerformance(customSound), null);
+});
+
+test("rooms relay bounded performances, sync tempo, and restore state for late joiners", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const guest = createClient(app.url);
+    clients.push(owner, guest);
+    await Promise.all([owner.ready, guest.ready]);
+    const created = await createRoom(owner);
+    guest.send({ type: "join", roomId: created.room.id });
+    await guest.next("room_state");
+
+    const performance = roomPerformance();
+    owner.send({ type: "performance", performance });
+    const shared = await guest.next("performance");
+    assert.equal(shared.performance.tracks[0].patterns[0].steps[0][1][0], 60);
+    assert.equal(shared.performance.tracks[3].voice.kit, 5);
+
+    owner.send({ type: "transport", playing: true, tempo: 124 });
+    const transport = await guest.next("transport");
+    assert.equal(transport.playing, true);
+    assert.equal(transport.clock.tempo, 124);
+    assert.ok(Number.isFinite(transport.clock.beat));
+
+    const lateJoiner = createClient(app.url);
+    clients.push(lateJoiner);
+    await lateJoiner.ready;
+    lateJoiner.send({ type: "join", roomId: created.room.id });
+    await lateJoiner.next("room_state");
+    const restored = await lateJoiner.next("performance", (message) => message.playerId === created.players[0].id);
+    assert.equal(restored.performance.playing, true);
+    assert.equal(restored.performance.tempo, 124);
+    assert.equal(restored.performance.tracks[0].patterns[0].steps[0][1][0], 60);
+
+    const arbitrary = roomPerformance();
+    arbitrary.tracks[0].sample = [1, 2, 3];
+    owner.send({ type: "performance", performance: arbitrary });
+    assert.equal((await owner.next("error")).code, "invalid_performance");
+  } finally {
+    await app.close(clients);
+  }
+});
+
 test("rooms share validated sound edits and retain them for later participants", async () => {
   const app = await startRoomServer();
   const clients = [];
@@ -119,18 +206,18 @@ test("rooms share validated sound edits and retain them for later participants",
     assert.deepEqual((await peer.next("voice")).voice,
       { engine: 0, preset: 2, params: { 68: 64 } });
 
-    owner.send({ type: "sound_edit", param: 68, value: 92 });
+    owner.send({ type: "sound_edit", track: 0, param: 68, value: 92 });
     const edit = await peer.next("sound_edit");
     assert.deepEqual(
       { playerId: edit.playerId, slot: edit.slot, param: edit.param, value: edit.value },
       { playerId: created.players[0].id, slot: created.players[0].slot, param: 68, value: 92 },
     );
 
-    owner.send({ type: "sound_edit", param: 71, value: 1 });
+    owner.send({ type: "sound_edit", track: 0, param: 71, value: 1 });
     assert.equal((await owner.next("error")).code, "unsupported_sound_edit");
-    owner.send({ type: "sound_edit", param: 68, value: 128 });
+    owner.send({ type: "sound_edit", track: 0, param: 68, value: 128 });
     assert.equal((await owner.next("error")).code, "unsupported_sound_edit");
-    owner.send({ type: "sound_edit", param: 68, value: 92, sample: [1, 2, 3] });
+    owner.send({ type: "sound_edit", track: 0, param: 68, value: 92, sample: [1, 2, 3] });
     assert.equal((await owner.next("error")).code, "invalid_message");
 
     const lateJoiner = createClient(app.url);
@@ -176,18 +263,18 @@ test("room capacity is eight and only members can share typed notes", async () =
     assert.deepEqual(voice.voice, { engine: 0, preset: 2 });
     assert.equal(voice.playerId, created.players[0].id);
 
-    owner.send({ type: "note_on", note: 60, velocity: 110 });
+    owner.send({ type: "note_on", track: 0, note: 60, velocity: 110 });
     const played = await peer.next("note_on");
     assert.equal(played.note, 60);
     assert.equal(played.velocity, 110);
     assert.equal(played.slot, created.players[0].slot);
 
-    owner.send({ type: "note_off", note: 60 });
+    owner.send({ type: "note_off", track: 0, note: 60 });
     assert.equal((await peer.next("note_off")).note, 60);
 
     owner.send({ type: "voice", voice: { engine: 0, preset: 1, patch: [0, 0] } });
     assert.equal((await owner.next("error")).code, "unsupported_voice");
-    owner.send({ type: "note_on", note: 128, velocity: 90 });
+    owner.send({ type: "note_on", track: 0, note: 128, velocity: 90 });
     assert.equal((await owner.next("error")).code, "invalid_message");
     owner.send({ type: "midi", data: [0xf0, 0, 0xf7] });
     assert.equal((await owner.next("error")).code, "unsupported_message");
@@ -232,11 +319,11 @@ test("empty rooms expire after ten minutes and a rejoin cancels expiry", async (
     await guest.next("room_state");
 
     owner.send({ type: "voice", voice: { engine: 1, preset: 1 } });
-    owner.send({ type: "note_on", note: 64, velocity: 100 });
+    owner.send({ type: "note_on", track: 0, note: 64, velocity: 100 });
     await guest.next("note_on");
     assert.equal((await guest.next("note_off")).note, 64);
 
-    owner.send({ type: "note_on", note: 65, velocity: 100 });
+    owner.send({ type: "note_on", track: 0, note: 65, velocity: 100 });
     await guest.next("note_on");
 
     await owner.close();

@@ -27,13 +27,14 @@ def main():
                            ('gen_obv.py', 'felucca_obv.h')]:
         subprocess.run([sys.executable, str(ROOT / 'tools' / script), str(GEN / header)], cwd=ROOT, check=True)
     exports = ['init', 'buffer', 'frames', 'rate', 'track', 'param', 'global', 'select', 'step', 'locks',
+               'sequence_reset', 'pattern', 'chain', 'scene', 'scene_launch', 'phase',
                'fm6', 'sample', 'kit', 'hit', 'note', 'play', 'position', 'panic', 'render', 'preset']
     if not emcc:                                     # clang + wasm-ld, freestanding, with tools/wasm_shim
         shim = ROOT / 'tools' / 'wasm_shim'
         mem = OUT / 'mem.o'
         subprocess.run(['clang', '--target=wasm32', '-O2', '-fno-builtin', '-ffreestanding', '-c', str(shim / 'mem.c'),
                         '-o', str(mem)], cwd=ROOT, check=True)
-        subprocess.run(['clang', '--target=wasm32', '-O2', '-fwrapv', '-fno-strict-aliasing', '-ffreestanding', '-nostdlib',
+        subprocess.run(['clang', '--target=wasm32', '-O2', '-fwrapv', '-fno-strict-aliasing', '-ffreestanding', '-nostdlib', '-static',
                         '-w', '-I' + str(shim), '-I' + str(GEN), '-I' + str(ROOT / 'firmware/src'),
                         str(ROOT / 'firmware/host/preview.c'), str(mem), '-Wl,--no-entry', '-Wl,--export-memory',
                         '-Wl,--initial-memory=16777216', '-Wl,-z,stack-size=131072']

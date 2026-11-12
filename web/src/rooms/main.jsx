@@ -16,10 +16,12 @@ const ERROR_TEXT = {
   room_not_found: "That room has closed. Refresh the browser to see active rooms.",
   server_full: "The server is at its 50-room limit. Try again later.",
   voice_not_set: "Share a built-in sound before playing.",
+  performance_not_set: "Sync your FM-1 performance before starting playback.",
   too_many_notes: "Release some notes before playing more.",
   rate_limited: "That was too many requests. Wait a moment and try again.",
   unsupported_voice: "That sound isn't available to share.",
   unsupported_sound_edit: "That sound control isn't available to share.",
+  invalid_performance: "The room rejected an unsupported performance update.",
 };
 const ENGINE_LABELS = config.engineNames;
 
@@ -34,6 +36,12 @@ function voiceLabel(voice) {
   return `${ENGINE_LABELS[voice.engine]} · preset ${voice.preset + 1}`;
 }
 
+function performanceLabel(player) {
+  if (Number.isInteger(player.sharedTracks)) return `${player.sharedTracks} stock tracks synced`;
+  if (player.hasPerformance) return "Syncing performance…";
+  return voiceLabel(player.voice);
+}
+
 function RoomPage() {
   const [socketState, setSocketState] = useState("connecting");
   const [rooms, setRooms] = useState([]);
@@ -45,10 +53,12 @@ function RoomPage() {
   const [status, setStatus] = useState("Connecting to the room server…");
   const [error, setError] = useState("");
   const socketRef = useRef(null);
+  const selfPlayerIdRef = useRef(null);
   const fm1Ref = useRef(null);
   const audioRef = useRef(null);
   const roomRef = useRef(room);
   const voiceStateRef = useRef(new Map());
+  const performanceStateRef = useRef(new Map());
   const heldRef = useRef(new Set());
 
   useEffect(() => { roomRef.current = room; }, [room]);
@@ -61,37 +71,64 @@ function RoomPage() {
   }, []);
 
   const stopAllNotes = useCallback(() => {
-    for (const note of heldRef.current) send({ type: "note_off", note });
+    for (const key of heldRef.current) {
+      const [track, note] = key.split(":").map(Number);
+      send({ type: "note_off", track, note });
+    }
     heldRef.current.clear();
     send({ type: "panic" });
   }, [send]);
 
-  const playNote = useCallback((note, on, velocity = 96) => {
+  const playNote = useCallback((note, on, velocity = 96, track = 0) => {
     if (!roomRef.current) return;
+    const key = `${track}:${note}`;
     if (on) {
-      heldRef.current.add(note);
-      send({ type: "note_on", note, velocity });
+      heldRef.current.add(key);
+      send({ type: "note_on", track, note, velocity });
     } else {
-      heldRef.current.delete(note);
-      send({ type: "note_off", note });
+      heldRef.current.delete(key);
+      send({ type: "note_off", track, note });
     }
   }, [send]);
 
   const applyVoice = useCallback((player) => {
-    if (!audioRef.current || !player?.voice) return;
+    if (player?.id === selfPlayerIdRef.current) return;
+    if (!audioRef.current || !player?.voice || player.hasPerformance) return;
     const voiceKey = JSON.stringify(player.voice);
     if (voiceStateRef.current.get(player.id) === voiceKey) return;
     voiceStateRef.current.set(player.id, voiceKey);
     audioRef.current.setVoice(player.slot, player.voice).catch((err) => setError(err.message));
   }, []);
 
+  const applyPerformance = useCallback((playerId, slot, performance, clock = null) => {
+    if (!performance) return;
+    const key = JSON.stringify(performance);
+    const saved = performanceStateRef.current.get(playerId);
+    if (saved?.key === key && (saved.applied || !audioRef.current)) return;
+    const state = { key, performance, applied: false };
+    performanceStateRef.current.set(playerId, state);
+    if (playerId === selfPlayerIdRef.current) {
+      state.applied = true;
+      return;
+    }
+    if (!audioRef.current) return;
+    audioRef.current.setPerformance(slot, performance, clock)
+      .then(() => { state.applied = true; })
+      .catch((err) => setError(err.message));
+  }, []);
+
   const reconcileRoomVoices = useCallback((currentPlayers) => {
     const bySlot = new Map((currentPlayers || []).map((player) => [player.slot, player]));
     for (let slot = 0; slot < config.maxPlayers; slot += 1) {
-      if (!bySlot.get(slot)?.voice) audioRef.current?.removeVoice(slot);
+      const player = bySlot.get(slot);
+      if (!player || (!player.hasPerformance && !player.voice)) audioRef.current?.removeVoice(slot);
     }
     for (const player of currentPlayers || []) applyVoice(player);
-  }, [applyVoice]);
+    for (const player of currentPlayers || []) {
+      const saved = performanceStateRef.current.get(player.id)?.performance;
+      if (saved) applyPerformance(player.id, player.slot, saved);
+    }
+  }, [applyPerformance, applyVoice]);
 
   useEffect(() => {
     let stopped = false;
@@ -109,31 +146,56 @@ function RoomPage() {
       socket.onmessage = ({ data }) => {
         let message;
         try { message = JSON.parse(data); } catch { return; }
-        if (message.type === "rooms") {
+        if (message.type === "connected") {
+          selfPlayerIdRef.current = message.playerId;
+        } else if (message.type === "rooms") {
           setRooms(Array.isArray(message.rooms) ? message.rooms.slice(0, config.maxRooms) : []);
         } else if (message.type === "room_state") {
           setRoom(message.room);
           setPlayers(message.players || []);
+          if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
           setStatus(`In a ${GENRES.find((item) => item.id === message.room.genre)?.label || "music"} room.`);
           const currentIds = new Set((message.players || []).map((player) => player.id));
           for (const id of voiceStateRef.current.keys()) {
             if (!currentIds.has(id)) voiceStateRef.current.delete(id);
           }
+          for (const id of performanceStateRef.current.keys()) {
+            if (!currentIds.has(id)) performanceStateRef.current.delete(id);
+          }
           reconcileRoomVoices(message.players || []);
+        } else if (message.type === "performance") {
+          const sharedTracks = message.performance.tracks.filter((track) => track.voice).length;
+          applyPerformance(message.playerId, message.slot, message.performance, message.clock);
+          setPlayers((current) => current.map((player) => player.id === message.playerId
+            ? { ...player, hasPerformance: true, sharedTracks } : player));
+          if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
+        } else if (message.type === "transport") {
+          if (message.clock) {
+            audioRef.current?.setTempo(message.clock.tempo);
+            audioRef.current?.setTransport(message.slot, message.playing, message.clock.tempo, message.clock);
+          }
+          const saved = performanceStateRef.current.get(message.playerId);
+          if (saved) {
+            saved.performance.playing = message.playing;
+            if (message.clock) saved.performance.tempo = message.clock.tempo;
+            saved.key = JSON.stringify(saved.performance);
+          }
         } else if (message.type === "voice") {
           applyVoice({ id: message.playerId, slot: message.slot, voice: message.voice });
           setPlayers((current) => current.map((player) => player.id === message.playerId
             ? { ...player, voice: message.voice } : player));
         } else if (message.type === "sound_edit") {
-          audioRef.current?.setSoundParameter(message.slot, message.param, message.value)
-            .catch((err) => setError(err.message));
+          if (message.playerId !== selfPlayerIdRef.current) {
+            audioRef.current?.setSoundParameter(message.slot, message.track, message.param, message.value)
+              .catch((err) => setError(err.message));
+          }
           setPlayers((current) => current.map((player) => player.id === message.playerId && player.voice
             ? { ...player, voice: { ...player.voice, params: { ...(player.voice.params || {}), [message.param]: message.value } } }
             : player));
         } else if (message.type === "note_on") {
-          audioRef.current?.note(message.slot, message.note, true);
+          if (message.playerId !== selfPlayerIdRef.current) audioRef.current?.note(message.slot, message.track, message.note, true);
         } else if (message.type === "note_off") {
-          audioRef.current?.note(message.slot, message.note, false);
+          if (message.playerId !== selfPlayerIdRef.current) audioRef.current?.note(message.slot, message.track, message.note, false);
         } else if (message.type === "error") {
           setError(ERROR_TEXT[message.code] || "The room server rejected that request.");
         } else if (message.type === "server_closing") {
@@ -143,11 +205,13 @@ function RoomPage() {
       socket.onclose = () => {
         if (stopped) return;
         setSocketState("connecting");
+        selfPlayerIdRef.current = null;
         setStatus("Room server disconnected. Reconnecting…");
         setRoom(null);
         setPlayers([]);
         roomRef.current = null;
         voiceStateRef.current.clear();
+        performanceStateRef.current.clear();
         audioRef.current?.panic();
         for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
         retryTimer = window.setTimeout(connect, 1800);
@@ -175,6 +239,7 @@ function RoomPage() {
       if (!audioRef.current) audioRef.current = new RoomAudio((err) => setError(err.message));
       await audioRef.current.start();
       setAudioEnabled(true);
+      for (const saved of performanceStateRef.current.values()) saved.applied = false;
       reconcileRoomVoices(players);
       setStatus("Room audio is on. Connect the FM-1 to play.");
     } catch (err) {
@@ -190,10 +255,18 @@ function RoomPage() {
       fm1Ref.current = await connectFm1(playNote, (state) => {
         setFm1State(state);
         if (state === "disconnected") stopAllNotes();
-      }, (param, value) => {
-        if (roomRef.current) send({ type: "sound_edit", param, value });
+      }, (track, param, value) => {
+        if (roomRef.current) send({ type: "sound_edit", track, param, value });
+      }, (performance) => {
+        if (roomRef.current && !send({ type: "performance", performance })) {
+          setError("Wait for the room server to reconnect.");
+        }
+      }, (transport) => {
+        if (roomRef.current) send({ type: "transport", ...transport });
+      }, () => {
+        setError("The FM-1 performance could not be synced. Check the USB connection and try again.");
       });
-      setStatus("FM-1 connected. Share its selected built-in sound to the room.");
+      setStatus("FM-1 connected. Syncing its stock sounds, patterns, and tempo to the room.");
     } catch (err) {
       setFm1State("disconnected");
       setError(err.message);
@@ -201,16 +274,16 @@ function RoomPage() {
     }
   };
 
-  const shareSound = async () => {
+  const sharePerformance = async () => {
     if (!fm1Ref.current) {
       setError("Connect the FM-1 first.");
       return;
     }
     setError("");
     try {
-      const voice = await fm1Ref.current.getSelectedVoice();
-      if (!send({ type: "voice", voice })) throw new Error("Wait for the room server to reconnect.");
-      setStatus(`Sharing ${voiceLabel(voice)} with the room.`);
+      const performance = await fm1Ref.current.getPerformanceSnapshot();
+      if (!performance) throw new Error("The FM-1 could not read its current performance.");
+      setStatus("Synced all shareable FM-1 tracks and patterns.");
     } catch (err) {
       setError(err.message);
     }
@@ -230,6 +303,7 @@ function RoomPage() {
     setRoom(null);
     setPlayers([]);
     voiceStateRef.current.clear();
+    performanceStateRef.current.clear();
     for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
     setStatus("You left the room.");
   };
@@ -247,7 +321,7 @@ function RoomPage() {
         <header className="rooms-hero">
           <p className="rooms-kicker">LIVE MUSIC · UP TO 8 PLAYERS</p>
           <h1>Jam rooms</h1>
-          <p>Play your FM-1 keyboard with other BoopBox players. Everyone renders the notes locally using the firmware audio engine.</p>
+          <p>Jam with up to seven other FM-1 players. Each device renders everyone’s stock sounds, live notes, patterns, and chains with the firmware audio engine.</p>
           <div className="rooms-status" role="status" aria-live="polite">
             <span className={`status-dot ${socketState === "connected" ? "is-connected" : ""}`} aria-hidden="true" />
             {status}
@@ -270,20 +344,20 @@ function RoomPage() {
             <div className="room-controls">
               <div className="room-control-card">
                 <h3>Hear the room</h3>
-                <p>Start audio once on this device. Each player’s notes are rendered locally.</p>
+                <p>Enable audio once to hear the other players’ tracks and sequences locally. Your own FM-1 stays audible directly, without a doubled browser copy.</p>
                 <button className="button button-primary" type="button" onClick={startAudio}>
                   {audioEnabled ? "Restart room audio" : "Enable room audio"}
                 </button>
               </div>
               <div className="room-control-card">
                 <h3>Play from your FM-1</h3>
-                <p>Connect the USB MIDI keyboard, then share its selected built-in sound.</p>
+                <p>Connect the USB MIDI cable. Stock sounds, track edits, patterns, and chains sync to the room; playback start and stop stay individual while tempo is shared.</p>
                 <div className="control-row">
                   <button className="button button-primary" type="button" onClick={connectDevice}>
                     {fm1State === "connected" ? "Reconnect FM-1" : "Connect FM-1"}
                   </button>
-                  <button className="button button-secondary" type="button" onClick={shareSound}
-                    disabled={fm1State !== "connected"}>Share selected sound</button>
+                  <button className="button button-secondary" type="button" onClick={sharePerformance}
+                    disabled={fm1State !== "connected"}>Sync full performance</button>
                 </div>
               </div>
             </div>
@@ -295,13 +369,13 @@ function RoomPage() {
                   <li key={player.id}>
                     <span className="player-badge" aria-hidden="true">{player.slot + 1}</span>
                     <span className="player-name">Player {player.slot + 1}</span>
-                    <span className="player-voice">{voiceLabel(player.voice)}</span>
+                    <span className="player-voice">{performanceLabel(player)}</span>
                   </li>
                 ))}
               </ul>
             </div>
             <p className="room-safety-note">
-              Only built-in synth preset and factory drum kit IDs are shared; live knob edits, user samples, custom patches, chat, and audio streams are not sent.
+              Only factory synth presets, factory drum kits, and bounded musical controls and sequence data are shared. User samples and custom presets are not shared; raw MIDI, SysEx, arbitrary data, and audio streams are never relayed.
             </p>
           </section>
         ) : (

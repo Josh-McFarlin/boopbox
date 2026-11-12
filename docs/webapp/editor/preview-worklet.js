@@ -43,14 +43,42 @@ export class FirmwareAudio {
         this.write(data); this.w.preview_step(k, i);
       }
       if (!before || JSON.stringify(t.locks) !== JSON.stringify(before.locks)) {
-        const data = new Uint8Array(24 * 4);
-        t.locks.slice(0, 24).forEach((l, i) => data.set([l.step, l.param, l.value & 255, (l.value >> 8) & 255], i * 4));
+        const data = new Uint8Array(32 * 4);
+        t.locks.slice(0, 32).forEach((l, i) => data.set([l.step, l.param, l.value & 255, (l.value >> 8) & 255], i * 4));
         this.write(data); this.w.preview_locks(k, t.locks.length);
+      }
+      const sequenceChanged = !before || t.currentPattern !== before.currentPattern
+        || t.chainEnabled !== before.chainEnabled || JSON.stringify(t.chain) !== JSON.stringify(before.chain)
+        || JSON.stringify(t.roomPatterns) !== JSON.stringify(before.roomPatterns);
+      if (sequenceChanged && t.roomPatterns) {
+        this.w.preview_sequence_reset(k, t.currentPattern);
+        const patterns = [...t.roomPatterns].sort((a, b) => (
+          (a.id === t.currentPattern ? -1 : 0) - (b.id === t.currentPattern ? -1 : 0)
+        ));
+        for (const pattern of patterns) {
+          const bytes = Uint8Array.from(pattern.bytes || []);
+          this.write(bytes);
+          if (!this.w.preview_pattern(k, pattern.id, pattern.length, bytes.length)) {
+            throw new Error("The firmware rejected a shared pattern.");
+          }
+        }
+        this.write(Uint8Array.from(t.chain || []));
+        this.w.preview_chain(k, (t.chain || []).length, t.chainEnabled ? 1 : 0);
       }
       if (k < 3 && (changedSound || t.p[70] !== before.p[70] || JSON.stringify(t.fm6) !== JSON.stringify(before.fm6))) {
         this.write(t.fm6); this.w.preview_fm6(k);
       }
     });
+    if (state.roomScenes && (!old || JSON.stringify(state.roomScenes) !== JSON.stringify(old.roomScenes))) {
+      for (let scene = 0; scene < state.roomScenes.names.length; scene += 1) {
+        for (let track = 0; track < state.tracks.length; track += 1) {
+          this.w.preview_scene(scene, track, state.roomScenes.patterns[scene][track], state.roomScenes.names[scene]);
+        }
+      }
+    }
+    if (old && Number.isInteger(state.currentScene) && state.currentScene !== old.currentScene) {
+      this.w.preview_scene_launch(state.currentScene);
+    }
     state.samples?.forEach((s, k) => { this.write(s); this.w.preview_sample(k); });
     state.kits?.forEach((kit, k) => { this.write(kit); this.w.preview_kit(k); });
     this.previous = state;
@@ -60,6 +88,79 @@ export class FirmwareAudio {
       if (this.position >= this.frames) { this.w.preview_render(); this.position = 0; }
       left[i] = this.audio[this.position * 2]; right[i] = this.audio[this.position * 2 + 1];
       this.position++;
+    }
+  }
+}
+
+// Each room member has two isolated firmware instances: each renders three synth tracks and one drum track.
+export class RoomFirmwareAudio {
+  constructor(module) {
+    this.players = Array.from({ length: 8 }, () => [new FirmwareAudio(module), new FirmwareAudio(module)]);
+    this.active = Array.from({ length: 8 }, () => [false, false]);
+    this.left = new Float32Array(0);
+    this.right = new Float32Array(0);
+  }
+  sync(slot, group, state) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length
+      || !Number.isInteger(group) || group < 0 || group > 1) return;
+    this.players[slot][group].sync(state);
+    if (state.playing && Number.isFinite(state.roomBeat)) {
+      const beat = Math.max(0, state.roomBeat);
+      const whole = Math.floor(beat);
+      this.players[slot][group].w.preview_phase(whole, Math.floor((beat - whole) * 1_000_000));
+    }
+    this.players[slot][group].w.preview_play(state.playing ? 1 : 0);
+    this.active[slot][group] = !!state.hasVoice;
+  }
+  note(slot, track, note, on) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    if (!Number.isInteger(track) || track < 0 || track > 7) return;
+    const group = Math.floor(track / 4);
+    this.players[slot][group].w.preview_note(track % 4, note, on ? 1 : 0);
+  }
+  transport(slot, tempo, playing, beat) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    if (!Number.isInteger(tempo) || tempo < 40 || tempo > 240) return;
+    for (let group = 0; group < 2; group += 1) {
+      const dsp = this.players[slot][group];
+      dsp.w.preview_global(0, tempo);
+      if (playing && Number.isFinite(beat)) {
+        const phase = Math.max(0, beat);
+        const whole = Math.floor(phase);
+        dsp.w.preview_phase(whole, Math.floor((phase - whole) * 1_000_000));
+      }
+      dsp.w.preview_play(playing ? 1 : 0);
+    }
+  }
+  panic(slot) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    for (const dsp of this.players[slot]) dsp.w.preview_panic();
+  }
+  drop(slot) {
+    this.panic(slot);
+    if (Number.isInteger(slot) && slot >= 0 && slot < this.active.length) this.active[slot] = [false, false];
+  }
+  render(left, right) {
+    left.fill(0);
+    right.fill(0);
+    if (this.left.length !== left.length) {
+      this.left = new Float32Array(left.length);
+      this.right = new Float32Array(right.length);
+    }
+    const activePlayers = this.active.filter((groups) => groups.some(Boolean)).length;
+    if (!activePlayers) return;
+    const gain = 0.25 / Math.sqrt(activePlayers);
+    for (let slot = 0; slot < this.players.length; slot += 1) {
+      for (let group = 0; group < 2; group += 1) {
+        if (!this.active[slot][group]) continue;
+        this.left.fill(0);
+        this.right.fill(0);
+        this.players[slot][group].render(this.left, this.right);
+        for (let frame = 0; frame < left.length; frame += 1) {
+          left[frame] += this.left[frame] * gain;
+          right[frame] += this.right[frame] * gain;
+        }
+      }
     }
   }
 }
@@ -102,4 +203,25 @@ if (typeof registerProcessor === 'function') {
     }
   }
   registerProcessor('boopbox-preview', BoopBoxProcessor);
+
+  class BoopBoxRoomProcessor extends AudioWorkletProcessor {
+    constructor(options) {
+      super();
+      this.dsp = new RoomFirmwareAudio(options.processorOptions.module);
+      this.port.onmessage = ({ data }) => {
+        try {
+          if (data.type === 'state') this.dsp.sync(data.slot, data.group, data.state);
+          else if (data.type === 'note') this.dsp.note(data.slot, data.track, data.note, data.on);
+          else if (data.type === 'transport') this.dsp.transport(data.slot, data.tempo, data.playing, data.beat);
+          else if (data.type === 'panic') this.dsp.panic(data.slot);
+          else if (data.type === 'drop') this.dsp.drop(data.slot);
+        } catch (error) { this.port.postMessage({ error: error.message }); }
+      };
+    }
+    process(_inputs, outputs) {
+      this.dsp.render(outputs[0][0], outputs[0][1]);
+      return true;
+    }
+  }
+  registerProcessor('boopbox-room-preview', BoopBoxRoomProcessor);
 }
