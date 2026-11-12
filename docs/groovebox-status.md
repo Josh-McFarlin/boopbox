@@ -1,120 +1,190 @@
 # Groovebox upgrade: status, limits, build and install
 
-This page says what the groovebox upgrade of BoopBox implements, what it does not, and how to build and install it.
-The controls are in `docs/groovebox-controls.md`, the design in `docs/groovebox-architecture.md`, the project format
-in `docs/groovebox-storage.md`, and the measured cost in `docs/groovebox-performance.md`.
+This page tells what the groovebox upgrade of BoopBox implements and what it does not implement. It also tells how
+to build and install the firmware. It applies to BoopBox 1.9.3.
 
-**Status in one line:** every feature below is implemented and tested on the host (the firmware's code compiled
-for the PC, with the FM-1's inputs simulated) and on an FM-1, and the default build (`scripts/build.sh`, the JieLi toolchain) makes an
-image that fits the flash with 6,248 B to spare (1.3.1), the web editor and the visualiser's six styles included. To fit, the build leaves out the bitmap boot logo and one bass recording, and builds
-three tables in RAM at power-on (section 2).
+Other pages give more data:
+
+| Topic | Page |
+| --- | --- |
+| The controls | `docs/groovebox-controls.md` |
+| The design | `docs/groovebox-architecture.md` |
+| The project format | `docs/groovebox-storage.md` |
+| The measured cost | `docs/groovebox-performance.md` |
+| The build, all options | `BUILDING.md` |
+
+**Status in one line:** each feature below has host tests in `tests/run_tests.sh`. The host tests compile the
+firmware code for the PC and simulate the inputs of the FM-1. The default build fits the flash. In 1.9.3, 2,364 B of
+the app slot are free (`docs/groovebox-performance.md`, section 1).
 
 ## 1. Implemented
 
+Each test in the table is in `tests/` and `tests/run_tests.sh` runs it.
+
 | Feature | What it does | Tests |
 | --- | --- | --- |
-| Eight tracks | 8 tracks, each a synth or a drum track (default: drums on 4 and 8, `SAVE > TOOLS > KIND` changes it); own engine, preset, pattern, length, MIDI channel; a shared budget of 20 synth voices (`NVBUDGET`; the trainer 8) and one pool of drum voices; at most 3 big engines (refused and said for a fourth); render split over two cores | `tracks8_test`, `arena_test`, `mix_split_test`, `cpu1_modes.sh` (TSan), `ui_pages_test` |
-| Step components | 14 types (PULSE, HOLD, MULT, VEL, RAMP+, RAMP−, RAND, PORTA, BEND, TONE, JUMP, PARAM, COND, TRIG); 16 a track, several a step; directions FWD, REV, PEND, RAND; a seed; edited in the step sheet | `comp_test`, `ui_pages_test`, `soak_test` |
-| Parameter locks | 32 a track, several a step (one a parameter); SLIDE (a glide over the step, 4 at once a track); knob moves recorded as locks (`MENU > SEQ > REC KNOBS`); saves keep the track's own values; the sheet's LOCKS strip | `lock_test`, `ui_pages_test` |
-| Patterns | 8 a track; changes quantized (LOOP, 1, 2, 4 bars; tracks asked together change together); chains of up to 16 slots with repeats ×1..×16 and PLAY; 8 named scenes (a pattern or KEEP a track); COPY, CLEAR; the PATTERNS, CHAIN and SCENES pages, the keys as pads; the song's loop region | `pat_test`, `song_ui_test`, `ui_pages_test`, `soak_test` |
-| Harmony | the song's key, scale and chord; per-track FOLLOW (TRANS, SCALE); changes on NOW / BEAT / BAR; a progression of up to 8 chords; live chords from the keys (latched); a note's note-off is always its own note's | `harm_test`, `ui_pages_test` |
-| Performance effects | the punch-in effects with TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (keys and the MIDI FX channel) and Q (1/16, 1/8, 1/4, BAR) | `perf_test`, `mix_split_test` (TARGET scene) |
-| Storage | project format 7 (eight tracks, all the above), the only format: SLOOP's formats 1..6 are not read nor written; damage detected, never cut (refused whole) | `project_test` and the feature tests' store checks |
-| Flash budget | the text boot logo is the default; the BASS set has three recordings; FM6's exponent, the sine and the font built in RAM at power-on (1.1.0); `FELUCCA_EDITOR=0` by hand; `tools/build.py` fails and says so when the image does not fit | real build: 576,164 B of 581,564 (1.1.0) |
+| Eight tracks | 8 tracks. Each track is a synth track or a drum track. By default, tracks 4 and 8 are drum tracks. `SAVE > TOOLS > KIND` changes the kind. Each track has its own engine, preset, pattern, length and MIDI channel. The render is split over the two cores. | `tracks8_test`, `mix_split_test`, `cpu1_modes.sh` (ThreadSanitizer), `ui_pages_test` |
+| 20 synth voices (1.6.0) | The synth tracks share 20 voices (`NVBUDGET`). One track plays a maximum of 8 notes (`NPOLY`). The trainer build keeps 8 voices. | `tracks8_test`, the regression suite (`tests/regress.c`) |
+| Big engines | GRAIN, WHEEL, FM6, PHYS and OBERVAVE keep their state in an engine arena. There are 3 arenas (`NARENA`). The UI refuses a big engine on a fourth track and shows a message. | `arena_test`, `tracks8_test` |
+| Step components | 14 types: PULSE, HOLD, MULT, VEL, RAMP+, RAMP−, RAND, PORTA, BEND, TONE, JUMP, PARAM, COND, TRIG. A track has a maximum of 16 (`NCOMP`). A step can have more than one, each of a different type. Play directions are FWD, REV, PEND and RAND. Each track has a seed. You edit them in the step sheet. | `comp_test`, `ui_pages_test`, `soak_test` |
+| Parameter locks | A track has a maximum of 32 locks (`NLOCK`). A step can have more than one lock, one for each parameter. SLIDE glides a parameter over its step, 4 at the same time on a track (`NSLIDE`). `MENU > SEQ > REC KNOBS` records knob moves as locks. A save keeps the own values of the track, not a lock that plays at that time. | `lock_test`, `ui_pages_test` |
+| Patterns | 8 patterns for each track (`NPAT`). A pattern change is quantized: LOOP, 1, 2 or 4 bars. Tracks that you ask together change together. COPY and CLEAR. | `pat_test`, `ui_pages_test`, `soak_test` |
+| PATTERNS, CHAIN and SCENES pages (1.7.0) | Three pages after PLAY. On these pages, white keys 1–8 select patterns 1–8 and white keys 9–16 start scenes 1–8. A chain has a maximum of 16 slots (`NCHAIN`). Each slot has a pattern and 1–16 repeats. PLAY turns the chain on or off. There are 8 named scenes. A scene sets a pattern for each track, or KEEP. | `pat_test`, `ui_pages_test` |
+| Song loop region | The song can loop a region of its entries. | `pat_test`, `song_ui_test` |
+| Harmony | The song has a key, a scale and a chord. Each synth track has a FOLLOW setting: OFF, TRANS or SCALE. Changes occur on NOW, BEAT or BAR. A progression has a maximum of 8 chords (`NHPROG`). The keys can play live chords (latched). The note-off of a note is always for that same note. | `harm_test`, `ui_pages_test` |
+| Performance effects | The punch-in effects have TARGET (MASTER, SEL, DRUMS, SYNTHS), LATCH (the keys and the MIDI FX channel) and Q (OFF, 1/16, 1/8, 1/4, BAR). | `perf_test`, `mix_split_test` |
+| Beats from the keys (1.9.0) | On the PLAY page of a drum track, held white keys write a full beat. The lowest key selects the groove. The other keys add detail. The same keys and the same SEED always give the same beat. | `drumgen_test` |
+| Key velocity and aftertouch (1.8.0) | The keys of the FM-1 can send velocity and aftertouch. Hold HOME, then select **KEYS**. Both functions are OFF by default. | `keyvel_test`, `keyvel_seq_test` |
+| NRPN (1.8.0) | MIDI can set each track parameter with 14 bits: CC99, CC98, then CC6 and CC38. The map is `docs/NRPN.md`. | `nrpn_test` (it also compares `docs/NRPN.md` with the firmware) |
+| OBERVAVE engine (1.7.0) | An analog polysynth engine with 70 programs. | the regression suite (`tests/golden.txt`) |
+| USB HOST (1.7.0) | A class-compliant USB-MIDI keyboard can play BoopBox through a powered hub. | `usb_host_test` |
+| The second flash chip (1.8.0) | BoopBox reads and writes the flash chip of the FM-1 units sold from late 2026. | `recovery_test` |
+| Storage | Project format 7 ("FUN7") is the only format. BoopBox does not read or write the formats 1 to 6 of SLOOP. BoopBox finds damaged data and refuses it. It never cuts a project. | `project_test`, `storage_test`, and the store checks of the feature tests |
+| Web editor and site | The editor edits all eight tracks, the patterns, chains, scenes, step components and the chord progression. The installer, the offline editor and the site are tested. | `web/test_web.mjs` (with `proj7_tool`), `site_test.py`, `pwa_test.mjs`, `install_test.py`, `run_preview_tests.sh` |
+| Browser emulator (1.8.0) | The site runs the real firmware in the browser. | `emu_test`, `emu_wasm_test.mjs` |
+| BoopBox Trainer (1.4.0) | A second firmware that teaches three songs on the FM-1. It has three levels. It has no web editor and three sample sets fewer. | `trainer_test` |
+| Flash budget | The boot logo is text by default. The BASS sample set has three recordings. The firmware builds two tables in RAM. If the image does not fit, `tools/build.py` stops with an error. | the real build (section 4) |
 
-The existing BoopBox features keep working: the 182 golden renders are unchanged, USB-MIDI, USB audio, the TRS MIDI
-input, the M-UPGRADE update entry and the USB rescue are untouched (their host tests pass).
+The features of BoopBox from before the groovebox upgrade continue to work. The regression suite compares a hash of
+each render with `tests/golden.txt` (252 renders in 1.9.3). USB-MIDI, USB audio, the TRS MIDI input, the M-UPGRADE
+update entry and the USB rescue have their own host tests.
 
 ## 2. Limits and what is not implemented
 
-- **Left out for flash room** (from SLOOP 2.8.3): the bitmap boot logo (the logo is text) and the top recording of the SAMPLE engine's BASS set (notes 70 and up of UP BASS and
-  DEEP BASS are played from the F# recording; every note below 70 is as before). 1.1.0's visualiser (six new styles in
-  place of the twelve) fits beside the web editor because FM6's exponent table, the sine table and the screen font are
-  built in RAM at power-on (8.7 KB of flash for 11.5 KB of RAM). See `docs/groovebox-performance.md`.
+### Left out for flash room
 
-- **Web editor:** it shows all eight tracks (the track bar, the Tracks page, the LIVE page: protocol v13 adds tracks 5..8
-  to LIVE's state and a solo of any track, 32 bytes of flash). Its **Patterns** page edits patterns 1..8, chains, FOLLOW,
-  step components, direction and seed, and the chord progression, by reading the working project (backup object 0,
-  format 7), changing it in the browser (`web/src/editor/lib/proto.js` PROJ7, checked against the firmware's own capture and load by
-  `tests/proj7_tool.c`) and sending it back whole: no new command, and only while the song is stopped (the FM-1 loads
-  it at once). The Song page keeps and edits the loop region. The Patterns page (patterns, chains with repeats, scenes) edits the working project only: a
-  section A..D is edited by loading it on the FM-1, editing, and saving it into its section again.
-- **Screens** show 4 tracks at a time: the bank (1-4 or 5-8) of the selected track.
-- **Voices:** the 8 synth tracks share 8 sounding voices; 3 big engines (GRAIN, DRAWBAR, FM6, PHYS) at once; 4
-  tracks with STUT at once.
-- **Recording on a track off the grid** (PULSE, HOLD, JUMP, or a direction other than FWD) writes on the grid's
-  step, and a held note is not extended into TIEs there.
-- **Project size:** a project object is 3,840 B. Eight dense tracks (about 6.4 KB) do not fit and are refused whole;
-  the patterns not playing share a 3 KB store (a change that does not fit is refused).
-- **Harmony** moves only the sequencer's notes: the keys, the arp and MIDI in play as they are; drum tracks never
-  follow.
-- **Performance effects** are the existing punch-in effects with new controls, not new effect types. With a target,
-  the loop effects' memory holds only the targeted tracks; for up to 0.74 s after a target change it still holds
-  what came before.
-- **Step component semantics** are this firmware's own definitions (listed in `docs/groovebox-controls.md`); they
-  are not copied from another instrument.
-- **SLOOP's projects:** BoopBox does not read SLOOP's four-track formats, and SLOOP does not read BoopBox's: going
-  either way, the sections show as empty (see `docs/groovebox-storage.md`, sections 4 and 7). Back up first.
+These items are left out to fit the flash:
 
-## 3. Test results
+- **The bitmap boot logo.** The boot logo is text (`FELUCCA_LOGO_TEXT=1`).
+- **The top recording of the BASS sample set.** The BASS set keeps three recordings: E1, B1 and F#2. The F#2
+  recording plays the top notes.
 
-After `scripts/build.sh`, `SOAK_MIN=2 SKIP_CPU_VALGRIND=1 sh tests/run_tests.sh` passes on the final tree with nothing
-skipped: *ALL HOST TESTS PASSED* in 18 min 14 s on this machine. That includes the 182 golden renders unchanged, the
-two-core split under ThreadSanitizer (no race), the UBSan builds, a 2-minute soak, and the tests that need the
-firmware image: the M-UPGRADE entry and the update loader on the built package, the target cost of the render loops
-(`tests/target_budget.py`, rewritten for this toolchain, see `docs/groovebox-performance.md`) and the offline site
-in Chromium. The full log is not part of the repository. Without the toolchain, `HOST_ONLY=1` runs everything but
-those four.
+To get flash room, the firmware also builds two tables in RAM:
 
-## 4. Blockers met
+- The sine table, at power-on (`sine_fill`).
+- The 2^x table of FM6, at the first use (`fm6_x2_fill`).
 
-- At first the JieLi pi32v2 toolchain and the AC79 SDK could not be downloaded (the environment's network policy).
-  With `pkgman.jieliapp.com`, `jl-update.oss-cn-shenzhen.aliyuncs.com` (where the toolchain link leads) and
-  `gitee.com` allowed, `tools/get_toolchain.sh` and a sparse checkout of the three SDK files work, and the image is
-  built.
+Since 1.8.0, the firmware reads the screen font directly from the flash. See `docs/groovebox-performance.md` for
+the measured sizes.
 
-## 5. Build
+### Other limits
 
-The build is BoopBox's own; see `BUILDING.md` for the prerequisites (Python 3 with Pillow, the JieLi toolchain, the
-three AC79 SDK files, Docker on macOS).
+| Item | Limit |
+| --- | --- |
+| Screens | A screen shows 4 tracks at a time: the bank (1–4 or 5–8) of the selected track. |
+| Synth voices | The synth tracks share 20 voices. One track plays a maximum of 8 notes. Each engine can have a lower limit. |
+| Big engines | A maximum of 3 tracks can play GRAIN, WHEEL, FM6, PHYS or OBERVAVE at the same time. |
+| STUT | The SLICER has 4 STUT buffers. A fifth track in STUT plays live with no repeat until a buffer is free. |
+| Project size | A project object is 3,840 B. A project that does not fit is refused whole. Eight dense tracks (6,664 B in the host test) do not fit. |
+| Pattern bank | The patterns that do not play share a bank of 3,072 B. The firmware refuses a change that does not fit. |
+| Harmony | Only the notes of the sequencer move. The keys, the arpeggiator and MIDI in play as they are. Drum tracks never follow. |
+| Performance effects | These are the existing punch-in effects with new controls. They are not new effect types. |
+| USB HOST | USB HOST was not tried on an FM-1 with a keyboard (1.7.0 release notes). Low-speed devices are not supported. |
 
-```sh
-tools/get_toolchain.sh                 # the JieLi toolchain, to ~/.jieli/toolchain
-git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
-    https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
-scripts/build.sh                             # build/felucca.bin, build/loader/ota.bin, build/felucca.fwsc
-```
+More details:
 
-The default build fits (`app ... 576164 B`, 1.1.0). The bitmap boot logo can be built back in place of the visualiser
-with `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 scripts/build.sh`. When an image does not fit, `tools/build.py` fails and says so; it
-leaves nothing out by itself. With `FELUCCA_EDITOR=0` the web editor gets no reply from the FM-1; updates, the USB
-rescue, USB-MIDI and USB audio still work.
+- **Recording on a track off the grid.** PULSE, HOLD, JUMP or a direction other than FWD move the playhead off the
+  grid. On such a track, live recording writes into the step of the grid.
+- **Performance effects with a target.** The memory of the loop effects holds only the targeted tracks. For a
+  maximum of 0.74 s after a target change, it holds the sound from before the change.
+- **Step components.** The behavior of each type is a definition of this firmware. `docs/groovebox-controls.md`
+  lists them. They are not copies from another instrument.
+- **The web editor.** It reads the working project (backup object 0, format 7) and changes it in the browser
+  (`web/src/editor/lib/proto.js`, `PROJ7`). Then it sends the project back whole. The FM-1 loads it immediately. This
+  is possible only while the song is stopped. `tests/proj7_tool.c` compares this codec with the capture and the load
+  of the firmware.
+- **Song sections in the web editor.** The Patterns page edits only the working project. To edit a section A..D,
+  load the section on the FM-1. Then edit it and save it into the same section again.
+- **Projects of SLOOP.** BoopBox does not read the four-track formats of SLOOP, and SLOOP does not read the format
+  of BoopBox. In both directions, the sections show as empty. See `docs/groovebox-storage.md`, sections 4 and 7.
+  Make a backup first.
 
-After a build, `sh tests/run_tests.sh` (without `HOST_ONLY`) also runs the tests that need the image.
+## 3. Tests
 
-## 6. Install and recovery
+`tests/run_tests.sh` runs all the host tests. `BUILDING.md` (section *Tests*) tells how to run them and how long
+they take.
 
-Installing custom firmware is at your own risk. Before you install, **save a backup with the web editor** (the
-projects, user presets and samples).
+Four tests need the firmware image:
 
-```sh
-python3 tools/fm1_install.py build/felucca.fwsc     # needs pip3 install mido python-rtmidi
-python3 tools/fm1_install.py --info                 # the identity of the connected FM-1
-```
+- The M-UPGRADE update entry.
+- The update loader.
+- The target cost of the render loops (`tests/target_budget.py`).
+- The site with no internet in Chromium.
 
-Or the web installer from a local copy of the site (Web MIDI needs `localhost`):
+If you do not have the JieLi toolchain, use `HOST_ONLY=1 sh tests/run_tests.sh`. This command skips these four
+tests and names them.
+
+These variables make a run shorter:
+
+| Variable | Effect |
+| --- | --- |
+| `SOAK_MIN=n` | The soak test runs for n minutes (default 10). |
+| `SKIP_CPU_VALGRIND=1` | The CPU check uses time, not callgrind. |
+| `TEST_JOBS=n` | n jobs run at the same time (default: the number of CPUs). |
+
+## 4. Build
+
+`BUILDING.md` gives the full steps, the prerequisites and the build options. This is a summary.
+
+On Linux or macOS:
+
+1. Install the JieLi toolchain with `tools/get_toolchain.sh`.
+2. Get the three AC79 SDK files. `BUILDING.md` gives the `git clone` command.
+3. Run `scripts/build.sh`.
+
+The build writes three files:
+
+| File | What |
+| --- | --- |
+| `build/felucca.bin` | the firmware app |
+| `build/loader/ota.bin` | the update loader |
+| `build/felucca.fwsc` | the package to install (app and loader) |
+
+On Windows with WSL:
+
+1. Run `scripts/INSTALL-BOOPBOX.bat`.
+2. Keep the window open during the install.
+
+`scripts/INSTALL-BOOPBOX.bat` runs `scripts/build-boopbox.ps1`. This script builds the firmware in WSL. It writes the
+site into `build/boopbox-site` and serves it on `http://localhost:8766`. Then it opens the installer in the browser.
+
+To open the editor again later, run `scripts/OPEN-EDITOR.bat`. It serves `build/boopbox-site` and opens
+`http://localhost:8766/webapp/editor/`.
+
+Notes about the build:
+
+- If the image does not fit, `tools/build.py` stops with an error. It does not leave out anything by itself.
+- The bitmap boot logo can replace the visualizer: `FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0 scripts/build.sh`.
+- With `FELUCCA_EDITOR=0`, the web editor gets no reply from the FM-1. Updates and the USB rescue continue to work.
+
+## 5. Install and recovery
+
+> CAUTION: You install custom firmware at your own risk. Before you install, save a backup with the web editor. The
+> backup keeps the projects, user presets and samples.
+
+To install with Python:
+
+1. Install the MIDI packages: `pip3 install mido python-rtmidi`.
+2. Run `python3 tools/fm1_install.py build/felucca.fwsc`.
+
+To show the identity of the connected FM-1, run `python3 tools/fm1_install.py --info`.
+
+To install with the web installer from a local copy of the site:
 
 ```sh
 python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
-cd /tmp/felucca-site && python3 -m http.server 8000   # open http://localhost:8000/webapp/installer/
+cd /tmp/felucca-site && python3 -m http.server 8000
 ```
 
-If something goes wrong:
+Then open `http://localhost:8000/webapp/installer/` in Chrome or Edge. Web MIDI needs `localhost`.
 
-- the FM-1 no longer starts BoopBox: hold **OCT−** alone while you switch it on (*BoopBox USB RESCUE*), then install
-  again (this firmware or a BoopBox release);
-- an install was cut off: the FM-1 stays in update mode; install again;
-- the FM-1 does not start at all: [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
+Recovery:
 
-To go back to SLOOP, install its `.fwsc` and restore a backup made with SLOOP. Projects saved by BoopBox do not open
-in SLOOP.
+| Problem | Action |
+| --- | --- |
+| The FM-1 does not start BoopBox. | Hold **OCT−** alone while you switch on the FM-1 (*BoopBox USB RESCUE*). Then install again. |
+| An install stopped before the end. | The FM-1 stays in update mode. Install again. |
+| The FM-1 does not start at all. | Use [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter). |
+
+To go back to SLOOP, install the `.fwsc` of SLOOP. Then restore a backup that you made with SLOOP. SLOOP does not
+open projects that BoopBox saved.

@@ -1,362 +1,550 @@
 # BoopBox groovebox: controls
 
-This page lists the controls added by the groovebox upgrade (eight tracks, step components, and what follows). Every
-control of SLOOP 2.8.3 described in `GUIDE.md` still works as written there; where a control changed, this page says
-so. Button names are the FM-1's panel labels (see `GUIDE.md`, "The panel").
+This page lists the controls of the groovebox upgrade: eight tracks, step components, parameter locks, patterns,
+harmony and the performance effects. It is correct for BoopBox 1.9.3.
 
-Three things of SLOOP 2.8.3 are left out of this build, or cut down, to make room in the flash
-(`docs/groovebox-performance.md`):
+All the controls of SLOOP 2.8.3 in `GUIDE.md` operate as `GUIDE.md` tells. When a control is different in BoopBox,
+this page tells you. The button names are the panel labels of the FM-1 (`GUIDE.md`, "The panel").
 
-- **The visualiser's six styles:** tapping HOME on the TRACKS screen opens it; SELECT steps through PALMS, NIGHT DRIVE,
-  HORIZON, FLYOVER, DENSE CITY and KEY CITY.
-- **The bitmap boot logo:** the boot screen shows "BOOPBOX" as text, BOOP in the tracks' colours.
-- **The top recording of the SAMPLE engine's BASS set** (UP BASS, DEEP BASS): notes 70 and up are played from the
-  recording below, so they sound a little different; every note below 70 sounds as before.
+The words on this page have these meanings:
+
+| Word | Meaning |
+| --- | --- |
+| **push** | push a button and release it |
+| **hold** | keep a button or key down |
+| **turn** | turn a knob (KNOB 1–4, PRESETS, ALGORITHM, SELECT) |
+| **page** | what a button shows on the display. The TRACKS screen, the CHORDS screen and the SONG screen are pages too |
+| **display** | the LCD of the FM-1 |
+| *TEXT* | text that the display shows |
+
+## What this build changes to fit the flash
+
+The flash of the FM-1 is full. Thus this build differs from SLOOP 2.8.3 in three items (`docs/groovebox-performance.md`):
+
+- **The visualizer has six new styles.** They replace the twelve styles of SLOOP. To open the visualizer, push
+  **HOME** on the TRACKS screen. To change the style, turn **SELECT**. The styles are PALMS, NIGHT DRIVE, HORIZON,
+  FLYOVER, DENSE CITY and KEY CITY.
+- **The boot logo is text, not a bitmap.** The boot page shows "BOOPBOX". The letters BOOP have the colors of tracks
+  1–4.
+- **The BASS sample set has no top recording.** This set of the SAMPLE engine (UP BASS, DEEP BASS) has no C# recording
+  (note 73). Notes 70 and up play from the F# recording (note 66), so they sound a little different. All notes below
+  70 sound as before.
 
 ## Eight tracks
 
-| Control | Does |
+| Control | Function |
 | --- | --- |
-| **ALGORITHM** | selects the track, 1 to 8 (it stopped at 4 before), on every page (1.2.0; on the TRACKS, PATTERNS and CHORDS screens only before); on a page the header names the track a moment |
-| **TRACKS screen** (HOME) | shows the bank of four tracks the selected one is in: *tracks 1-4* or *tracks 5-8*. Turn ALGORITHM past track 4 to see the second bank. Tracks 5-8 have a shade of the colours of tracks 1-4 (lighter; darker on a light theme), so each track has its own |
-| **GLO layer** (mute, solo, levels) | acts on the bank shown: keys 1-4 are tracks 1-4 or 5-8 |
-| **MIDI 2** | CH5, CH6, CH7, CH8: the MIDI channel of tracks 5-8 (OFF, 1-16), in and out, as MIDI does for tracks 1-3 and the drum channel (CH4) |
-| **GLO > DRUMS** | LVL, REV and DLY of the selected drum track; on a synth track, of the first drum track |
+| **ALGORITHM** | Selects the track, 1 to 8, on all pages. The header shows the track name for a short time. On some pages, ALGORITHM has a different function (see the next table) |
+| **TRACKS screen** (HOME) | Shows the bank of four tracks that holds the selected track: *tracks 1-4* or *tracks 5-8*. To see the second bank, turn ALGORITHM past track 4 |
+| **TRACKS screen**, KNOB 1–4 | **TRACK**, **LEVEL**, **LEN** and **PAN** of the selected track |
+| **GLO layer** (mute, solo, levels) | Operates on the bank that the display shows. Keys 1–4 are tracks 1–4 or tracks 5–8 |
+| **MIDI 2** page | **CH5**, **CH6**, **CH7**, **CH8**: the MIDI channel of tracks 5–8 (OFF, 1–16), for MIDI in and MIDI out. The **MIDI** page has CH1–CH3 and CH4 (the drum channel) |
+| **GLO > DRUMS** | **LVL**, **REV** and **DLY** of the selected drum track. On a synth track, these knobs set the first drum track |
 
-**SAVE > TOOLS > KIND** (KNOB 3, a GO button as CLRSQ and NEW: one detent arms, *TURN AGAIN: KIND*, a second acts) turns
-the selected track from a synth track into a drum track or back (*NOW A DRUM TRACK*, *NOW A SYNTH TRACK*). Its
-pattern is cleared (a synth step and a drum step hold different things; undo cannot bring it back), its notes end;
-it takes the default kit or sound of that track number; its PAN, MUTE, FILTER, LEN, DIV and SWING stay. It works
-while playing.
+On these pages, ALGORITHM does not select the track:
 
-The default project: tracks 1-3 and 5-7 are synth tracks, tracks 4 and 8 drum tracks. Each synth track has its own
-engine and preset; each drum track its own kit, sounds, mix and mutes. A project saved by an older BoopBox opens on
-tracks 1-4 as it was; tracks 5-8 start as at power-on.
+| Page | ALGORITHM |
+| --- | --- |
+| The sound browser (1.9.3) | Moves through the sounds of the engine, as KNOB 3 does. The track stays the same |
+| The SEQ layer, with a step key held | Selects the lock parameter (see [Parameter locks](#parameter-locks)) |
+| The SONG screen | Sets the start of the loop region (see [Song: the loop region](#song-the-loop-region)) |
 
-Limits: the synth tracks share **20 sounding voices** (one track plays at most 8; BoopBox Trainer keeps 8 in all); the drum tracks share one pool of drum voices. At most
-**three tracks** play GRAIN, WHEEL (the drawbar organ), FM6, PHYS or OBERVAVE at once: choosing one of them on a fourth track (an engine, a
-preset of it, a user preset) is refused and the screen says *BIG ENGINES: 3 IN USE*; the track keeps its sound. Once
-one of the three plays another engine, the fourth can take it. At most **four tracks** use the SLICER's STUT mode at
-once (more play the SLICER without STUT).
+### The tracks and their colors
 
-Song mode (SONG screen, OCT−) puts the loop you made aside while the song plays. When that loop is too big to be
-kept (it would not fit a project), PLAY does not start the song and the screen says *LOOP TOO BIG FOR SONG*.
+Tracks 5–8 have a shade of the colors of tracks 1–4. On a dark theme the shade is lighter. On a light theme the shade
+is darker. Thus each track has its own color.
+
+On the TRACKS screen, the section letter (A–D) is on the row of the beat lights, to the right of the four lights
+(1.9.3). It does not cover *LOOP*, *SONG* or the bar.beat counter.
+
+### LEVEL of a synth track (1.9.2)
+
+The LEVEL of a synth track shows 0–127, as the LEVEL of a drum track and MIDI CC 7 do. The value 112 is unity (0 dB).
+Each step is 1/2 dB, and 127 is +7.5 dB. The page of the track, the dials of HOME, the DRUMS page, the GLO faders,
+the trainer and the web editor all show this value.
+
+### The sound browser (1.9.3)
+
+| Control | Function |
+| --- | --- |
+| **PRESETS** | Moves through the engines, as KNOB 2 does |
+| **ALGORITHM** | Moves through the sounds of the engine, as KNOB 3 does |
+| **SAVE** light | Breathes, up to full brightness. To keep the sound, push SAVE |
+| **HOME** light | Is on at half brightness. To put the old sound back, push HOME |
+
+### Change a synth track to a drum track
+
+To change the selected track to a drum track or to a synth track, use **SAVE > TOOLS > KIND** (KNOB 3).
+
+1. Turn KNOB 3 one step. The display shows *TURN AGAIN: KIND*.
+2. Turn KNOB 3 one more step in 1.5 s. The display shows *NOW A DRUM TRACK* or *NOW A SYNTH TRACK*.
+
+KIND is a GO knob, the same as CLRSQ and NEW. The change clears the pattern of the track, because a synth step and a
+drum step hold different data. Undo cannot bring back this pattern. The notes of the track stop.
+
+The track gets the default kit or sound of its track number. Its PAN, MUTE, FILTER, LEN, DIV and SWING stay the same.
+The change also operates while the sequencer plays. A track can become a synth track with a big engine only if a big
+engine is free. If no big engine is free, the display shows *ENGINE BUSY: NO CHANGE*.
+
+The sound browser can also change the kind of the track. To do this, select a kit on a synth track, or a synth sound
+on a drum track. If the track has a pattern, turn the knob again. The display shows *AGAIN: DRUMS, PAT CLR* or
+*AGAIN: SYNTH, PAT CLR* first.
+
+### The default project
+
+In the default project, tracks 1–3 and 5–7 are synth tracks. Tracks 4 and 8 are drum tracks. Each synth track has its
+own engine and preset. Each drum track has its own kit, sounds, mix and mutes.
+
+BoopBox uses one project format with eight tracks. A four-track project of SLOOP does not open in BoopBox.
+
+### Limits
+
+| Item | Limit |
+| --- | --- |
+| Synth voices | The synth tracks share **20 voices**. One track plays a maximum of **8**. BoopBox Trainer keeps 8 voices in total |
+| Drum voices | The drum tracks share one set of drum voices |
+| Big engines | A maximum of **three tracks** play GRAIN, WHEEL (the drawbar organ), FM6, PHYS or OBERVAVE at the same time |
+| SLICER STUT | A maximum of **four tracks** use the STUT mode of the SLICER at the same time |
+
+If you select a big engine on a fourth track, BoopBox refuses it. This applies to an engine, one of its presets and a
+user preset. The display shows *BIG ENGINES: 3 IN USE*, and the track keeps its sound. When one of the three tracks
+changes to a different engine, the fourth track can use the big engine.
+
+When a fifth track uses STUT, it plays the SLICER without STUT until a STUT buffer is free.
+
+### Song mode
+
+To start or stop song mode, stop the sequencer and push **OCT−** on the SONG screen. Song mode keeps your loop aside while the song plays. If the loop
+is too big to keep, PLAY does not start the song. The display then shows *LOOP TOO BIG FOR SONG*.
 
 ## Step components
 
-A **step component** is a rule on one step that changes how the step plays each time the sequencer reaches it. A
-track holds up to **16 components**; one step can hold several (each of a different type). They work on synth and drum
-tracks (on a drum track a component acts on the whole step, every sound in it; the melodic ones do nothing there).
+A **step component** is a rule on a step. It changes how the step plays each time the sequencer gets to it. A track
+holds a maximum of **16 components**. One step can hold more than one component, each of a different type.
 
-### Edit them
+Components operate on synth tracks and on drum tracks. On a drum track, a component operates on the full step, with
+all the sounds in it. The melodic types have no effect on a drum track.
 
-On the **NOTES** page (synth tracks) or the **DRUMS grid** (drum tracks):
+### Edit the components
 
-1. Put the cursor on the step (NOTES: the note under edit; DRUMS: KNOB 2's step).
-2. Hold **OCT+** (0.4 s): the step's sheet opens at the bottom of the screen.
-3. Turn **KNOB 1** to the last row, **COMP** (its value is the number of components on the step, *--* for none).
-4. Tap **OCT+**: the component strip opens.
+Do these steps on the **NOTES** page (synth track) or on the **DRUMS grid** (drum track):
 
-| In the component strip | Does |
+1. Put the cursor on the step. On NOTES, this is the note that you edit. On the DRUMS grid, KNOB 2 selects the step.
+2. Hold **OCT+** for 0.4 s. The sheet of the step opens at the bottom of the page.
+3. Turn **KNOB 1** to the row **COMP**. This row is immediately before the last row, LOCKS.
+4. Push **OCT+**. The component strip opens.
+
+The value of the COMP row is the number of components on the step. It shows *--* when the step has no component. The
+sheet opens again on the row that you used last.
+
+| In the component strip | Function |
 | --- | --- |
-| **KNOB 1** | picks an item: the step's components one by one, then **ADD** |
-| **KNOB 2** | on a component: its first value; on ADD: the type to add |
-| **KNOB 3** | on a component: its second value (when the type has one) |
-| **OCT+** (tap) | on ADD: adds that type with its default values (*COMP ADDED*; *ON THE STEP ALREADY* picks the one there; *NO COMP LEFT* when the track has 16); on a component: removes it (*COMP REMOVED*) |
-| **OCT−** | back to the sheet; OCT− again closes the sheet |
+| **KNOB 1** | Selects an item: each component of the step, then **ADD** |
+| **KNOB 2** | On a component: its first value. On ADD: the type to add |
+| **KNOB 3** | On a component: its second value, if the type has one |
+| **OCT+** | On ADD: adds that type with its default values (*COMP ADDED*). On a component: removes it (*COMP REMOVED*) |
+| **OCT−** | Goes back to the sheet. Push OCT− again to close the sheet |
 
-A step with a component shows the same corner dot as a step with a lock or a nudge. **SEQ + step + OCT−** clears the
-step's nudge, locks, fill condition and components (*STEP EXTRAS CLEARED*). Clearing a step (a tap in the SEQ layer,
-the last sound of a drum step) removes its components too. MOVE and COPY in the sheet take the step's components with
-it, as they take its nudge, fill condition and locks.
+If the step already has a component of that type, OCT+ selects it and the display shows *ON THE STEP ALREADY*. If the
+track has 16 components, the display shows *NO COMP LEFT*.
+
+A step with a component shows a dot in its corner. A step with a lock or a nudge shows the same dot.
+
+To clear the extras of a step, hold **SEQ**, hold the step key and push **OCT−**. This clears the nudge, the locks, the
+fill condition and the components of the step. The display shows *STEP EXTRAS CLEARED*.
+
+When you clear a step, its components go too. This applies to a push of a step key in the SEQ layer and to the last
+sound of a drum step. MOVE and COPY in the sheet move or copy the components with the step. They also move or copy the nudge, the fill
+condition and the locks.
 
 ### The types
 
 | Type | First value (KNOB 2) | Second value (KNOB 3) | What the step does |
 | --- | --- | --- | --- |
-| **PULSE** | +1 … +8 | — | plays again on the next 1-8 grid steps, a new hit each time, before the sequence moves on |
-| **HOLD** | +1 … +16 | — | sounds on through the next 1-16 grid steps (no new hit), then the sequence moves on |
-| **MULT** | x2 … x8 | — | that many hits, evenly inside the step (a ratchet for the whole step) |
-| **VEL** | 1 … 127 | ~0 … ~64 | its notes or hits at that velocity, with a random spread of ± the second value |
-| **RAMP+** | 1 … 16 | /1 … /7 | each time it plays, its notes go up the scale by the second value (degrees), up to the first value times; then back to the start |
-| **RAMP−** | 1 … 16 | /1 … /7 | the same, down |
-| **RAND** | ~1 … ~12 | — | its notes move a random number of scale degrees, within ± the value |
-| **PORTA** | 1 … 127 | — | its notes glide in from the notes before, with that GLIDE time (for this step) |
-| **BEND** | −12 … +12 | TO / FROM | the track's pitch bends over the step: from the note to the value in semitones (TO), or from the value back to the note (FROM) |
-| **TONE** | −24 … +24 | — | its notes move that many semitones (not in the scale) |
-| **JUMP** | 1 … 64 | /1 … /16 | after it, the sequence goes on at that step; the second value: every how many times the step plays |
-| **PARAM** | a sound parameter | 1 … 100 % | that parameter takes a random value within ± that share of its range, for the step (any parameter a lock can take) |
-| **COND** | 1 … 8, or !1 … !8 | :1 … :8 | plays on loop A of every B (A:B); with **!** it plays on every other loop |
-| **TRIG** | 1 … 99 % | — | plays with that chance |
+| **PULSE** | +1 … +8 | — | Plays again on the next 1–8 grid steps, with a new hit each time. Then the sequence continues |
+| **HOLD** | +1 … +16 | — | Sounds through the next 1–16 grid steps, with no new hit. Then the sequence continues |
+| **MULT** | x2 … x8 | — | Plays that number of hits, at equal intervals in the step (a ratchet for the full step) |
+| **VEL** | 1 … 127 | 0 … 64 (shown as ~) | Plays its notes or hits at that velocity, with a random spread of ± the second value |
+| **RAMP+** | 1 … 16 | /1 … /7 | Each time it plays, its notes go up the scale by the second value (in degrees). After the first value of times, it goes back to the start |
+| **RAMP−** | 1 … 16 | /1 … /7 | The same as RAMP+, but down |
+| **RAND** | ~1 … ~12 | — | Moves its notes by a random number of scale degrees, in the range ± the value |
+| **PORTA** | 1 … 127 | — | Its notes glide from the notes before, with that GLD time, for this step only |
+| **BEND** | −12 … +12 | TO / FROM | Bends the pitch of the track over the step. TO: from the note to the value, in semitones. FROM: from the value back to the note |
+| **TONE** | −24 … +24 | — | Moves its notes by that number of semitones, not in the scale |
+| **JUMP** | 1 … 64 | /1 … /16 | After this step, the sequence continues at the step of the first value. The second value: the jump occurs each Nth time that the step plays |
+| **PARAM** | a sound parameter | 1 … 100 % | Gives the parameter a random value in ± that percentage of its range, for this step. Any parameter that a lock can use is available |
+| **COND** | 1 … 8, or !1 … !8 | :1 … :8 | A:B plays on loop A of each B loops. !A:B plays on all loops except loop A of each B loops |
+| **TRIG** | 1 … 99 % | — | Plays with that probability |
 
-The melodic types (RAMP+, RAMP−, RAND) move in the track's scale (SEL > ROOT and SCL; CHR: semitones). A note a
-component moves ends as that note: nothing is left sounding. PARAM and PORTA work like locks: the parameter is back
-at its own value on the next step and at STOP. A step silenced by COND or TRIG is silent whole, and its other
-components do not act that time.
+The melodic types (RAMP+, RAMP−, RAND) move notes in the scale of the track: SEL > ROOT and SCL. With the scale CHR,
+they move notes in semitones. A note that a component moves stops as that note, so no note stays on.
 
-PULSE, HOLD and JUMP move the track's playhead off the grid (the track plays more or fewer grid steps per pass);
-other tracks keep their own grid. On such a track, live recording still writes the grid's step (where the step would
-be without them).
+PARAM and PORTA operate as locks do. On the next step and at STOP, the parameter goes back to its own value. When COND
+or TRIG silences a step, the full step is silent. Its other components have no effect at that time.
+
+PULSE, HOLD and JUMP move the playhead of the track off the grid. Thus the track plays more or fewer grid steps in each
+pass. The other tracks stay on their own grid. On such a track, live recording writes to the grid step, as if the
+components were not there.
 
 ### The PLAY page (SEQ, third page)
 
-| Knob | Does |
+| Knob | Function |
 | --- | --- |
-| **KNOB 1 DIR** | the play direction: **FWD**, **REV** (backwards), **PEND** (forwards then backwards, the end steps once), **RAND** (a random step each time) |
-| **KNOB 2 SEED** | 0 … 255: the seed of the components' random numbers (RAND, VEL's spread, PARAM, TRIG, the RAND direction). Each PLAY starts the same random sequence again; another seed gives another one |
+| **KNOB 1 DIR** | The play direction: **FWD** (forward), **REV** (backward), **PEND** (forward, then backward, with the end steps once), **RAND** (a random step each time) |
+| **KNOB 2 SEED** | 0 … 255: the seed of the random numbers for the components (RAND, the spread of VEL, PARAM, TRIG) and for the RAND direction |
 
-DIR and SEED belong to the pattern (saved with it). They are not sound parameters: they cannot be locked or learnt
-over MIDI.
+Each time you push PLAY, the same random sequence starts again. A different seed gives a different sequence.
+
+DIR and SEED are part of the pattern, and the pattern saves them. They are not sound parameters. Thus you cannot lock
+them, and MIDI LEARN cannot learn them.
 
 ### Beats from the keys (the PLAY page of a drum track, 1.9)
 
-On a drum track's **PLAY** page the white keys make beats: **hold one or more white keys** and the whole pattern is
-written at once, across the whole kit, over the track's length (TIMING > LEN). The keys play no sound on this page
-(the beat plays when the sequencer does), and the screen says *HOLD KEYS: A NEW BEAT* when you open it.
+On the **PLAY** page of a drum track, the white keys make beats. When you hold one or more white keys, BoopBox writes
+a full pattern for the full kit. The pattern has the length of the track (TIMING > LEN).
 
-| Keys held | Make |
+On this page, the keys play no sound. The beat plays when the sequencer plays. When the page opens, the display shows
+*HOLD KEYS: A NEW BEAT*.
+
+To make a beat, hold one or more white keys.
+
+| Keys that you hold | Result |
 | --- | --- |
-| the **lowest** key held, white keys **1 … 8** | the groove: **HOUSE**, **ROCK**, **BOOM BAP**, **TRAP**, **BREAK**, **DEMBOW**, **DNB**, **ELECTRO** |
-| the lowest key held, white keys **9 … 16** | the same eight grooves, busier (hats in 16ths, more of everything below) |
-| each **other** key held | a variation of the groove, with more detail: kicks and ghost snares added, the open hat (two keys or more), a percussion layer (three: shaker, conga, rim, cowbell, ride or pedal hat, on a euclidean rhythm), a second one and a crash on the one (four), a fill of snares and toms on the last steps (three: two steps; five: four), the clap on the snare and hat rolls (more) |
-| **KNOB 2 SEED** | another set of variations for the same keys. At SEED 0 one key alone gives its groove plain |
+| The **lowest** key, white keys **1 … 8** | The groove: **HOUSE**, **ROCK**, **BOOM BAP**, **TRAP**, **BREAK**, **DEMBOW**, **DNB**, **ELECTRO** |
+| The **lowest** key, white keys **9 … 16** | The same eight grooves, but busier. The hi-hats play in 16th notes, and the beat has more detail |
+| Each **other** key | A variation of the groove, with more detail |
+| **KNOB 2 SEED** | A different set of variations for the same keys. At SEED 0, one key alone gives its groove with no change |
 
-**The same keys and the same SEED always make the same beat**, in whatever order they are pressed: nothing is random
-from one hold to the next, so a beat you liked comes back with the same fingers. Each key pressed during a hold makes
-the beat again from all the keys held; letting go keeps the last one. The screen names the groove: *BEAT HOUSE*, *BEAT TRAP*.
+More keys give more detail. The detail is added in this sequence:
 
-A beat replaces the pattern playing (its hits, levels and ratchets; its nudges, locks, fill conditions and components
-are cleared). **One hold is one undo**: EDIT + OCT− brings back the pattern from before the hold, EDIT + OCT+ the beat
-again. Edit it afterwards as any pattern (the DRUMS grid, the SEQ layer, recording), copy it to another pattern on
-PATTERNS. While a song plays (SONG screen), it is refused: *STOP THE SONG FIRST*.
+| Detail level | Added detail |
+| --- | --- |
+| 1 key | More kicks and ghost snares (at SEED 1 and up) |
+| 2 keys | The open hi-hat |
+| 3 keys | A percussion layer on a euclidean rhythm (shaker, conga, rim, cowbell, ride or pedal hi-hat), and a fill on the last 2 steps |
+| 4 keys | A second percussion layer, and a crash on step 1 |
+| 5 keys | The clap with the snare (in the grooves that use the snare), and a fill on the last 4 steps |
+| 6 keys or more | Hi-hat rolls |
 
-### Saved
+Keys 9–16 add 2 to the detail level. TRAP always has hi-hat rolls. The fill uses the snares and the toms.
 
-Components, the direction and the seed are saved in the project (format 7) and in song sections. When a project does not
-fit, the save is refused (*PROJECT FULL: NOT SAVED*) and nothing is cut.
+**The same keys and the same SEED always make the same beat.** The sequence in which you push the keys has no effect.
+Nothing is random from one hold to the next. Thus a beat that you like comes back when you hold the same keys again.
+
+Each key that you push during a hold makes the beat again, from all the keys that you hold. When you release the keys,
+the last beat stays. The display shows the groove, for example *BEAT HOUSE* or *BEAT TRAP*.
+
+A beat replaces the pattern that plays: its hits, levels and ratchets. The beat clears the nudges, locks, fill
+conditions and components.
+
+**One hold is one undo.** To get back the pattern from before the hold, hold **EDIT** and push **OCT−**. To get the beat
+back, hold **EDIT** and push **OCT+**.
+
+After that, you can edit the beat as any other pattern: on the DRUMS grid, in the SEQ layer, or with recording. You can
+copy it to a different pattern on the PATTERNS page. In song mode, while the song plays, BoopBox refuses a new beat.
+The display then shows *STOP THE SONG FIRST*.
+
+### What the project saves (components)
+
+The project (format 7) and the song sections save the components, the direction and the seed. If the project does not
+fit, BoopBox does not save it. The display shows *PROJECT FULL: NOT SAVED*, and no data is cut.
 
 ## Parameter locks
 
-Everything in `GUIDE.md` ("Parameter locks") still works: **SEQ + step + PRESETS** makes or moves a lock of the lock
-parameter, **ALGORITHM** (step held) picks the parameter. What changed:
+All of "Parameter locks" in `GUIDE.md` operates as before. To make or move a lock of the lock parameter, hold **SEQ**,
+hold the step key, and turn **PRESETS**. To select the lock parameter, turn **ALGORITHM** while you hold the step key.
 
-- A track holds **32 locks** (24 before). Several locks can sit on one step, one per parameter.
-- A lock made from the SEQ layer starts at the **track's own value**, also while another step's lock is playing.
-- **Saving never keeps a lock's value as the sound.** A project (also the autosave while playing) and a user preset
-  store the track's own values; the locks are stored as locks.
+These items are different from SLOOP 2.8.3:
+
+- A track holds **32 locks**. One step can hold more than one lock, one for each parameter.
+- A new lock from the SEQ layer starts at the **own value of the track**. This is also true while a lock on a different
+  step plays.
+- **A save never keeps the value of a lock as the sound.** A project, the autosave and a user preset keep the own
+  values of the track. They keep the locks as locks.
 
 ### The LOCKS row of the sheet
 
-On the **NOTES** page or the **DRUMS grid**, hold **OCT+** (the step's sheet), turn **KNOB 1** to the last row,
-**LOCKS** (its value: the number of locks on the step), and tap **OCT+**:
+To open the lock strip, do these steps on the **NOTES** page or on the **DRUMS grid**:
 
-| In the lock strip | Does |
+1. Hold **OCT+** for 0.4 s. The sheet of the step opens.
+2. Turn **KNOB 1** to the last row, **LOCKS**. Its value is the number of locks on the step.
+3. Push **OCT+**. The lock strip opens.
+
+| In the lock strip | Function |
 | --- | --- |
-| **KNOB 1** | picks an item: the step's locks one by one (the parameter and its value; *SL* when it slides), then **ADD** |
-| **KNOB 2** | on a lock: its value; on ADD: the parameter to lock (the lockable ones, as ALGORITHM picks them in the SEQ layer) |
-| **KNOB 3** | on a lock: **SLIDE** (right ON, left OFF) |
-| **OCT+** (tap) | on ADD: a lock of that parameter at the track's own value (*LOCK ADDED*; *ON THE STEP ALREADY* picks it; *NO LOCK LEFT* at 32); on a lock: removes it (*LOCK REMOVED*) |
-| **OCT−** | back to the sheet; OCT− again closes it |
+| **KNOB 1** | Selects an item: each lock of the step (its parameter and its value), then **ADD**. *SL* shows that a lock slides |
+| **KNOB 2** | On a lock: its value. On ADD: the parameter to lock, from the parameters that ALGORITHM selects in the SEQ layer |
+| **KNOB 3** | On a lock: **SLIDE**. Turn right for ON, left for OFF |
+| **OCT+** | On ADD: adds a lock of that parameter at the own value of the track (*LOCK ADDED*). On a lock: removes it (*LOCK REMOVED*) |
+| **OCT−** | Goes back to the sheet. Push OCT− again to close the sheet |
+
+If the step already has a lock of that parameter, OCT+ selects it and the display shows *ON THE STEP ALREADY*. If the
+track has 32 locks, the display shows *NO LOCK LEFT*.
 
 ### SLIDE
 
-A lock with **SLIDE** does not jump to its value at the start of its step: the parameter glides from the value it had
-(the step before's lock, or the track's own value) to the lock's value, reaching it at the end of the step. On the
-next step the parameter goes on as usual (its lock there, or back to the track's value). Up to **4** slides play at
-once on a track (on a step with more, the others jump). Turning the parameter's knob during a slide stops it: the
-knob's value stays and becomes the track's value.
+A lock with **SLIDE** does not jump to its value at the start of its step. The parameter glides from its last value to
+the value of the lock. The last value is the lock of the step before, or the own value of the track. The parameter gets
+to the value of the lock at the end of the step.
 
-### Recording knob moves as locks
+On the next step, the parameter continues as usual: to the lock on that step, or back to the value of the track. A
+maximum of **4** slides play at the same time on a track. On a step with more, the other locks jump.
 
-**MENU > SEQ > REC KNOBS**: **SOUND** (the default, as before: a knob turned while recording changes the sound) or
-**LOCKS**: while the selected track records (REC, playing), turning a sound parameter's knob (on its page or on HOME)
-writes a lock of that value on the step playing. You hear it at once; the track's own value does not change, so on
-the steps without a lock the sound stays as it was. Parameters that cannot be locked change as usual. The setting is
-kept with the FM-1's settings.
+If you turn the knob of the parameter during a slide, the slide stops. The knob value stays and becomes the value of
+the track.
 
-### Saved
+### Record knob movements as locks
 
-Format 7 keeps all 32 locks and their SLIDE.
+The setting **REC KNOBS** is in the menu, section **SEQ**. To open the menu, hold **HOME** for 0.7 s.
+
+| REC KNOBS | When you turn a knob while the selected track records |
+| --- | --- |
+| **SOUND** (default) | The knob changes the sound, as before |
+| **LOCKS** | The knob writes a lock with that value on the step that plays |
+
+With LOCKS, the knob of a sound parameter operates on its page and on HOME. You hear the change immediately. The own
+value of the track does not change, so the steps without a lock sound as before. A parameter that cannot lock changes
+as usual. The FM-1 settings keep REC KNOBS.
+
+### What the project saves (locks)
+
+Format 7 keeps all 32 locks and their SLIDE setting.
 
 ## Patterns
 
-Each track has **8 patterns**. A pattern holds the track's steps with their nudges, fill conditions, locks and step
-components, its direction and seed (SEQ > PLAY) and its **length** (TIMING > LEN). The sound, DIV, SWG and GATE are
-the track's, the same for all its patterns. A new pattern starts empty, with the length the track has.
+Each track has **8 patterns**. A pattern holds:
+
+- the steps of the track, with their nudges, fill conditions, locks and step components
+- the direction and the seed (SEQ > PLAY)
+- the **length** (TIMING > LEN)
+
+The sound, DIV, SWG and GATE belong to the track. They are the same for all its patterns. A new pattern starts empty,
+with the length that the track has.
 
 ### Three pages: PATTERNS, CHAIN, SCENES
 
-Tap **SEQ** until they show (NOTES, TIMING, PLAY, **PATTERNS**, **CHAIN**, **SCENES**, SONG; on a drum track the
-DRUMS grid in place of NOTES), or turn **SELECT** right from PLAY. Hold **SEQ** and tap **SAVE** to jump to
-**SCENES** from any page and track; SELECT left goes back through CHAIN and PATTERNS.
+To open these pages, push **SEQ** until they show. The sequence of the SEQ pages is NOTES, TIMING, PLAY, **PATTERNS**,
+**CHAIN**, **SCENES**, SONG. On a drum track, the DRUMS grid replaces NOTES. You can also turn **SELECT** to the right
+from PLAY.
 
-On all three pages **the keys are pads**, and they play no notes:
+To go to **SCENES** from any page and track, hold **SEQ** and push **SAVE**. To go back through CHAIN and PATTERNS,
+turn SELECT to the left.
 
-| Keys | Do |
+On all three pages, **the keys are pads**. They play no notes.
+
+| Keys | Function |
 | --- | --- |
-| white keys **1 … 8** (F3 … F4) | the selected track's patterns 1 … 8: asks for that pattern (on CHAIN: puts it in the chain) |
-| white keys **9 … 16** (G4 … G5) | scenes 1 … 8: launches that scene, on every track |
-| black keys | nothing |
+| White keys **1 … 8** (F3 … F4) | Patterns 1 … 8 of the selected track: requests that pattern. On CHAIN: adds it to the chain |
+| White keys **9 … 16** (G4 … G5) | Scenes 1 … 8: launches that scene on all tracks |
+| Black keys | No function |
 
-Their lights show what plays (lit) and what is asked for (blinking). The strip near the bottom of each page shows the
-same 16 pads. **ALGORITHM** picks the track; **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** work as
-everywhere.
+The key lights show what plays (on) and what you requested (blinking). The strip near the bottom of each page shows the
+same 16 pads. **ALGORITHM** selects the track. **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** operate as on
+all pages.
 
-A change you ask for waits for its moment (**PAT Q**, on PATTERNS and SCENES KNOB 2): **LOOP** (at the end of the
-track's own loop, each track on its own length), **1 BAR**, **2 BAR**, **4 BAR** (on the first step of the track at or
-after the next such bar line: tracks asked together change together). Stopped, a change is made at once. Playing, the
-new pattern starts from its step 1 (a note of the old pattern still sounding ends there).
+A pattern change that you request waits for its time. **PAT Q** (KNOB 2 on PATTERNS and SCENES) sets this time:
 
-#### PATTERNS: the track's patterns as pads
-
-Eight tiles, the selected track's patterns 1 … 8. Each shows what it holds (its steps, as bars over its length) or
-*empty*; **now** marks the one playing (lit in the track's colour), **next** and a blinking frame the one asked for. A
-white line marks the cursor. The header shows the track and how full the pattern store is.
-
-| Control | Does |
+| PAT Q | The change occurs |
 | --- | --- |
-| a white key 1 … 8 | asks for that pattern on the track (the cursor goes there) |
-| **KNOB 1** | the cursor: pattern 1 … 8 |
+| **LOOP** | At the end of the loop of the track. Each track uses its own length |
+| **1 BAR**, **2 BAR**, **4 BAR** | On the first step of the track at or after the next such bar line. Tracks that you request together change together |
+
+When the sequencer is stopped, the change occurs immediately. While the sequencer plays, the new pattern starts from its
+step 1. A note of the old pattern that still sounds stops there.
+
+#### PATTERNS: the patterns of the track as pads
+
+The page shows eight tiles: patterns 1 … 8 of the selected track. Each tile shows its steps, as bars over its length,
+or *empty*. *now* and the color of the track show the pattern that plays. *next* and a blinking frame show the pattern
+that you requested. A white line shows the cursor. The header shows the track and how full the pattern store is, in
+percent.
+
+| Control | Function |
+| --- | --- |
+| A white key 1 … 8 | Requests that pattern on the track. The cursor goes there |
+| **KNOB 1** | The cursor: pattern 1 … 8 |
 | **KNOB 2 QUANT** | PAT Q |
-| **KNOB 3 COPY**, twice | copies the pattern playing into the cursor's (the first turn says *COPY 1 > 4: AGAIN*) |
-| **KNOB 4 CLEAR**, twice | clears the cursor's pattern (the first turn says *CLEAR 4: TURN AGAIN*) |
-| **OCT+** | asks for the cursor's pattern on this track |
-| **OCT−** | asks for the cursor's pattern on **every** track |
+| **KNOB 3 COPY**, two turns | Copies the pattern that plays into the pattern at the cursor. The first turn shows *COPY 1 > 4: AGAIN* |
+| **KNOB 4 CLEAR**, two turns | Clears the pattern at the cursor. The first turn shows *CLEAR 4: TURN AGAIN* |
+| **OCT+** | Requests the pattern at the cursor on this track |
+| **OCT−** | Requests the pattern at the cursor on **all** tracks |
 
 #### CHAIN: a playlist
 
-A chain plays its **slots** in order, then starts again. Each slot is a pattern and how many loops it plays (×1 …
-×16), so *1 ×2, 3, 2 ×3* plays pattern 1 twice, pattern 3 once, pattern 2 three times, round. A chain has up to **16
-slots** and plays once it has two. The slots are tiles in order; a `+` tile after the last is the end. The slot playing
-is lit, with a bar for the loops it has played.
+A chain plays its **slots** in sequence, then starts again. Each slot is a pattern and a number of loops (×1 … ×16).
+For example, *1 ×2, 3, 2 ×3* plays pattern 1 two times, pattern 3 one time and pattern 2 three times, then starts
+again.
 
-| Control | Does |
+A chain has a maximum of **16 slots**. It plays when it has two or more slots. The page shows the slots as tiles, in
+sequence. A `+` tile after the last slot is the end. The slot that plays is on, with a bar for the loops that it played.
+
+| Control | Function |
 | --- | --- |
-| a white key 1 … 8 | puts that pattern in a slot after the cursor. At the end it appends, so typing 1, 3, 2 builds *1 3 2* |
-| **KNOB 1** | the slot, or the end |
-| **KNOB 2** | the slot's pattern |
-| **KNOB 3** | the slot's repeats, ×1 … ×16 |
-| **KNOB 4 PLAY** | right: the chain plays; left: it is kept but does not play |
-| **OCT+** | inserts a copy of the slot after it (at the end: the pattern playing) |
-| **OCT−** | removes the slot |
+| A white key 1 … 8 | Adds that pattern in a slot after the cursor. At the end, it adds the slot last. Thus the keys 1, 3, 2 make *1 3 2* |
+| **KNOB 1** | The slot, or the end |
+| **KNOB 2** | The pattern of the slot |
+| **KNOB 3** | The repeats of the slot, ×1 … ×16 |
+| **KNOB 4 PLAY** | Turn right: the chain plays. Turn left: BoopBox keeps the chain, but it does not play |
+| **OCT+** | Adds a slot with the same pattern (×1) after the cursor. At the end: a slot with the pattern that plays |
+| **OCT−** | Removes the slot |
 
-An asked change goes before the chain; the chain then goes on from the pattern asked for.
+If the chain has 16 slots, the display shows *CHAIN FULL: 16 SLOTS*. A pattern that you request plays before the
+chain. The chain then continues from that pattern.
 
-#### SCENES: the song's moments
+#### SCENES: the parts of the song
 
-A scene is a pattern for each track, played together: an intro, a verse, a chorus. There are **8 scenes**, a row each:
-its number, its name and the pattern of each track (a `-` means the track **keeps** what it plays). The scene playing
-has a ▶; one asked for has a blinking frame, and the header says when it comes (*in 3 beats*, *at loop end*). At first
-scene N is pattern N on every track, with no name.
+A scene is a pattern for each track. All the patterns play together, for example as an intro, a verse or a chorus.
+There are **8 scenes**, one on each row. A row shows the number of the scene, its name and the pattern of each track.
+A `-` shows that the track **keeps** the pattern that it plays.
 
-| Control | Does |
+A ▶ shows the scene that plays. A blinking ▶ shows the scene that you requested. The header shows when it starts, for
+example *next in 3 beats* or *at loop end*. In a new project, scene N is pattern N on all tracks, with no name.
+
+| Control | Function |
 | --- | --- |
-| a white key 9 … 16 (on any of the three pages) | launches that scene: every track of it asked for its pattern |
-| **KNOB 1** | the scene |
+| A white key 9 … 16 (on all three pages) | Launches that scene: each track in the scene requests its pattern |
+| **KNOB 1** | The scene |
 | **KNOB 2 QUANT** | PAT Q |
-| **KNOB 3 NAME** | its name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |
-| **KNOB 4** | the selected track's pattern in the scene: 1 … 8, or **keep** |
-| **OCT+** | launches the scene |
-| **OCT−**, twice | stores the patterns playing now into the scene (*OCT- AGAIN: STORE 3* first) |
+| **KNOB 3 NAME** | The name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |
+| **KNOB 4** | The pattern of the selected track in the scene: 1 … 8, or **keep** |
+| **OCT+** | Launches the scene |
+| **OCT−**, two pushes | Stores the patterns that play now into the scene. The first push shows *OCT- AGAIN: STORE 3* |
 
-Edit the pattern playing as usual (NOTES, the DRUMS grid, the SEQ layer, recording): its changes are kept when
-another pattern plays, and come back with it.
+Edit the pattern that plays as usual: on NOTES, on the DRUMS grid, in the SEQ layer or with recording. BoopBox keeps
+the changes when a different pattern plays. The changes come back with the pattern.
 
 ### When the store is full
 
-The patterns that are not playing share one store of 3 KB (a typical pattern takes 30 to 150 bytes; a 64-step pattern
-of 4-note chords about 700). When the pattern playing does not fit in it, a change is refused: the screen says
-*PATTERNS FULL: KEPT* and the pattern keeps playing, whole. COPY says *PATTERNS FULL: NO COPY*. Clear a
-pattern you do not need, or shorten one.
+The patterns that do not play share one store of 3 KB. If the pattern that plays does not fit in the store, BoopBox
+refuses the change. The display shows *PATTERNS FULL: KEPT*, and the full pattern continues to play.
 
-### Saved
+If a copy does not fit, the display shows *PATTERNS FULL: NO COPY*. To make space, clear a pattern that you do not
+need, or make a pattern shorter.
 
-The patterns, the chains (their repeats and PLAY), the scenes and the pattern each track plays are saved in the
-project (format 7) and in each song section. A project larger than a store
-object is refused whole (*PROJECT FULL: NOT SAVED*).
+### What the project saves (patterns)
+
+The project (format 7) and each song section save these items:
+
+- the patterns
+- the chains, with their repeats and PLAY setting
+- the scenes
+- the pattern that each track plays
+
+If a project is larger than one store object, BoopBox does not save it. The display shows *PROJECT FULL: NOT SAVED*.
 
 ## Song: the loop region
 
-On the **SONG** screen (see `GUIDE.md`):
+These controls are on the **SONG** screen (see `GUIDE.md`):
 
-| Control | Does |
+| Control | Function |
 | --- | --- |
-| **PRESETS** right | the song **loops**, the loop region **ending** on the entry under the cursor |
-| **ALGORITHM** | the loop region **starts** on the entry under the cursor |
-| **PRESETS** left | no loop: the song ends after its last entry |
+| **PRESETS**, turn right | The song **loops**. The loop region **ends** on the entry at the cursor (*LOOP ON*) |
+| **ALGORITHM** | The loop region **starts** on the entry at the cursor (*LOOP STARTS HERE*) |
+| **PRESETS**, turn left | No loop. The song stops after its last entry (*LOOP OFF: THE SONG ENDS*) |
 
-With a loop on, the song plays from its first entry and, after the region's last entry, goes back to the region's first
-(the header shows *loop a-b*; a bar beside the entries marks the region). This works while the song plays (it is read
-at the next entry). The region is kept with the song. (The web editor's song page saves the song without a region.)
+With a loop, the song plays from its first entry. After the last entry of the region, it goes back to the first entry
+of the region. The header shows *loop a-b*, and a bar next to the entries shows the region.
+
+These controls also operate while the song plays. The song reads them at the next entry. The song keeps its region. If the
+region still fits the entries, the song page of the web editor also keeps it.
 
 ## Harmony
 
-The song has one **key**, one **scale** and one **chord** (a degree of the key's scale, I to VII). The synth tracks
-that **follow** it play their **sequenced** notes in it: the steps, their ratchets and the notes the step components
-make. The keys, the arp and MIDI in play as they are; drum tracks never follow. A track's pattern is taken as written
-in the track's own **ROOT** (SEL page).
+The song has one **key**, one **scale** and one **chord**. The chord is a degree of the scale of the key, I to VII.
 
-| FOLLOW | A note moves |
+The synth tracks that **follow** the harmony play their **sequenced** notes in it. These notes are the steps, their
+ratchets and the notes that the step components make. The keys, the arpeggiator and MIDI in do not change. Drum tracks
+never follow. BoopBox reads the pattern of a track as written in the **ROOT** of the track (SEL page).
+
+| FOLLOW | How a note moves |
 | --- | --- |
-| **OFF** (default) | not at all |
-| **TRANS** | by the key's distance from the track's ROOT (the nearer way: up to a tritone up, a fifth down), then by the chord root's semitones: the pattern's shape is kept exactly (C E G on chord V of C major: G B D) |
-| **SCALE** | by the key's distance from the track's ROOT, into the scale (a note outside it goes to the nearest scale tone below), then up the chord's number of scale degrees: the chords of the scale itself (C E G on ii of C major: D F A; in C minor, E becomes Eb) |
+| **OFF** (default) | It does not move |
+| **TRANS** | By the distance from the ROOT of the track to the key, the shorter way (a maximum of a tritone up or a fifth down). Then by the semitones of the chord root. The shape of the pattern stays the same. For example, C E G on chord V of C major becomes G B D |
+| **SCALE** | By the distance from the ROOT of the track to the key. Then into the scale: a note out of the scale goes to the nearest scale note below. Then up by the degree of the chord, in scale degrees. This gives the chords of the scale. For example, C E G on ii of C major becomes D F A. In C minor, E becomes Eb |
 
-A note keeps the pitch it started with until it ends; its note-off is that note's, so a change never leaves a note on.
+A note keeps its start pitch until it stops. Its note-off is for that same note, so a change never leaves a note on.
 
 ### Pages (SEL)
 
-Tap **SEL** to walk its pages: SEL, SEL 2, **HARMONY**, **FOLLOW**, then the **CHORDS** screen.
+To move through the SEL pages, push **SEL**. The sequence is SEL, SEL 2, **HARMONY**, **FOLLOW**, then the **CHORDS**
+screen.
 
 | Page | Knobs |
 | --- | --- |
-| **HARMONY** | **KEY** C … B · **SCALE** (the 16 scales of the SEL page) · **Q** when a change of key, scale or chord takes hold: **NOW**, the next **BEAT**, the next **BAR** (default) · **PROG** the chord progression OFF / ON |
-| **FOLLOW** | **FOLLOW** of the selected track: OFF, TRANS, SCALE (a drum track shows nothing here) |
+| **HARMONY** | **KEY**: C … B. **SCALE**: the 16 scales of the SEL page. **Q**: when a change of key, scale or chord occurs: **NOW**, the next **BEAT** or the next **BAR** (default). **PROG**: the chord progression OFF or ON |
+| **FOLLOW** | **FOLLOW** of the selected track: OFF, TRANS, SCALE. On a drum track, this page is empty |
 
-KEY, SCALE, Q and PROG are saved with the project; each song section carries its own (a section change can change
-the key).
+The project saves KEY, SCALE, Q and PROG. Each song section has its own values, so a section change can change the key.
 
 ### The CHORDS screen
 
-It shows the key and scale asked for and Q (top right), the chord playing now in large type (*LIVE* when played
-live, *progression* or *no progression*), the key and scale in force, the progression's chords (a roman numeral and
-its bars; the one playing lit) and the eight tracks with their FOLLOW (*-* off, *T* trans, *S* scale).
+The CHORDS screen shows these items:
 
-| Control | Does |
+- the key and the scale that you set, and Q
+- the chord that plays now, in large letters, with *live*, *progression* or *no progression*
+- the key and the scale that are in use now
+- the chords of the progression (a roman numeral and its bars). The chord that plays is on
+- the eight tracks with their FOLLOW: *-* (OFF), *T* (TRANS), *S* (SCALE)
+
+| Control | Function |
 | --- | --- |
-| **the keys** | play the song's chord **live**: a white key its degree (C I, D II, E III, F IV, G V, A VI, B VII, in every octave), a black key lets the live chord go (back to the progression, or I). On Q's boundary; no note sounds from the keys on this screen |
-| **KNOB 1** | the progression's chord under edit (1 … count) |
-| **KNOB 2** | its degree, I … VII |
-| **KNOB 3** | its length, 1 … 16 bars |
-| **KNOB 4** | how many chords the progression has, 1 … 8 |
-| **PRESETS** | the KEY |
-| **SELECT** | the SCALE |
-| **ALGORITHM** | the track; **OCT+** steps its FOLLOW round (OFF, TRANS, SCALE) |
-| **OCT−** | PROG on / off (*PROGRESSION ON*) |
-| **ENV**, **LFO**, the layer buttons, **HOME** | as everywhere |
+| **The white keys** | Play the chord of the song **live**. Each key is a degree: C I, D II, E III, F IV, G V, A VI, B VII, in all octaves. The change occurs on the Q boundary |
+| **The black keys** | Release the live chord. The progression continues, or chord I plays |
+| **KNOB 1** | The chord of the progression that you edit (1 … count) |
+| **KNOB 2** | Its degree, I … VII |
+| **KNOB 3** | Its length, 1 … 16 bars |
+| **KNOB 4** | The number of chords in the progression, 1 … 8 |
+| **PRESETS** | The KEY |
+| **SELECT** | The SCALE |
+| **ALGORITHM** | The track |
+| **OCT+** | Changes the FOLLOW of the track: OFF, TRANS, SCALE, then OFF again |
+| **OCT−** | PROG on or off (*PROGRESSION ON*, *PROGRESSION OFF*) |
+| **ENV**, **LFO**, the layer buttons, **HOME** | As on all pages |
 
-With PROG on, while the song plays, the progression's chords follow one another round, each for its bars, counted
-from PLAY. A live chord stays (latched) over the progression until a black key lets it go. Stopped, the first chord of
-the progression (or the live one) is in force.
+On this page, the keys do not play notes. On a drum track, OCT+ shows *DRUM TRACK: NO FOLLOW*.
 
-### Saved
+With PROG on, while the song plays, the chords of the progression play in sequence and then start again. Each chord
+plays for its bars, counted from PLAY. A live chord stays on (latched) over the progression until you push a black key.
+When the sequencer is stopped, the first chord of the progression is in use, or the live chord if there is one.
 
-The progression is saved in the project (format 7) and in song sections; FOLLOW with each track.
+### What the project saves (harmony)
+
+The project (format 7) and the song sections save the progression. Each track saves its FOLLOW.
 
 ## Performance effects
 
-The punch-in effects of `GUIDE.md` (hold **FX**, press a key: LOOP, STUTTER, REVERSE, STOP, HALF, the filters, PHONE,
-CRUSH, GATE, ECHO, WOBBLE, the kills, REWIND, OCT UP, FLANGER, AUTO-PAN, FREEZE, MONO, FADE OUT …) are the
-performance effects: beat repeat (the LOOPs, STUTTER), filter sweeps (LOW, HIGH), speed (STOP, HALF, REWIND), gating
-(GATE), audio transposition (OCT UP). Live **sequencer** transposition is the harmony's: the CHORDS screen's keys (see
-Harmony). Everything there still works as written; the **PERF** page (FX family, the last page) adds:
+The punch-in effects of `GUIDE.md` operate as `GUIDE.md` tells. To use one, hold **FX** and push a key. The effects
+include LOOP, STUTTER, REVERSE, STOP, HALF, the filters, PHONE, CRUSH, GATE, ECHO, WOBBLE, the kills, REWIND, OCT UP,
+FLANGER, AUTO-PAN, FREEZE, MONO and FADE OUT.
 
-| Knob | Does |
+They are the performance effects of the groovebox:
+
+| Function | Effects |
 | --- | --- |
-| **KNOB 1 TARGET** | what the effects act on: **MASTER** (the whole mix, as before), **SEL** (the selected track), **DRUMS** (the drum tracks), **SYNTHS** (the synth tracks). With a target, only those tracks' dry sound goes through the effect; the other tracks, the reverb, delay and chorus returns and the TEXTURE pass it by. A target taken while an effect plays waits until that effect ends |
-| **KNOB 2 LATCH** | **OFF** (as before: an effect lasts while its key is held) or **ON**: FX + a key turns its effect on and it stays when you let go (also FX); the same key again turns it off; another key changes to its effect. The MIDI FX channel (MIDI 4 > FX CH) does the same with its notes |
-| **KNOB 3 Q** | when an effect starts: **OFF** (at once, as before) or on the next **1/16**, **1/8**, **1/4** or **BAR** line of the playing transport. Its end is always at once; stopped, it starts at once |
+| Beat repeat | the LOOPs, STUTTER |
+| Filter sweeps | LOW, HIGH |
+| Speed | STOP, HALF, REWIND |
+| Gate | GATE |
+| Audio transposition | OCT UP |
 
-TARGET, LATCH and Q are saved with the project. The loops replay what the target played (with a
-target the loops' memory holds only those tracks; just after the target changed, it still holds what came before,
-for up to 0.74 s).
+For live transposition of the **sequencer**, use the keys of the CHORDS screen (see [Harmony](#harmony)).
+
+The **PERF** page is the last page of the FX family. It adds these knobs:
+
+| Knob | Function |
+| --- | --- |
+| **KNOB 1 TARGET** | What the effects operate on: **MASTER** (the full mix, as before), **SEL** (the selected track), **DRUMS** (the drum tracks), **SYNTHS** (the synth tracks) |
+| **KNOB 2 LATCH** | **OFF**: an effect stays on while you hold its key, as before. **ON**: FX and a key start the effect, and it stays on when you release them |
+| **KNOB 3 Q** | When an effect starts: **OFF** (immediately, as before), or on the next **1/16**, **1/8**, **1/4** or **BAR** line of the transport |
+
+With a target, only the dry sound of those tracks goes through the effect. The other tracks, the reverb, delay and
+chorus returns and the TEXTURE do not go through it. If you change the target while an effect plays, the new target
+waits until that effect stops.
+
+With LATCH ON, the same key again stops the effect. A different key changes to its effect. The MIDI FX
+channel (MIDI 4 > FX CH) operates the same way with its notes.
+
+With Q, an effect always stops immediately. When the sequencer is stopped, an effect starts immediately.
+
+The project saves TARGET, LATCH and Q. The loops play again what the target played. With a target, the loop memory
+holds only those tracks. Immediately after a target change, the memory holds the earlier sound for a maximum of 0.74 s.

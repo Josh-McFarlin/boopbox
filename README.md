@@ -189,7 +189,7 @@ For the full steps, read [BUILDING.md](BUILDING.md). You need the JieLi toolchai
 - On Linux or macOS, run `scripts/build.sh`.
 - On Windows with WSL, run `scripts/INSTALL-BOOPBOX.bat`.
 
-Both commands build the firmware and serve the installer and the editor on `http://localhost:8766`.
+Both commands build the firmware into `build/felucca.fwsc`. On Windows, the script also serves the installer and the editor on `http://localhost:8766`. On Linux or macOS, [BUILDING.md](BUILDING.md) tells you how to serve them.
 
 `tests/run_tests.sh` runs the host test suite with no hardware. The tests cover audio output, CPU budgets, sequencer timing, the UI, flash storage, the update loader, MIDI, USB audio and the web pages.
 
