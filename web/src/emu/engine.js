@@ -10,6 +10,23 @@ export const BLACK = (k) => [1, 3, 5, 8, 10].includes(k % 12);
 export const NKEYS = 27;
 const FS = 44100;
 
+/* the two firmwares the page runs (tools/build_emu.py, with --trainer for the second), each with its own flash kept in
+   this browser: their sample sets differ, so one's projects are not the other's */
+export const FIRMWARE = {
+  main: { label: "BoopBox", wasm: "boopbox-emu.wasm", key: "fm1", file: "boopbox-emulator-flash.bin" },
+  trainer: { label: "BoopBox Trainer", wasm: "boopbox-trainer-emu.wasm", key: "fm1-trainer",
+             file: "boopbox-trainer-emulator-flash.bin" },
+};
+/* the firmware asked for in the address (?fw=trainer), else the main one */
+export function firmwareFromUrl() {
+  const f = new URLSearchParams(location.search).get("fw");
+  return f in FIRMWARE ? f : "main";
+}
+/* whether this site has the firmware's WebAssembly (the trainer's is optional in make_site.py) */
+export async function hasFirmware(fw) {
+  try { return (await fetch(FIRMWARE[fw].wasm, { method: "HEAD" })).ok; } catch { return false; }
+}
+
 // the computer's keyboard: two rows of notes (Z.. from F3, Q.. from B4), the transport and the knobs
 export const KEYMAP = {};
 ["KeyZ", "KeyS", "KeyX", "KeyD", "KeyC", "KeyF", "KeyV", "KeyB", "KeyH", "KeyN", "KeyJ", "KeyM", "Comma", "KeyL", "Period",
@@ -30,32 +47,32 @@ function db() {
     r.onerror = () => no(r.error);
   });
 }
-export async function flashLoad() {
+export async function flashLoad(fw = "main") {
   try {
     const d = await db();
     return await new Promise((ok) => {
-      const g = d.transaction("flash").objectStore("flash").get("fm1");
+      const g = d.transaction("flash").objectStore("flash").get(FIRMWARE[fw].key);
       g.onsuccess = () => ok(g.result || null);
       g.onerror = () => ok(null);
     });
   } catch { return null; }
 }
 /* -> the line to show under the panel */
-export async function flashSave(buf) {
+export async function flashSave(buf, fw = "main") {
   try {
     const d = await db();
-    d.transaction("flash", "readwrite").objectStore("flash").put(buf, "fm1");
+    d.transaction("flash", "readwrite").objectStore("flash").put(buf, FIRMWARE[fw].key);
     return "Saved in this browser " + new Date().toLocaleTimeString();
   } catch { return "This browser does not keep data: nothing is saved between visits"; }
 }
-export async function flashErase() {
-  try { const d = await db(); d.transaction("flash", "readwrite").objectStore("flash").delete("fm1"); } catch { /* nothing kept */ }
+export async function flashErase(fw = "main") {
+  try { const d = await db(); d.transaction("flash", "readwrite").objectStore("flash").delete(FIRMWARE[fw].key); } catch { /* nothing kept */ }
 }
 
-export function download(buf) {
+export function download(buf, fw = "main") {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([buf], { type: "application/octet-stream" }));
-  a.download = "boopbox-emulator-flash.bin";
+  a.download = FIRMWARE[fw].file;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -70,13 +87,14 @@ export function drawScreen(g, img, buf) {
   g.putImageData(img, 0, 0);
 }
 
-/* power on: the worklet with the firmware and the flash; on(message) gets its messages. -> {node, ctx, flash} */
-export async function powerOn(onMessage) {
+/* power on: the worklet with the firmware fw (FIRMWARE's key) and its flash; on(message) gets its messages.
+   -> {node, ctx, flash} */
+export async function powerOn(onMessage, fw = "main") {
   const ctx = new AudioContext({ sampleRate: FS, latencyHint: "interactive" });
   const [module, flash] = await Promise.all([
-    fetch("boopbox-emu.wasm").then((r) => { if (!r.ok) throw new Error("boopbox-emu.wasm: " + r.status); return r.arrayBuffer(); })
+    fetch(FIRMWARE[fw].wasm).then((r) => { if (!r.ok) throw new Error(FIRMWARE[fw].wasm + ": " + r.status); return r.arrayBuffer(); })
       .then((b) => WebAssembly.compile(b)),
-    flashLoad(),
+    flashLoad(fw),
     ctx.audioWorklet.addModule("emu-worklet.js"),
   ]);
   const node = new AudioWorkletNode(ctx, "boopbox-emu", { numberOfInputs: 0, outputChannelCount: [2],

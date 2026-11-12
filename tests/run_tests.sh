@@ -318,7 +318,8 @@ run "key velocity in the sequencer: synth and drum keys, held-back presses, afte
 emu() {
     cc_run emu_test "-O1 -w -Ibuild/gen -Ifirmware/src" tests/emu_test.c "$OUT" || return 1
     if command -v node >/dev/null && command -v clang >/dev/null && command -v wasm-ld >/dev/null; then
-        python3 tools/build_emu.py >/dev/null && node tests/emu_wasm_test.mjs
+        python3 tools/build_emu.py >/dev/null && python3 tools/build_emu.py --trainer >/dev/null &&
+            node tests/emu_wasm_test.mjs
     else
         echo "emu wasm: no clang / wasm-ld / node: the WebAssembly build not checked"
     fi

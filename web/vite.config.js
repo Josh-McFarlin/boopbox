@@ -20,8 +20,9 @@ const SITE = resolve(HERE, "site");
 const BUILD = resolve(HERE, "..", "build");
 
 /* the dev server also serves the WebAssembly built apart from the pages (make_site.py copies them into the site):
-   the emulator's (tools/build_emu.py) at /emu/, the editor's audio preview (tools/build_preview.py) at /editor/ */
+   the emulators' (tools/build_emu.py, and --trainer) at /emu/, the editor's audio preview (tools/build_preview.py) at /editor/ */
 const WASM = { "/emu/boopbox-emu.wasm": resolve(BUILD, "emu/boopbox-emu.wasm"),
+               "/emu/boopbox-trainer-emu.wasm": resolve(BUILD, "emu/boopbox-trainer-emu.wasm"),
                "/editor/boopbox-preview.wasm": resolve(BUILD, "preview/boopbox-preview.wasm") };
 const devWasm = {
   name: "boopbox-dev-wasm",

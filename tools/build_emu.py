@@ -3,12 +3,14 @@
 """Compile the BoopBox emulator for the browser: the whole firmware (UI, sequencer, sound, storage) as WebAssembly
 (firmware/host/emu.c), run by the site's emulator page (web/src/emu/, 1.8, after JIANT FM's emulator).
 
-python3 tools/build_emu.py
-Writes build/emu/boopbox-emu.wasm (the Vite dev server serves it at /emu/: cd web && npm run dev; web/make_site.py
+python3 tools/build_emu.py [--trainer]
+Writes build/emu/boopbox-emu.wasm (with --trainer: build/emu/boopbox-trainer-emu.wasm, BoopBox Trainer: the lessons,
+three sample sets fewer, its generated headers in build/emu/trainer-gen/) (the Vite dev server serves it at /emu/: cd web && npm run dev; web/make_site.py
 puts it in the site). Needs clang with the wasm32 target and wasm-ld (lld),
 or Emscripten. No JieLi SDK, Docker or FM-1.
 """
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -25,6 +27,11 @@ GENERATED = [('gen_tables.py', 'felucca_tables.h'), ('gen_samples.py', 'felucca_
 
 
 def main():
+    global GEN
+    trainer = '--trainer' in sys.argv[1:]
+    if trainer:                                   # (gen_samples.py and lessons.py read it; its own headers)
+        os.environ['FELUCCA_TRAINER'] = '1'
+        GEN = OUT / 'trainer-gen'
     emcc = shutil.which('emcc')
     if not emcc and not (shutil.which('clang') and shutil.which('wasm-ld')):
         sys.exit('Install clang and lld (wasm-ld), or Emscripten (macOS: brew install emscripten).')
@@ -33,12 +40,15 @@ def main():
     for script, header in GENERATED:              # (the firmware build's generated headers, if not there yet)
         if not (GEN / header).exists():
             subprocess.run([sys.executable, str(ROOT / 'tools' / script), str(GEN / header)], cwd=ROOT, check=True)
+    if trainer:                                   # the lessons, from the approved songs (tools/build.py's)
+        subprocess.run([sys.executable, str(ROOT / 'tools/trainer/lessons.py'), str(GEN / 'trainer_lessons.h')],
+                       cwd=ROOT, check=True)
     src = str(ROOT / 'firmware/host/emu.c')
-    wasm = OUT / 'boopbox-emu.wasm'
-    flags = ['-O2', '-fwrapv', '-fno-strict-aliasing', '-w', '-I' + str(GEN), '-I' + str(ROOT / 'firmware/src')]
+    wasm = OUT / ('boopbox-trainer-emu.wasm' if trainer else 'boopbox-emu.wasm')
+    flags = ['-O2', *(['-DFELUCCA_TRAINER=1'] if trainer else []), '-fwrapv', '-fno-strict-aliasing', '-w', '-I' + str(GEN), '-I' + str(ROOT / 'firmware/src')]
     if not emcc:                                  # clang + wasm-ld, freestanding, with tools/wasm_shim
         shim = ROOT / 'tools' / 'wasm_shim'
-        mem = OUT / 'mem.o'
+        mem = OUT / ('mem-trainer.o' if trainer else 'mem.o')
         subprocess.run(['clang', '--target=wasm32', '-O2', '-fno-builtin', '-ffreestanding', '-c', str(shim / 'mem.c'),
                         '-o', str(mem)], cwd=ROOT, check=True)
         subprocess.run(['clang', '--target=wasm32', '-ffreestanding', '-nostdlib', '-I' + str(shim)] + flags +
