@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { CMD, Link, fm1Ports, parse, req } from "../editor/lib/proto.js";
-import config from "../../../shared/room-config.json";
+import config from "../../../shared/room-config.json" with { type: "json" };
 import { parseKeyboardMessage } from "./keyboard-midi.js";
 export { parseKeyboardMessage } from "./keyboard-midi.js";
 
@@ -11,6 +11,7 @@ function cleanVoice(dump) {
   }
   if (dump.engine < 0 || dump.engine >= config.presetCounts.length || dump.engine === 4) return null;
   if (dump.preset < 0 || dump.preset >= config.presetCounts[dump.engine]) return null;
+  if (dump.engine === 9 && (dump.p[70] < 0 || dump.p[70] >= config.presetCounts[9])) return null;
   return { engine: dump.engine, preset: dump.preset };
 }
 
@@ -32,7 +33,7 @@ export async function connectFm1(onNote, onState) {
       const data = event.data;
       if (!data?.length) return;
       if (data[0] === 0xf0) {
-        link.receive(data);
+        if (data.length <= 512) link.receive(data);
         return;
       }
       const note = parseKeyboardMessage(data);

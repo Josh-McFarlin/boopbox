@@ -84,6 +84,14 @@ function RoomPage() {
     audioRef.current.setVoice(player.slot, player.voice).catch((err) => setError(err.message));
   }, []);
 
+  const reconcileRoomVoices = useCallback((currentPlayers) => {
+    const bySlot = new Map((currentPlayers || []).map((player) => [player.slot, player]));
+    for (let slot = 0; slot < config.maxPlayers; slot += 1) {
+      if (!bySlot.get(slot)?.voice) audioRef.current?.removeVoice(slot);
+    }
+    for (const player of currentPlayers || []) applyVoice(player);
+  }, [applyVoice]);
+
   useEffect(() => {
     let stopped = false;
     let retryTimer;
@@ -110,7 +118,7 @@ function RoomPage() {
           for (const id of voiceStateRef.current.keys()) {
             if (!currentIds.has(id)) voiceStateRef.current.delete(id);
           }
-          for (const player of message.players || []) applyVoice(player);
+          reconcileRoomVoices(message.players || []);
         } else if (message.type === "voice") {
           applyVoice({ id: message.playerId, slot: message.slot, voice: message.voice });
           setPlayers((current) => current.map((player) => player.id === message.playerId
@@ -133,7 +141,8 @@ function RoomPage() {
         setPlayers([]);
         roomRef.current = null;
         voiceStateRef.current.clear();
-        audioRef.current?.preview.panic();
+        audioRef.current?.panic();
+        for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
         retryTimer = window.setTimeout(connect, 1800);
       };
       socket.onerror = () => socket.close();
@@ -145,7 +154,7 @@ function RoomPage() {
       socket?.close();
       socketRef.current = null;
     };
-  }, [applyVoice, send]);
+  }, [reconcileRoomVoices, send]);
 
   useEffect(() => () => {
     stopAllNotes();
@@ -159,7 +168,7 @@ function RoomPage() {
       if (!audioRef.current) audioRef.current = new RoomAudio((err) => setError(err.message));
       await audioRef.current.start();
       setAudioEnabled(true);
-      for (const player of players) applyVoice(player);
+      reconcileRoomVoices(players);
       setStatus("Room audio is on. Connect the FM-1 to play.");
     } catch (err) {
       setError(err.message);
@@ -212,6 +221,7 @@ function RoomPage() {
     setRoom(null);
     setPlayers([]);
     voiceStateRef.current.clear();
+    for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
     setStatus("You left the room.");
   };
 

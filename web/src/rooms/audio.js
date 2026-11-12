@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { CMD, Link, makeMockDevice, parse, previewSnapshot, req } from "../editor/lib/proto.js";
+import { Link, makeMockDevice, previewSnapshot, req } from "../editor/lib/proto.js";
 
 const PLAYERS = 8;
 const WASM_URL = new URL("../editor/boopbox-preview.wasm", document.baseURI);
@@ -116,7 +116,9 @@ export class RoomAudio {
   removeVoice(slot) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
     this.voices[slot] = null;
-    this.node?.port.postMessage({ type: "drop", slot });
+    const next = this.queue.then(() => this.node?.port.postMessage({ type: "drop", slot }));
+    this.queue = next.catch(() => {});
+    return this.queue;
   }
 
   note(slot, note, on) {
@@ -144,6 +146,7 @@ export class RoomAudio {
   async close() {
     this.panic();
     await this.loading?.catch(() => {});
+    await this.queue;
     this.node?.disconnect();
     this.node = null;
     if (this.context) await this.context.close();
