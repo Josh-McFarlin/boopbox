@@ -33,6 +33,16 @@ for (const [name, wasm] of [["emu wasm", "build/emu/boopbox-emu.wasm"], ["traine
     check(screen().some((v, i) => v !== a[i]), "ENV opens its page");
   }
   check(e.emu_led(7 + 14) >= 0 && e.emu_flash_size() === 1 << 20, "LEDs and the 1 MiB flash exported");
+  if (!trainer) {
+    const size = e.emu_room_capture();
+    const project = new Uint8Array(e.memory.buffer, e.emu_room_project_ptr(), size);
+    const projectSize = new DataView(project.buffer, project.byteOffset, project.byteLength).getUint32(4, true);
+    check(size >= 12 && project[0] === 0x37 && project[1] === 0x4e && project[2] === 0x55 && project[3] === 0x46
+      && projectSize === size, "room snapshot exports the current firmware project");
+    check(e.emu_room_tempo() >= 40 && e.emu_room_tempo() <= 240
+      && e.emu_room_selected_track() < 8 && e.emu_room_note(7) < 128,
+    "room snapshot exports tempo, selected track, and mapped keyboard notes");
+  }
   console.log(`${name}: ${speed.toFixed(1)}x real time`);
   check(speed > 2, "faster than real time");
 }

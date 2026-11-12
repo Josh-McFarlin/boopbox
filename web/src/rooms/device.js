@@ -100,6 +100,29 @@ function buildRoomPerformance(project, dumps, live, info) {
   };
 }
 
+export function buildEmulatorPerformance(projectBytes, tracks, live) {
+  if (!(projectBytes instanceof ArrayBuffer) && !ArrayBuffer.isView(projectBytes)) {
+    throw new Error("The emulator performance snapshot is invalid.");
+  }
+  if (!Array.isArray(tracks) || tracks.length !== 8 || !Number.isSafeInteger(live?.tempo)
+    || live.tempo < 40 || live.tempo > 240 || typeof live.playing !== "boolean") {
+    throw new Error("The emulator performance snapshot is invalid.");
+  }
+  const bytes = projectBytes instanceof ArrayBuffer ? new Uint8Array(projectBytes) : new Uint8Array(
+    projectBytes.buffer, projectBytes.byteOffset, projectBytes.byteLength,
+  );
+  const project = PROJ7.decode(bytes);
+  const dumps = tracks.map((track) => {
+    if (!track || !Number.isSafeInteger(track.engine) || !Number.isSafeInteger(track.preset)
+      || !Array.isArray(track.p) || track.p.length !== 71
+      || track.p.some((value) => !Number.isSafeInteger(value))) {
+      throw new Error("The emulator track contains unsupported data.");
+    }
+    return { engine: track.engine, preset: track.preset, p: track.p };
+  });
+  return buildRoomPerformance(project, dumps, live, { pe0: 63 });
+}
+
 export async function connectFm1(
   onNote, onState, onParameter = () => {}, onPerformance = () => {}, onTransport = () => {}, onPerformanceError = () => {},
 ) {

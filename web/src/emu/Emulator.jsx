@@ -116,8 +116,9 @@ function FirmwareSwitch({ fw, onPick, disabled }) {
 }
 
 export default function Emulator() {
-  const [fw, setFw] = useState(firmwareFromUrl);
-  const [hasTrainer, setHasTrainer] = useState(() => firmwareFromUrl() === "trainer");
+  const roomMode = new URLSearchParams(location.search).get("room") === "1" && window.parent !== window;
+  const [fw, setFw] = useState(() => roomMode ? "main" : firmwareFromUrl());
+  const [hasTrainer, setHasTrainer] = useState(() => !roomMode && firmwareFromUrl() === "trainer");
   const [on, setOn] = useState(false);
   const [starting, setStarting] = useState(false);
   const [saved, setSaved] = useState("Your projects, songs and settings are kept in this browser.");
@@ -194,12 +195,13 @@ export default function Emulator() {
           if (data.ask) download(data.flash, f);
           else flashSave(data.flash, f).then(setSaved);
         }
-      }, f);
+      }, f, { roomMode });
       node.current = r.node;
       ctx.current = r.ctx;
       setStarting(false);
       r.node.onprocessorerror = () => setSaved("The emulator stopped. Reload the page to start it again.");
       setOn(true);
+      if (roomMode) window.parent.postMessage({ type: "boopbox-room-ready" }, location.origin);
       send({ t: "master", v: master });
       setSaved(`${FIRMWARE[f].label}: ` + (r.flash ? "your work from last time is back" : "nothing saved yet: your work is kept in this browser"));
     } catch (err) {
@@ -207,6 +209,40 @@ export default function Emulator() {
       setSaved("Could not start: " + (err.message || err) + ". Try Chrome, Edge, Firefox or Safari.");
     }
   };
+
+  useEffect(() => {
+    if (!on || !roomMode || !node.current) return undefined;
+    const timer = window.setInterval(() => node.current?.port.postMessage({ t: "room-snapshot" }), 900);
+    return () => window.clearInterval(timer);
+  }, [on, roomMode]);
+
+  useEffect(() => {
+    if (!roomMode) return undefined;
+    const handle = ({ data }) => {
+      if (data?.t === "room-note") {
+        window.parent.postMessage({
+          type: "boopbox-room-note", track: data.track, note: data.note,
+          down: data.down, velocity: data.velocity,
+        }, location.origin);
+      } else if (data?.t === "room-snapshot") {
+        window.parent.postMessage({
+          type: "boopbox-room-snapshot", project: data.project, tracks: data.tracks,
+          tempo: data.tempo, playing: data.playing,
+        }, location.origin, [data.project]);
+      } else if (data?.t === "room-snapshot-error") {
+        window.parent.postMessage({ type: "boopbox-room-error", error: data.error }, location.origin);
+      }
+    };
+    node.current?.port.addEventListener("message", handle);
+    node.current?.port.start();
+    const panic = () => window.parent.postMessage({ type: "boopbox-room-panic" }, location.origin);
+    window.addEventListener("pagehide", panic);
+    return () => {
+      node.current?.port.removeEventListener("message", handle);
+      window.removeEventListener("pagehide", panic);
+      panic();
+    };
+  }, [on, roomMode]);
 
   /* the other firmware: the running one is switched off (its flash is already kept) and the new one powered on */
   const pick = async (f) => {
@@ -263,7 +299,10 @@ export default function Emulator() {
       <h1 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold min-[600px]:text-[52px]">BoopBox emulator</h1>
       <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">The real BoopBox firmware, running in your browser:
         the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
-      {hasTrainer ? (
+      {roomMode ? <p className="mb-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-body" role="status">
+        Room mode is on. Power up the emulator to share its stock-sound performance and live notes with the jam room.
+      </p> : null}
+      {hasTrainer && !roomMode ? (
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 text-[14px] text-dim">
           <span className="font-pixel text-[18px] text-dim">SELECT GAME</span>
           <FirmwareSwitch fw={fw} onPick={pick} disabled={starting} />

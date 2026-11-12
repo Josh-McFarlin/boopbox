@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
-import { connectFm1 } from "./device.js";
+import { buildEmulatorPerformance, connectFm1 } from "./device.js";
 import config from "../../../shared/room-config.json";
 import "../styles/site.css";
 import "./rooms.css";
@@ -50,11 +50,17 @@ function RoomPage() {
   const [genre, setGenre] = useState(GENRES[0].id);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [fm1State, setFm1State] = useState("disconnected");
+  const [deviceMode, setDeviceMode] = useState("fm1");
+  const [emulatorReady, setEmulatorReady] = useState(false);
   const [status, setStatus] = useState("Connecting to the room server…");
   const [error, setError] = useState("");
   const socketRef = useRef(null);
   const selfPlayerIdRef = useRef(null);
   const fm1Ref = useRef(null);
+  const emulatorFrameRef = useRef(null);
+  const emulatorSnapshotRef = useRef("");
+  const emulatorTransportRef = useRef(null);
+  const emulatorHasPerformanceRef = useRef(false);
   const audioRef = useRef(null);
   const roomRef = useRef(room);
   const voiceStateRef = useRef(new Map());
@@ -241,7 +247,7 @@ function RoomPage() {
       setAudioEnabled(true);
       for (const saved of performanceStateRef.current.values()) saved.applied = false;
       reconcileRoomVoices(players);
-      setStatus("Room audio is on. Connect the FM-1 to play.");
+      setStatus("Room audio is on. Connect an FM-1 or start the browser emulator to play.");
     } catch (err) {
       setError(err.message);
     }
@@ -249,6 +255,11 @@ function RoomPage() {
 
   const connectDevice = async () => {
     setError("");
+    setDeviceMode("fm1");
+    setEmulatorReady(false);
+    emulatorSnapshotRef.current = "";
+    emulatorTransportRef.current = null;
+    emulatorHasPerformanceRef.current = false;
     setStatus("Connecting to the FM-1…");
     try {
       fm1Ref.current?.close();
@@ -273,6 +284,76 @@ function RoomPage() {
       setStatus("FM-1 not connected.");
     }
   };
+
+  const useEmulator = () => {
+    fm1Ref.current?.close();
+    fm1Ref.current = null;
+    setFm1State("disconnected");
+    setDeviceMode("emulator");
+    setEmulatorReady(false);
+    emulatorSnapshotRef.current = "";
+    emulatorTransportRef.current = null;
+    emulatorHasPerformanceRef.current = false;
+    setError("");
+    setStatus("Start the browser emulator below to play in this room.");
+  };
+
+  const usePhysicalDevice = () => {
+    stopAllNotes();
+    setDeviceMode("fm1");
+    setEmulatorReady(false);
+    emulatorHasPerformanceRef.current = false;
+    setStatus("Connect the FM-1 with its USB MIDI cable.");
+  };
+
+  useEffect(() => {
+    const onEmulatorMessage = (event) => {
+      if (event.origin !== window.location.origin || event.source !== emulatorFrameRef.current?.contentWindow
+        || deviceMode !== "emulator") return;
+      const message = event.data;
+      if (!message || typeof message !== "object") return;
+      if (message.type === "boopbox-room-ready") {
+        setEmulatorReady(true);
+        setStatus("Browser emulator is running. Its stock-sound performance syncs with the room.");
+      } else if (message.type === "boopbox-room-note") {
+        if (!emulatorHasPerformanceRef.current || !roomRef.current
+          || !Number.isInteger(message.track) || message.track < 0 || message.track >= 8
+          || !Number.isInteger(message.note) || message.note < 0 || message.note > 127
+          || typeof message.down !== "boolean"
+          || (message.down && (!Number.isInteger(message.velocity) || message.velocity < 1 || message.velocity > 127))) return;
+        playNote(message.note, message.down, message.velocity || 96, message.track);
+      } else if (message.type === "boopbox-room-panic") {
+        stopAllNotes();
+      } else if (message.type === "boopbox-room-error") {
+        setError(message.error || "The emulator could not sync its performance.");
+      } else if (message.type === "boopbox-room-snapshot") {
+        if (!roomRef.current || !Array.isArray(message.tracks)) return;
+        try {
+          const performance = buildEmulatorPerformance(message.project, message.tracks, {
+            tempo: message.tempo, playing: message.playing,
+          });
+          const performanceKey = JSON.stringify(performance);
+          if (performanceKey !== emulatorSnapshotRef.current) {
+            if (!send({ type: "performance", performance })) {
+              setError("Wait for the room server to reconnect.");
+              return;
+            }
+            emulatorSnapshotRef.current = performanceKey;
+            emulatorHasPerformanceRef.current = true;
+          }
+          const transportKey = `${performance.tempo}:${performance.playing}`;
+          if (transportKey !== emulatorTransportRef.current) {
+            send({ type: "transport", playing: performance.playing, tempo: performance.tempo });
+            emulatorTransportRef.current = transportKey;
+          }
+        } catch (err) {
+          setError(err.message || "The emulator performance could not be synced.");
+        }
+      }
+    };
+    window.addEventListener("message", onEmulatorMessage);
+    return () => window.removeEventListener("message", onEmulatorMessage);
+  }, [deviceMode, playNote, send, stopAllNotes]);
 
   const sharePerformance = async () => {
     if (!fm1Ref.current) {
@@ -300,6 +381,9 @@ function RoomPage() {
   const leaveRoom = () => {
     stopAllNotes();
     send({ type: "leave" });
+    setDeviceMode("fm1");
+    setEmulatorReady(false);
+    emulatorHasPerformanceRef.current = false;
     setRoom(null);
     setPlayers([]);
     voiceStateRef.current.clear();
@@ -321,7 +405,7 @@ function RoomPage() {
         <header className="rooms-hero">
           <p className="rooms-kicker">LIVE MUSIC · UP TO 8 PLAYERS</p>
           <h1>Jam rooms</h1>
-          <p>Jam with up to seven other FM-1 players. Each device mixes everyone’s stock-sound performances, while every player keeps their own patterns, scenes, and chains.</p>
+          <p>Jam with up to seven other BoopBox players. Each FM-1 or browser emulator mixes everyone’s stock-sound performances, while every player keeps their own patterns, scenes, and chains.</p>
           <div className="rooms-status" role="status" aria-live="polite">
             <span className={`status-dot ${socketState === "connected" ? "is-connected" : ""}`} aria-hidden="true" />
             {status}
@@ -344,23 +428,46 @@ function RoomPage() {
             <div className="room-controls">
               <div className="room-control-card">
                 <h3>Hear the room</h3>
-                <p>Enable audio once to hear the other players’ tracks and sequences locally. Your own FM-1 stays audible directly, without a doubled browser copy.</p>
+              <p>Enable audio once to hear the other players’ tracks and sequences locally. Your own device or emulator stays audible directly, without a doubled browser copy.</p>
                 <button className="button button-primary" type="button" onClick={startAudio}>
                   {audioEnabled ? "Restart room audio" : "Enable room audio"}
                 </button>
               </div>
               <div className="room-control-card">
-                <h3>Play from your FM-1</h3>
-                <p>Connect the USB MIDI cable. Your patterns, scenes, and chains remain your own and are mixed with other players, not copied onto their devices. Only firmware stock sounds are allowed; starts and stops stay individual while room tempo is shared.</p>
+                <h3>{deviceMode === "emulator" ? "Play from the emulator" : "Play from your device"}</h3>
+                <p>Your patterns, scenes, and chains remain your own and are mixed with other players, not copied onto their devices. Only firmware stock sounds are allowed; starts and stops stay individual while room tempo is shared.</p>
                 <div className="control-row">
-                  <button className="button button-primary" type="button" onClick={connectDevice}>
-                    {fm1State === "connected" ? "Reconnect FM-1" : "Connect FM-1"}
-                  </button>
-                  <button className="button button-secondary" type="button" onClick={sharePerformance}
-                    disabled={fm1State !== "connected"}>Sync full performance</button>
+                  {deviceMode === "emulator" ? (
+                    <button className="button button-primary" type="button" onClick={usePhysicalDevice}>Use physical FM-1</button>
+                  ) : (
+                    <>
+                      <button className="button button-primary" type="button" onClick={connectDevice}>
+                        {fm1State === "connected" ? "Reconnect FM-1" : "Connect FM-1"}
+                      </button>
+                      <button className="button button-secondary" type="button" onClick={useEmulator}>Use browser emulator</button>
+                      <button className="button button-secondary" type="button" onClick={sharePerformance}
+                        disabled={fm1State !== "connected"}>Sync full performance</button>
+                    </>
+                  )}
                 </div>
+                {deviceMode === "emulator" && (
+                  <p className="emulator-sync-status" role="status" aria-live="polite">
+                    {emulatorReady ? "Emulator connected; performance syncs automatically." : "Start the emulator below to connect it to this room."}
+                  </p>
+                )}
               </div>
             </div>
+
+            {deviceMode === "emulator" && (
+              <section className="room-emulator" aria-label="Browser FM-1 emulator">
+                <iframe
+                  ref={emulatorFrameRef}
+                  src="../emu/?room=1"
+                  title="BoopBox FM-1 emulator for this jam room"
+                  allow="autoplay"
+                />
+              </section>
+            )}
 
             <div className="player-list" aria-label="Players in this room">
               <h3>Players</h3>

@@ -89,7 +89,7 @@ export function drawScreen(g, img, buf) {
 
 /* power on: the worklet with the firmware fw (FIRMWARE's key) and its flash; on(message) gets its messages.
    -> {node, ctx, flash} */
-export async function powerOn(onMessage, fw = "main") {
+export async function powerOn(onMessage, fw = "main", { roomMode = false } = {}) {
   const ctx = new AudioContext({ sampleRate: FS, latencyHint: "interactive" });
   const [module, flash] = await Promise.all([
     fetch(FIRMWARE[fw].wasm).then((r) => { if (!r.ok) throw new Error(FIRMWARE[fw].wasm + ": " + r.status); return r.arrayBuffer(); })
@@ -98,7 +98,7 @@ export async function powerOn(onMessage, fw = "main") {
     ctx.audioWorklet.addModule("emu-worklet.js"),
   ]);
   const node = new AudioWorkletNode(ctx, "boopbox-emu", { numberOfInputs: 0, outputChannelCount: [2],
-                                                          processorOptions: { module, flash } });
+                                                          processorOptions: { module, flash, roomMode } });
   node.port.onmessage = ({ data }) => onMessage(data);
   node.connect(ctx.destination);
   await ctx.resume();

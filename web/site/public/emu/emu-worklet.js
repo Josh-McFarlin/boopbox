@@ -9,6 +9,7 @@ class BoopBoxEmu extends AudioWorkletProcessor {
   constructor(options) {
     super();
     const { module, flash } = options.processorOptions;
+    this.roomMode = !!options.processorOptions.roomMode;
     this.e = new WebAssembly.Instance(module, {}).exports;
     this.e.emu_init();
     if (flash && flash.byteLength === this.e.emu_flash_size())
@@ -19,15 +20,49 @@ class BoopBoxEmu extends AudioWorkletProcessor {
     this.lastScreen = -1;
     this.lastLeds = "";
     this.sent = 0;
+    this.roomHeld = new Map();
     this.port.onmessage = ({ data }) => this.input(data);
   }
   input(m) {
     const e = this.e;
     switch (m.t) {
-      case "key": e.emu_key(m.k, m.down ? 1 : 0, m.vel || 100); break;
+      case "key":
+        e.emu_key(m.k, m.down ? 1 : 0, m.vel || 100);
+        if (this.roomMode) {
+          const key = m.k;
+          const voice = m.down ? {
+            track: e.emu_room_selected_track(), note: e.emu_room_note(key),
+          } : this.roomHeld.get(key);
+          if (voice && voice.note < 128) {
+            if (m.down) this.roomHeld.set(key, voice);
+            else this.roomHeld.delete(key);
+            this.port.postMessage({
+              t: "room-note", track: voice.track, note: voice.note, down: !!m.down, velocity: m.vel || 100,
+            });
+          }
+        }
+        break;
       case "button": e.emu_button(m.b, m.down ? 1 : 0); break;
       case "knob": e.emu_knob(m.e, m.s | 0); break;
       case "master": e.emu_master(m.v | 0); break;
+      case "room-snapshot": {
+        const size = e.emu_room_capture();
+        if (!size) {
+          this.port.postMessage({ t: "room-snapshot-error", error: "The emulator performance could not be read." });
+          break;
+        }
+        const project = new Uint8Array(e.memory.buffer, e.emu_room_project_ptr(), size).slice();
+        const tracks = Array.from({ length: 8 }, (_, track) => ({
+          engine: e.emu_room_engine(track),
+          preset: e.emu_room_preset(track),
+          p: Array.from({ length: 71 }, (_, param) => e.emu_room_param(track, param)),
+        }));
+        this.port.postMessage({
+          t: "room-snapshot", project: project.buffer, tracks, tempo: e.emu_room_tempo(),
+          playing: !!e.emu_room_playing(),
+        }, [project.buffer]);
+        break;
+      }
       case "flash": {                             // the page asks for the flash (a download of it)
         const f = new Uint8Array(e.memory.buffer, e.emu_flash(), e.emu_flash_size()).slice();
         this.port.postMessage({ t: "flash", flash: f.buffer, ask: true }, [f.buffer]);

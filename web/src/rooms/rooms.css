@@ -305,6 +305,27 @@
   line-height: 1.5;
 }
 
+.emulator-sync-status {
+  margin-bottom: 0;
+}
+
+.room-emulator {
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid #493766;
+  border-radius: 14px;
+  background: #100a1f;
+}
+
+.room-emulator iframe {
+  display: block;
+  width: 100%;
+  height: min(88vh, 1120px);
+  min-height: 720px;
+  border: 0;
+  background: #100a1f;
+}
+
 .control-row {
   display: flex;
   flex-wrap: wrap;
@@ -373,6 +394,11 @@
   .room-active-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .room-emulator iframe {
+    height: 760px;
+    min-height: 0;
   }
 
   .room-list-item {

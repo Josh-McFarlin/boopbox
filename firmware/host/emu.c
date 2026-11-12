@@ -208,6 +208,7 @@ static void fl_plain_window_init(void) {}
 static int32_t emu_block[CTL * 2];
 static float emu_out[CTL * 2];
 static uint32_t emu_blocks;             /* audio blocks since the last pass */
+static project_t emu_room_project;
 
 void emu_master(uint32_t v);
 
@@ -277,6 +278,27 @@ uint8_t *emu_flash(void) { return emu_fl; }
 uint32_t emu_flash_size(void) { return EMU_FLASH; }
 /* 1 once after the firmware wrote the flash (the page saves it then) */
 uint32_t emu_flash_dirty(void) { uint32_t d = emu_fl_dirty; emu_fl_dirty = 0; return d; }
+/* The room bridge exports only the firmware's bounded stock-sound project and live keyboard notes. */
+uint32_t emu_room_capture(void)
+{
+    return proj_capture(&emu_room_project) ? emu_room_project.size : 0u;
+}
+uint32_t emu_room_project_ptr(void) { return (uint32_t)(uintptr_t)&emu_room_project; }
+uint32_t emu_room_engine(uint32_t track) { return track < NTRK ? trk[track].eng_req : 0xFFFFFFFFu; }
+uint32_t emu_room_preset(uint32_t track) { return track < NTRK ? trk[track].preset : 0xFFFFFFFFu; }
+int32_t emu_room_param(uint32_t track, uint32_t param)
+{
+    return track < NTRK && param < P_COUNT ? trk[track].p[param] : 0;
+}
+uint32_t emu_room_tempo(void) { return (uint32_t)clamp(song.g[G_BPM], 40, 240); }
+uint32_t emu_room_playing(void) { return song.playing ? 1u : 0u; }
+uint32_t emu_room_selected_track(void) { return song.sel < NTRK ? song.sel : 0u; }
+uint32_t emu_room_note(uint32_t key)
+{
+    if (key >= 27u)
+        return 0xFFFFFFFFu;
+    return kb_map(&trk[emu_room_selected_track()], key);
+}
 /* note key k (0 F3 .. 26 G5) down / up, at velocity vel (1..127): played as MENU > KEYS > VELOCITY says (OFF: 100) */
 void emu_key(uint32_t k, uint32_t down, uint32_t vel)
 {
