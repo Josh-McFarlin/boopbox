@@ -13,6 +13,15 @@ repository. It preserves the existing React/Vite source layout and includes
 the firmware packages and WebAssembly files without requiring a firmware compiler.
 No secrets, database, or external services are needed to view it.
 
+## Publishing on a Reserved VM
+
+The production run command is `node server.js`. It serves the prebuilt site
+from `docs/` on the port supplied by Replit (`5000` by default), bound on
+`0.0.0.0`. In Publishing settings, select **Reserved VM** and map external
+port 80 to local port 5000 before publishing. Replit requires the deployment
+type to be selected in the Publishing tool; it cannot be switched by changing
+the project file alone.
+
 Pages:
 
 - `/` — home
@@ -57,5 +66,5 @@ npm audit
 ```
 
 `npm run build` writes ignored output into `build/webapp-vite/`, not `docs/`.
-The Python HTTP server is for development preview; it is not a production
-hosting configuration.
+The Python HTTP server is for development preview; `server.js` is the
+production server for publishing the existing prebuilt site.
