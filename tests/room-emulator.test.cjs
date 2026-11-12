@@ -261,6 +261,40 @@ test("browser emulator notes and sequenced performance reach room players and la
     assert.equal(restoredListener.performance.playing, false);
     assert.equal(restoredListener.performance.tempo, 140);
     assert.equal(restoredListener.performance.tracks[0].patterns[0].steps[0][1][0], 67);
+
+    // An unclean owner disconnect must release its sustained notes to every
+    // listener, and a later room join must not replay those live notes.
+    const heldNote = 72;
+    emulatorPlayer.send({ type: "note_on", track: 0, note: heldNote, velocity: 96 });
+    const notePredicate = (message) => message.playerId === ownerId && message.track === 0
+      && message.note === heldNote;
+    await Promise.all([
+      listener.next("note_on", notePredicate),
+      lateJoiner.next("note_on", notePredicate),
+    ]);
+    const socketClosed = once(emulatorPlayer.ws, "close");
+    emulatorPlayer.ws.terminate();
+    await socketClosed;
+    const [listenerRelease, lateJoinerRelease] = await Promise.all([
+      listener.next("note_off", notePredicate),
+      lateJoiner.next("note_off", notePredicate),
+    ]);
+    assert.equal(listenerRelease.slot, roomState.players[0].slot);
+    assert.equal(lateJoinerRelease.note, heldNote);
+
+    const rejoiner = createClient(app.url);
+    clients.push(rejoiner);
+    await rejoiner.ready;
+    rejoiner.send({ type: "join", roomId: roomState.room.id });
+    const rejoinState = await rejoiner.next("room_state");
+    assert.ok(rejoinState.players.every((player) => player.id !== ownerId));
+    for (const type of ["note_on", "note_off"]) {
+      await assert.rejects(
+        rejoiner.next(type, notePredicate, 120),
+        /Timed out waiting/,
+        `a later joiner should not receive stale ${type} events`,
+      );
+    }
   } finally {
     await roomAudio?.close();
     if (originalDocument === undefined) delete global.document;

@@ -248,6 +248,7 @@ function RoomPage() {
         if (stopped) return;
         setSocketState("connecting");
         selfPlayerIdRef.current = null;
+        heldRef.current.clear();
         setStatus("Room server disconnected. Reconnecting…");
         setRoom(null);
         setPlayers([]);
