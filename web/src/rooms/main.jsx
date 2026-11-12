@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
+import { getRoomBrowserIdentity } from "./browser-identity.js";
 import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
 import { createSoundEditSharingController } from "./edit-sharing.js";
 import RoomChat from "./chat-ui/RoomChat.jsx";
@@ -13,6 +14,9 @@ import "./rooms.css";
 const GENRES = config.genres;
 const ERROR_TEXT = {
   already_in_room: "Leave your current room before joining another.",
+  browser_already_in_room: "This browser already has a room open in another tab. Leave it there before joining or creating another.",
+  browser_identity_required: "Room access could not be verified. Refresh this page and try again.",
+  invalid_browser_identity: "This browser could not be verified. Refresh the page to try again.",
   not_in_room: "Join a room first.",
   room_full: "This room already has eight players.",
   room_not_found: "That room has closed. Refresh the browser to see active rooms.",
@@ -154,20 +158,40 @@ function RoomPage() {
     let stopped = false;
     let retryTimer;
     let socket;
-    const connect = () => {
+    let browserIdentity = null;
+    const connect = async () => {
+      if (stopped) return;
+      if (!browserIdentity) {
+        try {
+          browserIdentity = await getRoomBrowserIdentity();
+        } catch (identityError) {
+          if (!stopped) {
+            setSocketState("identity_error");
+            setStatus("Room access is unavailable in this browser.");
+            setError(identityError.message);
+          }
+          return;
+        }
+      }
       if (stopped) return;
       socket = new WebSocket(socketUrl());
       socketRef.current = socket;
       socket.onopen = () => {
-        setSocketState("connected");
-        setStatus("Connected. Choose a genre and create a room, or join one below.");
-        setError("");
+        setStatus("Checking this browser’s room access…");
+        if (!send({ type: "identify", browserId: browserIdentity })) {
+          setError("Could not verify this browser with the room server. Refresh the page to try again.");
+          socket.close();
+        }
       };
       socket.onmessage = ({ data }) => {
         let message;
         try { message = JSON.parse(data); } catch { return; }
         if (message.type === "connected") {
           selfPlayerIdRef.current = message.playerId;
+        } else if (message.type === "identified") {
+          setSocketState("connected");
+          setStatus("Connected. Choose a genre and create a room, or join one below.");
+          setError("");
         } else if (message.type === "rooms") {
           setRooms(Array.isArray(message.rooms) ? message.rooms.slice(0, config.maxRooms) : []);
         } else if (message.type === "room_state") {
@@ -263,11 +287,11 @@ function RoomPage() {
         performanceStateRef.current.clear();
         audioRef.current?.panic();
         for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
-        retryTimer = window.setTimeout(connect, 1800);
+        retryTimer = window.setTimeout(() => { void connect(); }, 1800);
       };
       socket.onerror = () => socket.close();
     };
-    connect();
+    void connect();
     return () => {
       stopped = true;
       window.clearTimeout(retryTimer);

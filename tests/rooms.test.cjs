@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { randomUUID } = require("node:crypto");
 const { createServer } = require("node:http");
 const { once } = require("node:events");
 const test = require("node:test");
@@ -8,12 +9,16 @@ const { WebSocket } = require("ws");
 const { createRoomService, normalizeVoice, normalizeRoomPerformance } = require("../server/rooms.cjs");
 const config = require("../shared/room-config.json");
 
-function createClient(url) {
+function createClient(url, browserId = randomUUID(), autoIdentify = true) {
   const ws = new WebSocket(url, { headers: { Origin: url.replace(/^ws:/, "http:").replace(/\/api\/rooms$/, "") } });
   const inbox = [];
   const waiters = [];
+  let resolveIdentified;
+  const identified = new Promise((resolve) => { resolveIdentified = resolve; });
+  const opened = once(ws, "open");
   ws.on("message", (data) => {
     const message = JSON.parse(data.toString());
+    if (message.type === "identified") resolveIdentified(message);
     const index = waiters.findIndex((waiter) => waiter.match(message));
     if (index >= 0) {
       const [waiter] = waiters.splice(index, 1);
@@ -21,9 +26,14 @@ function createClient(url) {
       waiter.resolve(message);
     } else inbox.push(message);
   });
+  if (autoIdentify) {
+    ws.on("open", () => {
+      ws.send(JSON.stringify({ v: config.protocolVersion, type: "identify", browserId }));
+    });
+  }
   return {
     ws,
-    ready: once(ws, "open"),
+    ready: autoIdentify ? opened.then(() => identified) : opened,
     send(message) {
       ws.send(JSON.stringify({ v: config.protocolVersion, ...message }));
     },
@@ -54,6 +64,13 @@ function createClient(url) {
         else ws.close();
       });
     },
+    terminate() {
+      if (ws.readyState === WebSocket.CLOSED) return Promise.resolve();
+      return new Promise((resolve) => {
+        ws.once("close", resolve);
+        ws.terminate();
+      });
+    },
   };
 }
 
@@ -79,6 +96,65 @@ async function createRoom(client, genre = "house") {
   client.send({ type: "create", genre });
   return client.next("room_state");
 }
+
+test("room access requires a valid browser identity handshake", async () => {
+  const app = await startRoomServer();
+  const client = createClient(app.url, null, false);
+  try {
+    await client.ready;
+    client.send({ type: "create", genre: "house" });
+    assert.equal((await client.next("error")).code, "browser_identity_required");
+
+    client.send({ type: "identify", browserId: "not-a-uuid" });
+    assert.equal((await client.next("error")).code, "invalid_browser_identity");
+    assert.equal(app.service.stats().rooms, 0);
+  } finally {
+    await app.close([client]);
+  }
+});
+
+test("one browser identity can occupy only one room across tabs", async () => {
+  const app = await startRoomServer();
+  const browserId = randomUUID();
+  const firstTab = createClient(app.url, browserId);
+  const secondTab = createClient(app.url, browserId);
+  const otherBrowser = createClient(app.url);
+  const clients = [firstTab, secondTab, otherBrowser];
+  try {
+    await Promise.all(clients.map((client) => client.ready));
+    const firstRoom = await createRoom(firstTab, "house");
+
+    secondTab.send({ type: "create", genre: "techno" });
+    assert.equal((await secondTab.next("error")).code, "browser_already_in_room");
+    assert.equal(app.service.stats().rooms, 1, "a rejected create should not leave an empty room");
+
+    const otherRoom = await createRoom(otherBrowser, "ambient");
+    secondTab.send({ type: "join", roomId: otherRoom.room.id });
+    assert.equal((await secondTab.next("error")).code, "browser_already_in_room");
+
+    firstTab.send({ type: "leave" });
+    await firstTab.next("rooms", (message) => message.rooms.length === 2);
+    secondTab.send({ type: "join", roomId: otherRoom.room.id });
+    assert.equal((await secondTab.next("room_state")).room.id, otherRoom.room.id);
+
+    firstTab.send({ type: "join", roomId: firstRoom.room.id });
+    assert.equal((await firstTab.next("error")).code, "browser_already_in_room");
+
+    secondTab.send({ type: "leave" });
+    await secondTab.next("rooms", (message) => message.rooms.length === 2);
+    firstTab.send({ type: "join", roomId: firstRoom.room.id });
+    assert.equal((await firstTab.next("room_state")).room.id, firstRoom.room.id);
+
+    await firstTab.terminate();
+    const replacementTab = createClient(app.url, browserId);
+    clients.push(replacementTab);
+    await replacementTab.ready;
+    replacementTab.send({ type: "join", roomId: otherRoom.room.id });
+    assert.equal((await replacementTab.next("room_state")).room.id, otherRoom.room.id);
+  } finally {
+    await app.close(clients);
+  }
+});
 
 function roomPattern(id) {
   return { id, length: 16, steps: [], micro: [], fill: [], locks: [], components: [], dir: 0, seed: 0 };

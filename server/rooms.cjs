@@ -15,6 +15,8 @@ const MAX_CHAT_MESSAGE_LENGTH = 500;
 const MAX_CHAT_MESSAGES_PER_WINDOW = 8;
 const CHAT_RATE_WINDOW_MS = 10_000;
 const MAX_NAME_CHANGES_PER_MINUTE = 5;
+const ROOM_BROWSER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const BROWSER_IDENTITY_TIMEOUT_MS = 10_000;
 
 function isIntegerInRange(value, min, max) {
   return Number.isSafeInteger(value) && value >= min && value <= max;
@@ -217,6 +219,7 @@ function createRoomService(server, options = {}) {
   const maxMessagesPerSecond = options.maxMessagesPerSecond ?? config.maxMessagesPerSecond;
   const noteTimeoutMs = options.noteTimeoutMs ?? config.noteTimeoutMs;
   const rooms = new Map();
+  const activeBrowserRooms = new Map();
   const wsServer = new WebSocketServer({
     noServer: true,
     maxPayload: config.maxMessageBytes,
@@ -330,6 +333,9 @@ function createRoomService(server, options = {}) {
     if (!room) return;
     releaseNotes(player);
     room.players.delete(player.id);
+    if (player.browserIdentity && activeBrowserRooms.get(player.browserIdentity) === player) {
+      activeBrowserRooms.delete(player.browserIdentity);
+    }
     player.room = null;
     player.voice = null;
     player.performance = null;
@@ -381,10 +387,25 @@ function createRoomService(server, options = {}) {
     return `Player-${randomUUID().slice(0, 8)}`;
   }
 
+  function browserAlreadyInRoom(player) {
+    if (!player.browserIdentity) {
+      sendError(player, "browser_identity_required");
+      return true;
+    }
+    const activePlayer = activeBrowserRooms.get(player.browserIdentity);
+    if (activePlayer && activePlayer !== player && activePlayer.room) {
+      sendError(player, "browser_already_in_room");
+      return true;
+    }
+    if (activePlayer && activePlayer !== player) activeBrowserRooms.delete(player.browserIdentity);
+    return false;
+  }
+
   function joinRoom(player, room) {
+    if (browserAlreadyInRoom(player)) return false;
     if (room.players.size >= playerLimit) {
       sendError(player, "room_full");
-      return;
+      return false;
     }
     clearTimeout(room.expiryTimer);
     room.expiryTimer = null;
@@ -398,10 +419,12 @@ function createRoomService(server, options = {}) {
     player.performance = null;
     player.soundEditsPaused = false;
     room.players.set(player.id, player);
+    activeBrowserRooms.set(player.browserIdentity, player);
     safeSend(player.ws, roomState(room));
     sendPerformances(room, player.ws);
     broadcast(room, roomState(room));
     broadcastRoomList();
+    return true;
   }
 
   function exactKeys(message, expected) {
@@ -420,8 +443,28 @@ function createRoomService(server, options = {}) {
       protocolError(player);
       return;
     }
+    if (!player.browserIdentity && message.type !== "identify") {
+      return sendError(player, "browser_identity_required");
+    }
+    if (player.browserIdentity && message.type === "identify") {
+      return protocolError(player, "already_identified");
+    }
 
     switch (message.type) {
+      case "identify": {
+        if (!validEnvelope(message, ["browserId"]) || typeof message.browserId !== "string"
+          || !ROOM_BROWSER_ID.test(message.browserId)) {
+          sendError(player, "invalid_browser_identity");
+          player.ws.close(1008, "Invalid browser identity");
+          return;
+        }
+        player.browserIdentity = message.browserId.toLowerCase();
+        clearTimeout(player.identityTimer);
+        player.identityTimer = null;
+        safeSend(player.ws, { type: "identified" });
+        sendRoomList(player.ws);
+        break;
+      }
       case "list":
         if (!validEnvelope(message, [])) return protocolError(player);
         if (Date.now() - player.lastListAt < 1000) return sendError(player, "rate_limited");
@@ -431,6 +474,7 @@ function createRoomService(server, options = {}) {
       case "create": {
         if (!validEnvelope(message, ["genre"]) || !GENRES.has(message.genre)) return protocolError(player);
         if (player.room) return sendError(player, "already_in_room");
+        if (browserAlreadyInRoom(player)) return;
         const now = Date.now();
         player.createTimes = player.createTimes.filter((time) => now - time < 60_000);
         if (player.createTimes.length >= MAX_ROOM_CREATES_PER_MINUTE) return sendError(player, "rate_limited");
@@ -455,6 +499,7 @@ function createRoomService(server, options = {}) {
           return protocolError(player);
         }
         if (player.room) return sendError(player, "already_in_room");
+        if (browserAlreadyInRoom(player)) return;
         const room = rooms.get(message.roomId);
         if (!room) return sendError(player, "room_not_found");
         joinRoom(player, room);
@@ -730,6 +775,8 @@ function createRoomService(server, options = {}) {
     const player = {
       id: randomUUID(),
       ws,
+      browserIdentity: null,
+      identityTimer: null,
       room: null,
       slot: null,
       name: null,
@@ -749,7 +796,10 @@ function createRoomService(server, options = {}) {
       chatTimes: [],
     };
     safeSend(ws, { type: "connected", playerId: player.id });
-    sendRoomList(ws);
+    player.identityTimer = setTimeout(() => {
+      if (!player.browserIdentity) ws.close(1008, "Room identity required");
+    }, BROWSER_IDENTITY_TIMEOUT_MS);
+    player.identityTimer.unref?.();
 
     ws.on("message", (raw, isBinary) => {
       if (isBinary || raw.length > config.maxMessageBytes) {
@@ -773,8 +823,14 @@ function createRoomService(server, options = {}) {
       applyMessage(player, message);
     });
 
-    ws.on("close", () => leaveRoom(player));
-    ws.on("error", () => leaveRoom(player));
+    ws.on("close", () => {
+      clearTimeout(player.identityTimer);
+      leaveRoom(player);
+    });
+    ws.on("error", () => {
+      clearTimeout(player.identityTimer);
+      leaveRoom(player);
+    });
   }
 
   function onUpgrade(request, socket, head) {
@@ -827,6 +883,7 @@ function createRoomService(server, options = {}) {
       server.off("upgrade", onUpgrade);
       for (const room of rooms.values()) clearTimeout(room.expiryTimer);
       rooms.clear();
+      activeBrowserRooms.clear();
       for (const ws of wsServer.clients) ws.close(1001, "Server restarting");
       wsServer.close();
     },

@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { randomUUID } = require("node:crypto");
 const { readFile } = require("node:fs/promises");
 const { createServer } = require("node:http");
 const { once } = require("node:events");
@@ -35,12 +36,16 @@ function createEmulatorWorklet(messages) {
   return new Processor({ processorOptions: { module, flash: null, roomMode: true } });
 }
 
-function createClient(url) {
+function createClient(url, browserId = randomUUID()) {
   const ws = new WebSocket(url, { headers: { Origin: url.replace(/^ws:/, "http:").replace(/\/api\/rooms$/, "") } });
   const inbox = [];
   const waiters = [];
+  let resolveIdentified;
+  const identified = new Promise((resolve) => { resolveIdentified = resolve; });
+  const opened = once(ws, "open");
   ws.on("message", (data) => {
     const message = JSON.parse(data.toString());
+    if (message.type === "identified") resolveIdentified(message);
     const index = waiters.findIndex((waiter) => waiter.match(message));
     if (index >= 0) {
       const [waiter] = waiters.splice(index, 1);
@@ -48,9 +53,12 @@ function createClient(url) {
       waiter.resolve(message);
     } else inbox.push(message);
   });
+  ws.on("open", () => {
+    ws.send(JSON.stringify({ v: config.protocolVersion, type: "identify", browserId }));
+  });
   return {
     ws,
-    ready: once(ws, "open"),
+    ready: opened.then(() => identified),
     send(message) {
       ws.send(JSON.stringify({ v: config.protocolVersion, ...message }));
     },
