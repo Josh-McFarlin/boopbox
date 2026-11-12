@@ -298,29 +298,40 @@ test("browser emulator notes and sequenced performance reach room players and la
     assert.equal(updatedPerformance.performance.tracks[0].patterns[0].steps[0][1][0], 64);
 
     // Apply the relayed update to the same state-message path used by the listener's audio worklet.
-    const [{ RoomAudio }, { FirmwareAudio }] = await Promise.all([
+    const [{ RoomAudio }, { RoomFirmwareAudio }] = await Promise.all([
       import("../web/src/rooms/audio.js"),
       import("../web/site/public/editor/preview-worklet.js"),
     ]);
     roomAudio = new RoomAudio(() => {});
     const audioMessages = [];
     roomAudio.node = { port: { postMessage: (message) => audioMessages.push(message) }, disconnect() {} };
+    const ownerSlot = roomState.players.find((player) => player.id === ownerId).slot;
     const listenerId = listenerState.players.find((player) => player.id !== ownerId).id;
     const listenerSlot = listenerState.players.find((player) => player.id === listenerId).slot;
-    await roomAudio.setPerformance(listenerSlot, receivedPerformance.performance, receivedPerformance.clock);
+    await roomAudio.setPerformance(ownerSlot, receivedPerformance.performance, receivedPerformance.clock);
     const initialRendererState = audioMessages.filter((message) => message.type === "state"
-      && message.slot === listenerSlot && message.group === 0).at(-1).state;
-    await roomAudio.setPerformance(listenerSlot, updatedPerformance.performance, updatedPerformance.clock);
+      && message.slot === ownerSlot && message.group === 0).at(-1).state;
+    await roomAudio.setPerformance(ownerSlot, updatedPerformance.performance, updatedPerformance.clock);
     const updatedRendererState = audioMessages.filter((message) => message.type === "state"
-      && message.slot === listenerSlot && message.group === 0).at(-1).state;
+      && message.slot === ownerSlot && message.group === 0).at(-1).state;
     assert.equal(updatedRendererState.playing, true);
     assert.notDeepEqual(
       updatedRendererState.tracks[0].roomPatterns[0].bytes,
       initialRendererState.tracks[0].roomPatterns[0].bytes,
     );
     const previewModule = await WebAssembly.compile(await readFile("build/preview/boopbox-preview.wasm"));
-    const renderer = new FirmwareAudio(previewModule);
-    assert.doesNotThrow(() => renderer.sync(updatedRendererState));
+    const renderer = new RoomFirmwareAudio(previewModule);
+    renderer.sync(ownerSlot, 0, updatedRendererState);
+    assert.equal(renderer.active[ownerSlot][0], true, "the playing performance is active in the listener's mixer");
+    let ownerRenderCalls = 0;
+    const ownerDsp = renderer.players[ownerSlot][0];
+    const renderOwner = ownerDsp.render.bind(ownerDsp);
+    ownerDsp.render = (left, right) => {
+      ownerRenderCalls += 1;
+      renderOwner(left, right);
+    };
+    renderer.render(new Float32Array(128), new Float32Array(128));
+    assert.equal(ownerRenderCalls, 1, "the listener renders the departing player's sequenced slot");
 
     // A second player's stopped performance stays independent while tempo is shared.
     const listenerPerformance = structuredClone(performance);
@@ -345,7 +356,10 @@ test("browser emulator notes and sequenced performance reach room players and la
     clients.push(lateJoiner);
     await lateJoiner.ready;
     lateJoiner.send({ type: "join", roomId: roomState.room.id });
-    await lateJoiner.next("room_state");
+    const lateJoinState = await lateJoiner.next("room_state");
+    const lateJoinerId = lateJoinState.players.find((player) => player.id !== ownerId
+      && player.id !== listenerId).id;
+    const lateJoinerSlot = lateJoinState.players.find((player) => player.id === lateJoinerId).slot;
     const restoredOwner = await lateJoiner.next("performance", (message) => message.playerId === ownerId);
     const restoredListener = await lateJoiner.next("performance", (message) => message.playerId === listenerId);
     assert.equal(restoredOwner.performance.playing, true);
@@ -368,12 +382,58 @@ test("browser emulator notes and sequenced performance reach room players and la
     const socketClosed = once(emulatorPlayer.ws, "close");
     emulatorPlayer.ws.terminate();
     await socketClosed;
+    const listenerRoomState = await listener.next("room_state", (message) => (
+      !message.players.some((player) => player.id === ownerId)
+    ));
+    await lateJoiner.next("room_state", (message) => !message.players.some((player) => player.id === ownerId));
+    assert.ok(!listenerRoomState.players.some((player) => player.slot === ownerSlot));
+    await roomAudio.removeVoice(ownerSlot);
+    const dropMessage = audioMessages.findLast((message) => message.type === "drop" && message.slot === ownerSlot);
+    assert.ok(dropMessage, "the listener drops the departed player's audio slot");
+    renderer.drop(dropMessage.slot);
+    assert.deepEqual(renderer.active[ownerSlot], [false, false]);
+    const renderCallsBeforeNextBlock = ownerRenderCalls;
+    renderer.render(new Float32Array(128), new Float32Array(128));
+    assert.equal(ownerRenderCalls, renderCallsBeforeNextBlock, "the departed player's slot is no longer rendered");
+
     const [listenerRelease, lateJoinerRelease] = await Promise.all([
       listener.next("note_off", notePredicate),
       lateJoiner.next("note_off", notePredicate),
     ]);
     assert.equal(listenerRelease.slot, roomState.players[0].slot);
     assert.equal(lateJoinerRelease.note, heldNote);
+
+    // A normal Leave action also removes that player's sequenced slot for listeners.
+    const leavingPerformance = structuredClone(listenerPerformance);
+    leavingPerformance.playing = true;
+    lateJoiner.send({ type: "performance", performance: leavingPerformance });
+    const leavingUpdate = await listener.next("performance", (message) => message.playerId === lateJoinerId);
+    await roomAudio.setPerformance(lateJoinerSlot, leavingUpdate.performance, leavingUpdate.clock);
+    const leavingState = audioMessages.filter((message) => message.type === "state"
+      && message.slot === lateJoinerSlot && message.group === 0).at(-1).state;
+    renderer.sync(lateJoinerSlot, 0, leavingState);
+    assert.equal(renderer.active[lateJoinerSlot][0], true);
+    let leavingRenderCalls = 0;
+    const leavingDsp = renderer.players[lateJoinerSlot][0];
+    const renderLeaving = leavingDsp.render.bind(leavingDsp);
+    leavingDsp.render = (left, right) => {
+      leavingRenderCalls += 1;
+      renderLeaving(left, right);
+    };
+    renderer.render(new Float32Array(128), new Float32Array(128));
+    assert.equal(leavingRenderCalls, 1, "the listener renders the player who will leave normally");
+    lateJoiner.send({ type: "leave" });
+    const afterLeave = await listener.next("room_state", (message) => (
+      !message.players.some((player) => player.id === lateJoinerId)
+    ));
+    assert.ok(!afterLeave.players.some((player) => player.slot === lateJoinerSlot));
+    await roomAudio.removeVoice(lateJoinerSlot);
+    renderer.drop(lateJoinerSlot);
+    assert.deepEqual(renderer.active[lateJoinerSlot], [false, false]);
+    const leavingRenderCallsBeforeNextBlock = leavingRenderCalls;
+    renderer.render(new Float32Array(128), new Float32Array(128));
+    assert.equal(leavingRenderCalls, leavingRenderCallsBeforeNextBlock,
+      "the normally departing player's slot is no longer rendered");
 
     const rejoiner = createClient(app.url);
     clients.push(rejoiner);
