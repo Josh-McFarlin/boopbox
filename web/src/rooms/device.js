@@ -123,6 +123,24 @@ export function buildEmulatorPerformance(projectBytes, tracks, live) {
   return buildRoomPerformance(project, dumps, live, { pe0: 63 });
 }
 
+export function syncEmulatorSnapshot(message, state, send) {
+  const performance = buildEmulatorPerformance(message.project, message.tracks, {
+    tempo: message.tempo,
+    playing: message.playing,
+  });
+  const performanceKey = JSON.stringify(performance);
+  let hasPerformance = state.hasPerformance;
+  if (performanceKey !== state.performanceKey) {
+    if (!send({ type: "performance", performance })) return null;
+    hasPerformance = true;
+  }
+  const transportKey = `${performance.tempo}:${performance.playing}`;
+  if (transportKey !== state.transportKey) {
+    send({ type: "transport", playing: performance.playing, tempo: performance.tempo });
+  }
+  return { performanceKey, transportKey, hasPerformance };
+}
+
 export async function connectFm1(
   onNote, onState, onParameter = () => {}, onPerformance = () => {}, onTransport = () => {}, onPerformanceError = () => {},
 ) {

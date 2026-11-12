@@ -212,7 +212,7 @@ export default function Emulator() {
 
   useEffect(() => {
     if (!on || !roomMode || !node.current) return undefined;
-    const timer = window.setInterval(() => node.current?.port.postMessage({ t: "room-snapshot" }), 900);
+    const timer = window.setInterval(() => node.current?.port.postMessage({ t: "room-snapshot" }), 1200);
     return () => window.clearInterval(timer);
   }, [on, roomMode]);
 

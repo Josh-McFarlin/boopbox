@@ -103,7 +103,7 @@ function wait(ms) {
 }
 
 test("browser emulator notes and sequenced performance reach room players and late joiners", async () => {
-  const { buildEmulatorPerformance } = await import("../web/src/rooms/device.js");
+  const { buildEmulatorPerformance, syncEmulatorSnapshot } = await import("../web/src/rooms/device.js");
   const { PROJ7 } = await import("../web/src/editor/lib/proto.js");
   const workletMessages = [];
   const emulator = createEmulatorWorklet(workletMessages);
@@ -129,7 +129,10 @@ test("browser emulator notes and sequenced performance reach room players and la
 
   const app = await startRoomServer();
   const clients = [];
+  const originalDocument = global.document;
+  let roomAudio;
   try {
+    global.document = { baseURI: "http://localhost/webapp/rooms/" };
     const emulatorPlayer = createClient(app.url);
     const listener = createClient(app.url);
     clients.push(emulatorPlayer, listener);
@@ -141,7 +144,15 @@ test("browser emulator notes and sequenced performance reach room players and la
     listener.send({ type: "join", roomId: roomState.room.id });
     const listenerState = await listener.next("room_state");
 
-    emulatorPlayer.send({ type: "performance", performance });
+    const snapshotState = { performanceKey: "", transportKey: null, hasPerformance: false };
+    const initialSync = syncEmulatorSnapshot({
+      project: projectBytes, tracks: snapshot.tracks, tempo: snapshot.tempo, playing: snapshot.playing,
+    }, snapshotState, (message) => {
+      emulatorPlayer.send(message);
+      return true;
+    });
+    assert.equal(initialSync.hasPerformance, true);
+    Object.assign(snapshotState, initialSync);
     const receivedPerformance = await listener.next("performance", (message) => message.playerId === ownerId);
     assert.equal(receivedPerformance.performance.tracks[0].patterns[0].steps[0][1][0], 60);
     assert.equal(receivedPerformance.performance.tracks[0].voice.preset, snapshot.tracks[0].preset);
@@ -171,13 +182,54 @@ test("browser emulator notes and sequenced performance reach room players and la
     assert.equal(relayedNoteOff.playerId, ownerId);
     assert.equal(relayedNoteOff.note, noteOff.note);
 
+    await wait(100);
     emulatorPlayer.send({ type: "transport", playing: true, tempo: 128 });
-    const started = await listener.next("transport", (message) => message.playerId === ownerId);
+    const started = await listener.next("transport", (message) => message.playerId === ownerId && message.playing);
     assert.equal(started.playing, true);
     assert.equal(started.clock.tempo, 128);
 
-    // A second player's stopped performance stays independent while tempo is shared.
+    // A later emulator snapshot changes while the owner is already playing.
+    await wait(1000);
+    project.tracks[0].pat.steps[0].notes[0] = 64;
+    const updatedProjectBytes = PROJ7.encode(project);
+    const updatedSync = syncEmulatorSnapshot({
+      project: updatedProjectBytes, tracks: snapshot.tracks, tempo: 128, playing: true,
+    }, snapshotState, (message) => {
+      emulatorPlayer.send(message);
+      return true;
+    });
+    assert.notEqual(updatedSync.performanceKey, snapshotState.performanceKey);
+    Object.assign(snapshotState, updatedSync);
+    const updatedPerformance = await listener.next("performance", (message) => message.playerId === ownerId);
+    assert.equal(updatedPerformance.performance.playing, true);
+    assert.equal(updatedPerformance.performance.tracks[0].patterns[0].steps[0][1][0], 64);
+
+    // Apply the relayed update to the same state-message path used by the listener's audio worklet.
+    const [{ RoomAudio }, { FirmwareAudio }] = await Promise.all([
+      import("../web/src/rooms/audio.js"),
+      import("../web/site/public/editor/preview-worklet.js"),
+    ]);
+    roomAudio = new RoomAudio(() => {});
+    const audioMessages = [];
+    roomAudio.node = { port: { postMessage: (message) => audioMessages.push(message) }, disconnect() {} };
     const listenerId = listenerState.players.find((player) => player.id !== ownerId).id;
+    const listenerSlot = listenerState.players.find((player) => player.id === listenerId).slot;
+    await roomAudio.setPerformance(listenerSlot, receivedPerformance.performance, receivedPerformance.clock);
+    const initialRendererState = audioMessages.filter((message) => message.type === "state"
+      && message.slot === listenerSlot && message.group === 0).at(-1).state;
+    await roomAudio.setPerformance(listenerSlot, updatedPerformance.performance, updatedPerformance.clock);
+    const updatedRendererState = audioMessages.filter((message) => message.type === "state"
+      && message.slot === listenerSlot && message.group === 0).at(-1).state;
+    assert.equal(updatedRendererState.playing, true);
+    assert.notDeepEqual(
+      updatedRendererState.tracks[0].roomPatterns[0].bytes,
+      initialRendererState.tracks[0].roomPatterns[0].bytes,
+    );
+    const previewModule = await WebAssembly.compile(await readFile("docs/webapp/editor/boopbox-preview.wasm"));
+    const renderer = new FirmwareAudio(previewModule);
+    assert.doesNotThrow(() => renderer.sync(updatedRendererState));
+
+    // A second player's stopped performance stays independent while tempo is shared.
     const listenerPerformance = structuredClone(performance);
     listenerPerformance.playing = false;
     listenerPerformance.tempo = 128;
@@ -205,11 +257,14 @@ test("browser emulator notes and sequenced performance reach room players and la
     const restoredListener = await lateJoiner.next("performance", (message) => message.playerId === listenerId);
     assert.equal(restoredOwner.performance.playing, true);
     assert.equal(restoredOwner.performance.tempo, 140);
-    assert.equal(restoredOwner.performance.tracks[0].patterns[0].steps[0][1][0], 60);
+    assert.equal(restoredOwner.performance.tracks[0].patterns[0].steps[0][1][0], 64);
     assert.equal(restoredListener.performance.playing, false);
     assert.equal(restoredListener.performance.tempo, 140);
     assert.equal(restoredListener.performance.tracks[0].patterns[0].steps[0][1][0], 67);
   } finally {
+    await roomAudio?.close();
+    if (originalDocument === undefined) delete global.document;
+    else global.document = originalDocument;
     await app.close(clients);
   }
 });

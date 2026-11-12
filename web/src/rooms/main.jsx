@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
-import { buildEmulatorPerformance, connectFm1 } from "./device.js";
+import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
 import RoomChat from "./chat-ui/RoomChat.jsx";
 import config from "../../../shared/room-config.json";
 import "../styles/site.css";
@@ -371,23 +371,18 @@ function RoomPage() {
       } else if (message.type === "boopbox-room-snapshot") {
         if (!roomRef.current || !Array.isArray(message.tracks)) return;
         try {
-          const performance = buildEmulatorPerformance(message.project, message.tracks, {
-            tempo: message.tempo, playing: message.playing,
-          });
-          const performanceKey = JSON.stringify(performance);
-          if (performanceKey !== emulatorSnapshotRef.current) {
-            if (!send({ type: "performance", performance })) {
-              setError("Wait for the room server to reconnect.");
-              return;
-            }
-            emulatorSnapshotRef.current = performanceKey;
-            emulatorHasPerformanceRef.current = true;
+          const synced = syncEmulatorSnapshot(message, {
+            performanceKey: emulatorSnapshotRef.current,
+            transportKey: emulatorTransportRef.current,
+            hasPerformance: emulatorHasPerformanceRef.current,
+          }, send);
+          if (!synced) {
+            setError("Wait for the room server to reconnect.");
+            return;
           }
-          const transportKey = `${performance.tempo}:${performance.playing}`;
-          if (transportKey !== emulatorTransportRef.current) {
-            send({ type: "transport", playing: performance.playing, tempo: performance.tempo });
-            emulatorTransportRef.current = transportKey;
-          }
+          emulatorSnapshotRef.current = synced.performanceKey;
+          emulatorTransportRef.current = synced.transportKey;
+          emulatorHasPerformanceRef.current = synced.hasPerformance;
         } catch (err) {
           setError(err.message || "The emulator performance could not be synced.");
         }
