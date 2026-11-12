@@ -289,6 +289,125 @@ test("rooms relay bounded performances, sync tempo, and restore state for late j
   }
 });
 
+test("physical FM-1 sequence edits update active listeners without sharing playback controls", async () => {
+  const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
+  const { connectFm1 } = await import("../web/src/rooms/device.js");
+  const app = await startRoomServer();
+  const clients = [];
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const previousDocument = globalThis.document;
+  const mock = makeMockDevice({ auto: false });
+  const deviceErrors = [];
+  let device;
+  let roomAudio;
+
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { requestMIDIAccess: async () => mock.access },
+  });
+  globalThis.document = { baseURI: "http://localhost/webapp/rooms/" };
+
+  try {
+    const { RoomAudio } = await import("../web/src/rooms/audio.js");
+    const owner = createClient(app.url);
+    const listener = createClient(app.url);
+    clients.push(owner, listener);
+    await Promise.all([owner.ready, listener.ready]);
+    const created = await createRoom(owner);
+    const ownerId = created.players[0].id;
+    listener.send({ type: "join", roomId: created.room.id });
+    const listenerState = await listener.next("room_state");
+    const listenerPlayer = listenerState.players.find((player) => player.id !== ownerId);
+
+    device = await connectFm1(
+      () => {},
+      () => {},
+      () => {},
+      (performance) => {
+        owner.send({ type: "performance", performance });
+      },
+      (transport) => {
+        owner.send({ type: "transport", ...transport });
+      },
+      (error) => { deviceErrors.push(error); },
+    );
+    const initial = await listener.next("performance", (message) => message.playerId === ownerId);
+    assert.equal(initial.performance.playing, false);
+
+    const ownPerformance = roomPerformance();
+    ownPerformance.tracks[0].patterns[0].steps[0][1][0] = 67;
+    listener.send({ type: "performance", performance: ownPerformance });
+    const ownerSawListener = await owner.next("performance", (message) => message.playerId === listenerPlayer.id);
+    assert.equal(ownerSawListener.performance.playing, false);
+
+    roomAudio = new RoomAudio(() => {});
+    const rendererMessages = [];
+    roomAudio.node = { port: { postMessage: (message) => rendererMessages.push(message) }, disconnect() {} };
+    await roomAudio.setPerformance(listenerPlayer.slot, initial.performance, initial.clock);
+    const initialRendererState = rendererMessages.filter((message) => message.type === "state"
+      && message.slot === listenerPlayer.slot && message.group === 0).at(-1).state;
+
+    mock.sim.play(true);
+    const ownerStarted = await listener.next("transport", (message) => message.playerId === ownerId && message.playing);
+    assert.equal(ownerStarted.playing, true);
+    assert.equal(ownerSawListener.performance.playing, false);
+
+    await new Promise((resolve) => setTimeout(resolve, 1050));
+    const nextPerformance = listener.next("performance", (message) => message.playerId === ownerId);
+    mock.sim.step(0);
+    const relayedUpdate = await nextPerformance;
+    assert.notDeepEqual(
+      relayedUpdate.performance.tracks[0].patterns[0].steps,
+      initial.performance.tracks[0].patterns[0].steps,
+    );
+    assert.equal(relayedUpdate.performance.playing, true);
+    await roomAudio.setPerformance(listenerPlayer.slot, relayedUpdate.performance, relayedUpdate.clock);
+    const updatedRendererState = rendererMessages.filter((message) => message.type === "state"
+      && message.slot === listenerPlayer.slot && message.group === 0).at(-1).state;
+    assert.equal(updatedRendererState.playing, true);
+    assert.notDeepEqual(
+      updatedRendererState.tracks[0].roomPatterns[0].bytes,
+      initialRendererState.tracks[0].roomPatterns[0].bytes,
+    );
+
+    listener.send({ type: "transport", playing: true, tempo: relayedUpdate.performance.tempo });
+    const listenerStarted = await owner.next("transport",
+      (message) => message.playerId === listenerPlayer.id && message.playing);
+    assert.equal(listenerStarted.playing, true);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    listener.send({ type: "transport", playing: false, tempo: relayedUpdate.performance.tempo });
+    const listenerStopped = await owner.next("transport",
+      (message) => message.playerId === listenerPlayer.id && !message.playing);
+    assert.equal(listenerStopped.playing, false);
+    assert.equal(ownerSawListener.performance.tracks[0].patterns[0].steps[0][1][0], 67);
+
+    const lateJoiner = createClient(app.url);
+    clients.push(lateJoiner);
+    await lateJoiner.ready;
+    lateJoiner.send({ type: "join", roomId: created.room.id });
+    await lateJoiner.next("room_state");
+    const restoredOwner = await lateJoiner.next("performance", (message) => message.playerId === ownerId);
+    const restoredListener = await lateJoiner.next("performance", (message) => message.playerId === listenerPlayer.id);
+    assert.equal(restoredOwner.performance.playing, true);
+    assert.notDeepEqual(
+      restoredOwner.performance.tracks[0].patterns[0].steps,
+      initial.performance.tracks[0].patterns[0].steps,
+    );
+    assert.equal(restoredListener.performance.playing, false);
+    assert.equal(restoredListener.performance.tracks[0].patterns[0].steps[0][1][0], 67);
+    assert.deepEqual(deviceErrors, []);
+  } finally {
+    device?.close();
+    mock.stop();
+    await roomAudio?.close();
+    await app.close(clients);
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
+});
+
 test("rooms share validated sound edits and retain them for later participants", async () => {
   const app = await startRoomServer();
   const clients = [];
