@@ -5,6 +5,11 @@ import { A, notify } from "./app.js";
 export const TABS = ["live", "sound", "sequencer", "patterns", "song", "save", "library", "slots", "settings", "theme"];
 export const TAB_KEY = "felucca-editor-tab";
 export const TRACK_TABS = new Set(["sound", "sequencer"]);
+/* the pages before 1.9.5's: their links still work. The Mixer is part of LIVE; Samples, Drum kit and Drum synth are the
+   three modes of Sample slots (A.slotMode) */
+export const OLD_TABS = { tracks: ["live"], projects: ["save"], samples: ["slots", "samples"], kits: ["slots", "kits"], drumsynth: ["slots", "drumsynth"] };
+export const SLOT_MODES = ["samples", "kits", "drumsynth"];
+const MODE_KEY = "felucca-editor-slots";
 /* the side bar, grouped by what you came to do: [heading key, [tab, its name's key, its icon] ...]; one line per page,
    and the page's name is the same in the side bar, its title and its URL (#save is "Save & load") */
 export const NAV = [
@@ -17,11 +22,6 @@ export const NAV = [
 export const TAB_NAME = Object.fromEntries(NAV.flatMap(([, tabs]) => tabs.map(([tab, name]) => [tab, name])));
 /* the pages that need an FM-1 (the Library and the Theme work without one) */
 export const DEV_TABS = new Set(TABS.filter((x) => x !== "library" && x !== "theme"));
-/* the pages before 1.9.5's: their links still work. The Mixer is part of LIVE; Samples, Drum kit and Drum synth are the
-   three modes of Sample slots (A.slotMode) */
-export const OLD_TABS = { tracks: ["live"], projects: ["save"], samples: ["slots", "samples"], kits: ["slots", "kits"], drumsynth: ["slots", "drumsynth"] };
-export const SLOT_MODES = ["samples", "kits", "drumsynth"];
-const MODE_KEY = "felucca-editor-slots";
 
 /* a hash or a stored name -> [the tab, the Sample slots mode] (or null) */
 function resolve(h) {
