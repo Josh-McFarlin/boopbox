@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The Save & load page's work: the sections A..D (PROJECT), the full backup (v6) and a song as one file (2.7). The Song
-// page loads a song file with songFileLoad too.
+// The Save & load page's work: the sections A..D (PROJECT), the full backup (v6) and a song as one file (2.7).
 import { CMD, backupCapture, backupObjects, backupRestore, parse, req, songObjects } from "../../lib/proto.js";
 import { A, download, notify, op, pickFile, report, rq, sayK, selfLoad, t, today } from "../../core/app.js";
 import { afterSoundChange } from "../../core/device.js";
@@ -10,7 +9,8 @@ import { bkDone, bkProgress, bkReport, smpInfo, songLoadUI } from "../../core/sh
 export async function project(o, slot) {
   const dev = A.dev;
   if (!dev) return;
-  if (!confirm(t(o ? "confirmSave" : "confirmLoad").replaceAll("{n}", "ABCD"[slot]))) return;
+  /* loading replaces the loop: always asked; saving only over a section that is (or may be) used */
+  if ((!o || dev.slotUsed[slot] == null || dev.slotUsed[slot]) && !confirm(t(o ? "confirmSave" : "confirmLoad").replaceAll("{n}", "ABCD"[slot]))) return;
   A.busy++;
   notify();
   try {
