@@ -56,7 +56,7 @@ function SideLinks() {
   const [canInstall, install] = useInstallPrompt();
   return (
     <div className="mt-auto flex flex-col gap-1.5 border-t border-line pt-3 text-dim [&_a]:text-dim [&_a:hover]:text-fg">
-      <a href={__OFFLINE__ ? SITE + "installer/" : "../installer/"} {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
+      <a href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/installer/" : "../installer/"} {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
       {__OFFLINE__ ? null : <a href="boopbox-editor.html" download={OFFLINE_NAME} title={t("offline")}>{t("offlineShort")}</a>}
       {canInstall ? <button id="install" type="button" onClick={install}>{t("install")}</button> : null}
     </div>
@@ -176,7 +176,7 @@ export default function App() {
           <p className="m-0">BoopBox, based on <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">SLOOP</a> and on Felucca by Leo
           Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>. GPL-3.0.
           {" "}{t("foot")} M-VAVE and FM-1 are trademarks of their respective owners.{" "}
-          <a href={__OFFLINE__ ? SITE + "editor/FUKIAI-LICENSE.txt" : "FUKIAI-LICENSE.txt"}
+          <a href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/editor/FUKIAI-LICENSE.txt" : "FUKIAI-LICENSE.txt"}
             {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("iconsCredit")}</a> · {t("fontCredit")}</p>
         </footer>
       </main>

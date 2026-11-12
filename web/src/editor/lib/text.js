@@ -182,7 +182,6 @@ export const TEXT = {
     offlineShort: "Download for offline use", openLive: "Open LIVE",
     deskTitle: "Use a desktop browser", deskText: "The BoopBox editor needs a desktop browser (Chrome or Edge) at least 1000 px wide, with the FM-1 plugged in with USB.",
     deskGuide: "Read the guide", deskEmu: "Try the emulator",
-    /* @SEQUENCER: this page group's new strings go right below this line */
     sqComps: "Step components",
     sqView: "View", sqViewSteps: "Steps", sqViewRoll: "Piano roll", sqViewList: "List",
     sqViewStepsTip: "The step grid and the selected step's settings", sqViewRollTip: "Notes as bars on a piano roll", sqViewListTip: "Every step as a row you can type in",
@@ -216,10 +215,6 @@ export const TEXT = {
     sqListHint: "Type notes like C4 E4 G4 (up to 4; C4 is middle C), then press Enter.",
     sqListHintDrum: "Type drums by name or number, like KICK SNARE CHH (up to 4), then press Enter.",
     sqPvClick: "Click: change notes", sqPvDouble: "double-click or Delete: rest", sqPvHitDouble: "double-click or Delete: remove",
-    /* ---- */
-    /* ---- */
-    /* ---- */
-    /* @LIVE: this page group's new strings go right below this line */
     lvxSoundLink: "Edit this track's sound →", lvxSoundLinkTip: "Open the Sound page for the track the keys play",
     lvxMore: "more", lvxMoreTip: "Pan, filter, sends (rev, dly, cho) and drive of this track", lvxArmed: "Armed for recording on the FM-1",
     lvxKeysBar: "keys", lvxKeysOpen: "Show the keys and pads", lvxKeysClose: "Hide the keys and pads",
@@ -231,10 +226,6 @@ lvxShortcuts: "keyboard shortcuts", lvxClose: "close",
       ["Z / X", "octave down / up"], ["← / →", "the track the keys play"], ["A W S E D F T G Y H U J K O L P", "play the keys (drums: the 16 pads)"],
       ["Shift + those letters", "punch-in effects"], ["F1 – F8", "recall a scene"], ["Shift + F1 – F8", "store a scene"], ["Esc", "all off"],
       ["?", "this list"]],
-    /* ---- */
-    /* ---- */
-    /* ---- */
-    /* @SOUND-SETTINGS: this page group's new strings go right below this line */
     tipValue: "Drag up or down to change (Shift: finer). Double-click: back to the default.",
     tipSlider: "Drag, or click and use the mouse wheel or arrow keys (Shift: steps of 10). Double-click: back to the default.",
     sndPresetsOf: "Presets", sndAllEngines: "All engines", sndSearch: "Search presets", sndNoMatch: "No preset matches.",
@@ -246,10 +237,6 @@ lvxShortcuts: "keyboard shortcuts", lvxClose: "close",
     midiChannels: "Channels", midiChannelsHint: "The MIDI channel each track listens to (OFF: the track ignores MIDI notes).",
     midiTrackN: "Track {n}", midiDrums: "Drums", midiMore: "Other MIDI settings",
     midiNote: "A change here goes to the FM-1 at once.",
-    /* ---- */
-    /* ---- */
-    /* ---- */
-    /* @PATTERNS-SONG-SAVE: this page group's new strings go right below this line */
     patSubPat: "Patterns & chains", patSubScn: "Scenes", patSubCh: "Chords",
     patHelp1: "A copy of the FM-1's project: change it here, then Send.",
     patNotRead: "Read the FM-1's project first", patMemPat: "patterns", patMemProj: "project",
@@ -306,13 +293,6 @@ lvxShortcuts: "keyboard shortcuts", lvxClose: "close",
     filesTitle: "Files", filesOld: "Files need newer firmware on the FM-1 (SLOOP 2.5 or BoopBox).",
     sfWhat: "this song only: the loop, the sections A–D and their order. Play song files one after the other from the LIVE page's playlist.",
     bkWhat: "everything on the FM-1: sounds, samples, settings, songs. Restoring replaces everything on it.",
-    /* ---- */
-    /* ---- */
-    /* ---- */
-    /* @LIBRARY-SLOTS-THEME: this page group's new strings go right below this line */
-    /* ---- */
-    /* ---- */
-    /* ---- */
     stepList: "Step list (type note names)", stepsOf: "{n} steps", fontCredit: "Font: Terminus (SIL OFL 1.1)",
     ctlDrag: "You can also drag a value up or down.",
     kitTitle: "Drum kit", kitHelp: "Build 16 sounds for the drum track, one per white key. Three steps: put your sounds on the pads, choose where the kit goes, send it to the FM-1.",
@@ -414,7 +394,7 @@ lvxShortcuts: "keyboard shortcuts", lvxClose: "close",
     smpPlaying: "Track",
     smpFull: "A slot takes 16 files at most",
     chopSendBelow: "Sending: step 3 below.",
-    /* @LIBRARY-SLOTS-THEME: the Library, Sample slots (Samples, Drum kit, Drum synth) and Theme pages */
+    /* the Library, Sample slots (Samples, Drum kit, Drum synth) and Theme pages */
     libDnd: "Drag a sound onto a slot to put it on the FM-1, or a slot onto the library to keep a copy. Right-click or ⋯ for more.",
     libActions: "Actions", libActionsOf: "Actions: {name}", libSort: "Sort",
     libRowHint: "{name}: drag it onto a device slot; double-click to hear it",
