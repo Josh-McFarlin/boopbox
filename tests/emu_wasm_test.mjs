@@ -3,6 +3,7 @@
 // runs it: no imports; it powers on and draws; a key sounds; the screen changes with a button; it keeps up (faster
 // than real time here). Run after python3 tools/build_emu.py (and --trainer): node tests/emu_wasm_test.mjs
 import fs from "fs";
+import config from "../shared/room-config.json" with { type: "json" };
 let fails = 0, ran = 0;
 /* the main firmware and BoopBox Trainer's (tools/build_emu.py --trainer), each when built */
 for (const [name, wasm] of [["emu wasm", "build/emu/boopbox-emu.wasm"], ["trainer emu wasm", "build/emu/boopbox-trainer-emu.wasm"]]) {
@@ -42,6 +43,10 @@ for (const [name, wasm] of [["emu wasm", "build/emu/boopbox-emu.wasm"], ["traine
     check(e.emu_room_tempo() >= 40 && e.emu_room_tempo() <= 240
       && e.emu_room_selected_track() < 8 && e.emu_room_note(7) < 128,
     "room snapshot exports tempo, selected track, and mapped keyboard notes");
+    check(e.emu_room_engine(0) < config.engineNames.length
+      && e.emu_room_engine(3) === config.engineNames.length
+      && config.shareableDrumKits.includes(e.emu_room_param(3, 63)),
+    "room snapshot distinguishes synth voices from factory drum kits");
   }
   console.log(`${name}: ${speed.toFixed(1)}x real time`);
   check(speed > 2, "faster than real time");

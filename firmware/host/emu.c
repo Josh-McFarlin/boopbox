@@ -284,7 +284,7 @@ uint32_t emu_room_capture(void)
     return proj_capture(&emu_room_project) ? emu_room_project.size : 0u;
 }
 uint32_t emu_room_project_ptr(void) { return (uint32_t)(uintptr_t)&emu_room_project; }
-uint32_t emu_room_engine(uint32_t track) { return track < NTRK ? trk[track].eng_req : 0xFFFFFFFFu; }
+uint32_t emu_room_engine(uint32_t track) { return track < NTRK ? (is_drum(&trk[track]) ? NENGINES : trk[track].eng_req) : 0xFFFFFFFFu; }
 uint32_t emu_room_preset(uint32_t track) { return track < NTRK ? trk[track].preset : 0xFFFFFFFFu; }
 int32_t emu_room_param(uint32_t track, uint32_t param)
 {
