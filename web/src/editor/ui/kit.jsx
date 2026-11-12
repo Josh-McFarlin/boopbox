@@ -92,9 +92,9 @@ export function GroupPage({ title, ic }) {
 
 /* the cards' and their rows' names in words (the device's page names: ENV DEST, LFO 2, SEL 2 ...) */
 export const GROUP_NAME = { ENV: "Envelope", LFO: "LFO", EDIT: "Engine", VOICE: "Voice", FX: "Effects", SEL: "Key & chords", ARP: "Arpeggiator",
-  "SEQ TIMING": "Timing", GLOBAL: "Tempo & tuning", MASTER: "Master effects", DRUMS: "Drums", MIDI: "MIDI", TEXTURE: "Texture" };
+  "SEQ TIMING": "Timing", GLOBAL: "Tempo & tuning", MASTER: "Master effects", DRUMS: "Drums", MIDI: "MIDI", TEXTURE: "Texture (background bed)" };
 export const PAGE_NAME = { ENV: "Shape", "ENV DEST": "Envelope moves", "ENV SYNC": "Tempo sync", LFO: "Wave", "LFO 2": "Timing", "LFO DEST": "LFO moves",
-  LEVEL: "Level", VOICE: "Voices", "VOICE 2": "Unison & pan", FX: "Sends & distortion", FILTER: "Filter", SLICER: "Slicer", INSERT: "Insert effect",
+  LEVEL: "Level", VOICE: "Voices", "VOICE 2": "Unison, pan & level", FX: "Distortion, sends & filter", FILTER: "Filter", SLICER: "Slicer", INSERT: "Insert effect",
   "INSERT 2": "Insert mix", DLY: "Delay (all tracks)", "REV/CHO": "Reverb & chorus (all tracks)", SEL: "Key & scale", "SEL 2": "Chords", ARP: "Pattern",
   "ARP 2": "Feel", MIDI: "Channels", "MIDI 2": "Input", "MIDI 3": "Sync & remote", TEXTURE: "Bed", "TEXTURE 2": "Timing",
   /* the engines' own page titles (DESC titles) */
@@ -104,8 +104,9 @@ export const PAGE_NAME = { ENV: "Shape", "ENV DEST": "Envelope moves", "ENV SYNC
 /* a context for labelOf(): the row's device page name, or the card's */
 const ctxOf = (group, page) => ({ "ENV DEST": "ENV DEST", "LFO DEST": "LFO DEST", LFO: "LFO", "LFO 2": "LFO", SLICER: "SLICER", INSERT: "INSERT",
   "INSERT 2": "INSERT", DLY: "DLY", FX: "FX", FILTER: "FX" })[page] || group;
+/* a row of knobs: four a line, as the device's four knobs (a knob merged in from a one-knob page starts a new line) */
 export const Knobs = ({ children }) => (
-  <div className="grid grid-cols-2 border-t border-line wide:grid-cols-4">{children}</div>
+  <div className="grid grid-cols-4 border-t border-line">{children}</div>
 );
 
 /* ------------------------------------------------------- a device parameter --- */
@@ -122,8 +123,8 @@ export function barVars(d, v) {
 export function KnobBox({ index = 0, color, enumLike, pushed, children, title }) {
   return (
     <div title={title} style={{ "--c": color || KNOB_C[index % 4] }}
-      className={`relative flex min-w-0 flex-col gap-1 border-l border-line px-2.5 pt-2 pb-2.5 max-wide:odd:border-l-0 max-wide:odd:pl-0
-        wide:[&:nth-child(4n+1)]:border-l-0 wide:[&:nth-child(4n+1)]:pl-0 ${enumLike ? "enum" : ""} ${pushed ? "pushed" : ""}`}>
+      className={`relative flex min-w-0 flex-col gap-1 border-l border-line px-2.5 pt-2 pb-2.5
+        [&:nth-child(4n+1)]:border-l-0 [&:nth-child(4n+1)]:pl-0 [&:nth-child(n+5)]:border-t ${enumLike ? "enum" : ""} ${pushed ? "pushed" : ""}`}>
       {children}
     </div>
   );
@@ -135,8 +136,8 @@ export function BigValue({ d, v, onChange, onDragKey, pushed }) {
   const [txt, unit] = fmtValue(d, v);
   const long = String(txt).length + (unit ? Math.ceil(unit.length / 2) : 0) > 6;
   return (
-    <span title={d.label}
-      className={`cursor-ns-resize touch-none overflow-hidden whitespace-nowrap select-none ${long ? "text-[16px] leading-8" : "text-big"} ${pushed ? "text-trk" : "text-fg"}`}
+    <span title={t("tipValue")}
+      className={`cursor-ns-resize touch-none overflow-hidden whitespace-nowrap select-none ${long ? "text-[16px] leading-8" : "text-big"} ${pushed ? "text-acc" : "text-fg"}`}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         ref.current = { y0: e.clientY, v0: v, on: true };
@@ -182,7 +183,7 @@ export function Slider({ d, v, onChange, onDragKey, style }) {
     return () => input.removeEventListener("wheel", wheel);
   }, [d]);
   return (
-    <input ref={ref} type="range" min={d.min} max={d.max} step="1" value={v} title={d.label} style={{ ...barVars(d, v), ...style }}
+    <input ref={ref} type="range" min={d.min} max={d.max} step="1" value={v} title={t("tipSlider")} style={{ ...barVars(d, v), ...style }}
       onPointerDown={() => { if (onDragKey) A.dragging = onDragKey; }}
       onChange={(e) => onChange(+e.target.value, false)}
       onPointerUp={(e) => onChange(+e.target.value, true)}
@@ -197,6 +198,10 @@ export function Slider({ d, v, onChange, onDragKey, style }) {
       }} />
   );
 }
+/* a select's chevron (its own layers, so a select's background colour class stays) */
+const CHEV_L = "linear-gradient(45deg, transparent 50%, var(--fg2) 50%)", CHEV_R = "linear-gradient(-45deg, transparent 50%, var(--fg2) 50%)";
+export const CHEVRON = { backgroundImage: `${CHEV_L}, ${CHEV_R}`, backgroundRepeat: "no-repeat",
+  backgroundPosition: "calc(100% - 13px) 55%, calc(100% - 7px) 55%", backgroundSize: "6px 6px, 6px 6px", paddingRight: 26 };
 /* a choice for d (ENUM / NOTE / ON-OFF): a select; WAVE choices with their icons where the browser can */
 export function Choice({ d, v, onChange, focusKey, className = "" }) {
   const wave = RICH_SELECT && d.fmt === F.ENUM && /^WAVE2?$/.test(d.label);
@@ -207,7 +212,7 @@ export function Choice({ d, v, onChange, focusKey, className = "" }) {
     opts.push(<option key={x} value={x}>{wave && WAVE_IC[name] ? <Icon name={WAVE_IC[name]} /> : null}{name}</option>);
   }
   return (
-    <select title={d.label} value={v} className={`${wave ? "wave" : ""} ${className}`}
+    <select title={d.label} value={v} className={`${wave ? "wave" : ""} ${className}`} style={wave ? undefined : CHEVRON}
       onFocus={() => { if (focusKey) A.focused = focusKey; }} onBlur={() => { if (A.focused === focusKey) A.focused = null; }}
       onChange={(e) => onChange(+e.target.value, true)}>
       {wave ? <button type="button"><selectedcontent /></button> : null}
@@ -244,7 +249,7 @@ export function Param({ s, id, index, ctx }) {
       <ParamName label={d.label} ctx={ctx} />
       {choice ? (
         <Choice d={d} v={v} focusKey={k} onChange={set}
-          className={`mt-1.5 h-[34px] w-full border-line bg-s2 text-[16px] ${pushed ? "text-trk" : "text-c"}`} />
+          className={`mt-1.5 h-[34px] w-full border-line bg-s2 text-[16px] ${pushed ? "text-acc" : "text-c"}`} />
       ) : (
         <>
           <BigValue d={d} v={v} onChange={set} onDragKey={k} pushed={pushed && !touched(k)} />
@@ -255,6 +260,39 @@ export function Param({ s, id, index, ctx }) {
   );
 }
 
+/* a device parameter as a line of a settings list: its name as words (and its sentence under it), its control on the
+   right. name / hint: given, else from labels.js (ctx) */
+export function ParamRow({ s, id, ctx, name, hint, chip }) {
+  useApp();
+  const dev = A.dev;
+  const d = s ? dev.gdesc[id] : dev.pdesc[id];
+  if (!visible(d)) return null;
+  const [full, what] = labelOf(d.label, ctx);
+  const k = key(s, id), v = (s ? dev.dump.g : dev.dump.p)[id] ?? d.def;
+  const pushed = performance.now() - (A.blink.get(k) || 0) < 400;
+  const set = (nv, final) => userSet(s, id, nv, final);
+  const nm = name || full, sub = hint === undefined ? what : hint;
+  return (
+    <div data-param={d.label} className="grid grid-cols-[minmax(0,1fr)_240px] items-center gap-6 border-t border-line py-2.5 first:border-t-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-fg" title={`${nm} (${d.label})`}>
+          {chip}{nm}<small className="text-[16px] leading-4 text-dim opacity-70">{d.label}</small></div>
+        {sub ? <p className="m-0 text-dim">{sub}</p> : null}
+      </div>
+      {isChoice(d) ? (
+        <Choice d={d} v={v} focusKey={k} onChange={set} className={`h-[34px] w-full ${pushed ? "text-acc" : ""}`} />
+      ) : (
+        <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3">
+          <BigValue d={d} v={v} onChange={set} onDragKey={k} pushed={pushed && !touched(k)} />
+          <Slider d={d} v={v} onChange={set} onDragKey={k} />
+        </div>
+      )}
+    </div>
+  );
+}
+/* a global's id by its device name (the settings that are not on a knob page of their own: MIDI) */
+export const gid = (label) => (A.dev && A.dev.gdesc ? A.dev.gdesc.findIndex((d) => d && d.label === label) : -1);
+
 /* ----------------------------------------------------- the parameter pages --- */
 /* the device's pages (firmware/src/core.h ids; used only when P_COUNT / G_COUNT / PE0 match the firmware's):
    pcount 71 / pe0 63: 2.6's INSERT, filter TYPE, ENV SYNC, LFO 2 (P_ITYPE 53 .. P_LPOL 62, after Felucca 1.4 / 1.5) */
@@ -263,19 +301,21 @@ export const LAYOUT = (pe0) => {
   const v251 = pe0 >= 63;                         /* (2.6: the pages the device has for the new parameters) */
   const opt = (yes, ...pages) => (yes ? pages : []);
   return [
-    { t: "ENV", pages: [["ENV", 0, [1, 2, 3, 4]], ["ENV DEST", 0, [5, 6, 7, 8]], ...opt(v251, ["ENV SYNC", 0, [59]])] },
+    /* (a one-knob page joins the row before it: ENV SYNC the shape, FILTER the sends, INSERT 2 the insert) */
+    { t: "ENV", pages: [["ENV", 0, [1, 2, 3, 4]], ...opt(v251, ["ENV SYNC", 0, [59]]), ["ENV DEST", 0, [5, 6, 7, 8]]] },
     { t: "LFO", pages: [["LFO", 0, [9, 10, 11, 12]], ...opt(v251, ["LFO 2", 0, [60, 61, 62]]), ["LFO DEST", 0, [13, 14, 15, 16]]] },
     { t: "EDIT", engine: true, pages: [["EDIT 1", 0, [pe0, pe0 + 1, pe0 + 2, pe0 + 3]], ["EDIT 2", 0, [pe0 + 4, pe0 + 5, pe0 + 6, pe0 + 7]],
       ...opt(v251, ["FILTER", 0, [58], 0])] },     /* (4th: the engine it is shown with: ANALOG's filter TYPE) */
-    { t: "VOICE", pages: [["LEVEL", 0, [0]], ["VOICE", 0, [37, 38, 41, 42]], ["VOICE 2", 0, [43, 44, 39, 40]]] },
+    { t: "VOICE", pages: [["VOICE", 0, [37, 38, 41, 42]], ["VOICE 2", 0, [43, 44, 39, 40]], ["LEVEL", 0, [0]]] },
     { t: "FX", pages: [["FX", 0, [33, 34, 35, 36]], ["FILTER", 0, [50]], ["SLICER", 0, [45, 46, 47, 48]],
       ...opt(v251, ["INSERT", 0, [53, 54, 55, 56]], ["INSERT 2", 0, [57]]), ["DLY", 1, [4, 5, 6, 7]], ["REV/CHO", 1, [8, 9, 10, 11]]] },
     { t: "SEL", pages: [["SEL", 0, [25, 26, 27, 49]], ["SEL 2", 0, [28, 51, 52]]] },
     { t: "ARP", pages: [["ARP", 0, [17, 18, 19, 20]], ["ARP 2", 0, [21, 22, 23, 24]]] },
     { t: "SEQ TIMING", tab: "seqgroups", pages: [["TIMING", 0, [29, 30, 31, 32]]] },
     { t: "GLOBAL", tab: "setgroups", pages: [["GLOBAL", 1, [0, 1, 2, 3]]] },
-    { t: "MASTER", tab: "setgroups", pages: [["MASTER", 1, [27, 28, 29, 30]]] },
-    { t: "DRUMS", tab: "setgroups", pages: [["DRUMS", 1, [24, 25, 26, 32]]] },
+    { t: "MASTER", tab: "setgroups", pages: [["MASTER", 1, [27, 28, 29, 30, 49]]] },   /* (49: 2.7.2's FX FADE) */
+    /* (the drums' channel, CH4, is with the other channels once the device has them) */
+    { t: "DRUMS", tab: "setgroups", pages: [["DRUMS", 1, v251 ? [25, 26, 32] : [24, 25, 26, 32]]] },
     ...opt(v251, { t: "MIDI", tab: "setgroups", pages: [["MIDI", 1, [33, 34, 35, 24]], ["MIDI 2", 1, [14, 36, 12, 44]], ["MIDI 3", 1, [45, 46, 47, 48]]] }),   /* CH1 CH2 CH3 CH4 (drums);
                                                      * IN OTHER OUT BEND (settings of the FM-1; IN and OUT: the FM-1 only, G_SKIP) */
     ...opt(v251, { t: "TEXTURE", tab: "setgroups", pages: [["TEXTURE", 1, [37, 38, 39, 40]], ["TEXTURE 2", 1, [41, 42, 43]]] }),   /* the bed */
@@ -287,33 +327,47 @@ const shown = (s, id) => { const d = s ? A.dev.gdesc[id] : A.dev.pdesc[id]; retu
 
 /* the parameter cards of one page of the editor: "groups" (Sound: the selected track's), "seqgroups" (Sequencer: its
    pattern settings), "setgroups" (Settings: globals and drums); a card per button of the device (ENV, LFO, EDIT ...),
-   its pages as rows of four knobs */
-export function ParamGroups({ where }) {
+   its pages as rows of four knobs. only: these cards (LAYOUT t), in that order; flat: one under the other, full width
+   (no columns) */
+export const layoutKnown = (info) => {
+  const known = EXPECT.pcount.indexOf(info.pcount);
+  return known >= 0 && EXPECT.gcount.includes(info.gcount) && info.pe0 === EXPECT.pe0[known];
+};
+export function ParamGroups({ where, only, flat }) {
   const { dev } = useApp();
   const { info } = dev;
-  const known = EXPECT.pcount.indexOf(info.pcount);
   const out = [];
-  if (known >= 0 && EXPECT.gcount.includes(info.gcount) && info.pe0 === EXPECT.pe0[known]) {
-    for (const g of LAYOUT(info.pe0)) {
-      if ((g.tab || "groups") !== where) continue;
-      const pages = [];
-      for (const [title, s, ids, onlyEng] of g.pages) {
-        if (onlyEng != null && dev.dump.engine !== onlyEng) continue;
-        const live = ids.filter((id) => shown(s, id));
-        if (!live.length) continue;
-        const tt = g.engine && (dev.titles[dev.dump.engine] || [])[g.pages.findIndex((x) => x[0] === title)];
-        const ctx = g.engine ? info.engines[dev.dump.engine] : ctxOf(g.t, title);
-        pages.push(
-          <div key={title}>
-            {g.pages.length > 1 ? <GroupPage ic={PAGE_IC[tt || title]} title={PAGE_NAME[tt || title] || tt || title} /> : null}
-            <Knobs>{live.map((id, i) => <Param key={id} s={s} id={id} index={i} ctx={ctx} />)}</Knobs>
-          </div>,
-        );
-      }
-      if (!pages.length) continue;
+  if (layoutKnown(info)) {
+    const groups = LAYOUT(info.pe0).filter((g) => (only ? only.includes(g.t) : (g.tab || "groups") === where));
+    if (only) groups.sort((a, b) => only.indexOf(a.t) - only.indexOf(b.t));
+    for (const g of groups) {
       const eng = info.engines[dev.dump.engine] || "";
+      const head = g.engine ? `${GROUP_NAME.EDIT}: ${eng}` : GROUP_NAME[g.t] || g.t;
+      const rows = [];   /* {title, ic, items: [{s, id, ctx}]} */
+      g.pages.forEach(([title, s, ids, onlyEng], pi) => {
+        if (onlyEng != null && dev.dump.engine !== onlyEng) return;
+        const live = ids.filter((id) => shown(s, id));
+        if (!live.length) return;
+        const tt = g.engine && (dev.titles[dev.dump.engine] || [])[pi];
+        const ctx = g.engine ? eng : ctxOf(g.t, title);
+        const items = live.map((id) => ({ s, id, ctx }));
+        const prev = rows[rows.length - 1];
+        /* a page of one knob joins the row before it (its name says what it is) */
+        if (items.length === 1 && prev && prev.items.length % 4 === 0) prev.items.push(...items);
+        else rows.push({ title: PAGE_NAME[tt || title] || tt || title, ic: PAGE_IC[tt || title], items });
+      });
+      if (!rows.length) continue;
+      /* a row's heading only when the card has several rows, and not the card's own name again */
+      const heads = rows.length > 1;
       out.push(
-        <Group key={g.t} ic={HEAD_IC[g.t]} title={g.engine ? `${GROUP_NAME.EDIT}: ${eng}` : GROUP_NAME[g.t] || g.t}>{pages}</Group>,
+        <Group key={g.t} ic={HEAD_IC[g.t]} title={head}>
+          {rows.map((r, ri) => (
+            <div key={ri}>
+              {heads && r.title.toLowerCase() !== head.toLowerCase() ? <GroupPage ic={r.ic} title={r.title} /> : null}
+              <Knobs>{r.items.map((x, i) => <Param key={x.s + ":" + x.id} s={x.s} id={x.id} index={i} ctx={x.ctx} />)}</Knobs>
+            </div>
+          ))}
+        </Group>,
       );
     }
   } else {
@@ -327,5 +381,5 @@ export function ParamGroups({ where }) {
       out.push(box("EDIT", 0, ids(info.pcount, 0, (i) => i >= info.pe0)));
     } else if (where === "setgroups") out.push(box("GLOBAL", 1, ids(info.gcount, 1, () => true)));
   }
-  return <Groups>{out}</Groups>;
+  return flat ? <div className="groups">{out}</div> : <Groups>{out}</Groups>;
 }
