@@ -203,6 +203,7 @@ export const TEXT = {
     deskTitle: "Use a desktop browser", deskText: "The BoopBox editor needs a desktop browser (Chrome or Edge) at least 1000 px wide, with the FM-1 plugged in with USB.",
     deskGuide: "Read the guide", deskEmu: "Try the emulator",
     /* @SEQUENCER: this page group's new strings go right below this line */
+    sqComps: "Step components",
     sqView: "View", sqViewSteps: "Steps", sqViewRoll: "Piano roll", sqViewList: "List",
     sqViewStepsTip: "The step grid and the selected step's settings", sqViewRollTip: "Notes as bars on a piano roll", sqViewListTip: "Every step as a row you can type in",
     sqRollWhyDrum: "Drum tracks have no piano roll", sqListWhyDrum: "The drum grid shows every hit; the list is for synth tracks",

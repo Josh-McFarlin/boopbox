@@ -9,6 +9,7 @@ import { DRUM_LANES, F, FC, LV_NAMES, LV_ORDER, MICRO, drumName, fmtValue, noteN
 import { hasFill, hasLocks, isDrum, t, tf, useApp } from "../../core/app.js";
 import { More } from "../../ui/kit.jsx";
 import Field from "./Field.jsx";
+import { StepComponents } from "../patterns/StepComponents.jsx";
 import {
   SQ, addLock, canAddLock, changeLockParam, drumSet, drumView, lockName, lockableIds, moveSel, notesOf, paint, setFlag,
   setNotes, setTime, setVel, stepFill, stepLen, toggleNote, writeFill, writeLock, writeMicro,
@@ -249,7 +250,8 @@ export default function Inspector() {
       </div>
       {lanes ? <DrumStep i={i} /> : <NoteStep i={i} s={s} />}
       {hasLocks() && dev.micro ? <StepExtras i={i} /> : null}
-      {/* STEP COMPONENTS: mounted after merge */}
+      {/* the step's components (BoopBox: how the step plays each time the sequencer reaches it; pages/patterns) */}
+      {!lanes ? <><Head>{t("sqComps")}</Head><StepComponents step={i} /></> : null}
     </aside>
   );
 }
