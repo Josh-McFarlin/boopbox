@@ -169,10 +169,13 @@ export const CTX = {
   DRUMSYNTH: { "B.TIME": ["Bend time", "How long the pitch drop at the start takes."], BEND: ["Pitch bend", "How far the pitch drops at the start, in semitones."],
     "2ND": ["Second tone", "A second oscillator, an interval above (OFF: none)."], "2ND LVL": ["Second tone level", "How loud the second tone is."],
     CLICK: ["Click", "The attack transient."], PITCH: ["Pitch", "The drum's note."], FINE: ["Fine tune", "In sixteenths of a semitone."],
-    HOLD: ["Hold", "How long it stays at full level before the decay."], ON: ["Filter envelope source", "What the filter envelope follows."],
-    ENV: ["Filter envelope", "How far the filter moves, in octaves."], HPF: ["High-pass", "Cuts the low end."], CHIP: ["Chip", "A game-chip colour (–: none)."],
+    HOLD: ["Hold", "How long it stays at full level before the decay."], ON: ["Filter applies to", "What goes through the filter: the noise only (NOISE), or the tone too (ALL)."],
+    ENV: ["Filter envelope", "How far the cutoff jumps at the hit, in octaves (it falls back with the pitch bend)."], HPF: ["High-pass", "Cuts the low end."], CHIP: ["Chip", "A game-chip colour (–: none)."],
     CLAP: ["Clap", "Repeats the noise like the hands of a clap."], NOISE: ["Noise", "The noise's kind (OFF: none)."], CUTOFF: ["Cutoff", "Where the filter cuts."],
-    DRIVE: ["Drive", "Saturation."], DECAY: ["Decay", "How long it rings."] },
+    DRIVE: ["Drive", "Saturation."], DECAY: ["Decay", "How long it rings."],
+    WAVE: ["Waveform", "The tone's shape (BELL: through the noise's filter)."], LEVEL: ["Level", "How loud this part is."],
+    FILTER: ["Filter type", "Low-pass, band-pass or high-pass (OFF: none)."], RES: ["Resonance", "A peak at the cutoff."],
+    CRUSH: ["Bit crush", "Fewer bits: grit (all 16 sounds of the kit)."], "S&H": ["Sample rate reduction", "Holds each sample for longer: aliasing, lo-fi (all 16 sounds of the kit)."] },
 };
 
 /* the whole name and its sentence for a short name in a context (or the short name itself, when it is not known) */

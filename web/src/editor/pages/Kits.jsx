@@ -3,10 +3,11 @@
 // USR3+4: the big kit), 3 send it and play it on the drum track. (Shows only when the FM-1 reported its sample flash.)
 import { useEffect, useRef } from "react";
 import { DRUM_LANES, KIT, SMP, kitBytes, kitFit, kitLen } from "../lib/proto.js";
-import { hasTracks, notify, pickFile, t, useApp } from "../core/app.js";
-import { Card, Help, Ic, barVars } from "../ui/kit.jsx";
+import { hasTracks, notify, pickFile, t, tf, useApp } from "../core/app.js";
+import { Card, Ic, barVars } from "../ui/kit.jsx";
 import { SB } from "./samples/smp.js";
-import { Meter, NameInput, Step, useDrop } from "./samples/ui.jsx";
+import { Meter, NameInput, ShortHelp, Step, useDrop } from "./samples/ui.jsx";
+import { SlotTiles } from "./samples/SlotTiles.jsx";
 import {
   KEY_OF_LANE, KIT_PAIR, kitAddFiles, kitDest, kitDraft, kitHas4, kitIndexOf, kitMatch, kitOver, kitPlayPad, kitRoom, kitSend, kitSlots, kitUse, kitZip,
 } from "./kits/kit.js";
@@ -55,10 +56,10 @@ function Pad({ l }) {
   let body = null;
   if (!p) {
     body = (
-      <div className="empty grid flex-1 cursor-pointer place-content-center border border-dashed border-s3 text-center text-s3 hover:border-dim hover:text-fg2"
-        onClick={() => pick(l)}>
-        {t("kitEmptyPad").split("\n").flatMap((x, i) => (i ? [<br key={i} />, x] : [x]))}
-      </div>
+      <button type="button" className="empty grid flex-1 place-content-center border border-dashed border-s3 bg-transparent py-1 text-center normal-case text-dim hover:border-dim hover:text-fg2"
+        title={t("kitEmptyPadHint")} onClick={() => pick(l)}>
+        {t("kitEmptyPad").replace("\n", " ")}
+      </button>
     );
   } else {
     const full = kitLen({ ...p, len: 0 });
@@ -87,7 +88,7 @@ function Pad({ l }) {
   }
   return (
     <div data-l={l} {...drop} style={{ "--c": "var(--t4)" }}
-      className={`pad relative flex min-h-[170px] min-w-0 flex-col gap-1.5 border border-line bg-bg p-2.5
+      className={`pad relative flex ${p ? "min-h-[170px]" : "min-h-[85px]"} min-w-0 flex-col gap-1.5 border border-line bg-bg p-2.5
         ${over ? "over outline-2 -outline-offset-2 outline-c outline-dashed" : ""}`}>
       <div className="ph flex items-baseline gap-2">
         <b className="font-normal text-c uppercase">{DRUM_LANES[l][1]}</b>
@@ -109,29 +110,26 @@ function Meter2() {
   );
 }
 
-/* where the kit goes: one slot (about 7 s), or USR3+4 (about 15 s, the big kit) */
+/* where the kit goes: one slot (about 7 s), or USR3+4 (about 15 s, the big kit); the same tiles as the Samples page */
 function Dest() {
   const { dev } = useApp();
   const ok = !!dev && !!dev.smp;
-  return (
-    <div className="dest mb-2.5 grid grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-2 max-wide:grid-cols-2" role="radiogroup" aria-label={t("kitStep2")}>
-      {[KIT_PAIR, 0, 1, 2, 3].map((d) => {
-        const sl = kitSlots(d).map((k) => ok && dev.smp.slots[k]);
-        const now = !ok ? "" : sl.every((x) => !x || !x.zones) ? t("empty")
-          : sl.filter((x) => x && x.zones).map((x) => x.name || "—").filter((x, i, a) => a.indexOf(x) === i).join(" + ");
-        return (
-          <button key={d} type="button" role="radio" data-d={d} aria-checked={d === kitDraft.slot ? "true" : "false"}
-            className={`${d === KIT_PAIR ? "big" : ""} ${ok && sl.some((x) => x && x.zones) ? "full" : ""}`}
-            disabled={ok && !kitHas4() && (d === KIT_PAIR || d === 3)}
-            onClick={() => { kitDraft.slot = d; notify(); }}>
-            <b>{kitDest(d)}</b>
-            <span className="cap">{d === KIT_PAIR ? t("kitCapBig") : t("kitCapOne")}</span>
-            <span className="now">{now}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const tiles = [KIT_PAIR, 0, 1, 2, 3].map((d) => {
+    const ks = kitSlots(d), sl = ks.map((k) => ok && dev.smp.slots[k]);
+    const full = sl.filter((x) => x && x.zones);
+    return { id: d, title: kitDest(d), big: d === KIT_PAIR, full: !!full.length,
+      now: full.map((x) => x.name || "—").filter((x, i, a) => a.indexOf(x) === i).join(" + "),
+      kib: sl.reduce((a, x) => a + ((x && x.kib) || 0), 0), max: (ok ? dev.smp.slotKiB : 0) * ks.length,
+      cap: t(d === KIT_PAIR ? "kitCapBig" : "kitCapOne"), why: ok && !kitHas4() && (d === KIT_PAIR || d === 3) ? t("kitNo4") : "" };
+  });
+  return <SlotTiles label={t("kitStep2")} tiles={tiles} sel={kitDraft.slot} onPick={(d) => { kitDraft.slot = d; notify(); }}
+    className="grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]" />;
+}
+
+/* why the kit cannot be sent yet ("" when it can) */
+function whySend(ok, any, over) {
+  return !ok ? t("libWhyNoDev") : SB.busy ? t("whyBusy") : !any ? t("kitWhyNoPads") : over ? t("kitWhyOver")
+    : !kitDraft.name ? t("kitWhyName") : !kitHas4() && kitDraft.slot >= 3 ? t("kitNo4") : "";
 }
 
 export default function Kits() {
@@ -143,33 +141,36 @@ export default function Kits() {
   const used = sl.filter((x) => x && x.zones);
   const up = SB.up && SB.up.where === "kit" ? SB.up : null;
   const [, cardDrop] = useDrop((fs) => kitAddFiles(fs));
+  const why = whySend(ok, any, over);
+  const whyUse = !ok ? t("libWhyNoDev") : SB.busy ? t("whyBusy") : !used.length ? tf("smpWhyEmptyX", { x: kitDest() })
+    : !hasTracks() || (dev.kitNames && kitIndexOf(kitDraft.slot) < 0) ? t("kitNoKit") : "";
   return (
     <div id="kit">
       <Card title={t("kitTitle")} ic="symbol_drum">
         <div onDragOver={(e) => e.preventDefault()} onDrop={cardDrop.onDrop}>
-          <Help>{t("kitHelp")}</Help>
+          <ShortHelp text={t("kitHelp")} />
           <Step n={1} title={t("kitStep1")}>
-            <p className="dim my-4">{t("kitStep1Help")}</p>
-            <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3 max-wide:grid-cols-1">
+            <ShortHelp text={t("kitStep1Help")} />
+            <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3">
               <div className="bar m-0">
                 <button type="button" onClick={() => pick(-1)}><Ic ic="symbol_folder_open">{t("kitAdd")}</Ic></button>
-                <button type="button" disabled={!any} onClick={kitZip}><Ic ic="symbol_download">{t("kitZip")}</Ic></button>
-                <button type="button" className="warn" onClick={() => { kitDraft.pads = Array(16).fill(null); kitDraft.sel = -1; notify(); }}>
+                <button type="button" disabled={!any} title={any ? "" : t("kitWhyNoPads1")} onClick={kitZip}><Ic ic="symbol_download">{t("kitZip")}</Ic></button>
+                <button type="button" className="warn" disabled={!any} title={any ? "" : t("kitWhyNoPads1")}
+                  onClick={() => { kitDraft.pads = Array(16).fill(null); kitDraft.sel = -1; notify(); }}>
                   <Ic ic="symbol_trash">{t("kitClear")}</Ic>
                 </button>
               </div>
               <Meter2 />
             </div>
-            <div className="pads my-4 grid grid-cols-4 gap-2.5 max-wide:grid-cols-2">
+            <div className="pads my-4 grid grid-cols-4 gap-2.5">
               {Array.from({ length: 16 }, (_, l) => <Pad key={l} l={l} />)}
             </div>
             <div className="bar">
-              <button type="button" disabled={kitDraft.pads.filter(Boolean).length < 2} onClick={kitMatch}><Ic ic="symbol_audio">{t("matchLevels")}</Ic></button>
-              <span className="dim">{t("matchHelp")}</span>
-            </div>
-            <div className="bar">
-              <button type="button" disabled={!over} onClick={() => { if (kitFit(kitDraft.pads, kitRoom(), kitSlots().length)) notify(); }}>{t("kitFit")}</button>
-              <span className="dim">{t("kitFitHelp")}</span>
+              <button type="button" disabled={kitDraft.pads.filter(Boolean).length < 2}
+                title={kitDraft.pads.filter(Boolean).length < 2 ? t("kitWhyTwo") : t("matchHelp")} onClick={kitMatch}>
+                <Ic ic="symbol_audio">{t("matchLevels")}</Ic></button>
+              <button type="button" disabled={!over} title={over ? t("kitFitHelp") : t("kitWhyFit")}
+                onClick={() => { if (kitFit(kitDraft.pads, kitRoom(), kitSlots().length)) notify(); }}>{t("kitFit")}</button>
             </div>
           </Step>
           <Step n={2} title={t("kitStep2")}>
@@ -184,16 +185,13 @@ export default function Kits() {
               <NameInput value={kitDraft.name} onChange={(v) => { kitDraft.name = v; notify(); }} />
             </div>
           </Step>
-          <Step n={3} title={t("kitStep3")}>
+          <Step n={3} title={t("kitStep3")} off={!any && !used.length} why={!any ? t("kitWhyNoPads") : ""}>
             <div className="bar">
-              <button type="button" className="pri" onClick={kitSend}
-                disabled={!ok || SB.busy || !any || over || !kitDraft.name || (!kitHas4() && kitDraft.slot >= 3)}>
+              <button type="button" className="pri" onClick={kitSend} disabled={!!why} title={why}>
                 <Ic ic="symbol_upload">{t("kitSend").replace("{x}", kitDest())}</Ic>
               </button>
               <progress className="w-[180px]" max="1" value={up ? up.v : 0} hidden={!up} />
-              <button type="button" onClick={() => kitUse(kitDraft.slot)}
-                disabled={!ok || SB.busy || !sl.some((x) => x && x.zones) || !hasTracks()}
-                title={dev && dev.kitNames && kitIndexOf(kitDraft.slot) < 0 ? t("kitNoKit") : ""}>
+              <button type="button" onClick={() => kitUse(kitDraft.slot)} disabled={!!whyUse} title={whyUse}>
                 <Ic ic="symbol_drum">{t("kitUse").replace("{x}", kitDest())}</Ic>
               </button>
             </div>
