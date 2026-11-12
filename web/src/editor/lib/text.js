@@ -202,6 +202,26 @@ export const TEXT = {
     offlineShort: "Download for offline use", openLive: "Open LIVE",
     deskTitle: "Use a desktop browser", deskText: "The BoopBox editor needs a desktop browser (Chrome or Edge) at least 1000 px wide, with the FM-1 plugged in with USB.",
     deskGuide: "Read the guide", deskEmu: "Try the emulator",
+    /* @SEQUENCER: this page group's new strings go right below this line */
+    /* ---- */
+    /* ---- */
+    /* ---- */
+    /* @LIVE: this page group's new strings go right below this line */
+    /* ---- */
+    /* ---- */
+    /* ---- */
+    /* @SOUND-SETTINGS: this page group's new strings go right below this line */
+    /* ---- */
+    /* ---- */
+    /* ---- */
+    /* @PATTERNS-SONG-SAVE: this page group's new strings go right below this line */
+    /* ---- */
+    /* ---- */
+    /* ---- */
+    /* @LIBRARY-SLOTS-THEME: this page group's new strings go right below this line */
+    /* ---- */
+    /* ---- */
+    /* ---- */
     stepList: "Step list (type note names)", stepsOf: "{n} steps", fontCredit: "Font: Terminus (SIL OFL 1.1)",
     ctlDrag: "You can also drag a value up or down.",
     kitTitle: "Drum kit", kitHelp: "Build 16 sounds for the drum track, one per white key. Three steps: put your sounds on the pads, choose where the kit goes, send it to the FM-1.",
