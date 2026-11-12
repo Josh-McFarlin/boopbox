@@ -1,7 +1,4 @@
 /* SPDX-License-Identifier: GPL-3.0-only
-   The Sequencer page: what reads better as CSS than as utilities (the folding step list's marker). */
-details.seq-more { margin-top: 8px; }
-details.seq-more > summary { cursor: pointer; color: var(--dim); text-transform: lowercase; list-style: none; padding: 6px 0; }
-details.seq-more > summary::-webkit-details-marker { display: none; }
-details.seq-more > summary::before { content: "\25B8  "; white-space: pre; }
-details.seq-more[open] > summary::before { content: "\25BE  "; }
+   The Sequencer page: what reads better as CSS than as utilities. */
+/* the step grid's cells keep their own look when pressed (aria-pressed marks the selected step for screen readers) */
+#stepgrid button[aria-pressed="true"] { color: inherit; }
