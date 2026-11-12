@@ -64,6 +64,56 @@ export class FirmwareAudio {
   }
 }
 
+// Each room member gets an isolated firmware instance. The editor preview has only three synth parts,
+// so a room cannot map eight people onto one preview instance without dropping voices.
+export class RoomFirmwareAudio {
+  constructor(module) {
+    this.players = Array.from({ length: 8 }, () => new FirmwareAudio(module));
+    this.active = new Array(8).fill(false);
+    this.left = new Float32Array(0);
+    this.right = new Float32Array(0);
+  }
+  sync(slot, state) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    this.players[slot].sync(state);
+    this.active[slot] = true;
+  }
+  note(slot, track, note, on) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    if (track !== 0 && track !== 3) return;
+    this.players[slot].w.preview_note(track, note, on ? 1 : 0);
+  }
+  panic(slot) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    this.players[slot].w.preview_panic();
+  }
+  drop(slot) {
+    this.panic(slot);
+    if (Number.isInteger(slot) && slot >= 0 && slot < this.active.length) this.active[slot] = false;
+  }
+  render(left, right) {
+    left.fill(0);
+    right.fill(0);
+    if (this.left.length !== left.length) {
+      this.left = new Float32Array(left.length);
+      this.right = new Float32Array(right.length);
+    }
+    const activePlayers = this.active.filter(Boolean).length;
+    if (!activePlayers) return;
+    const gain = 0.35 / Math.sqrt(activePlayers);
+    for (let slot = 0; slot < this.players.length; slot += 1) {
+      if (!this.active[slot]) continue;
+      this.left.fill(0);
+      this.right.fill(0);
+      this.players[slot].render(this.left, this.right);
+      for (let frame = 0; frame < left.length; frame += 1) {
+        left[frame] += this.left[frame] * gain;
+        right[frame] += this.right[frame] * gain;
+      }
+    }
+  }
+}
+
 // Guard permits the exact same adapter to be tested with Node, without Web Audio.
 if (typeof registerProcessor === 'function') {
   class BoopBoxProcessor extends AudioWorkletProcessor {
@@ -102,4 +152,24 @@ if (typeof registerProcessor === 'function') {
     }
   }
   registerProcessor('boopbox-preview', BoopBoxProcessor);
+
+  class BoopBoxRoomProcessor extends AudioWorkletProcessor {
+    constructor(options) {
+      super();
+      this.dsp = new RoomFirmwareAudio(options.processorOptions.module);
+      this.port.onmessage = ({ data }) => {
+        try {
+          if (data.type === 'state') this.dsp.sync(data.slot, data.state);
+          else if (data.type === 'note') this.dsp.note(data.slot, data.track, data.note, data.on);
+          else if (data.type === 'panic') this.dsp.panic(data.slot);
+          else if (data.type === 'drop') this.dsp.drop(data.slot);
+        } catch (error) { this.port.postMessage({ error: error.message }); }
+      };
+    }
+    process(_inputs, outputs) {
+      this.dsp.render(outputs[0][0], outputs[0][1]);
+      return true;
+    }
+  }
+  registerProcessor('boopbox-room-preview', BoopBoxRoomProcessor);
 }

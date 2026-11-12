@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The BoopBox site: React + Vite + Tailwind. Four pages under site/ (home/, installer/, editor/, emu/), relative URLs
+// The BoopBox site: React + Vite + Tailwind. Pages under site/, relative URLs
 // everywhere (base "./"), so the build drops into the site's webapp/ folder as it is (web/make_site.py).
 //
 //   npm run dev                      the pages at http://localhost:5173/home/ /installer/ /editor/ /emu/ (editor: ?mock=1
@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
     publicDir: offline ? false : resolve(SITE, "public"),
     plugins: [react(), tailwindcss(), devWasm, ...(offline ? [viteSingleFile({ removeViteModuleLoader: true })] : [])],
     define: { __OFFLINE__: JSON.stringify(offline) },
-    server: { fs: { allow: [HERE] } },
+    server: { fs: { allow: [HERE, resolve(HERE, "..")] } },
     build: {
       outDir: resolve(HERE, "..", "build", offline ? "webapp-offline" : "webapp-vite"),
       emptyOutDir: true,
@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
               installer: resolve(SITE, "installer/index.html"),
               editor: resolve(SITE, "editor/index.html"),
               emu: resolve(SITE, "emu/index.html"),
+              rooms: resolve(SITE, "rooms/index.html"),
             },
       },
     },

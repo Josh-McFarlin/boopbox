@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Browser-only firmware audio. Explicit start is required by autoplay policies.
 export class LocalPreview {
-  constructor(getState, onError, onLevel = () => {}, onTransport = () => {}) {
+  constructor(getState, onError, onLevel = () => {}, onTransport = () => {}, assets = {}) {
     this.getState = getState;
     this.onError = onError;
     this.onLevel = onLevel;
     this.onTransport = onTransport;
+    this.wasmUrl = assets.wasmUrl || new URL('boopbox-preview.wasm', document.baseURI);
+    this.workletUrl = assets.workletUrl || new URL('preview-worklet.js', document.baseURI);
     this.context = null;
     this.node = null;
     this.loading = null;
@@ -31,10 +33,10 @@ export class LocalPreview {
   }
   async load() {
     try {
-      const response = await fetch(new URL('boopbox-preview.wasm', document.baseURI));
+      const response = await fetch(this.wasmUrl);
       if (!response.ok) throw new Error('Build the audio preview first: python3 tools/build_preview.py');
       const module = await WebAssembly.compile(await response.arrayBuffer());
-      await this.context.audioWorklet.addModule(new URL('preview-worklet.js', document.baseURI));
+      await this.context.audioWorklet.addModule(this.workletUrl);
       this.node = new AudioWorkletNode(this.context, 'boopbox-preview', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { module },
       });

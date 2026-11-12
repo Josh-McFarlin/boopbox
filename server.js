@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Serve the prebuilt website in docs/ for production publishing.
+// Serve the prebuilt website and the safe, in-memory music-room service.
 const { createReadStream, statSync } = require("node:fs");
 const { createServer } = require("node:http");
 const { extname, resolve, sep } = require("node:path");
+const { createRoomService } = require("./server/rooms.cjs");
 
 const ROOT = resolve(__dirname, "docs");
+const BUILD_ROOT = resolve(__dirname, "build/webapp-vite");
 const MIME = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -26,7 +28,44 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be an integer from 1 to 65535");
 }
 
-createServer((req, res) => {
+function fileExists(file) {
+  try {
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function fileOrDirectoryExists(file) {
+  try {
+    const info = statSync(file);
+    return info.isFile() || info.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function staticTarget(pathname) {
+  if (pathname === "/") {
+    const home = resolve(BUILD_ROOT, "home/index.html");
+    return fileExists(home) ? home : resolve(ROOT, "index.html");
+  }
+
+  if (pathname.startsWith("/webapp/")) {
+    const relative = pathname.slice("/webapp/".length);
+    const built = resolve(BUILD_ROOT, `.${pathname.slice("/webapp".length)}`);
+    const isInstaller = relative === "installer" || relative.startsWith("installer/");
+    if (!isInstaller && (built === BUILD_ROOT || built.startsWith(`${BUILD_ROOT}${sep}`)) && fileOrDirectoryExists(built)) {
+      return built;
+    }
+  }
+
+  const file = resolve(ROOT, `.${pathname}`);
+  if (file !== ROOT && !file.startsWith(`${ROOT}${sep}`)) return null;
+  return file;
+}
+
+const server = createServer((req, res) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   if (req.method !== "GET" && req.method !== "HEAD") {
     res.writeHead(405, { Allow: "GET, HEAD" }).end("Method not allowed");
@@ -41,8 +80,8 @@ createServer((req, res) => {
     return;
   }
 
-  const file = resolve(ROOT, `.${pathname}`);
-  if (file !== ROOT && !file.startsWith(`${ROOT}${sep}`)) {
+  const file = staticTarget(pathname);
+  if (!file) {
     res.writeHead(404).end("Not found");
     return;
   }
@@ -62,6 +101,9 @@ createServer((req, res) => {
   } catch {
     res.writeHead(404).end("Not found");
   }
-}).listen(port, "0.0.0.0", () => {
+});
+createRoomService(server);
+
+server.listen(port, "0.0.0.0", () => {
   console.log(`BoopBox website listening on port ${port}`);
 });
