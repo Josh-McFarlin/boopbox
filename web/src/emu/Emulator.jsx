@@ -116,7 +116,7 @@ function FirmwareSwitch({ fw, onPick, disabled }) {
 }
 
 export default function Emulator() {
-  const roomMode = new URLSearchParams(location.search).get("room") === "1" && window.parent !== window;
+  const roomMode = new URLSearchParams(location.search).get("room") === "1";
   const [fw, setFw] = useState(() => roomMode ? "main" : firmwareFromUrl());
   const [hasTrainer, setHasTrainer] = useState(() => !roomMode && firmwareFromUrl() === "trainer");
   const [on, setOn] = useState(false);
@@ -293,15 +293,16 @@ export default function Emulator() {
 
   return (
     <>
-    <SiteHeader current="emu" />
-    <main className="mx-auto max-w-[1280px] px-4 pt-6 pb-12">
-      <p className="m-0 mb-3 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue">▶ Play it</p>
-      <h1 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold min-[600px]:text-[52px]">BoopBox emulator</h1>
-      <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">The real BoopBox firmware, running in your browser:
-        the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
-      {roomMode ? <p className="mb-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-body" role="status">
-        Room mode is on. Power up the emulator to share its stock-sound performance and live notes with the jam room.
-      </p> : null}
+    {!roomMode && <SiteHeader current="emu" />}
+    <main className={`mx-auto max-w-[1280px] ${roomMode ? "emu-room-main" : "px-4 pt-6 pb-12"}`}>
+      {!roomMode && (
+        <>
+          <p className="m-0 mb-3 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue">▶ Play it</p>
+          <h1 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold min-[600px]:text-[52px]">BoopBox emulator</h1>
+          <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">The real BoopBox firmware, running in your browser:
+            the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
+        </>
+      )}
       {hasTrainer && !roomMode ? (
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 text-[14px] text-dim">
           <span className="font-pixel text-[18px] text-dim">SELECT GAME</span>
@@ -350,30 +351,34 @@ export default function Emulator() {
         ) : null}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] text-dim">
-        <span className="mr-auto">{saved}</span>
-        <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={() => send({ t: "flash" })}>Download the flash</button>
-        <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={async () => {
-          if (!confirm(`Erase everything ${FIRMWARE[fw].label} saved in this browser (projects, songs, presets, settings${fw === "trainer" ? ", lesson progress" : ""})?`)) return;
-          await flashErase(fw);
-          location.reload();
-        }}>Erase what is saved</button>
-      </div>
+      {!roomMode && (
+        <>
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] text-dim">
+            <span className="mr-auto">{saved}</span>
+            <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={() => send({ t: "flash" })}>Download the flash</button>
+            <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={async () => {
+              if (!confirm(`Erase everything ${FIRMWARE[fw].label} saved in this browser (projects, songs, presets, settings${fw === "trainer" ? ", lesson progress" : ""})?`)) return;
+              await flashErase(fw);
+              location.reload();
+            }}>Erase what is saved</button>
+          </div>
 
-      <h2 className="m-0 mt-10 mb-4 font-pixel text-[28px] leading-none text-green">HOW TO PLAY</h2>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3 text-[14px] leading-[1.75] text-body [&>div]:pixel-panel [&>div]:p-4">
-        <div><b className={help}>Keys</b>: click them (lower on a key plays harder, with MENU › KEYS › VELOCITY on), or{" "}
-          <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5. On a phone, swipe the case under the keys to scroll them.</div>
-        <div><b className={help}>Buttons</b>: hold them for their layer. <kbd>Shift</kbd>-click keeps one held, so the keyboard can play its
-          layer. <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Esc</kbd> HOME, <kbd>[</kbd> <kbd>]</kbd> OCT− OCT+.</div>
-        <div><b className={help}>Knobs</b>: drag up or down, or scroll (MASTER is the volume). <kbd>↑</kbd> <kbd>↓</kbd> SELECT, <kbd>←</kbd> <kbd>→</kbd> ALGORITHM,{" "}
-          <kbd>PgUp</kbd> <kbd>PgDn</kbd> PRESETS.</div>
-        <div><b className={help}>More buttons</b>: <kbd>1</kbd> FX, <kbd>2</kbd> SEL, <kbd>5</kbd> ENV, <kbd>7</kbd> LFO, <kbd>8</kbd> EDIT,{" "}
-          <kbd>9</kbd> GLO, <kbd>0</kbd> SAVE, <kbd>-</kbd> ARP, <kbd>=</kbd> SEQ.</div>
-      </div>
-      <p className="mt-8 text-[13px] text-dim">The panel is drawn, not photographed, to the FM-1's own layout and proportions. Not here:
-        USB and MIDI, USB audio, the web editor's link, your own samples, the keys' own velocity sensing. After JIANT FM's
-        emulator. <a href="../installer/">Install BoopBox on your FM-1</a> · GPL-3.0.</p>
+          <h2 className="m-0 mt-10 mb-4 font-pixel text-[28px] leading-none text-green">HOW TO PLAY</h2>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3 text-[14px] leading-[1.75] text-body [&>div]:pixel-panel [&>div]:p-4">
+            <div><b className={help}>Keys</b>: click them (lower on a key plays harder, with MENU › KEYS › VELOCITY on), or{" "}
+              <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5. On a phone, swipe the case under the keys to scroll them.</div>
+            <div><b className={help}>Buttons</b>: hold them for their layer. <kbd>Shift</kbd>-click keeps one held, so the keyboard can play its
+              layer. <kbd>Space</kbd> PLAY, <kbd>Enter</kbd> REC, <kbd>Esc</kbd> HOME, <kbd>[</kbd> <kbd>]</kbd> OCT− OCT+.</div>
+            <div><b className={help}>Knobs</b>: drag up or down, or scroll (MASTER is the volume). <kbd>↑</kbd> <kbd>↓</kbd> SELECT, <kbd>←</kbd> <kbd>→</kbd> ALGORITHM,{" "}
+              <kbd>PgUp</kbd> <kbd>PgDn</kbd> PRESETS.</div>
+            <div><b className={help}>More buttons</b>: <kbd>1</kbd> FX, <kbd>2</kbd> SEL, <kbd>5</kbd> ENV, <kbd>7</kbd> LFO, <kbd>8</kbd> EDIT,{" "}
+              <kbd>9</kbd> GLO, <kbd>0</kbd> SAVE, <kbd>-</kbd> ARP, <kbd>=</kbd> SEQ.</div>
+          </div>
+          <p className="mt-8 text-[13px] text-dim">The panel is drawn, not photographed, to the FM-1's own layout and proportions. Not here:
+            USB and MIDI, USB audio, the web editor's link, your own samples, the keys' own velocity sensing. After JIANT FM's
+            emulator. <a href="../installer/">Install BoopBox on your FM-1</a> · GPL-3.0.</p>
+        </>
+      )}
     </main>
     </>
   );

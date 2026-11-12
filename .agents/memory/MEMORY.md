@@ -1,2 +1,3 @@
 - [Room musical ownership](room-musical-ownership.md) — each player keeps personal patterns, scenes, and chains; room audio mixes stock-sound performances.
+- [Jam-room emulator presentation](jam-room-emulator-presentation.md) — the embedded room view should show only the emulator, not its standalone page content.
 - [Replit WASM build environment](replit-wasm-build-environment.md) — match the raw Nix Clang to its wrapper and install Python build libraries as language packages.

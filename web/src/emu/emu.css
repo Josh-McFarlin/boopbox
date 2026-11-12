@@ -9,6 +9,7 @@
 
 @layer components {
   .fm1-wrap { container-type: inline-size; }
+  .emu-room-main { width: 100%; padding: 8px; }
 
   /* ---- the case */
   .fm1 {
