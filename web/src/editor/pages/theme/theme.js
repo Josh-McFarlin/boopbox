@@ -5,23 +5,31 @@
    theme to the FM-1 (with its settings, the song stopped) and shows it; Read takes the FM-1's back; the code line
    shares it (THEME.code / THEME.fromCode). */
 import { CMD, THEME, crc32, parse, req } from "../../lib/proto.js";
-import { A, notify, op, rq, sayK } from "../../core/app.js";
+import { A, notify, op, rq, sayK, t } from "../../core/app.js";
 
 /* base: the ramp's starting colour (the old page's #thbase field) */
-export const TH = { t: Object.assign(THEME.builtin(4), { name: "MY THEME" }), from: "4", sent: null, base: [0x38, 0xc8, 0x5c] };
+export const TH = { t: Object.assign(THEME.builtin(4), { name: "MY THEME" }), from: "4", sent: null, base: [0x38, 0xc8, 0x5c], hl: null };
+/* the colour pointed at (the preview shows where it is used), or null */
+export const thHl = (w, k = 0) => { const n = w ? { w, k } : null; if (JSON.stringify(n) !== JSON.stringify(TH.hl)) { TH.hl = n; notify(); } };
 export const thOk = () => !!A.dev && !!A.dev.info && A.dev.info.proto >= 11;
 export const TH_SCREEN = ["thC1", "thC2", "thC3", "thC4", "thC5"];
 /* sent: what the FM-1 shows, as far as this page knows */
 export const thState = () => (!thOk() || TH.sent === null ? "" : TH.sent === THEME.code(TH.t) ? "thStSent" : "thStNew");
 
-export function thDraw(cv) {
+/* hl: the colour being pointed at ({ w: "c" | "trk" | "bg" | "hi", k }): what is drawn with it stays, the rest fades
+   towards the background, so the preview shows where that colour is used */
+export function thDraw(cv, hl = TH.hl) {
   const g = cv.getContext("2d"), th = TH.t;
   if (!g) return;
-  const P = th.c.map((x) => THEME.hex(THEME.shown(x))), T = th.trk.map((x) => THEME.shown(x)), BG = THEME.hex(THEME.shown(th.bg || [0, 0, 0]));
-  const HI = THEME.hex(THEME.shown(THEME.hiOf(th)));
-  const col = (k) => THEME.hex(T[k]), part = (k, f) => THEME.hex(T[k].map((x) => Math.round(x * f)));
+  const bg = THEME.shown(th.bg || [0, 0, 0]), BG = THEME.hex(bg);
+  const fade = (rgb, w, k) => THEME.hex(!hl || (hl.w === w && (hl.k === k || w === "bg" || w === "hi")) ? rgb
+    : rgb.map((x, i) => Math.round(bg[i] + (x - bg[i]) * 0.18)));
+  const P = th.c.map((x, k) => fade(THEME.shown(x), "c", k)), T = th.trk.map((x) => THEME.shown(x));
+  const HI = fade(THEME.shown(THEME.hiOf(th)), "hi", 0);
+  const col = (k) => fade(T[k], "trk", k), part = (k, f) => fade(T[k].map((x) => Math.round(x * f)), "trk", k);
   const sel = 0;
   g.fillStyle = BG; g.fillRect(0, 0, 240, 240);
+  if (hl && hl.w === "bg") { g.strokeStyle = THEME.hex(bg.map((x) => (x > 127 ? x - 90 : x + 90))); g.lineWidth = 2; g.setLineDash([6, 4]); g.strokeRect(1, 1, 238, 238); g.setLineDash([]); }
   g.textBaseline = "top";
   g.font = "bold 12px ui-monospace, monospace";
   g.fillStyle = P[4]; g.fillText("ANALOG1 SOFT PAD", 4, 4);
@@ -115,7 +123,7 @@ export function thSend() {
   return true;
 }
 export function thRemove() {
-  if (thOk()) op(async () => { const rc = await thPut(new Uint8Array(0)); if (rc === 0) TH.sent = null; thSay(rc, "thRemoved"); notify(); });
+  if (thOk() && confirm(t("thRemoveAsk"))) op(async () => { const rc = await thPut(new Uint8Array(0)); if (rc === 0) TH.sent = null; thSay(rc, "thRemoved"); notify(); });
 }
 export function thRead() {
   if (!thOk()) return;

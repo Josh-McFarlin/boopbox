@@ -120,12 +120,12 @@ export default function Chop() {
   const c = all[CH.sel];                             /* the selected chop's row */
   const full = c ? c.full - c.start : 0, lenMax = Math.max(10, Math.floor(full / SMP.RATE * 1000)), lenV = c ? Math.round((c.end - c.start) / SMP.RATE * 1000) : 10;
   return (
-    <div id="chop" className={`smp chop ${over ? "outline-2 -outline-offset-2 outline-trk outline-dashed" : ""}`}
+    <div id="chop" className={`smp chop ${over ? "outline-2 -outline-offset-2 outline-acc outline-dashed" : ""}`}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); if (e.dataTransfer.files[0]) chopLoad(e.dataTransfer.files[0]); }}>
       <Head>
-        <b className="min-w-12 text-big font-normal text-trk">CHOP</b>
+        <b className="min-w-12 text-big font-normal text-acc">CHOP</b>
         <button type="button" onClick={openFile}><Ic ic="symbol_folder_open">{t("chopOpen")}</Ic></button>
         <span className="dim">{CH.x ? `${CH.name} · ${chSecs(CH.x.length)} · ${all.length} ${t("chopChops")}` +
           (kept < all.length ? ` (${kept} ${t("chopKept")})` : "") : t("chopHelp")}</span>
@@ -174,7 +174,7 @@ export default function Chop() {
       <Head>
         <button type="button" onClick={() => chopKeepAll(true)}>{t("chopAll")}</button>
         <button type="button" onClick={() => chopKeepAll(false)}>{t("chopNone")}</button>
-        <button type="button" disabled={!tooLong} onClick={chopFitAll}>{t("chopFit")}</button>
+        <button type="button" disabled={!tooLong} title={tooLong ? "" : t("chopWhyFit")} onClick={chopFitAll}>{t("chopFit")}</button>
         <span className="dim">{t("chopKeepHint")}</span>
       </Head>
       <div className="my-2 flex flex-wrap gap-[3px]">
@@ -184,7 +184,7 @@ export default function Chop() {
             <span key={i} onClick={() => chopAudition(i)}
               title={`${chSecs(q.start)} · ${chSecs(q.end - q.start)}` + (q.end < q.full ? ` / ${chSecs(q.full - q.start)}` : "")}
               className={`chip inline-flex cursor-pointer items-center gap-1 px-2 py-[3px] normal-case select-none
-                ${on ? "on bg-trk" : "bg-s2"} ${off ? "off text-s3 line-through" : on ? "text-black" : "text-fg2"}`}>
+                ${on ? "on bg-acc" : "bg-s2"} ${off ? "off text-s3 line-through" : on ? "text-black" : "text-fg2"}`}>
               <input type="checkbox" title={t("chopKeep")} checked={!q.off} onClick={(e) => e.stopPropagation()} onChange={(e) => chopKeep(i, e.target.checked)} />
               {`${i + 1}` + chopKeyName(U, i)}
             </span>
@@ -200,7 +200,7 @@ export default function Chop() {
             onChange={(e) => { const ms = +e.target.value; chopSetLen(CH.sel, ms >= Math.floor(full / SMP.RATE * 1000) ? 0 : ms * SMP.RATE / 1000); }} />
           <span className="dim">{`${chSecs(c.end - c.start)} / ${chSecs(full)}`}</span>
           <button type="button" onClick={() => chopAudition(CH.sel)}>▶</button>
-          <button type="button" disabled={c.end >= c.full} onClick={() => chopSetLen(CH.sel, 0)}>{t("chopFull")}</button>
+          <button type="button" disabled={c.end >= c.full} title={c.end >= c.full ? t("chopWhyFull") : ""} onClick={() => chopSetLen(CH.sel, 0)}>{t("chopFull")}</button>
         </Head>
       ) : null}
       <Head>
