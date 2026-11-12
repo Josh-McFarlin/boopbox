@@ -1,14 +1,36 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The Song page: the order of the sections A..D (the device's SONG screen), its loop and region; a song as one file.
-import { useEffect } from "react";
+// The Song page: the order of the sections A..D (the device's SONG screen) as a timeline, and what happens at its end.
+// (A song as one file: the Save & load page.)
+import { useEffect, useState } from "react";
 import { ARR, CMD, crc32, parse, req } from "../lib/proto.js";
-import { A, notify, op, rq, sayK, t, useApp } from "../core/app.js";
-import { SG, songExport } from "../core/shared.js";
-import { Card, Help, Ic } from "../ui/kit.jsx";
-import { songFileLoad } from "./projects/files.js";
-import { ACTS, Num, SONG_TABLE, TD_I } from "./song/Num.jsx";
+import { A, notify, op, rq, sayK, t, tf, useApp } from "../core/app.js";
+import { SG } from "../core/shared.js";
+import { Card, SendBar } from "../ui/kit.jsx";
+import { HelpMore } from "./patterns/ui.jsx";
+import { Stepper } from "./song/Num.jsx";
 
-/* ---- SLOOP 2.5: the Song page: the order of the sections A..D (the device's SONG screen, from the browser) ---- */
+/* ---- SLOOP 2.5: the Song page: the order of the sections A..D (the device's SONG screen, from the browser) ----
+   SG.rows: the entries grouped ({scene, bars, times}: the same section and bars in a row is one block played `times`);
+   SG.loopFrom: the block the song starts again from when it loops (the loop region's first entry, BoopBox);
+   SG.rawFirst / SG.keepEnd: a region set on the FM-1 that is not "from a block to the end", kept until changed here;
+   SG.base: the song as read, to tell unsent changes */
+const LET = "ABCD";
+const emptySec = (dev, s) => dev.slotUsed[s] != null && !dev.slotUsed[s];   /* (PROJECT: used 0 / 1; null: not known) */
+const total = (rows) => rows.reduce((a, r) => a + Math.max(1, r.times | 0), 0);
+const startOf = (rows, k) => total(rows.slice(0, k));
+
+/* the loop region from the block picked: from its first entry to the end (null: the whole song) */
+function regionOf() {
+  const rows = SG.rows, n = total(rows), k = Math.max(0, rows.indexOf(SG.loopFrom));
+  let first = startOf(rows, k);
+  if (SG.rawFirst != null && SG.rawFirst > first && SG.rawFirst < first + rows[k].times) first = SG.rawFirst;
+  const end = SG.keepEnd != null && SG.keepEnd > first && SG.keepEnd <= n ? SG.keepEnd : n;
+  return first === 0 && end === n ? null : { first, end };
+}
+const songOf = () => ({ loop: !!SG.loop, entries: ARR.expand(SG.rows), region: regionOf() });
+const sig = () => JSON.stringify(songOf());
+const songDirty = () => !!SG.rows && SG.base != null && sig() !== SG.base;
+
 async function readSong() {
   const dev = A.dev;
   if (!dev || !(dev.info.proto >= 6)) { Object.assign(SG, { rows: null, err: "songOld" }); notify(); return; }
@@ -23,13 +45,18 @@ async function readSong() {
     data.set(g.data, off);
   }
   if (!ARR.ok(data)) { Object.assign(SG, { rows: null, err: "songOld" }); notify(); return; }
-  const song = ARR.decode(data);
-  Object.assign(SG, { bytes: data, rows: ARR.group(song.entries), loop: song.loop, region: song.region, err: "", dirty: false });
+  const song = ARR.decode(data), rows = ARR.group(song.entries), n = song.entries.length, r = song.region;
+  let k = 0;
+  if (r) while (k + 1 < rows.length && startOf(rows, k + 1) <= r.first) k++;
+  Object.assign(SG, { bytes: data, rows, loop: song.loop, region: r, err: "", loopFrom: rows[k] || null,
+    rawFirst: r && r.first !== startOf(rows, k) ? r.first : null, keepEnd: r && r.end < n ? r.end : null });
+  SG.sel = Math.min(SG.sel | 0, rows.length - 1);
+  SG.base = rows.length ? sig() : "";
   notify();
 }
 async function sendSong() {
   if (!A.dev || !SG.rows) return;
-  const song = { loop: SG.loop, entries: ARR.expand(SG.rows), region: SG.region };
+  const song = songOf();
   if (!ARR.valid(song)) { sayK("songBad"); return; }
   const d = ARR.encode(SG.bytes, song);
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(1, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
@@ -44,78 +71,121 @@ async function sendSong() {
   await readSong();
   sayK("songSent");
 }
-const songCount = () => (SG.rows || []).reduce((a, r) => a + Math.max(1, r.times | 0), 0);
-function songEdit(fn) { fn(); SG.dirty = true; notify(); }
-const clamp1 = (v, max) => Math.max(1, Math.min(max, Math.round(v) || 1));
+function songEdit(fn) { fn(); notify(); }
+function move(from, to) {
+  if (to < 0 || to >= SG.rows.length || from === to) return;
+  songEdit(() => { const [x] = SG.rows.splice(from, 1); SG.rows.splice(to, 0, x); SG.sel = to; });
+}
+const blockLabel = (r) => tf("songBlock", { s: LET[r.scene], b: r.bars, n: Math.max(1, r.times | 0) });
+
+/* the song as a timeline: a block per entry, as wide as it plays (bars × times), the colour of its section */
+function Timeline({ dev }) {
+  const [drag, setDrag] = useState(null), [over, setOver] = useState(null);
+  const rows = SG.rows;
+  let bar = 1;
+  return (
+    <div id="songrows" className="flex min-h-[76px] w-full gap-1 overflow-x-auto pb-1" role="listbox" aria-label={t("songTimeline")}>
+      {rows.map((r, k) => {
+        const len = r.bars * Math.max(1, r.times | 0), from = bar, empty = emptySec(dev, r.scene);
+        bar += len;
+        return (
+          <button key={k} type="button" role="option" aria-selected={k === SG.sel} draggable title={t("songDragHint")}
+            style={{ "--c": `var(--t${r.scene + 1})`, flexGrow: len, flexBasis: 0 }}
+            onClick={() => { SG.sel = k; notify(); }}
+            onDragStart={(e) => { setDrag(k); e.dataTransfer.setData("text/plain", "song:" + k); e.dataTransfer.effectAllowed = "move"; }}
+            onDragEnd={() => { setDrag(null); setOver(null); }}
+            onDragOver={(e) => { e.preventDefault(); setOver(k); }}
+            onDrop={(e) => { e.preventDefault(); const m = /^song:(\d+)$/.exec(e.dataTransfer.getData("text/plain")); setOver(null); if (m) move(+m[1], k); }}
+            className={`relative flex min-w-[96px] normal-case cursor-grab flex-col items-start justify-between gap-1 border-2 border-l-[6px] border-c bg-[color-mix(in_srgb,var(--c)_22%,var(--bg))]
+              px-2 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--c)_34%,var(--bg))]!
+              ${k === SG.sel ? "outline-2 outline-offset-2 outline-acc" : ""} ${drag === k ? "opacity-50" : ""}
+              ${over === k && drag !== k ? "shadow-[inset_4px_0_0_var(--acc)]" : ""} ${empty ? "border-dashed" : ""}`}>
+            <span className="whitespace-nowrap text-fg">{blockLabel(r)}</span>
+            <span className="whitespace-nowrap text-[14px] text-dim">{tf("songBarAt", { n: from })}{empty ? <span className="text-red">{" · " + t("songEmptyShort")}</span> : null}</span>
+            {SG.loop && r === (SG.rows[Math.max(0, SG.rows.indexOf(SG.loopFrom))]) && SG.rows.length > 1
+              ? <span className="absolute top-1 right-1.5 text-acc" title={t("songLoopMark")}>{"↻"}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* the block picked: its section, its bars, how many times it plays, its place */
+function EntryEditor({ dev, n }) {
+  const k = SG.sel, r = SG.rows[k];
+  if (!r) return null;
+  const full = n >= ARR.STEPS;
+  return (
+    <div id="songentry" className="mt-4 border border-line bg-bg p-3">
+      <div className="mb-3 flex items-center gap-3">
+        <b className="text-big font-normal text-fg">{tf("songEntryN", { n: k + 1 })}</b>
+        <span className="text-dim">{blockLabel(r)}</span>
+        <span className="ml-auto inline-flex gap-1.5">
+          <button type="button" disabled={k === 0} title={k === 0 ? t("songFirst") : t("songEarlier")} onClick={() => move(k, k - 1)}>{"← " + t("songEarlier")}</button>
+          <button type="button" disabled={k === SG.rows.length - 1} title={k === SG.rows.length - 1 ? t("songLast") : t("songLater")}
+            onClick={() => move(k, k + 1)}>{t("songLater") + " →"}</button>
+          <button type="button" className="warn" id="songdel" disabled={SG.rows.length < 2} title={SG.rows.length < 2 ? t("songOneLeft") : ""}
+            onClick={() => songEdit(() => { SG.rows.splice(k, 1); SG.sel = Math.max(0, k - 1); })}>{t("songDel")}</button>
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+        <span className="inline-flex items-center gap-2">
+          <span>{t("songSection")}</span>
+          <span className="seg ids" id="songsec" role="group" aria-label={t("songSection")}>
+            {[0, 1, 2, 3].map((s) => (
+              <button key={s} type="button" aria-pressed={r.scene === s} style={{ "--c": `var(--t${s + 1})` }}
+                className="min-w-[44px] border-b-4 border-c" title={emptySec(dev, s) ? t("songSecEmpty") : ""}
+                onClick={() => songEdit(() => { r.scene = s; })}>{LET[s] + (emptySec(dev, s) ? "°" : "")}</button>
+            ))}
+          </span>
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <Stepper id="songbars" v={r.bars} min={1} max={ARR.MAX_BARS} label={t("songBars")} fmt={(v) => tf("songBarsN", { n: v })}
+            whyMin={t("songBarsMin")} whyMax={tf("songBarsMax", { n: ARR.MAX_BARS })} onChange={(v) => songEdit(() => { r.bars = v; })} />
+          <span>×</span>
+          <Stepper id="songtimes" v={Math.max(1, r.times | 0)} min={1} max={Math.max(1, r.times | 0) + (full ? 0 : ARR.STEPS - n)} label={t("songTimes")}
+            fmt={(v) => tf("songTimesN", { n: v })} whyMin={t("songTimesMin")} whyMax={tf("songFull", { max: ARR.STEPS })}
+            onChange={(v) => songEdit(() => { r.times = v; })} />
+        </span>
+      </div>
+      <p className="help mt-3 mb-0 text-dim">{t("songTimesHelp")}</p>
+    </div>
+  );
+}
 
 function SongBody() {
-  const dev = A.dev;
-  const LET = "ABCD", n = songCount(), bars = SG.rows.reduce((a, r) => a + r.bars * Math.max(1, r.times | 0), 0);
-  /* (BoopBox) the loop region, in entries (a row played n times is n entries) */
-  if (SG.region && !ARR.regionOk(SG.region, n)) SG.region = null;
-  const entries = (from) => Array.from({ length: n }, (_, k) => <option key={k} value={k} disabled={k < from}>{String(k + 1)}</option>);
+  const dev = A.dev, rows = SG.rows;
+  const n = total(rows), bars = rows.reduce((a, r) => a + r.bars * Math.max(1, r.times | 0), 0);
+  if (SG.sel == null || SG.sel >= rows.length) SG.sel = Math.max(0, Math.min(SG.sel | 0, rows.length - 1));
+  if (SG.loopFrom && !rows.includes(SG.loopFrom)) SG.loopFrom = rows[0];
+  const lk = Math.max(0, rows.indexOf(SG.loopFrom));
+  const full = n >= ARR.STEPS;
   return (
     <div id="songbody">
-      <table className={SONG_TABLE}>
-        <thead><tr><th>#</th><th>{t("songSection")}</th><th>{t("songBars")}</th><th>{t("songTimes")}</th><th /></tr></thead>
-        <tbody id="songrows">
-          {SG.rows.map((r, k) => {
-            const empty = dev.slotUsed[r.scene] === false;
-            return (
-              <tr key={k} className={empty ? "[&_td]:text-red" : ""}>
-                <td className={TD_I}>{String(k + 1)}</td>
-                <td><select value={String(r.scene)} onChange={(e) => songEdit(() => { r.scene = +e.target.value; })}>
-                  {[0, 1, 2, 3].map((s) => <option key={s} value={s}>{LET[s] + (dev.slotUsed[s] === false ? ` (${t("empty")})` : "")}</option>)}
-                </select></td>
-                <td><Num v={r.bars} min={1} max={ARR.MAX_BARS} onCommit={(v) => songEdit(() => { r.bars = clamp1(v, ARR.MAX_BARS); })} /></td>
-                <td><Num v={r.times} min={1} max={ARR.STEPS} onCommit={(v) => songEdit(() => { r.times = clamp1(v, ARR.STEPS); })} /></td>
-                <td className={ACTS}>
-                  <button type="button" title={t("songUp")} disabled={k === 0} onClick={() => songEdit(() => { SG.rows.splice(k - 1, 0, SG.rows.splice(k, 1)[0]); })}>▲</button>
-                  <button type="button" title={t("songDown")} disabled={k === SG.rows.length - 1} onClick={() => songEdit(() => { SG.rows.splice(k + 1, 0, SG.rows.splice(k, 1)[0]); })}>▼</button>
-                  <button type="button" title={t("songDel")} disabled={SG.rows.length < 2} onClick={() => songEdit(() => { SG.rows.splice(k, 1); })}>✕</button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {SG.rows.some((r) => dev.slotUsed[r.scene] === false) ? <p className="bad" id="songempty">{t("songEmpty")}</p> : null}
-      <p className="bar">
-        <button type="button" id="songadd" disabled={n >= ARR.STEPS} onClick={() => songEdit(() => {
-          const last = SG.rows[SG.rows.length - 1];
-          SG.rows.push({ scene: last ? (last.scene + 1) % 4 : 0, bars: last ? last.bars : 4, times: 1 });
-        })}>{t("songAdd")}</button>{" "}
-        <span id="songsum" className={n > ARR.STEPS ? "bad" : "dim"}>{t("songSum").replace("{n}", n).replace("{max}", ARR.STEPS).replace("{bars}", bars)}</span>
-      </p>
-      <p className="bar"><span>{t("songLoop")}</span>{" "}
+      <Timeline dev={dev} />
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button type="button" id="songadd" disabled={full} title={full ? tf("songFull", { max: ARR.STEPS }) : t("songAddHint")} onClick={() => songEdit(() => {
+          const at = Math.min(SG.sel + 1, rows.length), last = rows[at - 1];
+          rows.splice(at, 0, { scene: last ? (last.scene + 1) % 4 : 0, bars: last ? last.bars : 4, times: 1 });
+          SG.sel = at;
+        })}>{t("songAdd")}</button>
+        <span id="songsum" className={n > ARR.STEPS ? "bad" : "text-dim"}>{tf("songSum", { n, max: ARR.STEPS, bars })}</span>
+      </div>
+      {rows.some((r) => emptySec(dev, r.scene)) ? <p className="bad mt-2 mb-0" id="songempty">{t("songEmpty")}</p> : null}
+      <EntryEditor dev={dev} n={n} />
+      <div className="mt-4 flex flex-wrap items-center gap-3" id="songend">
+        <span>{t("songEnds")}</span>
         <span className="seg" id="songloop">
           <button type="button" aria-pressed={!SG.loop} onClick={() => songEdit(() => { SG.loop = false; })}>{t("songLoopOff")}</button>
-          <button type="button" aria-pressed={SG.loop} onClick={() => songEdit(() => { SG.loop = true; })}>{t("songLoopOn")}</button>
+          <button type="button" aria-pressed={!!SG.loop} onClick={() => songEdit(() => { SG.loop = true; })}>{t("songLoopOn")}</button>
         </span>
-      </p>
-      <p className="bar"><span>{t("songRegion")}</span>{" "}
-        <select id="songrf" aria-label="from" value={String(SG.region ? SG.region.first : -1)} onChange={(e) => songEdit(() => {
-          const f = +e.target.value;
-          SG.region = f < 0 ? null : { first: f, end: Math.max(f + 1, SG.region ? SG.region.end : n) };
-          if (SG.region && SG.region.end > n) SG.region.end = n;
-        })}>
-          <option value={-1}>{t("songRegionAll")}</option>
-          {entries(0)}
-        </select> – <select id="songre" aria-label="to" disabled={!SG.region} value={String(SG.region ? SG.region.end - 1 : Math.max(0, n - 1))}
-          onChange={(e) => songEdit(() => { if (SG.region) SG.region.end = Math.max(SG.region.first + 1, +e.target.value + 1); })}>
-          {entries(SG.region ? SG.region.first : 0)}
-        </select>{" "}
-        <span className="dim" id="songrhint">{SG.region ? t(SG.loop ? "songRegionOn" : "songRegionOff") : ""}</span>
-      </p>
-      <p className="bar">
-        <button type="button" id="songread" onClick={() => op(readSong)}><Ic ic="control_arrow_loop">{t("songRead")}</Ic></button>
-        <button type="button" id="songsend" className={SG.dirty ? "pri" : ""} disabled={n > ARR.STEPS || !n} onClick={() => op(sendSong)}>
-          <Ic ic="symbol_upload">{t("songSend")}</Ic></button>
-      </p>
-      <p className="bar">
-        <button type="button" id="songexp" onClick={() => { if (A.dev) songExport(); }}><Ic ic="symbol_download">{t("sfSave")}</Ic></button>
-        <button type="button" id="songimp" onClick={songFileLoad}><Ic ic="symbol_upload">{t("sfLoad")}</Ic></button>
-      </p>
+        <select id="songrf" aria-label={t("songLoopFrom")} disabled={!SG.loop} title={!SG.loop ? t("songLoopFromWhy") : ""} value={String(lk)}
+          onChange={(e) => songEdit(() => { SG.loopFrom = rows[+e.target.value]; SG.rawFirst = null; SG.keepEnd = null; })}>
+          {rows.map((r, k) => <option key={k} value={k}>{tf("songEntryOpt", { n: k + 1, l: blockLabel(r) })}</option>)}
+        </select>
+        {SG.loop && SG.keepEnd != null ? <span className="text-dim" id="songrhint">{tf("songKeepEnd", { n: SG.keepEnd })}</span> : null}
+      </div>
     </div>
   );
 }
@@ -124,15 +194,21 @@ export default function Song() {
   const { dev, busy } = useApp();
   useEffect(() => {                                    /* (2.5) read the song order once per connection (when free) */
     if (!dev || !dev.dump || SG.dev === dev || busy) return;
-    Object.assign(SG, { dev, rows: null, err: "", dirty: false });
+    Object.assign(SG, { dev, rows: null, err: "", base: null, sel: 0 });
     op(readSong);
   });
   if (!dev || !dev.dump) return null;
+  const dirty = songDirty(), n = SG.rows ? total(SG.rows) : 0;
   return (
-    <Card title={t("songTitle")} ic="control_arrow_loop">
-      <Help>{t("songHelp")}</Help>
-      {SG.err ? <p className="bad" id="songerr">{t(SG.err)}</p> : null}
-      {SG.rows ? <SongBody /> : null}
-    </Card>
+    <>
+      <SendBar dirty={dirty} busy={!!busy} sendDisabled={!SG.rows || n > ARR.STEPS || !n}
+        why={!SG.rows ? t("songNotRead") : tf("songFull", { max: ARR.STEPS })}
+        onSend={() => op(sendSong)} onRead={() => { if (dirty && !confirm(t("songDiscard"))) return; op(readSong); }} />
+      <Card title={t("songTitle")} ic="control_arrow_loop">
+        <HelpMore line={t("songHelp1")}>{t("songHelp")}</HelpMore>
+        {SG.err ? <p className="bad" id="songerr">{t(SG.err)}</p> : null}
+        {SG.rows ? <SongBody /> : null}
+      </Card>
+    </>
   );
 }

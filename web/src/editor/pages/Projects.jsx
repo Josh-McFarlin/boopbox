@@ -1,25 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The Save & load page: the four sections A..D on the FM-1, the full backup (v6), a song as one file (2.7).
-import { A, t, useApp } from "../core/app.js";
+// The Save & load page: the four sections A..D of the song on the FM-1, and files: a song as one file (2.7), the full
+// backup (v6).
+import { A, t, tf, useApp } from "../core/app.js";
 import { songExport } from "../core/shared.js";
-import { Card, Help, Ic } from "../ui/kit.jsx";
+import { Card, Ic } from "../ui/kit.jsx";
+import { HelpMore } from "./patterns/ui.jsx";
 import { backupLoad, backupSave, project, songFileLoad } from "./projects/files.js";
 
-/* the sections: used, empty or unknown (the protocol cannot ask without loading or saving one ... or PROJECT op 2) */
-function Slots() {
-  const { dev } = useApp();
+/* the sections: used, empty or unknown (PROJECT op 2 tells used / empty, nothing more) */
+function Sections() {
+  const { dev, busy } = useApp();
   return (
-    <div id="slots" className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+    <div id="slots" className="grid grid-cols-4 gap-3">
       {[0, 1, 2, 3].map((i) => {
-        const u = dev.slotUsed[i];
+        const u = dev.slotUsed[i], L = "ABCD"[i];
         return (
-          <div key={i} className="flex flex-col gap-2 border border-line bg-bg p-3">
-            <b className="text-big font-normal text-fg">{"ABCD"[i]}</b>
-            <span className={`lowercase ${u ? "text-t2" : "text-dim"}`}>{u == null ? t("unknown") : t(u ? "used" : "empty")}</span>
-            <p className="bar m-0!">
-              <button type="button" className={u ? "pri" : ""} onClick={() => project(0, i)}><Ic ic="symbol_folder_open">{t("load")}</Ic></button>
-              <button type="button" onClick={() => project(1, i)}><Ic ic="port_disk">{t("save")}</Ic></button>
-            </p>
+          <div key={i} style={{ "--c": `var(--t${i + 1})` }} className="flex flex-col gap-2 border border-line border-t-4 border-t-c bg-bg p-3">
+            <div className="flex items-baseline gap-3">
+              <b className="text-big font-normal text-c">{L}</b>
+              <span className={u ? "text-fg" : "text-dim"}>{u == null ? t("secUnknown") : t(u ? "secUsed" : "secEmptyShort")}</span>
+            </div>
+            <button type="button" disabled={!!busy || (u != null && !u)} title={busy ? t("whyBusy") : (u != null && !u) ? tf("secLoadWhy", { n: L }) : tf("secLoadHint", { n: L })}
+              onClick={() => project(0, i)}><Ic ic="symbol_folder_open">{t("secLoad")}</Ic></button>
+            <button type="button" disabled={!!busy} title={busy ? t("whyBusy") : tf("secSaveHint", { n: L })}
+              onClick={() => project(1, i)}><Ic ic="port_disk">{t("secSave")}</Ic></button>
           </div>
         );
       })}
@@ -27,36 +31,44 @@ function Slots() {
   );
 }
 
+/* a file row: what it holds, its two buttons */
+function FileRow({ id, title, what, children }) {
+  return (
+    <div id={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-line py-3 first:border-t-0 first:pt-0">
+      <p className="help m-0 text-dim"><b className="text-fg">{title}</b>{" — " + what}</p>
+      <div className="flex gap-2">{children}</div>
+    </div>
+  );
+}
+
 export default function Projects() {
-  const { dev, bkProg } = useApp();
+  const { dev, bkProg, busy } = useApp();
   if (!dev || !dev.info) return null;
   const v6 = dev.info.proto >= 6;                      /* v6 firmware: backup / restore; (2.7) a song as one file: the same commands */
+  const why = busy ? t("whyBusy") : "";
   return (
     <>
-      <Card title={t("projects")} ic="symbol_folder">
-        <Help>{t("projHelp")}</Help>
-        <Slots />
+      <Card title={t("secTitle")} ic="symbol_folder">
+        <HelpMore line={t("secHelp1")}>{t("projHelp")}</HelpMore>
+        <Sections />
       </Card>
-      {v6 ? (
-        <Card title={t("bkTitle")} ic="port_disk" id="bkgroup">
-          <Help>{t("bkHelp")}</Help>
-          <p className="bar">
-            <button type="button" id="bk-save" className="pri" onClick={backupSave}>{t("bkSave")}</button>{" "}
-            <button type="button" id="bk-load" onClick={backupLoad}>{t("bkLoad")}</button>
-          </p>
-          {bkProg != null ? <progress id="bk-prog" max="1" value={bkProg} /> : null}
-        </Card>
-      ) : null}
-      {/* 2.7: a song as one file (the LIVE page's playlist plays them) */}
-      {v6 ? (
-        <Card title={t("sfTitle")} ic="control_arrow_loop" id="sfgroup">
-          <Help>{t("sfHelp")}</Help>
-          <p className="bar">
-            <button type="button" id="sf-save" className="pri" onClick={() => { if (A.dev) songExport(); }}><Ic ic="symbol_download">{t("sfSave")}</Ic></button>{" "}
-            <button type="button" id="sf-load" onClick={songFileLoad}><Ic ic="symbol_upload">{t("sfLoad")}</Ic></button>
-          </p>
-        </Card>
-      ) : null}
+      <Card title={t("filesTitle")} ic="port_disk" id="bkgroup">
+        {v6 ? (
+          <>
+            {/* 2.7: a song as one file (the LIVE page's playlist plays them) */}
+            <FileRow id="sfgroup" title={t("sfTitle")} what={t("sfWhat")}>
+              <button type="button" id="sf-save" disabled={!!busy} title={why} onClick={() => { if (A.dev) songExport(); }}>
+                <Ic ic="symbol_download">{t("sfSave")}</Ic></button>
+              <button type="button" id="sf-load" disabled={!!busy} title={why} onClick={songFileLoad}><Ic ic="symbol_upload">{t("sfLoad")}</Ic></button>
+            </FileRow>
+            <FileRow id="bkrow" title={t("bkTitle")} what={t("bkWhat")}>
+              <button type="button" id="bk-save" disabled={!!busy} title={why} onClick={backupSave}><Ic ic="symbol_download">{t("bkSave")}</Ic></button>
+              <button type="button" id="bk-load" disabled={!!busy} title={why} onClick={backupLoad}><Ic ic="symbol_upload">{t("bkLoad")}</Ic></button>
+            </FileRow>
+            {bkProg != null ? <progress id="bk-prog" className="mt-2 w-full" max="1" value={bkProg} /> : null}
+          </>
+        ) : <p className="help m-0 text-dim">{t("filesOld")}</p>}
+      </Card>
     </>
   );
 }
