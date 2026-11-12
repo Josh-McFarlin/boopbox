@@ -15,7 +15,7 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## 1.9.4
 
-**A new look for the logo.** The logo now matches the [website](https://josh-mcfarlin.github.io/boopbox/): the name
+**A new look for the logo.** The logo now matches the [website](https://boopbox.replit.app/): the name
 is set in the website's pixel font (Pixelify Sans Bold), and the boombox is pixel art. On the FM-1, the boot screen
 and **MENU → SYSTEM → ABOUT** show the new wordmark, *boop* in the four track colours and *box* in white. The
 installer, the web editor, the app icons and the logos in this repository use it too.
@@ -96,7 +96,7 @@ version reads 1.8.1); projects, presets and settings open as they are.
   HOME → **KEYS** (the USB section's new name). **VELOCITY** OFF / SOFT / NORMAL / HARD; **AFTERTOUCH** opens the
   filter or adds vibrato, and goes out as MIDI channel pressure; **VEL LEARN** lets each key learn your touch (OCT+
   forgets it). **Both are OFF by default**, and then nothing changes. MIDI channel pressure in works too.
-- **Try BoopBox in the browser**: [the emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real
+- **Try BoopBox in the browser**: [the emulator](https://boopbox.replit.app/webapp/emu/) runs the real
   firmware (screen, sequencer, sound) with the FM-1 drawn on the page; play it with the mouse, a touch screen or the
   keyboard. Your projects stay in the browser. After JIANT FM's emulator.
 - **The screen's font takes less room**: the glyphs are read straight from flash (about 2.5 KB of flash and 4.8 KB of
@@ -202,7 +202,7 @@ ANALOG track.
 - **BoopBox Trainer keeps 8 voices**, the budget its three songs were made and approved with.
 - Projects, presets and settings open as they are; a project with only a few voices sounds exactly the same.
 
-**The web editor's side bar says what each page is for** ([the web editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/)):
+**The web editor's side bar says what each page is for** ([the web editor](https://boopbox.replit.app/webapp/editor/)):
 
 - The pages are grouped by what you came to do: **Play**, **Make a loop**, **Song**, **Your sounds** and **FM-1**, with
   a few words under each page's name and a sentence under the page's title (also before you connect), in English and
@@ -227,7 +227,7 @@ from the song page with it.
   in songs with sharps or flats (your own songs from the song page, level 4), its end was cut off.
 - No hint is cut short any more (they have room for 47 characters).
 
-**The song page** ([webapp/song/](https://josh-mcfarlin.github.io/boopbox/webapp/song/)) hears dense songs better:
+**The song page (pre-1.9.1)** heard dense songs better:
 
 - **Half-time over a whole section:** in a busy drop the snare on beat 3 can hide in any four bars; a section of 16 bars
   or more is now also judged over all of its bars.
@@ -240,7 +240,7 @@ the installer empties level 4, so to keep your song, install 1.5.1 from the song
 
 ## The song page: dubstep (website, after 1.5.0)
 
-- A **dubstep** style on [the song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/): the DUBSTEP kit, WOBBLE
+- A **dubstep** style on the song page (pre-1.9.1): the DUBSTEP kit, WOBBLE
   bass, DARK STR chords and a SUPERSAW lead. It is in the style menu for any song, and chosen by itself for a song the
   page hears as **half-time** (the snare on beat 3) between 125 and 165 BPM.
 - The page hears half-time: a snare on beat 3 alone is taken as it is, not moved to the backbeat. On the FM-1 that step
@@ -249,7 +249,7 @@ the installer empties level 4, so to keep your song, install 1.5.1 from the song
 
 ## The song page: whole songs (website, after 1.5.0)
 
-[The song page](https://josh-mcfarlin.github.io/boopbox/webapp/song/) makes **the whole song** a trainer level, not a
+The song page (pre-1.9.1) made **the whole song** a trainer level, not a
 loop of a few bars. No new firmware: BoopBox Trainer 1.5.0 plays it as it is.
 
 - It listens to the **whole file** (up to 6 minutes): the song's **sections** (up to four, A to D) and the order they
@@ -266,7 +266,7 @@ loop of a few bars. No new firmware: BoopBox Trainer 1.5.0 plays it as it is.
 
 **BoopBox Trainer: your song as level 4** ([the trainer](docs/trainer.md)):
 
-- **A new page, [Your song](https://josh-mcfarlin.github.io/boopbox/webapp/song/)** (also linked from the installer).
+- **A new page, Your song** (pre-1.9.1, also linked from the installer).
   Drop in an audio file (MP3, WAV, OGG, M4A, FLAC). The page listens to 30 seconds of it, in your browser: the file is
   not uploaded anywhere. It finds the tempo, the key, a bar of drums (kick, snare, hats), a bass line, a chord a bar and
   a lead; the notes are found by Basic Pitch, Spotify's note model, served from the site.

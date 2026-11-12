@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Check that the website in docs/ is built for a firmware binary.
+"""Check that a generated site is built for a firmware binary.
 
-  tools/check_site.py docs/firmware/boopbox-X.Y.Z.fwsc [--site docs]
+  tools/check_site.py docs/firmware/boopbox-X.Y.Z.fwsc [--site build/replit-site]
 
-The site is built by web/make_site.py and committed: the installer and the offline
-cache (webapp/sw.js) name the package they install. A binary copied into
-docs/firmware/ without rebuilding the site would be released while the website still
-installs the old one. This checks, for the given binary:
-  - it is the only package in docs/firmware/ (make_site.py removes the old ones), but for BoopBox Trainer's package of
+The site is built by web/make_site.py from the firmware package and source pages.
+This checks, for the given binary:
+  - it is the only matching package in the generated firmware directory, together with BoopBox Trainer's package of
     the same version (boopbox-trainer-X.Y.Z.fwsc, the installer's second choice),
   - the installer's meta names it, with its version and its SHA-256 (and the trainer's, when there is one),
   - sw.js keeps it (and the trainer's) offline, under a stamp for its version.
@@ -70,13 +68,13 @@ def problems(fw, site):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("binary", type=Path)
-    ap.add_argument("--site", type=Path, default=Path("docs"))
+    ap.add_argument("--site", type=Path, default=Path("build/replit-site"))
     a = ap.parse_args()
     found = problems(a.binary, a.site)
     for where, msg in found:
         print(f"::error file={where}::{msg}")
     if found:
-        print(f"Rebuild the site: python3 web/make_site.py build/felucca-VER.fwsc VER {a.site}", file=sys.stderr)
+        print(f"Rebuild the site: python3 web/make_site.py BINARY VERSION {a.site}", file=sys.stderr)
         return 1
     print(f"{a.site}/ is built for {a.binary.name}.")
     return 0

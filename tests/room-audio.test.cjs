@@ -390,7 +390,7 @@ test("room firmware renders all eight tracks and sequenced patterns for eight me
     for (let slot = 0; slot < 8; slot += 1) {
       await audio.setPerformance(slot, roomPerformance(false));
     }
-    const module = await WebAssembly.compile(await readFile(resolve(__dirname, "../docs/webapp/editor/boopbox-preview.wasm")));
+    const module = await WebAssembly.compile(await readFile(resolve(__dirname, "../build/preview/boopbox-preview.wasm")));
     for (let track = 0; track < 8; track += 1) {
       const group = Math.floor(track / 4);
       const state = messages.find((message) => message.type === "state" && message.slot === 0 && message.group === group).state;

@@ -2,8 +2,8 @@
 # must also have a "## X.Y.Z" section in CHANGELOG.md: merging it publishes the
 # release with that section as its notes (release-on-merge.yml).
 # Shows on the PR the release notes it would publish.
-# Also checks that the website in docs/ was rebuilt for the binary (tools/check_site.py):
-# the site is committed, and its installer installs the package it was built with.
+# Also builds the Replit site from the candidate binary and checks that the
+# installer, firmware download, and offline cache all point to that release.
 name: Changelog check
 
 on:
@@ -24,6 +24,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Check the changelog for each new binary
         env:
@@ -51,8 +56,18 @@ jobs:
               echo "::error file=CHANGELOG.md::$file is added but CHANGELOG.md has no '## $ver' section: add one (it becomes the release notes)"
               fail=1
             fi
-            if ! python3 tools/check_site.py "$file" --site docs; then
-              echo "::error file=$file::the website in docs/ is not built for $ver: run web/make_site.py (BUILDING.md, Release step 2)"
+            site="$RUNNER_TEMP/boopbox-site-$ver"
+            if ! python3 web/make_site.py "$file" "$ver" "$site"; then
+              echo "::error file=$file::the Replit website could not be built for $ver"
+              fail=1
+              continue
+            fi
+            if ! python3 tools/check_site.py "$file" --site "$site"; then
+              echo "::error file=$file::the generated Replit installer does not match $ver"
+              fail=1
+            fi
+            if ! node tests/pwa_test.mjs "$site"; then
+              echo "::error file=$file::the generated Replit offline cache is invalid for $ver"
               fail=1
             fi
             src=$(sed -nE 's/^#define FELUCCA_VERSION "BOOPBOX ([^"]+)".*/\1/p' firmware/src/ui.c | tr 'A-Z' 'a-z')

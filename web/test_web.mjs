@@ -1577,7 +1577,7 @@ function editorIcons() {
   const missing = [...used].filter((n) => !names.has(n));
   ok(names.size > 0 && !missing.length, `editor: every icon name is in GLYPH (${used.size} used${missing.length ? ", missing " + missing : ""})`);
   const ttf = join(HERE, "src/editor/assets/fukiai.ttf"), lic = join(HERE, "site/public/editor/FUKIAI-LICENSE.txt");
-  ok(existsSync(ttf) && readFileSync(ttf).readUInt32BE(0) === 0x00010000 && existsSync(lic) && /href=\{[^}]*"FUKIAI-LICENSE\.txt"/.test(editorSrc),
+  ok(existsSync(ttf) && readFileSync(ttf).readUInt32BE(0) === 0x00010000 && existsSync(lic) && editorSrc.includes("FUKIAI-LICENSE.txt"),
     "editor: fukiai.ttf and FUKIAI-LICENSE.txt (served beside the editor)");
   ok(/html:not\(\.fk\) \.ic \{ display: none; \}/.test(editorSrc) && editorSrc.includes('classList.add("fk")'), "editor: icons hidden until the font has loaded");
 }

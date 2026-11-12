@@ -1,7 +1,7 @@
 # The BoopBox website
 
 The installer, the web editor and the browser emulator: React pages built with [Vite](https://vite.dev) and styled
-with [Tailwind CSS](https://tailwindcss.com) v4. `web/make_site.py` builds them into the site (`docs/` for a release).
+with [Tailwind CSS](https://tailwindcss.com) v4. `web/make_site.py` packages them with the current firmware for Replit.
 
 ```sh
 npm ci                   # once (Node.js 20 or newer)

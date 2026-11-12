@@ -208,11 +208,9 @@ When a PR that adds a new firmware binary merges into `main`, GitHub publishes a
 
 1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`). Then build with
    `scripts/build.sh --release X.Y.Z`.
-2. Rebuild the site: `python3 web/make_site.py build/felucca-X.Y.Z.fwsc X.Y.Z docs`. This command writes
-   `docs/firmware/boopbox-X.Y.Z.fwsc` and deletes the old package. It also writes the installer and the offline cache that
-   install the package. Do not copy a binary into `docs/firmware/` by hand. The website is these committed files.
-   If the site of a PR is not built for its new binary, the PR fails the *Changelog check* (`python3 tools/check_site.py
-   docs/firmware/boopbox-X.Y.Z.fwsc`).
+2. Add `build/felucca-X.Y.Z.fwsc` to `docs/firmware/boopbox-X.Y.Z.fwsc` (and the matching trainer package, if releasing
+   it). These checked-in binaries are the inputs for the Replit installer and GitHub release. Do not commit generated
+   website output under `docs/`; the *Changelog check* builds a temporary site for the candidate package and validates it.
 3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md). Write it for the people who install the release.
    This section becomes the release notes. If a PR adds a binary without a section, the PR fails the
    *Changelog check*. The *Changelog check* also shows the notes that it will publish on the summary page of the run.
@@ -250,6 +248,7 @@ npm run build            # -> build/webapp-vite/ (and npm run build:offline: the
 node test_web.mjs        # the editor's protocol, formats and pages, the installer's update protocol (no browser)
 ```
 
-`web/make_site.py` runs both builds itself. Then it writes the site (`docs/` for a release) with the package, the
-checksums of the installer and the offline cache. `python3 tests/site_test.py` and `node tests/pwa_test.mjs SITE_DIR` do checks on
-what it makes.
+`web/make_site.py` runs both web builds and packages a complete site from a firmware binary. The Replit build runs it
+through `scripts/build-site.sh`, writing to `build/replit-site/`; the release workflow builds a temporary copy to attach
+the offline editor to the GitHub release. `python3 tests/site_test.py` and `node tests/pwa_test.mjs SITE_DIR` check the
+generated site.

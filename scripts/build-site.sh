@@ -10,6 +10,23 @@ if [[ "${BOOPBOX_BUILD_LOCK_HELD:-0}" != "1" ]]; then
 fi
 
 python3 tools/build_emu.py
+python3 tools/build_emu.py --trainer
+python3 tools/build_preview.py
 npm --prefix web ci
-npm --prefix web run build
-cp build/emu/boopbox-emu.wasm build/webapp-vite/emu/boopbox-emu.wasm
+
+shopt -s nullglob
+packages=(docs/firmware/boopbox-[0-9]*.fwsc)
+if ((${#packages[@]} == 0)); then
+  echo "build-site: no release firmware package found in docs/firmware" >&2
+  exit 1
+fi
+mapfile -t packages < <(printf '%s\n' "${packages[@]}" | sort -V)
+package="${packages[${#packages[@]}-1]}"
+version="${package##*/boopbox-}"
+version="${version%.fwsc}"
+trainer="docs/firmware/boopbox-trainer-${version}.fwsc"
+trainer_args=()
+if [[ -f "$trainer" ]]; then
+  trainer_args=(--trainer "$trainer")
+fi
+python3 web/make_site.py "$package" "$version" build/replit-site "${trainer_args[@]}"

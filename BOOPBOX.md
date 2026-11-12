@@ -43,15 +43,15 @@ Version tags show the release that added a feature. *(1.8)* and other 1.x tags a
 
 ## Install
 
-1. Open the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/) in **Chrome or Edge**.
+1. Open the [installer page](https://boopbox.replit.app/webapp/installer/) in **Chrome or Edge**.
    If you use the source folder on Windows, you can also double-click **`scripts/INSTALL-BOOPBOX.bat`**. This script builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep its black window open until the install is done.
 2. Connect the FM-1 to the computer with a USB data cable. Connect it directly, not through a hub.
 3. Choose **BoopBox** (or **BoopBox Trainer**, below). Press **INSTALL**. Allow MIDI access. Wait for *Done*.
 
-The FM-1 restarts and shows the BoopBox logo. An update keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) (or **`scripts/OPEN-EDITOR.bat`**).
+The FM-1 restarts and shows the BoopBox logo. An update keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://boopbox.replit.app/webapp/editor/) (or **`scripts/OPEN-EDITOR.bat`**).
 
 - **BoopBox Trainer** is a second firmware. It teaches you three songs on the FM-1 itself, with a coach on the screen. All other functions work as in BoopBox. To switch back, install the other firmware ([the trainer](docs/trainer.md)).
-- **No FM-1 at hand?** [The emulator](https://josh-mcfarlin.github.io/boopbox/webapp/emu/) runs the real firmware in the browser, with a drawing of the FM-1 on the page. [The home page](https://josh-mcfarlin.github.io/boopbox/) shows what BoopBox does.
+- **No FM-1 at hand?** [The emulator](https://boopbox.replit.app/webapp/emu/) runs the real firmware in the browser, with a drawing of the FM-1 on the page. [The home page](https://boopbox.replit.app/) shows what BoopBox does.
 
 ## Sixty seconds to a beat
 
@@ -409,11 +409,11 @@ The **SONG screen** (tap SAVE on TRACKS, or SAVE + key 16) shows the chain, and 
 
 ## The web editor
 
-Connect the FM-1 by USB. Open the editor in Chrome or Edge from the [home page](https://josh-mcfarlin.github.io/boopbox/), from the installer page, or with **`scripts/OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`). Press **Connect**. The editor follows the device live: if you turn a knob on the FM-1, the editor moves.
+Connect the FM-1 by USB. Open the editor in Chrome or Edge from the [home page](https://boopbox.replit.app/), from the installer page, or with **`scripts/OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`). Press **Connect**. The editor follows the device live: if you turn a knob on the FM-1, the editor moves.
 
 **Offline (2.6).** *Download for offline use* (at the bottom of the side bar, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html`. This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click the file. It opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online editor. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
 
-**As an app, also on Android (2.6).** Open the [online editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) or the installer once with internet. Then use *Install the app* (at the bottom of the side bar, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs). The app stays the online site that the browser keeps, so it uses the same sound library as the online editor. It gets each new BoopBox version automatically the next time it opens online.
+**As an app, also on Android (2.6).** Open the [online editor](https://boopbox.replit.app/webapp/editor/) or the installer once with internet. Then use *Install the app* (at the bottom of the side bar, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs). The app stays the online site that the browser keeps, so it uses the same sound library as the online editor. It gets each new BoopBox version automatically the next time it opens online.
 
 On Android, use the app, not the downloaded file. Chrome on Android does not allow MIDI in a downloaded file.
 

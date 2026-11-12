@@ -3,3 +3,4 @@
 - [Jam-room emulator presentation](jam-room-emulator-presentation.md) — the embedded room view should show only the emulator, not its standalone page content.
 - [Mobile Web Audio activation](mobile-web-audio-activation.md) — resume the emulator audio context synchronously from the user's tap, before loading firmware or worklets.
 - [Replit WASM build environment](replit-wasm-build-environment.md) — match the raw Nix Clang to its wrapper and install Python build libraries as language packages.
+- [Replit site hosting](replit-site-hosting.md) — Replit is the public website host; keep generated site output build-only and retain docs and firmware inputs.

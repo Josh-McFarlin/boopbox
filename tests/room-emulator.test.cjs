@@ -233,7 +233,7 @@ test("browser emulator notes and sequenced performance reach room players and la
       updatedRendererState.tracks[0].roomPatterns[0].bytes,
       initialRendererState.tracks[0].roomPatterns[0].bytes,
     );
-    const previewModule = await WebAssembly.compile(await readFile("docs/webapp/editor/boopbox-preview.wasm"));
+    const previewModule = await WebAssembly.compile(await readFile("build/preview/boopbox-preview.wasm"));
     const renderer = new FirmwareAudio(previewModule);
     assert.doesNotThrow(() => renderer.sync(updatedRendererState));
 

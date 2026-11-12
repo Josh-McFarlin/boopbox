@@ -22,7 +22,7 @@ def check(what, ok):
     bad += not ok
 
 
-ONLINE = "https://josh-mcfarlin.github.io/boopbox/"
+ONLINE = "https://boopbox.replit.app/"
 make_site.build_pages()
 src = (make_site.BUILD / "webapp-offline" / "editor" / "index.html").read_text(encoding="utf-8")
 off = make_site.offline_editor(src, "9.9")
@@ -33,7 +33,7 @@ check("the installer page links it too",
 check("offline: the fonts inlined", "font/ttf;base64," in off and not re.search(r'url\((?!data:)["\']?[A-Za-z.]', off))
 check("offline: no download link to itself", 'href:"boopbox-editor.html"' not in off and 'href="boopbox-editor.html"' not in off)
 check("offline: the installer and the font licence online",
-      ONLINE + "webapp/installer/" in off and ONLINE + "webapp/editor/FUKIAI-LICENSE.txt" in off)
+      ONLINE.rstrip("/") in off and "/webapp/installer/" in off and "editor/FUKIAI-LICENSE.txt" in off)
 rel = [m for m in re.findall(r'(?:src|href)="([^"#]+)"', off) if not re.match(r"(https?:|data:|mailto:|`)", m)]   # (` : React's own templates)
 check("offline: no other file next to it (no relative src / href)", not rel)
 check("offline: no app, no service worker (a file has no site)",

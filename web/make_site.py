@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-"""Make the site (GitHub Pages):
+"""Build a complete static site from a firmware package:
 
   index.html                  the home page (webapp/home/index.html with <base href="webapp/home/">): what BoopBox is
   firmware/boopbox-VER.fwsc   the package
@@ -26,7 +26,8 @@
 
   web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta] [--trainer build/trainer-fw/felucca-trainer-X.Y.fwsc]
   (--beta: web/beta_banner.html at the top of the installer: the beta channel, docs/beta)
-  Needs Node.js: the pages are built with npm (npm ci in web/ the first time).
+The Replit build writes OUT_DIR as build/replit-site/. Release checks and GitHub releases use a temporary OUT_DIR.
+Needs Node.js: the pages are built with npm (npm ci in web/ the first time).
 
 The package identity (FM-1_9xx) is read from the package; the device reports it
 after the install.

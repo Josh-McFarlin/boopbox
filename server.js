@@ -6,7 +6,7 @@ const { extname, resolve, sep } = require("node:path");
 const { createRoomService } = require("./server/rooms.cjs");
 
 const ROOT = resolve(__dirname, "docs");
-const BUILD_ROOT = resolve(__dirname, "build/webapp-vite");
+const SITE_ROOT = resolve(__dirname, "build/replit-site");
 const MIME = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -47,16 +47,14 @@ function fileOrDirectoryExists(file) {
 
 function staticTarget(pathname) {
   if (pathname === "/") {
-    const home = resolve(BUILD_ROOT, "home/index.html");
+    const home = resolve(SITE_ROOT, "index.html");
     return fileExists(home) ? home : resolve(ROOT, "index.html");
   }
 
-  if (pathname.startsWith("/webapp/")) {
-    const relative = pathname.slice("/webapp/".length);
-    const built = resolve(BUILD_ROOT, `.${pathname.slice("/webapp".length)}`);
-    const isInstaller = relative === "installer" || relative.startsWith("installer/");
-    if (!isInstaller && (built === BUILD_ROOT || built.startsWith(`${BUILD_ROOT}${sep}`)) && fileOrDirectoryExists(built)) {
-      return built;
+  if (pathname.startsWith("/webapp/") || pathname.startsWith("/firmware/")) {
+    const generated = resolve(SITE_ROOT, `.${pathname}`);
+    if (generated.startsWith(`${SITE_ROOT}${sep}`) && fileOrDirectoryExists(generated)) {
+      return generated;
     }
   }
 

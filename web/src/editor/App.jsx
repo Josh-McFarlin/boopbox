@@ -11,6 +11,7 @@ import { selectTrack, toggleConnect } from "./core/device.js";
 import { DEV_TABS, NAV, TABS, TAB_NAME, TRACK_TABS, shownTab, showTab } from "./core/tabs.js";
 import { useInstallPrompt } from "../shared/pwa.js";
 import SiteHeader from "../shared/SiteHeader.jsx";
+import { PUBLIC_SITE_URL } from "../shared/site-config.js";
 import { Ic } from "./ui/kit.jsx";
 import { PAGES } from "./pages/index.js";
 import TransportBar from "./ui/TransportBar.jsx";
@@ -18,7 +19,7 @@ import TransportBar from "./ui/TransportBar.jsx";
 /* the offline file's name: with the site's version (make_site.py writes window.BOOPBOX_VERSION) */
 const OFFLINE_NAME = typeof window !== "undefined" && window.BOOPBOX_VERSION
   ? `boopbox-editor-${String(window.BOOPBOX_VERSION).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
-const SITE = __OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/" : "../";
+const SITE = __OFFLINE__ ? `${PUBLIC_SITE_URL}/webapp/` : "../";
 
 function Tabs() {
   useApp();
@@ -56,7 +57,7 @@ function SideLinks() {
   const [canInstall, install] = useInstallPrompt();
   return (
     <div className="mt-auto flex flex-col gap-1.5 border-t border-line pt-3 text-dim [&_a]:text-dim [&_a:hover]:text-fg">
-      <a href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/installer/" : "../installer/"} {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
+      <a href={__OFFLINE__ ? `${PUBLIC_SITE_URL}/webapp/installer/` : "../installer/"} {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
       {__OFFLINE__ ? null : <a href="boopbox-editor.html" download={OFFLINE_NAME} title={t("offline")}>{t("offlineShort")}</a>}
       {canInstall ? <button id="install" type="button" onClick={install}>{t("install")}</button> : null}
     </div>
@@ -176,7 +177,7 @@ export default function App() {
           <p className="m-0">BoopBox, based on <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">SLOOP</a> and on Felucca by Leo
           Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>. GPL-3.0.
           {" "}{t("foot")} M-VAVE and FM-1 are trademarks of their respective owners.{" "}
-          <a href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/editor/FUKIAI-LICENSE.txt" : "FUKIAI-LICENSE.txt"}
+          <a href={__OFFLINE__ ? `${SITE}editor/FUKIAI-LICENSE.txt` : "FUKIAI-LICENSE.txt"}
             {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("iconsCredit")}</a> · {t("fontCredit")}</p>
         </footer>
       </main>
