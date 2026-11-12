@@ -27,15 +27,6 @@ const STATS = [
   ["27", "punch-in effects on the keys", "blue"],
   ["64", "steps a track, with locks and fills", "green"],
 ];
-/* why BoopBox: a number each, then what it means */
-const REASONS = [
-  ["0", "Installs to try it", "The real firmware runs in your browser, with the same screen, sequencer and sound. Play it before you change anything on your FM-1.", "orange"],
-  ["1 min", "To install, from Chrome", "Over USB, with every byte checked. If an install stops halfway, press Install again. USB rescue and the official firmware are always there.", "blue"],
-  ["223", "Sounds at the same volume", "Thirteen engines, from 808s and acid to a Steinway, DX7 FM and the OberVave polysynth. Change sound mid-song and the level holds.", "green"],
-  ["8", "Tracks at once", "Six synths and two drum machines, 64 steps each, with locks, fills, eight patterns a track and scenes that switch them together.", "yellow"],
-  ["127", "Velocity levels from the FM-1's own keys", "Play harder and it plays louder, with aftertouch. Plug a USB keyboard into the FM-1 and that plays it too.", "blue"],
-  ["2.5 s", "Until your work is saved", "Autosave, undo and redo for everything, and a full backup from the web editor, which follows every knob you turn.", "green"],
-];
 const LAYERS = [
   ["FX · punch", "27 effects on the whole mix", "orange"],
   ["GLO · mix", "mute, solo, fill, tap tempo", "blue"],
@@ -130,17 +121,8 @@ export default function Home() {
 
         <section id="features" className="mx-auto max-w-[1200px] px-6 pt-10 pb-6">
           <p className={KICKER}>Why BoopBox</p>
-          <h2 className="m-0 mb-10 max-w-[24em] text-balance text-[32px] leading-[1.1] font-bold tracking-[-.01em] min-[600px]:text-[40px]">
+          <h2 className="m-0 mb-14 max-w-[24em] text-balance text-[32px] leading-[1.1] font-bold tracking-[-.01em] min-[600px]:text-[40px]">
             The most complete firmware for the <span className="whitespace-nowrap">FM-1</span>.</h2>
-          <div className="mb-24 grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3">
-            {REASONS.map(([big, title, text, c]) => (
-              <div key={title} className="border-t-[3px] bg-tile px-5 pt-5 pb-[22px]" style={{ borderColor: C[c] }}>
-                <b className={`block text-[30px] leading-[1.1] font-bold ${TEXT[c]}`}>{big}</b>
-                <h3 className="m-0 mt-2 mb-1.5 text-lg leading-snug font-bold">{title}</h3>
-                <p className="m-0 text-[15px] text-[#b8b8c0]">{text}</p>
-              </div>
-            ))}
-          </div>
 
           <Feature media={<Screen src={punch} caption="FX held: loops, stutter, tape stop, DJ kills, rewind, reverb freeze."
             alt="The PUNCH screen: FX held, the 27 effects laid out on the keys: loops, stutter, reverse, tape stop, kills, rewind, freeze" />}>
