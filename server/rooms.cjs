@@ -15,6 +15,21 @@ function isIntegerInRange(value, min, max) {
   return Number.isSafeInteger(value) && value >= min && value <= max;
 }
 
+function normalizeParameters(engine, value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const allowlist = config.shareableParameters[engine];
+  const keys = Object.keys(value);
+  if (!allowlist || keys.length > 8) return null;
+  const parameters = {};
+  for (const key of keys) {
+    if (!/^(0|[1-9]\d*)$/.test(key) || !Object.hasOwn(allowlist, key)) return null;
+    const [min, max] = allowlist[key];
+    if (!isIntegerInRange(value[key], min, max)) return null;
+    parameters[key] = value[key];
+  }
+  return parameters;
+}
+
 function normalizeVoice(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   if (value.engine === ENGINE_COUNT) {
@@ -23,9 +38,15 @@ function normalizeVoice(value) {
     return { engine: ENGINE_COUNT, kit: value.kit };
   }
   if (!isIntegerInRange(value.engine, 0, ENGINE_COUNT - 1) || value.engine === 4) return null;
-  if (Object.keys(value).length !== 2 || !Object.hasOwn(value, "preset")) return null;
+  const keys = Object.keys(value);
+  if (!Object.hasOwn(value, "preset") || keys.some((key) => !["engine", "preset", "params"].includes(key))
+    || keys.length < 2 || keys.length > 3) return null;
   if (!isIntegerInRange(value.preset, 0, config.presetCounts[value.engine] - 1)) return null;
-  return { engine: value.engine, preset: value.preset };
+  if (!Object.hasOwn(config.shareableParameters, value.engine)) return null;
+  if (!Object.hasOwn(value, "params")) return { engine: value.engine, preset: value.preset };
+  const params = normalizeParameters(value.engine, value.params);
+  if (!params) return null;
+  return { engine: value.engine, preset: value.preset, params };
 }
 
 function createRoomService(server, options = {}) {
@@ -237,6 +258,28 @@ function createRoomService(server, options = {}) {
           playerId: player.id,
           slot: player.slot,
           voice,
+        });
+        break;
+      }
+      case "sound_edit": {
+        if (!validEnvelope(message, ["param", "value"])) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        if (!player.voice || player.voice.engine === ENGINE_COUNT) return sendError(player, "voice_not_set");
+        const allowlist = config.shareableParameters[player.voice.engine];
+        const range = Number.isSafeInteger(message.param) ? allowlist?.[message.param] : null;
+        if (!range || !isIntegerInRange(message.value, range[0], range[1])) {
+          return protocolError(player, "unsupported_sound_edit");
+        }
+        player.voice = {
+          ...player.voice,
+          params: { ...(player.voice.params || {}), [message.param]: message.value },
+        };
+        broadcast(player.room, {
+          type: "sound_edit",
+          playerId: player.id,
+          slot: player.slot,
+          param: message.param,
+          value: message.value,
         });
         break;
       }

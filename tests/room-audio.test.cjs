@@ -40,9 +40,17 @@ test("FM-1 connection reads only the selected shareable voice", async () => {
   });
   const notes = [];
   try {
-    const device = await connectFm1((...note) => notes.push(note), () => {});
+    const edits = [];
+    const device = await connectFm1((...note) => notes.push(note), () => {}, (...edit) => edits.push(edit));
     assert.deepEqual(midiOptions, { sysex: true });
-    assert.deepEqual(await device.getSelectedVoice(), { engine: 0, preset: 4 });
+    const voice = await device.getSelectedVoice();
+    assert.equal(voice.engine, 0);
+    assert.equal(voice.preset, 4);
+    assert.equal(voice.params[68], mock.state.tracks[0].p[68]);
+    mock.sim.knob(68, 4);
+    mock.sim.knob(5, 4);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [[68, mock.state.tracks[0].p[68]]]);
     mock.state.tracks[0].engine = 9;
     mock.state.tracks[0].preset = 0;
     mock.state.tracks[0].p[70] = 8;
@@ -70,6 +78,8 @@ test("room audio maps shared factory sounds onto local firmware tracks", async (
     assert.equal(synthTrack.engine, 0);
     assert.equal(synthTrack.preset, 2);
     assert.equal(synthTrack.drum, false);
+    await audio.setSoundParameter(7, 68, 91);
+    assert.equal(synthTrack.p[68], 91);
 
     await audio.setVoice(1, { engine: 13, kit: 5 });
     const drumTrack = audio.players[1].mock.state.tracks[3];
@@ -98,11 +108,15 @@ test("isolated firmware renderers make sound on player slots beyond the editor p
       const voice = slot % 2 === 0 ? { engine: 0, preset: 2 } : { engine: 13, kit: 5 };
       await audio.setVoice(slot, voice);
     }
+    await audio.setSoundParameter(0, 68, 88);
+    assert.equal(audio.players[0].mock.state.tracks[0].p[68], 88);
     const module = await WebAssembly.compile(await readFile(resolve(__dirname, "../docs/webapp/editor/boopbox-preview.wasm")));
     const dsp = new RoomFirmwareAudio(module);
     for (let slot = 0; slot < 8; slot += 1) {
       const voice = audio.voices[slot];
-      dsp.sync(slot, previewSnapshot(audio.players[slot].mock.state));
+      const snapshot = previewSnapshot(audio.players[slot].mock.state);
+      if (slot === 0) assert.equal(snapshot.tracks[0].p[68], 88);
+      dsp.sync(slot, snapshot);
       dsp.note(slot, voice.engine === 13 ? 3 : 0, voice.engine === 13 ? 36 : 60, true);
     }
 

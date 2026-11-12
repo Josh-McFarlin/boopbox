@@ -19,6 +19,7 @@ const ERROR_TEXT = {
   too_many_notes: "Release some notes before playing more.",
   rate_limited: "That was too many requests. Wait a moment and try again.",
   unsupported_voice: "That sound isn't available to share.",
+  unsupported_sound_edit: "That sound control isn't available to share.",
 };
 const ENGINE_LABELS = config.engineNames;
 
@@ -123,6 +124,12 @@ function RoomPage() {
           applyVoice({ id: message.playerId, slot: message.slot, voice: message.voice });
           setPlayers((current) => current.map((player) => player.id === message.playerId
             ? { ...player, voice: message.voice } : player));
+        } else if (message.type === "sound_edit") {
+          audioRef.current?.setSoundParameter(message.slot, message.param, message.value)
+            .catch((err) => setError(err.message));
+          setPlayers((current) => current.map((player) => player.id === message.playerId && player.voice
+            ? { ...player, voice: { ...player.voice, params: { ...(player.voice.params || {}), [message.param]: message.value } } }
+            : player));
         } else if (message.type === "note_on") {
           audioRef.current?.note(message.slot, message.note, true);
         } else if (message.type === "note_off") {
@@ -183,6 +190,8 @@ function RoomPage() {
       fm1Ref.current = await connectFm1(playNote, (state) => {
         setFm1State(state);
         if (state === "disconnected") stopAllNotes();
+      }, (param, value) => {
+        if (roomRef.current) send({ type: "sound_edit", param, value });
       });
       setStatus("FM-1 connected. Share its selected built-in sound to the room.");
     } catch (err) {

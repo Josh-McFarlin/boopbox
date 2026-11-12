@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { Link, makeMockDevice, previewSnapshot, req } from "../editor/lib/proto.js";
+import config from "../../../shared/room-config.json" with { type: "json" };
 
 const PLAYERS = 8;
 const WASM_URL = new URL("../editor/boopbox-preview.wasm", document.baseURI);
 const WORKLET_URL = new URL("../editor/preview-worklet.js", document.baseURI);
+
+function isShareableParameter(engine, param, value) {
+  const range = config.shareableParameters[engine]?.[param];
+  return !!range && Number.isSafeInteger(value) && value >= range[0] && value <= range[1];
+}
 
 function makePlayer() {
   const mock = makeMockDevice({ auto: false });
@@ -82,22 +88,47 @@ export class RoomAudio {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return Promise.reject(new Error("Invalid player slot."));
     const next = this.queue.then(async () => {
       const player = this.players[slot];
+      const localVoice = { ...voice };
+      if (voice.params) localVoice.params = { ...voice.params };
       await player.ready;
-      if (voice.engine === 13) {
+      if (localVoice.engine === 13) {
         const track = player.mock.state.tracks[3];
         track.drum = true;
         track.engine = 13;
         track.preset = 0;
-        track.p[63] = voice.kit;
+        track.p[63] = localVoice.kit;
       } else {
         await player.link.request(req.track(0));
-        await player.link.request(req.preset(voice.engine, voice.preset));
+        await player.link.request(req.preset(localVoice.engine, localVoice.preset));
         const track = player.mock.state.tracks[0];
-        track.engine = voice.engine;
-        track.preset = voice.preset;
+        track.engine = localVoice.engine;
+        track.preset = localVoice.preset;
         track.drum = false;
+        for (const [param, value] of Object.entries(localVoice.params || {})) {
+          const id = Number(param);
+          if (!isShareableParameter(localVoice.engine, id, value)) {
+            throw new Error("That sound control isn't available to share.");
+          }
+          await player.link.request(req.trackParam(0, id, value));
+        }
       }
-      this.voices[slot] = voice;
+      this.voices[slot] = localVoice;
+      this.syncVoice(slot);
+    });
+    this.queue = next.catch(() => {});
+    return next;
+  }
+
+  setSoundParameter(slot, param, value) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return Promise.reject(new Error("Invalid player slot."));
+    const next = this.queue.then(async () => {
+      const voice = this.voices[slot];
+      if (!voice || voice.engine === 13 || !isShareableParameter(voice.engine, param, value)) {
+        throw new Error("That sound control isn't available to share.");
+      }
+      const player = this.players[slot];
+      await player.link.request(req.trackParam(0, param, value));
+      voice.params = { ...(voice.params || {}), [param]: value };
       this.syncVoice(slot);
     });
     this.queue = next.catch(() => {});

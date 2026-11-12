@@ -6,6 +6,7 @@ const { once } = require("node:events");
 const test = require("node:test");
 const { WebSocket } = require("ws");
 const { createRoomService, normalizeVoice } = require("../server/rooms.cjs");
+const config = require("../shared/room-config.json");
 
 function createClient(url) {
   const ws = new WebSocket(url, { headers: { Origin: url.replace(/^ws:/, "http:").replace(/\/api\/rooms$/, "") } });
@@ -79,11 +80,69 @@ async function createRoom(client, genre = "house") {
 test("voice descriptors allow only factory presets and factory drum kits", () => {
   assert.deepEqual(normalizeVoice({ engine: 0, preset: 14 }), { engine: 0, preset: 14 });
   assert.deepEqual(normalizeVoice({ engine: 13, kit: 36 }), { engine: 13, kit: 36 });
+  assert.deepEqual(normalizeVoice({ engine: 0, preset: 2, params: { 63: 3, 68: 64 } }),
+    { engine: 0, preset: 2, params: { 63: 3, 68: 64 } });
   assert.equal(normalizeVoice({ engine: 4, preset: 0 }), null);
+  assert.equal(normalizeVoice({ engine: 4, preset: 0, params: { 68: 64 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 15 }), null);
   assert.equal(normalizeVoice({ engine: 13, kit: 37 }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: [1, 2, 3] }), null);
+  assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 71: 1 } }), null);
+  assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 63: 5 } }), null);
+  assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 128 } }), null);
+  assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 1.5 } }), null);
+  assert.equal(normalizeVoice({ engine: 8, preset: 0, params: { 63: 0 } }), null);
+  assert.equal(normalizeVoice({ engine: 9, preset: 0, params: { 70: 0 } }), null);
   assert.equal(normalizeVoice({ engine: 99, preset: 0 }), null);
+  for (const [engine, allowlist] of Object.entries(config.shareableParameters)) {
+    const [param, [min, max]] = Object.entries(allowlist)[0];
+    assert.deepEqual(normalizeVoice({ engine: Number(engine), preset: 0, params: { [param]: min } }),
+      { engine: Number(engine), preset: 0, params: { [param]: min } });
+    assert.deepEqual(normalizeVoice({ engine: Number(engine), preset: 0, params: { [param]: max } }),
+      { engine: Number(engine), preset: 0, params: { [param]: max } });
+  }
+});
+
+test("rooms share validated sound edits and retain them for later participants", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const peer = createClient(app.url);
+    clients.push(owner, peer);
+    await Promise.all([owner.ready, peer.ready]);
+    const created = await createRoom(owner);
+    peer.send({ type: "join", roomId: created.room.id });
+    await peer.next("room_state");
+
+    owner.send({ type: "voice", voice: { engine: 0, preset: 2, params: { 68: 64 } } });
+    assert.deepEqual((await peer.next("voice")).voice,
+      { engine: 0, preset: 2, params: { 68: 64 } });
+
+    owner.send({ type: "sound_edit", param: 68, value: 92 });
+    const edit = await peer.next("sound_edit");
+    assert.deepEqual(
+      { playerId: edit.playerId, slot: edit.slot, param: edit.param, value: edit.value },
+      { playerId: created.players[0].id, slot: created.players[0].slot, param: 68, value: 92 },
+    );
+
+    owner.send({ type: "sound_edit", param: 71, value: 1 });
+    assert.equal((await owner.next("error")).code, "unsupported_sound_edit");
+    owner.send({ type: "sound_edit", param: 68, value: 128 });
+    assert.equal((await owner.next("error")).code, "unsupported_sound_edit");
+    owner.send({ type: "sound_edit", param: 68, value: 92, sample: [1, 2, 3] });
+    assert.equal((await owner.next("error")).code, "invalid_message");
+
+    const lateJoiner = createClient(app.url);
+    clients.push(lateJoiner);
+    await lateJoiner.ready;
+    lateJoiner.send({ type: "join", roomId: created.room.id });
+    const state = await lateJoiner.next("room_state");
+    assert.deepEqual(state.players.find((player) => player.id === created.players[0].id).voice,
+      { engine: 0, preset: 2, params: { 68: 92 } });
+  } finally {
+    await app.close(clients);
+  }
 });
 
 test("room capacity is eight and only members can share typed notes", async () => {
