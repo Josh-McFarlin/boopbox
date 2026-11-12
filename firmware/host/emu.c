@@ -26,7 +26,9 @@
 #define FELUCCA_EDITOR 0
 #define FELUCCA_CPU1 0
 #define FELUCCA_USB_HOST 0
-#define FELUCCA_TRAINER 0
+#ifndef FELUCCA_TRAINER
+#define FELUCCA_TRAINER 0               /* 1: BoopBox Trainer (tools/build_emu.py --trainer: the lessons, trainer.c) */
+#endif
 #define FELUCCA_ICONS 1
 #define FELUCCA_VIS 1
 
@@ -69,11 +71,21 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 static uint16_t emu_scr[240u * 240u];   /* the LCD's memory, as lcd_blit sends it (RGB565, bytes swapped: gfx.c) */
 static uint32_t emu_scr_n;              /* blits since the start: the page redraws when it moves */
 static void lcd_sync(void) {}
+#if FELUCCA_TRAINER
+static uint8_t lcd_clip_y;              /* trainer.c: the rows above it are the coach's line (lcd.c's) */
+#endif
 static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint16_t *p)
 {
     uint32_t i, j;
     if (x + w > 240u || y + h > 240u)
         return;
+#if FELUCCA_TRAINER
+    if (y < lcd_clip_y) {
+        if (y + h <= lcd_clip_y)
+            return;
+        p += (lcd_clip_y - y) * w, h -= lcd_clip_y - y, y = lcd_clip_y;
+    }
+#endif
     for (j = 0; j < h; j++)
         for (i = 0; i < w; i++)
             emu_scr[(y + j) * 240u + x + i] = p[j * w + i];
@@ -85,6 +97,13 @@ static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c)
     uint32_t i, j;
     if (x + w > 240u || y + h > 240u)
         return;
+#if FELUCCA_TRAINER
+    if (y < lcd_clip_y) {
+        if (y + h <= lcd_clip_y)
+            return;
+        h -= lcd_clip_y - y, y = lcd_clip_y;
+    }
+#endif
     for (j = 0; j < h; j++)
         for (i = 0; i < w; i++)
             emu_scr[(y + j) * 240u + x + i] = swap16(c);
@@ -180,6 +199,9 @@ static uint32_t fl_jedec_ram(void) { return 0x856014u; }
 #define FL_FAR(f) f
 static void fl_plain_window_init(void) {}
 #include "../src/project.c"
+#if FELUCCA_TRAINER
+#include "../src/trainer.c"             /* the lessons: the coach over the UI (felucca.c's) */
+#endif
 #include "../src/power_on.c"
 
 /* ---- the main loop's pass and the audio (main.c's, without the hardware) */
@@ -205,13 +227,22 @@ void emu_boot(void)
     emu_master((uint32_t)emu_pot);
     lcd_clear();
     ui.force = 1;
+#if FELUCCA_TRAINER
+    trainer_boot();                     /* the first start: the TRAINER menu (main.c's) */
+#endif
 }
 /* the main loop's pass: every ~16 ms of audio */
 void emu_frame(void)
 {
     ui_input();
+#if FELUCCA_TRAINER
+    trainer_tick();                     /* the lesson's goal */
+#endif
     ui_leds();
     ui_draw();
+#if FELUCCA_TRAINER
+    trainer_draw();                     /* the coach's line, over the header */
+#endif
     if (kv_poll(is_drum(TSEL) ? 0xFFFFFu : 0u, fm1_in.notes, fm1_ms))   /* (the menu's KEYS settings; no sensing here) */
         kv_cal_dirty = 1;
     autosave_tick();                    /* the working project into flash, when quiet */

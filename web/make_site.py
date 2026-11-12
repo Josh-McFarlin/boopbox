@@ -11,7 +11,9 @@
                               the React pages (web/site/, web/src/), built by Vite (npm run build, into
                               build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
                               editor's version are written into their index.html here
-  webapp/emu/                 (1.8) the browser emulator: only with build/emu/boopbox-emu.wasm (tools/build_emu.py)
+  webapp/emu/                 (1.8) the browser emulator: only with build/emu/boopbox-emu.wasm (tools/build_emu.py);
+                              BoopBox Trainer's too, to switch to, with build/emu/boopbox-trainer-emu.wasm
+                              (tools/build_emu.py --trainer)
   webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6; npm run build:offline): its
                               fonts and scripts inlined, its links to the installer and the font licence online;
                               opened from the disk in Chrome / Edge (file:// is a secure context: Web MIDI asks for
@@ -70,6 +72,11 @@ def emu_page(emu):
         print("site: no emulator (python3 tools/build_emu.py first)")
         return
     shutil.copy(wasm, emu / wasm.name)
+    trainer = BUILD / "emu" / "boopbox-trainer-emu.wasm"   # (the page offers it when it is there)
+    if trainer.exists():
+        shutil.copy(trainer, emu / trainer.name)
+    else:
+        print("site: no trainer in the emulator (python3 tools/build_emu.py --trainer first)")
 
 
 def offline_editor(html, version):

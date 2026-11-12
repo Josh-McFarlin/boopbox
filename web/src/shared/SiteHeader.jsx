@@ -11,7 +11,7 @@ const LINKS = [
   ["features", "Features", "features", "home/#features"],
   ["editor", "Web editor", "editor", "editor/"],
   ["emu", "Try it", null, "emu/"],              // (always the emulator page itself)
-  ["install", "Install", "install", "home/#install"],
+  ["installer", "Install", null, "installer/"],  // (always the installer page itself)
 ];
 
 /* current: the page shown ("home", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline

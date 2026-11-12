@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Strip } from "../shared/Brand.jsx";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import {
-  B, BLACK, BTNMAP, BUTTONS, KEYMAP, KNOBMAP, KNOBS, NKEYS, NOTE, download, drawScreen, flashErase, flashSave, powerOn,
+  B, BLACK, BTNMAP, BUTTONS, FIRMWARE, KEYMAP, KNOBMAP, KNOBS, NKEYS, NOTE, download, drawScreen, firmwareFromUrl,
+  flashErase, flashSave, hasFirmware, powerOn,
 } from "./engine.js";
 
 /* what the FM-1 has printed: its knobs' names, the PLAY/STOP button, the upper keys' labels (the stock firmware's) */
@@ -100,7 +101,23 @@ function Knob({ name, e, send, value, onValue }) {
   );
 }
 
+/* which firmware runs: BoopBox or BoopBox Trainer (shown when the site has the trainer's WebAssembly) */
+function FirmwareSwitch({ fw, onPick, disabled }) {
+  return (
+    <div role="radiogroup" aria-label="Firmware" className="inline-flex border border-line">
+      {Object.entries(FIRMWARE).map(([k, f]) => (
+        <button key={k} type="button" role="radio" aria-checked={fw === k} disabled={disabled}
+          onClick={() => fw !== k && onPick(k)}
+          className={`cursor-pointer border-0 px-3.5 py-1.5 text-[13px] ${fw === k ? "bg-orange font-semibold text-black" : "bg-tile text-fg"}`}>
+          {f.label}</button>
+      ))}
+    </div>
+  );
+}
+
 export default function Emulator() {
+  const [fw, setFw] = useState(firmwareFromUrl);
+  const [hasTrainer, setHasTrainer] = useState(() => firmwareFromUrl() === "trainer");
   const [on, setOn] = useState(false);
   const [starting, setStarting] = useState(false);
   const [saved, setSaved] = useState("Your projects, songs and settings are kept in this browser.");
@@ -108,6 +125,7 @@ export default function Emulator() {
   const [held, setHeld] = useState(() => new Set());
   const [master, setMaster] = useState(900);
   const node = useRef(null);
+  const ctx = useRef(null);
   const latched = useRef(new Set());
   const heldRef = useRef(held);
   heldRef.current = held;
@@ -122,6 +140,8 @@ export default function Emulator() {
     setMaster(v);
     send({ t: "master", v });
   }, [send]);
+
+  useEffect(() => { hasFirmware("trainer").then((ok) => ok && setHasTrainer(true)); }, []);
 
   useEffect(() => {
     const g = canvas.current.getContext("2d");
@@ -164,26 +184,48 @@ export default function Emulator() {
     return () => { document.removeEventListener("keydown", down); document.removeEventListener("keyup", up); window.removeEventListener("blur", blur); };
   }, [noteOn, noteOff, send]);
 
-  const power = async () => {
+  const power = async (f = fw) => {
     setStarting(true);
     try {
       const r = await powerOn((data) => {
         if (data.t === "screen") drawScreen(screen.current.g, screen.current.img, data.px);
         else if (data.t === "leds") setLeds(Array.from(data.leds));
         else if (data.t === "flash") {
-          if (data.ask) download(data.flash);
-          else flashSave(data.flash).then(setSaved);
+          if (data.ask) download(data.flash, f);
+          else flashSave(data.flash, f).then(setSaved);
         }
-      });
+      }, f);
       node.current = r.node;
+      ctx.current = r.ctx;
+      setStarting(false);
       r.node.onprocessorerror = () => setSaved("The emulator stopped. Reload the page to start it again.");
       setOn(true);
       send({ t: "master", v: master });
-      setSaved(r.flash ? "Your projects from last time are back" : "Nothing saved yet: your work is kept in this browser");
+      setSaved(`${FIRMWARE[f].label}: ` + (r.flash ? "your work from last time is back" : "nothing saved yet: your work is kept in this browser"));
     } catch (err) {
       setStarting(false);
       setSaved("Could not start: " + (err.message || err) + ". Try Chrome, Edge, Firefox or Safari.");
     }
+  };
+
+  /* the other firmware: the running one is switched off (its flash is already kept) and the new one powered on */
+  const pick = async (f) => {
+    setFw(f);
+    const u = new URL(location.href);
+    if (f === "main") u.searchParams.delete("fw"); else u.searchParams.set("fw", f);
+    history.replaceState(null, "", u);
+    if (!node.current) return;
+    for (const k of [...heldRef.current]) noteOff(k);
+    latched.current.clear();
+    node.current.port.onmessage = null;
+    node.current = null;
+    await ctx.current?.close();
+    ctx.current = null;
+    setOn(false);
+    setLeds(new Array(14 + NKEYS).fill(0));
+    const g = screen.current.g;
+    g.fillStyle = "#000"; g.fillRect(0, 0, 240, 240);
+    await power(f);
   };
 
   const keyDown = (k) => (ev) => {
@@ -221,6 +263,14 @@ export default function Emulator() {
       <p className="mb-[18px] max-w-[46em] text-[17px] leading-[1.35] min-[481px]:text-[19px]">The real BoopBox firmware, running in your browser:
         the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
       <Strip className="mb-5" />
+      {hasTrainer ? (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-dim">
+          <FirmwareSwitch fw={fw} onPick={pick} disabled={starting} />
+          <span>{fw === "trainer"
+            ? "Lessons that teach three songs on the FM-1. Hold HOME for the level picker."
+            : "The full BoopBox firmware."} Each keeps its own projects in this browser.</span>
+        </div>
+      ) : null}
 
       <div className="fm1-wrap relative">
         <div className="fm1 touch-manipulation select-none">
@@ -252,7 +302,7 @@ export default function Emulator() {
         </div>
         {!on ? (
           <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 rounded-[24px] bg-[#0b0b0dcc] p-4 text-center">
-            <button type="button" disabled={starting} onClick={power}
+            <button type="button" disabled={starting} onClick={() => power()}
               className="cursor-pointer border-0 bg-orange px-8 py-4 text-[15px] font-semibold uppercase leading-none tracking-[.08em] text-black">
               {starting ? "Starting…" : "Power on"}</button>
             <p className="m-0 text-[13px] text-dim">Sound needs a click to start. Best with headphones.</p>
@@ -264,8 +314,8 @@ export default function Emulator() {
         <span className="mr-auto">{saved}</span>
         <button type="button" className="cursor-pointer border border-line bg-tile px-3 py-1.5 text-fg" onClick={() => send({ t: "flash" })}>Download the flash</button>
         <button type="button" className="cursor-pointer border border-line bg-tile px-3 py-1.5 text-fg" onClick={async () => {
-          if (!confirm("Erase everything this emulator saved in this browser (projects, songs, presets, settings)?")) return;
-          await flashErase();
+          if (!confirm(`Erase everything ${FIRMWARE[fw].label} saved in this browser (projects, songs, presets, settings${fw === "trainer" ? ", lesson progress" : ""})?`)) return;
+          await flashErase(fw);
           location.reload();
         }}>Erase what is saved</button>
       </div>

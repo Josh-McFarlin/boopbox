@@ -230,7 +230,11 @@ storage on a memory flash). It uses the wasm32 target of clang and wasm-ld (or E
 To use this page, run `cd web && npm run dev`. Then open `http://localhost:5173/emu/` (the dev server
 serves `build/emu/boopbox-emu.wasm` there).
 
-If the emulator is built, `web/make_site.py` puts it in the site as `webapp/emu/`. The tests are `tests/emu_test.c` (the same core on the host) and
+`python3 tools/build_emu.py --trainer` compiles BoopBox Trainer in the same way, into `build/emu/boopbox-trainer-emu.wasm`.
+If it is built, the emulator page shows a switch between BoopBox and BoopBox Trainer (`?fw=trainer` opens the trainer).
+Each firmware keeps its own flash in the browser.
+
+If the emulator is built, `web/make_site.py` puts it in the site as `webapp/emu/`, with the trainer if that is built too. The tests are `tests/emu_test.c` (the same core on the host) and
 `tests/emu_wasm_test.mjs` (the wasm in Node). Both are in `tests/run_tests.sh`.
 
 ## The website
