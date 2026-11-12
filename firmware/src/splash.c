@@ -10,19 +10,25 @@
 #define FELUCCA_LOGO_TEXT 1
 #endif
 #include "boopbox_logo.h"
-#if FELUCCA_LOGO_TEXT
-UI_SMALL static void boopbox_logo_draw(uint32_t y0)
+/* the wordmark "boopbox" into the canvas, its top left at (x, y), each of the glyphs' pixels 2 x 2 (190 x 38): "boop" in
+ * the tracks' colours, "box" white (the boot logo; MENU > ABOUT, ui_menu.c) */
+UI_SMALL static void boopbox_word(int32_t x, int32_t y)
 {
-    uint32_t i, r, c, bits, x;
-    cv_begin(240, BOOPBOX_GLYPH_H * 2u, C_BLACK);      /* each of the glyphs' pixels 2 x 2, centred */
+    uint32_t i, r, c, bits;
     for (i = 0; i < BOOPBOX_WORD_N; i++) {
         uint16_t col = i < 4u ? (pal_neon ? UI_COL[i] : UI_COL_DEF[i]) : C_WHITE;
-        x = (240u - BOOPBOX_WORD_W * 2u) / 2u + i * BOOPBOX_GLYPH_ADV * 2u;
+        int32_t gx = x + (int32_t)(i * BOOPBOX_GLYPH_ADV * 2u);
         for (r = 0; r < BOOPBOX_GLYPH_H; r++)
             for (bits = BOOPBOX_GLYPHS[BOOPBOX_WORD[i]][r], c = 0; c < BOOPBOX_GLYPH_W; c++)
                 if (bits >> (BOOPBOX_GLYPH_W - 1u - c) & 1u)
-                    cv_rect((int32_t)(x + c * 2u), (int32_t)(r * 2u), 2, 2, col);
+                    cv_rect(gx + (int32_t)(c * 2u), y + (int32_t)(r * 2u), 2, 2, col);
     }
+}
+#if FELUCCA_LOGO_TEXT
+UI_SMALL static void boopbox_logo_draw(uint32_t y0)
+{
+    cv_begin(240, BOOPBOX_GLYPH_H * 2u, C_BLACK);
+    boopbox_word((240 - BOOPBOX_WORD_W * 2) / 2, 0);   /* centred */
     cv_blit(0, y0 + 73u);
 }
 #else

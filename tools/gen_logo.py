@@ -206,11 +206,11 @@ def splash_header(path):
     for k in range(0, len(rle), 24):
         L.append("    " + ", ".join(str(b) for b in rle[k:k + 24]) + ",")
     L.append("};")
-    # the wordmark alone, 1 bit a pixel (the default boot logo, splash.c FELUCCA_LOGO_TEXT): the four glyphs' rows (bit
+    # the wordmark alone, 1 bit a pixel (the default boot logo and MENU > ABOUT, splash.c): the four glyphs' rows (bit
     # GW - 1 the leftmost pixel) and the word as glyph indices
     gl = sorted(set(WORD))
-    L += ["/* the wordmark \"boopbox\" in Pixelify Sans Bold (FELUCCA_LOGO_TEXT 1): glyphs of W x H pixels, each ADV to the",
-          "   right of the last */", "#else",
+    L += ["#endif", "/* the wordmark \"boopbox\" in Pixelify Sans Bold: glyphs of W x H pixels, each ADV to the",
+          "   right of the last; the boot logo (FELUCCA_LOGO_TEXT 1) and MENU > ABOUT's title */",
           f"#define BOOPBOX_WORD_N {len(WORD)}", f"#define BOOPBOX_GLYPH_W {GW}", f"#define BOOPBOX_GLYPH_H {GH}",
           f"#define BOOPBOX_GLYPH_ADV {GADV}", f"#define BOOPBOX_WORD_W {WORD_W}",
           f"static const uint8_t BOOPBOX_WORD[{len(WORD)}] = {{" + ", ".join(str(gl.index(c)) for c in WORD) + "};",
@@ -218,7 +218,7 @@ def splash_header(path):
     for c in gl:
         rows = ", ".join("0x%03X" % int(r.replace("#", "1").replace(".", "0"), 2) for r in GLYPHS[c])
         L.append(f"    {{{rows}}},  /* {c} */")
-    L += ["};", "#endif"]
+    L.append("};")
     Path(path).write_text("\n".join(L) + "\n")
     print(f"logo: splash {SPLASH_W}x{SPLASH_H}, {len(rle)} B RLE -> {path}")
 

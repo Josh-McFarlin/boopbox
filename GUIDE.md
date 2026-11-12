@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
 
-# BoopBox 1.9.3 — The Complete Guide
+# BoopBox 1.9.4 — The Complete Guide
 
 This guide gives all the functions of BoopBox in one place: every button, every combination and every page. Read it from the top the first time. Then use it as a reference. The [cheat sheet](#26-cheat-sheet) at the end gives every combination on one page.
 
@@ -1273,7 +1273,7 @@ SLOOP 2.5: on the **Drum synth** page of the editor, you can change every value 
 
 Open the editor in **Chrome or Edge** with the FM-1 on USB. Open it from the [home page](https://josh-mcfarlin.github.io/boopbox/), the [installer page](https://josh-mcfarlin.github.io/boopbox/webapp/installer/), the [editor link](https://josh-mcfarlin.github.io/boopbox/webapp/editor/), or **`scripts/OPEN-EDITOR.bat`**. Then press **Connect** (allow MIDI). The editor follows the device live: when you turn a knob on the FM-1, the editor moves. It looks like the FM-1: the black screen, the colours of the tracks, the pixel font of the FM-1.
 
-**Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html` (for example, `boopbox-editor-1.9.3.html`). This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it. It opens in Chrome or Edge without internet (Chrome asks one time to allow MIDI), and it works as the online editor does. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
+**Offline (2.6).** *Download the editor* (under Connect, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html` (for example, `boopbox-editor-1.9.4.html`). This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it. It opens in Chrome or Edge without internet (Chrome asks one time to allow MIDI), and it works as the online editor does. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
 
 **As an app, also on Android (2.6).** Open the [online editor](https://josh-mcfarlin.github.io/boopbox/webapp/editor/) or the installer one time with internet. Then use *Install the app* (under Connect, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs).
 
