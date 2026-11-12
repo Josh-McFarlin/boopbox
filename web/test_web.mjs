@@ -58,7 +58,7 @@ async function editorMock() {
   {
     /* the SLICER (core.h P_SLCR..P_SLDEPTH = 45..48, just before P_E0): the mock as params.c has it,
        and a factory preset turns it off as ui.c apply_preset_to does */
-    const pc = readFileSync(join(HERE, "../firmware/src/params.c"), "utf8");
+    const pc = readFileSync(join(HERE, "../project/firmware/src/params.c"), "utf8");
     const sd = [];
     for (let i = 45; i < 49; i++) sd.push(E.parse[E.CMD.DESC](await rq(E.req.desc(0, i))));
     ok(sd.map((d) => d.label).join() === "SLCR,PAT,RATE,DEPTH" && sd[0].names.join() === "OFF,GATE,STUT"
@@ -529,8 +529,8 @@ async function editorTrackParam() {
 /* ------------------------------------- editor v9 (SLOOP 2.4): FM6 patches --- */
 async function editorV9() {
   const C = E.CMD, F = E.FM6;
-  /* the editor's factory patches == the firmware's (build/gen/felucca_fm6.h, tools/gen_fm6_patches.py) */
-  const gp = join(HERE, "../build/gen/felucca_fm6.h");
+  /* the editor's factory patches == the firmware's (project/build/gen/felucca_fm6.h, project/tools/gen_fm6_patches.py) */
+  const gp = join(HERE, "../project/build/gen/felucca_fm6.h");
   if (existsSync(gp)) {
     const h = readFileSync(gp, "utf8").replace(/\/\*[^*]*\*\//g, "");
     const arr = (name) => (new RegExp(`${name}\\[[^\\]]*\\](?:\\[[^\\]]*\\])?\\s*=\\s*\\{([\\s\\S]*?)\\};`).exec(h) || [])[1] || "";
@@ -611,7 +611,7 @@ async function editorBackup() {
   const { rq, done } = attachMock({});
   const info = E.parse[C.INFO](await rq(E.req.info()));
   ok(info.proto >= 6, "backup: INFO protocol v6 or later");
-  const ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8");
+  const ec = readFileSync(join(HERE, "../project/firmware/src/editor.c"), "utf8");
   ok(/ED_BK_IDS\[\] = \{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 32, 33, 34, 35\}/.test(ec) && E.backupObjects && [10, 11].every((id) => ec.includes(`id == ${id}u`)),
     "backup: the object ids == editor.c ED_BK_IDS (35: USR4, 9: SYN kits, 10: MIDI LEARN, 11: theme)");
   await rq(E.req.upStore(3, "BACKUP ME"));
@@ -651,7 +651,7 @@ async function editorV5() {
   const info = E.parse[C.INFO](await rq(E.req.info()));
   ok(info.proto === 13 && info.ntrk === 8 && /BOOPBOX/.test(info.version) && info.pcount === 71 && info.gcount === 50 && info.pe0 === 63, "v5..v13: INFO ends with the protocol version (13: LIVE for eight tracks), 8 tracks; 50 globals (2.5: drum DLY; 2.6: GLO > MIDI, TEXTURE, BEND; 2.7: FX CH, DR MAP, REMOTE, CLK OUT; 2.7.2: FX FADE)");
   /* the firmware says the same: ED_DRUM_STEP is command 33, INFO sends 5, P_CHORD / the master globals as the mock has them */
-  const ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8"), pc = readFileSync(join(HERE, "../firmware/src/params.c"), "utf8");
+  const ec = readFileSync(join(HERE, "../project/firmware/src/editor.c"), "utf8"), pc = readFileSync(join(HERE, "../project/firmware/src/params.c"), "utf8");
   const en = (/enum \{ ED_INFO = 1,([^}]*)\}/.exec(ec) || [])[1] || "";
   const names = ["ED_INFO", ...en.replace(/\/\*[^*]*\*\//g, "").split(",").map((x) => x.trim()).filter(Boolean)];
   ok(names.indexOf("ED_DRUM_STEP") + 1 === C.DRUM_STEP && names.indexOf("ED_TRACK_CHANGED") + 1 === C.TRACK_CHANGED
@@ -661,7 +661,7 @@ async function editorV5() {
     && names.indexOf("ED_FILL_GET") + 1 === C.FILL_GET && names.indexOf("ED_FILL_SET") + 1 === C.FILL_SET
     && /ED_FM6_GET = 68, ED_FM6_PUT, ED_FM6_LIST, ED_FM6_ERASE/.test(ec) && C.FM6_GET === 68 && C.FM6_ERASE === 71
     && /#define ED_PROTO 13u/.test(ec) && /ed_b\(ED_PROTO\);/.test(ec)
-    && /enum \{ ED_DSYN_LIST = 72, ED_DSYN_GET, ED_DSYN_PUT, ED_DSYN_STORE, ED_DSYN_PLAY \};/.test(readFileSync(join(HERE, "../firmware/src/editor_dsyn.c"), "utf8"))
+    && /enum \{ ED_DSYN_LIST = 72, ED_DSYN_GET, ED_DSYN_PUT, ED_DSYN_STORE, ED_DSYN_PLAY \};/.test(readFileSync(join(HERE, "../project/firmware/src/editor_dsyn.c"), "utf8"))
     && C.DSYN_LIST === 72 && C.DSYN_PLAY === 76, "v5..v13: command numbers and INFO == editor.c / editor_dsyn.c");
   const enumNames = (id) => (new RegExp(`${id}\\[\\] = \\{([^}]*)\\}`).exec(pc) || [])[1].split(",").map((x) => x.trim().replace(/"/g, ""));
   const chord = E.parse[C.DESC](await rq(E.req.desc(0, 49)));
@@ -698,14 +698,14 @@ async function editorV5() {
     "v5: the drum track through TRACK_STEP: lanes <-> GM notes");
   ok(E.DRUM_LANES.length === 16 && E.DRUM_LANES[0][0] === 36 && E.DRUM_LANES[15][0] === 56 && E.LV_NAMES.join() === "NORM,GHOST,SOFT,HARD",
     "v5: the 16 lanes (kick .. cowbell), 4 levels");
-  const dc = readFileSync(join(HERE, "../firmware/src/drums.c"), "utf8");
+  const dc = readFileSync(join(HERE, "../project/firmware/src/drums.c"), "utf8");
   const lanes = ((/LANE_NOTE\[DRUM_LANES\] = \{([^}]*)\}/.exec(dc) || [])[1] || "").split(",").map((x) => +x);
   ok(lanes.join() === E.DRUM_LANES.map((x) => x[0]).join(), "v5: lane notes == drums.c LANE_NOTE");
   /* the kit: the drum track's P_E0 */
   await rq(E.req.track(3));
   const kit = E.parse[C.DESC](await rq(E.req.desc(0, info.pe0)));
   const dk = (/DRUM_KIT_NAMES\[\] = \{([^}]*)\}/.exec(dc) || [])[1] || "";
-  const gen = join(HERE, "../build/gen/felucca_drumkits.h");
+  const gen = join(HERE, "../project/build/gen/felucca_drumkits.h");
   const dsList = existsSync(gen) ? ((/#define DS_KIT_NAME_LIST (.*)/.exec(readFileSync(gen, "utf8")) || [])[1] || "") : null;
   const fwKits = dsList == null ? null : dk.replace("DS_KIT_NAME_LIST", dsList).split(",").map((x) => x.trim().replace(/"/g, ""));
   ok(kit.label === "KIT" && kit.names[5] === "808" && kit.names.length === kit.max + 1 && (!fwKits || fwKits.join() === kit.names.join()),
@@ -736,7 +736,7 @@ async function editorV7() {
   const info = E.parse[C.INFO](await rq(E.req.info()));
   ok(info.proto === 13, "v7: INFO ends with 13 (v13 includes v7)");
   /* the lockable set == seq.c p_lockable (the ids as core.h names them) */
-  const sc = readFileSync(join(HERE, "../firmware/src/seq.c"), "utf8"), ch = readFileSync(join(HERE, "../firmware/src/core.h"), "utf8");
+  const sc = readFileSync(join(HERE, "../project/firmware/src/seq.c"), "utf8"), ch = readFileSync(join(HERE, "../project/firmware/src/core.h"), "utf8");
   const ids = {}; let n = 0;
   for (const nm of (/enum \{\s*\/\* per-track parameters \*\/([^}]*)\}/.exec(ch) || [])[1].replace(/\/\*[\s\S]*?\*\//g, "").split(",").map((x) => x.trim()).filter(Boolean)) ids[nm] = n++;
   const lockableC = (id) => id <= ids.P_LD_AMP || id === ids.P_SGATE || (id >= ids.P_DIST && id <= ids.P_REV) || id === ids.P_GLIDE || id === ids.P_PAN
@@ -801,7 +801,7 @@ async function editorV8() {
   const info = E.parse[C.INFO](await rq(E.req.info()));
   ok(info.proto === 13, "v8: INFO ends with 13 (v13 includes v8)");
   /* the condition codes == core.h FC_*; the bit layout of a 2-bit step field */
-  const ch = readFileSync(join(HERE, "../firmware/src/core.h"), "utf8"), sc = readFileSync(join(HERE, "../firmware/src/seq.c"), "utf8");
+  const ch = readFileSync(join(HERE, "../project/firmware/src/core.h"), "utf8"), sc = readFileSync(join(HERE, "../project/firmware/src/seq.c"), "utf8");
   ok(/enum \{ FC_NORM, FC_FILL, FC_NOFILL \}/.test(ch) && /uint8_t fill\[NSTEP \/ 4\];/.test(ch)
     && /t->fill\[idx \/ 4u\] >> \(2u \* \(idx % 4u\)\)\) & 3u/.test(sc) && E.FC.FILL === 1 && E.FC.NOFILL === 2,
     "v8: FC codes and the 2-bit layout == core.h / seq.c step_fill");
@@ -992,7 +992,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   ok(dn.map((n) => n.key).join() === "36,42,38,56" && dp.len === 7 && [0, 4, 6].every((i) => dp.dsteps[i].on === ds[i].on && js(dp.dsteps[i].lvl) === js(ds[i].lvl))
     && SMF.laneOf(36) === 0 && SMF.laneOf(35) === 1 && SMF.laneOf(57) === 11 && SMF.laneOf(20) === 0 && SMF.laneOf(90) === 13,
     "midi: the drum track: lanes as GM notes and back, levels ghost..hard kept (drums.c LANE_OF_GM)");
-  const dc = readFileSync(join(HERE, "../firmware/src/drums.c"), "utf8");
+  const dc = readFileSync(join(HERE, "../project/firmware/src/drums.c"), "utf8");
   const tbl = (/LANE_OF_GM\[81 - 35 \+ 1\] = \{([^}]*)\}/.exec(dc) || [, ""])[1].replace(/\/\*[^*]*\*\//g, "").split(",").map((x) => +x.trim());
   ok(js(tbl) === js(SMF.LANE_OF_GM), "midi: LANE_OF_GM == drums.c");
   /* the song order */
@@ -1005,7 +1005,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   ok(js(ARR.decode(enc)) === js({ loop: true, entries: ARR.expand(rows), region: null }) && enc.subarray(0, 48).every((v, i) => v === sb[i]) && enc.subarray(84).every((v, i) => v === sb[84 + i]),
     "song: encode keeps the rest of the settings");
   {   /* (BoopBox) the loop region in the two reserved bytes: arranger.h arr_loop_first / arr_loop_end */
-    const ah0 = readFileSync(join(HERE, "../firmware/src/arranger.h"), "utf8");
+    const ah0 = readFileSync(join(HERE, "../project/firmware/src/arranger.h"), "utf8");
     const rg = ARR.encode(sb, { loop: true, entries: ARR.expand(rows), region: { first: 1, end: 3 } });
     const kept = ARR.encode(rg, ARR.decode(rg));                       /* (read and sent again: kept, not zeroed) */
     const out = ARR.encode(sb, { loop: true, entries: ARR.expand(rows), region: { first: 2, end: 5 } });   /* (past the 4 entries: none) */
@@ -1016,7 +1016,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   }
   ok(!ARR.valid({ entries: [] }) && !ARR.valid({ entries: Array(17).fill({ scene: 0, bars: 1 }) }) && !ARR.valid({ entries: [{ scene: 4, bars: 1 }] })
     && !ARR.valid({ entries: [{ scene: 0, bars: 65 }] }) && ARR.valid({ entries: Array(16).fill({ scene: 3, bars: 64 }) }), "song: valid == arranger.h arr_valid (1..16 entries, A..D, 1..64 bars)");
-  const pc = readFileSync(join(HERE, "../firmware/src/project.c"), "utf8"), ah = readFileSync(join(HERE, "../firmware/src/arranger.h"), "utf8");
+  const pc = readFileSync(join(HERE, "../project/firmware/src/project.c"), "utf8"), ah = readFileSync(join(HERE, "../project/firmware/src/arranger.h"), "utf8");
   const pt = (/typedef struct \{([^}]*)\} persist_t;/.exec(pc) || [, ""])[1];
   ok(/PERSIST_MAGIC 0x50455233u/.test(pc) && /arr_config_t arrangement;/.test(pt) && /ARR_STEPS 16u/.test(ah)
     && /if \(\(song\.playing \|\| transport_req\) && memcmp\(&p\.arrangement, &arrangement, sizeof arrangement\)\)\s*return 3;/.test(pc),
@@ -1056,7 +1056,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
 /* ------------------------------------- SLOOP 2.5: the DRUM SYNTH page (v10) --- */
 async function editorDsyn() {
   const { DSYN } = E, C = E.CMD;
-  const dsc = readFileSync(join(HERE, "../firmware/src/drum_synth.c"), "utf8");
+  const dsc = readFileSync(join(HERE, "../project/firmware/src/drum_synth.c"), "utf8");
   const st = (/typedef struct \{([\s\S]*?)\} dsnd_t;/.exec(dsc) || [, ""])[1].replace(/\/\*[\s\S]*?\*\//g, "");
   const fields = [...st.matchAll(/(?:u?int8_t)\s+([^;]+);/g)].flatMap((m) => m[1].split(",").map((x) => x.trim()));
   ok(js(fields) === js(DSYN.FIELDS) && DSYN.SIZE === 22, "dsyn: the 22 fields in dsnd_t's order (drum_synth.c)");
@@ -1066,7 +1066,7 @@ async function editorDsyn() {
   /* the mock's factory kits == the firmware's (when built) */
   const raw = E.b64dec(E.DSYN_MOCK_KITS);
   let hdr = null;
-  try { hdr = readFileSync(join(HERE, "../build/gen/felucca_drumkits.h"), "utf8"); } catch (e) { /* (not built) */ }
+  try { hdr = readFileSync(join(HERE, "../project/build/gen/felucca_drumkits.h"), "utf8"); } catch (e) { /* (not built) */ }
   if (hdr) {
     /* (1.7) the sounds once (DS_SND), each kit as 16 indices into them and 16 levels (the sound's last byte) */
     const sndBody = (/DS_SND\[DS_NSND\] = \{([\s\S]*?)\n\};/.exec(hdr) || [])[1] || "";
@@ -1077,7 +1077,7 @@ async function editorDsyn() {
       return [Number(k[2]), ...idx.flatMap((s, l) => [...snd[s].slice(0, 21), lvl[l]])];
     });
     ok(kits.length === 32 && js(kits.map((k) => k[1])) === js(E.DSYN_MOCK_NAMES) && js(Array.from(raw)) === js(bytes),
-      "dsyn: the mock's 32 kits == build/gen/felucca_drumkits.h");
+      "dsyn: the mock's 32 kits == project/build/gen/felucca_drumkits.h");
   }
   /* viewing never changes a value: decode / encode give every factory sound back */
   let same = true;
@@ -1091,7 +1091,7 @@ async function editorDsyn() {
     && wild.fmode === 3 && wild.res === 31 && wild.fenv === -128 && wild.level === 255 && wild.drive === 127,
     "dsyn: decode / encode: all 512 factory sounds unchanged; out-of-range values into the firmware's ranges");
   ok(Math.round(DSYN.hz(69)) === 440 && Math.round(DSYN.decayMs(127)) === 4000 && Math.round(DSYN.cutHz(0)) === 30 && DSYN.db(132) === 1,
-    "dsyn: the units (Hz, ms, cutoff, dB) as tools/gen_tables.py");
+    "dsyn: the units (Hz, ms, cutoff, dB) as project/tools/gen_tables.py");
   /* files and the backup object */
   const kit = { name: "MY 808", crush: 0x21, src: 0, sounds: Array.from({ length: 16 }, (_, l) => raw.slice(1 + l * 22, 23 + l * 22)) };
   const back = DSYN.fromFile(JSON.parse(JSON.stringify(DSYN.toFile(kit))));
@@ -1205,7 +1205,7 @@ async function editorDsyn() {
 /* ------------------------------------------- 2.5: a DX7 cartridge into the bank --- */
 async function editorCart() {
   const C = E.CMD, F = E.FM6;
-  const fc = readFileSync(join(HERE, "../firmware/src/fm6_bank.c"), "utf8");
+  const fc = readFileSync(join(HERE, "../project/firmware/src/fm6_bank.c"), "utf8");
   const voices = Array.from({ length: 32 }, (_, k) => { const v = F.factory(k % F.FACTORY_PK.length); F.setName(v, `CART ${k + 1}`); return v; });
   const pb = F.parseSysex(F.bankSysex(voices));
   const slots = new Array(27).fill(null); slots[0] = F.pack(voices[0]); slots[26] = F.pack(voices[5]);
@@ -1273,8 +1273,8 @@ async function editorCart() {
 /* ------------------------------------- SLOOP 2.7: the LIVE page (v12, LIVE = 77) --- */
 async function editorLivePage() {
   const C = E.CMD, L = E.LIVE;
-  const lv = readFileSync(join(HERE, "../firmware/src/editor_live.c"), "utf8"), ec = readFileSync(join(HERE, "../firmware/src/editor.c"), "utf8");
-  const pu = readFileSync(join(HERE, "../firmware/src/punch.c"), "utf8"), sq = readFileSync(join(HERE, "../firmware/src/seq.c"), "utf8");
+  const lv = readFileSync(join(HERE, "../project/firmware/src/editor_live.c"), "utf8"), ec = readFileSync(join(HERE, "../project/firmware/src/editor.c"), "utf8");
+  const pu = readFileSync(join(HERE, "../project/firmware/src/punch.c"), "utf8"), sq = readFileSync(join(HERE, "../project/firmware/src/seq.c"), "utf8");
   const fxNames = [...((/PUNCH_NAME\[PUNCH_NFX\] = \{([^}]*)\}/.exec(pu) || [])[1] || "").matchAll(/"([^"]*)"/g)].map((x) => x[1]);
   const ly = ((/enum \{ LY_PLAY, ([^}]*)\}/.exec(sq) || [])[1] || "").split(",").map((x) => x.trim());
   ok(C.LIVE === 77 && /#define ED_LIVE 77u/.test(lv) && /#include "editor_live.c"/.test(ec) && /case ED_LIVE:/.test(ec)
@@ -1288,7 +1288,7 @@ async function editorLivePage() {
   ok(info.proto === 13 && raw.length === 65 && s.pro && s.master === -1 && s.dtw.length === 16 && s.dtw[0].tune === 0 && !s.playing && s.ready === 1 && s.tracks.length === 8 && s.bpm === m.state.g[0] && s.sec === -1 && s.fx === -1,
     "live page: the state (65 bytes as editor_live.c v13): stopped, 8 tracks, BPM, no section, no effect, A stored, the master on its knob, the pads as the kit");
   {   /* v13: tracks 5..8 in the state; op 13 solos any track (the GLO keys: the selected track's bank) */
-    const lvc = readFileSync(join(HERE, "../firmware/src/editor_live.c"), "utf8");
+    const lvc = readFileSync(join(HERE, "../project/firmware/src/editor_live.c"), "utf8");
     m.state.tracks[6].p[40] = 1; m.state.rec = 1 << 5;
     let t = await live(L.SOLO_TRK, 7);
     const one = t.solo === 0x80 && t.mutes === 0x40 && t.rec === 0x20 && t.tracks[7].len === m.state.tracks[7].p[29];
@@ -1338,7 +1338,7 @@ async function editorLivePage() {
     ok(ft && !s.freeTake && s.playing && !s.recWait, "live page: a free take; REC again closes the loop (it plays)");
     await live(L.PLAY, 0); m.state.slots.splice(0, 4, ...sl); m.state.midiIn.length = 0; }
   {   /* (2.7) the page's own: ops 6..12 */
-    const lv = (/case 6:[\s\S]*case 12:[\s\S]*?break;/.exec(readFileSync(join(HERE, "../firmware/src/editor_live.c"), "utf8")) || [""])[0];
+    const lv = (/case 6:[\s\S]*case 12:[\s\S]*?break;/.exec(readFileSync(join(HERE, "../project/firmware/src/editor_live.c"), "utf8")) || [""])[0];
     ok(L.ROLL === 6 && L.ERASE === 7 && L.PATTERN === 8 && L.CHAIN === 9 && L.THROW === 10 && L.MASTER === 11 && L.DRUM_TW === 12
       && /roll_start/.test(lv) && /erase_now/.test(lv) && /pattern_length/.test(lv) && /chain_sec/.test(lv) && /thr_ed/.test(lv) && /ed_master/.test(lv)
       && /drum_tune/.test(lv), "live page: ops 6..12 == editor_live.c (roll, erase, pattern, chain, throw, master, drum tune / decay)");
@@ -1368,7 +1368,7 @@ async function editorLivePage() {
 
 /* ------------------------------------- LIVE pro (editor only): scenes, morph, MIDI learn, the set's WAV --- */
 function editorLivePro() {
-  const X = E.LVX, ch = readFileSync(join(HERE, "../firmware/src/core.h"), "utf8");
+  const X = E.LVX, ch = readFileSync(join(HERE, "../project/firmware/src/core.h"), "utf8");
   const ids = {};
   let n = 0;
   for (const nm of (/enum \{\s*\/\* per-track parameters \*\/([^}]*)\}/.exec(ch) || [])[1].replace(/\/\*[\s\S]*?\*\//g, "").split(",").map((x) => x.trim()).filter(Boolean)) ids[nm] = n++;
@@ -1433,7 +1433,7 @@ async function editorSongFile() {
 /* ------------------------------------- SLOOP 2.7: your theme (v11, backup object 11) --- */
 async function editorTheme() {
   const C = E.CMD, T = E.THEME;
-  const gfx = readFileSync(join(HERE, "../firmware/src/gfx.c"), "utf8");
+  const gfx = readFileSync(join(HERE, "../project/firmware/src/gfx.c"), "utf8");
   const rgb = (s) => [...s.matchAll(/RGB\((\d+), (\d+), (\d+)\)/g)].map((m) => [+m[1], +m[2], +m[3]]);
   const pals = [...gfx.matchAll(/\{"(\w+)", \{(RGB[^}]*)\}\}/g)].map((m) => [m[1], rgb(m[2])]);
   const tdef = rgb((/UI_COL_DEF\[4\] = \{([^}]*)\}/.exec(gfx) || [])[1] || "");
@@ -1557,13 +1557,13 @@ function editorTabs() {
       && /--t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;/.test(css),
       "editor: the track colours of the device (gfx.c SYNTH_TRK, SYNTH_TRK2), colours only as tokens" + (hex.length || jsxHex.length ? ` (${hex.concat(jsxHex).join(" ")})` : ""));
     /* (the device's default theme since 1.1.0 is SYNTHWAVE, whose tracks are SYNTH_TRK and SYNTH_TRK2: gfx.c palette_set) */
-    const te = readFileSync(join(HERE, "../firmware/src/gfx.c"), "utf8");
+    const te = readFileSync(join(HERE, "../project/firmware/src/gfx.c"), "utf8");
     ok(/SYNTH_TRK\[4\] = \{RGB\(0, 228, 255\), RGB\(255, 44, 212\), RGB\(255, 140, 56\), RGB\(160, 96, 255\)\}/.test(te)
       && /SYNTH_TRK2\[4\] = \{RGB\(110, 140, 255\), RGB\(255, 112, 168\), RGB\(255, 214, 90\), RGB\(224, 128, 255\)\}/.test(te),
       "editor: ... the same eight as the firmware's SYNTHWAVE tracks");
     const font = join(HERE, "src/editor/assets/terminus.ttf");
     ok(existsSync(font) && readFileSync(font).length > 20000 && readFileSync(font).readUInt32BE(0) === 0x00010000 && /url\("\.\/assets\/terminus\.ttf"\)/.test(css),
-      "editor: the device's Terminus font (tools/gen_webfont.py)");
+      "editor: the device's Terminus font (project/tools/gen_webfont.py)");
   }
 }
 
@@ -1614,7 +1614,7 @@ function samplesMatch() {
     return { s, root: E.rootFromName(p.split("/").pop().replace(/\.[^.]*$/, "")) };
   });
   const js = E.buildSlot("Mix ä 12345", zones);
-  execFileSync(PYTHON, [join(HERE, "../tools/fm1_sample_upload.py"), "build", "Mix ä 12345", join(dir, "slot"), ...files]);
+  execFileSync(PYTHON, [join(HERE, "../project/tools/fm1_sample_upload.py"), "build", "Mix ä 12345", join(dir, "slot"), ...files]);
   const pyHdr = readFileSync(join(dir, "slot.hdr")), pyData = readFileSync(join(dir, "slot.bin"));
   ok(eq(js.hdr, pyHdr) && eq(js.data, pyData), `samples: editor == sampleio.py (${files.length} WAV formats, ${js.data.length} B)`);
 }
@@ -1695,9 +1695,9 @@ print(",".join(i.filename + ":" + str(i.file_size) for i in z.infolist()))`, zp)
 
 /* ------------------------------------------------------- packages: JS == Python --- */
 async function packages() {
-  const pkg = join(HERE, "../build/felucca.fwsc");
+  const pkg = join(HERE, "../project/build/felucca.fwsc");
   if (!existsSync(pkg)) {
-    console.log("packages: skipped (run scripts/build.sh first)");
+    console.log("packages: skipped (run project/scripts/build.sh first)");
     return;
   }
   const raw = readFileSync(pkg);
@@ -1889,17 +1889,17 @@ async function editorProj7Mock() {
 /* ---------------------------------- BoopBox: a project (format 7) read and written as the firmware does --- */
 function editorProj7() {
   const P = E.PROJ7, LEN = 29, ctx = { len: LEN, def: (id) => (id === LEN ? 16 : 0) };
-  const pc = readFileSync(join(HERE, "../firmware/src/project.c"), "utf8"), pt = readFileSync(join(HERE, "../firmware/src/patcodec.c"), "utf8");
-  const cp = readFileSync(join(HERE, "../firmware/src/comp.c"), "utf8"), pb = readFileSync(join(HERE, "../firmware/src/patbank.c"), "utf8");
+  const pc = readFileSync(join(HERE, "../project/firmware/src/project.c"), "utf8"), pt = readFileSync(join(HERE, "../project/firmware/src/patcodec.c"), "utf8");
+  const cp = readFileSync(join(HERE, "../project/firmware/src/comp.c"), "utf8"), pb = readFileSync(join(HERE, "../project/firmware/src/patbank.c"), "utf8");
   const ranges = [...((/CP_RANGE\[CP_COUNT\]\[6\] = \{([\s\S]*?)\n\};/.exec(cp) || [])[1] || "").matchAll(/\[CP_(\w+)\] = \{([^}]*)\}/g)]
     .filter((m) => m[1] !== "NONE").map((m) => m[2].replace("NSTEP", "64").replace("P_E7", "70").replace("P_ED_FLT", "5").split(",").map((x) => +x.trim()));
   const names = [...((/CP_NAME\[CP_COUNT\] = \{([^}]*)\}/.exec(cp) || [])[1] || "").matchAll(/"([^"]*)"/g)].map((m) => m[1]).slice(1);
-  ok(/#define PB_SIZE 3072u/.test(pb) && /#define NCHAIN 16/.test(readFileSync(join(HERE, "../firmware/src/core.h"), "utf8"))
+  ok(/#define PB_SIZE 3072u/.test(pb) && /#define NCHAIN 16/.test(readFileSync(join(HERE, "../project/firmware/src/core.h"), "utf8"))
     && js([...(/N_SCN\[\] = \{([^}]*)\}/.exec(pb) || [])[1].matchAll(/"([^"]*)"/g)].map((m) => m[1])) === js(P.SCN_NAMES) && /'G'/.test(pc) && /'H'/.test(pc) && /'P'/.test(pc) && /'C'/.test(pc) && /if \(sz < sizeof t->step\)/.test(pt)
     && js(ranges) === js(P.CP.slice(1).map((c) => c.slice(1))) && js(names) === js(P.CP.slice(1).map((c) => c[0])),
     "project 7: the editor's codec has the firmware's chunks, bank size, component names and ranges (comp.c)");
-  const tool = join(HERE, "../build/host/proj7_tool");
-  if (!existsSync(tool)) { console.log("project 7: SKIPPED the firmware cross-checks (build/host/proj7_tool: tests/run_tests.sh builds it)"); return; }
+  const tool = join(HERE, "../project/build/host/proj7_tool");
+  if (!existsSync(tool)) { console.log("project 7: SKIPPED the firmware cross-checks (project/build/host/proj7_tool: project/tests/run_tests.sh builds it)"); return; }
   const dir = mkdtempSync(join(tmpdir(), "proj7-")), f = (n) => join(dir, n);
   execFileSync(tool, ["gen", f("a.bin")]);
   const a = readFileSync(f("a.bin")), A = P.decode(a);

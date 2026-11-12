@@ -9,7 +9,7 @@ npm run build && node server.js
 ```
 
 The build compiles the React/Vite pages and assembles the complete site under
-`build/replit-site/` from `web/` and `firmware/releases/`. The Node server serves
+`project/build/replit-site/` from `web/` and `project/firmware/releases/`. The Node server serves
 the pages, firmware downloads, WebAssembly files, and in-memory room/WebSocket
 service on the same port. No database or external service is needed.
 
@@ -38,8 +38,8 @@ website does not install any firmware.
 ## Source development
 
 `npm run build` writes the complete generated site into ignored
-`build/replit-site/`. Keep source documentation in `docs/` and versioned
-firmware packages in `firmware/releases/`; the build assembles them without
+`project/build/replit-site/`. Keep source documentation in `docs/` and versioned
+firmware packages in `project/firmware/releases/`; the build assembles them without
 committing generated website output.
 
 The existing web dependencies are installed under `web/`. To work directly on

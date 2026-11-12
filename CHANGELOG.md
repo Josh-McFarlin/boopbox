@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in each BoopBox release, newest first. A release's section is its
-release notes on GitHub: when a PR adds `firmware/releases/boopbox-X.Y.Z.fwsc`, it
+release notes on GitHub: when a PR adds `project/firmware/releases/boopbox-X.Y.Z.fwsc`, it
 must also add a `## X.Y.Z` section here (CI checks), and merging it into `main`
 publishes the release with that section as its notes
 (`.github/workflows/release-on-merge.yml`).
@@ -455,7 +455,7 @@ A cleaner screen and quicker controls, after a review of every screen
   sunset orange and violet (5–8 periwinkle, rose, gold, orchid), neon rules with a glow under the headers, large
   values fading from pink to orange, a neon floor to the horizon where a page has an empty half, and a sun setting on
   the boot screen. An FM-1 that already has a colour set keeps it; the other palettes and your theme look as before.
-  The web editor's Theme page can start from it. See [every screen](assets/screens/all/README.md).
+  The web editor's Theme page can start from it. See [every screen](project/assets/screens/all/README.md).
 - **SEQ → PATTERN is now TIMING** (LEN, DIV, SWG, GATE), so it no longer reads like the PATTERNS screen next to it.
 - **FLYOVER keeps flying:** while the song plays the ground always moves, silent bars too; after STOP it moves on until
   the last peak has gone off the back of the screen.

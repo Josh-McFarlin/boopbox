@@ -9,8 +9,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "web"))
+sys.path.insert(0, str(ROOT / "project" / "tools"))
 import make_site  # noqa: E402
 
 bad = 0

@@ -34,7 +34,7 @@ export class LocalPreview {
   async load() {
     try {
       const response = await fetch(this.wasmUrl);
-      if (!response.ok) throw new Error('Build the audio preview first: python3 tools/build_preview.py');
+      if (!response.ok) throw new Error('Build the audio preview first: python3 project/tools/build_preview.py');
       const module = await WebAssembly.compile(await response.arrayBuffer());
       await this.context.audioWorklet.addModule(this.workletUrl);
       this.node = new AudioWorkletNode(this.context, 'boopbox-preview', {

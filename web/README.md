@@ -8,8 +8,8 @@ npm ci                   # once (Node.js 20 or newer)
 npm run dev              # http://localhost:5173/installer/  /editor/  /emu/
                          # the editor with ?mock=1: a simulated FM-1, no hardware (and the firmware's own audio
                          # in the browser when build/preview/boopbox-preview.wasm is built)
-npm run build            # -> ../build/webapp-vite/
-npm run build:offline    # -> ../build/webapp-offline/editor/index.html: the editor in one file, for the disk
+npm run build            # -> ../project/build/webapp-vite/
+npm run build:offline    # -> ../project/build/webapp-offline/editor/index.html: the editor in one file, for the disk
 node test_web.mjs        # the tests that need no browser
 ```
 

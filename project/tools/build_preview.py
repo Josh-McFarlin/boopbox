@@ -3,7 +3,7 @@
 """Compile the real BoopBox DSP/clock for browser preview (requires emcc).
 
 python3 tools/build_preview.py
-Then web/make_site.py includes the generated audio assets in the local site.
+Then ../web/make_site.py includes the generated audio assets in the local site.
 No JieLi SDK, Docker, or connected FM-1 is required.
 """
 from pathlib import Path

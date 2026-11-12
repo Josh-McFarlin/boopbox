@@ -99,7 +99,7 @@ def build(path):
 
 
 def main():
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "web" / "src" / "editor" / "assets" / "terminus.ttf"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "web" / "src" / "editor" / "assets" / "terminus.ttf"
     ttf, n = build(BDF)
     out.write_bytes(ttf)
     print(f"web font: {n} glyphs, {len(ttf)} B TTF -> {out}")

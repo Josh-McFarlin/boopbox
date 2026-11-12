@@ -6,8 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "bash scripts/build-site.sh",
-    "test": "python3 tools/build_preview.py && node --test tests/*.test.cjs"
+    "build": "bash project/scripts/build-site.sh",
+    "test": "python3 project/tools/build_preview.py && node --test project/tests/*.test.cjs"
   },
   "license": "GPL-3.0-only",
   "dependencies": {

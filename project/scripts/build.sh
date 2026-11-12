@@ -6,7 +6,7 @@
 #   JIELI_TOOLCHAIN  JieLi Linux toolchain (default: ~/.jieli/toolchain)
 #   AC79_SDK         JieLi AC79 SDK checkout (default: ~/fw-AC79_AIoT_SDK)
 set -e
-cd "$(dirname "$0")/.."            # the repository root
+cd "$(dirname "$0")/.."            # the project source directory
 export JIELI_TOOLCHAIN="${JIELI_TOOLCHAIN:-$HOME/.jieli/toolchain}"
 export AC79_SDK="${AC79_SDK:-$HOME/fw-AC79_AIoT_SDK}"
 PY="${PYTHON:-python3}"

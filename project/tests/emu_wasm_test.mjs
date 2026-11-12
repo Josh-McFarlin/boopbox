@@ -3,7 +3,7 @@
 // runs it: no imports; it powers on and draws; a key sounds; the screen changes with a button; it keeps up (faster
 // than real time here). Run after python3 tools/build_emu.py (and --trainer): node tests/emu_wasm_test.mjs
 import fs from "fs";
-import config from "../shared/room-config.json" with { type: "json" };
+import config from "../../shared/room-config.json" with { type: "json" };
 let fails = 0, ran = 0;
 /* the main firmware and BoopBox Trainer's (tools/build_emu.py --trainer), each when built */
 for (const [name, wasm] of [["emu wasm", "build/emu/boopbox-emu.wasm"], ["trainer emu wasm", "build/emu/boopbox-trainer-emu.wasm"]]) {

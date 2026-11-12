@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The home page: what BoopBox is and what it does, with the FM-1's own screens (tools/make_screens.py draws them with
-// the firmware's code: assets/screens/fm1/), then the way to the installer, the editor and the emulator.
+// The home page: what BoopBox is and what it does, with the FM-1's own screens (project/tools/make_screens.py draws them with
+// the firmware's code: project/assets/screens/fm1/), then the way to the installer, the editor and the emulator.
 // Served at the site's root (make_site.py writes it with <base href="webapp/home/">) and at webapp/home/: every link
 // and image is relative to webapp/home/.
 import SiteHeader from "../shared/SiteHeader.jsx";
-import tracks from "../../../assets/screens/fm1/tracks-1-4.png";
-import punch from "../../../assets/screens/fm1/layer-fx.png";
-import sounds from "../../../assets/screens/all/pages/save-presets.png";
-import drums from "../../../assets/screens/fm1/drums.png";
-import chords from "../../../assets/screens/fm1/chords.png";
-import notes from "../../../assets/screens/fm1/notes.png";
-import drive from "../../../assets/screens/fm1/vis-night-drive.png";
-import song from "../../../assets/screens/fm1/song.png";
-import patterns from "../../../assets/screens/fm1/patterns.png";
-import mix from "../../../assets/screens/fm1/layer-mix-5-8.png";
-import editorShot from "../../../assets/screens/editor-sound.png";
+import tracks from "../../../project/assets/screens/fm1/tracks-1-4.png";
+import punch from "../../../project/assets/screens/fm1/layer-fx.png";
+import sounds from "../../../project/assets/screens/all/pages/save-presets.png";
+import drums from "../../../project/assets/screens/fm1/drums.png";
+import chords from "../../../project/assets/screens/fm1/chords.png";
+import notes from "../../../project/assets/screens/fm1/notes.png";
+import drive from "../../../project/assets/screens/fm1/vis-night-drive.png";
+import song from "../../../project/assets/screens/fm1/song.png";
+import patterns from "../../../project/assets/screens/fm1/patterns.png";
+import mix from "../../../project/assets/screens/fm1/layer-mix-5-8.png";
+import editorShot from "../../../project/assets/screens/editor-sound.png";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
 const C = { blue: "#3ee6ff", green: "#c6ff3d", yellow: "#ffd23f", orange: "#ff4fd8" };   /* site.css: cyan, lime, yellow, magenta */

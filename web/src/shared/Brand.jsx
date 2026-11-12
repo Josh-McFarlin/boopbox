@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The BoopBox logo: the pixel-art boombox icon (assets/logo/boopbox-icon.svg, inline: its black ground made transparent,
+// The BoopBox logo: the pixel-art boombox icon (project/assets/logo/boopbox-icon.svg, inline: its black ground made transparent,
 // its colour bars in the site's palette; 30 x 29 pixels, drawn 1.5 px a pixel) and the name set in the site's pixel font
-// (tools/gen_logo.py draws the same wordmark from the font's pixels); and the strip of the four colours.
-import icon from "../../../assets/logo/boopbox-icon.svg?raw";
+// (project/tools/gen_logo.py draws the same wordmark from the font's pixels); and the strip of the four colours.
+import icon from "../../../project/assets/logo/boopbox-icon.svg?raw";
 
 /* the icon's bars: the FM-1's track colours -> the site's magenta, cyan, lime and yellow (light row: their tints) */
 const BARS = { "#287CFF": "#3EE6FF", "#1ECC70": "#C6FF3D", "#FFC618": "#FFD23F", "#FF621A": "#FF4FD8",

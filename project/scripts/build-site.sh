@@ -12,7 +12,7 @@ fi
 python3 tools/build_emu.py
 python3 tools/build_emu.py --trainer
 python3 tools/build_preview.py
-npm --prefix web ci
+npm --prefix ../web ci
 
 shopt -s nullglob
 packages=(firmware/releases/boopbox-[0-9]*.fwsc)
@@ -29,4 +29,4 @@ trainer_args=()
 if [[ -f "$trainer" ]]; then
   trainer_args=(--trainer "$trainer")
 fi
-python3 web/make_site.py "$package" "$version" build/replit-site "${trainer_args[@]}"
+python3 ../web/make_site.py "$package" "$version" build/replit-site "${trainer_args[@]}"

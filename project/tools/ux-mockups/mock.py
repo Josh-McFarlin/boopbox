@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 W = 240
 # the review's pictures: (file, the screen before, the screen after, the caption before, the caption after)
 PAIRS = [

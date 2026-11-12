@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Check that a generated site is built for a firmware binary.
 
-  tools/check_site.py firmware/releases/boopbox-X.Y.Z.fwsc [--site build/replit-site]
+  project/tools/check_site.py project/firmware/releases/boopbox-X.Y.Z.fwsc [--site project/build/replit-site]
 
 The site is built by web/make_site.py from the firmware package and source pages.
 This checks, for the given binary:
@@ -68,7 +68,7 @@ def problems(fw, site):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("binary", type=Path)
-    ap.add_argument("--site", type=Path, default=Path("build/replit-site"))
+    ap.add_argument("--site", type=Path, default=Path("project/build/replit-site"))
     a = ap.parse_args()
     found = problems(a.binary, a.site)
     for where, msg in found:

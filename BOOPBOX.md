@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="480"></p>
+<p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="480"></p>
 
 # BoopBox 1.9.1
 
@@ -44,11 +44,11 @@ Version tags show the release that added a feature. *(1.8)* and other 1.x tags a
 ## Install
 
 1. Open the [installer page](https://boopbox.replit.app/webapp/installer/) in **Chrome or Edge**.
-   If you use the source folder on Windows, you can also double-click **`scripts/INSTALL-BOOPBOX.bat`**. This script builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep its black window open until the install is done.
+   If you use the source folder on Windows, you can also double-click **`project/scripts/INSTALL-BOOPBOX.bat`**. This script builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep its black window open until the install is done.
 2. Connect the FM-1 to the computer with a USB data cable. Connect it directly, not through a hub.
 3. Choose **BoopBox** (or **BoopBox Trainer**, below). Press **INSTALL**. Allow MIDI access. Wait for *Done*.
 
-The FM-1 restarts and shows the BoopBox logo. An update keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://boopbox.replit.app/webapp/editor/) (or **`scripts/OPEN-EDITOR.bat`**).
+The FM-1 restarts and shows the BoopBox logo. An update keeps your projects, presets, samples, kits and settings. The editor is at [webapp/editor/](https://boopbox.replit.app/webapp/editor/) (or **`project/scripts/OPEN-EDITOR.bat`**).
 
 - **BoopBox Trainer** is a second firmware. It teaches you three songs on the FM-1 itself, with a coach on the screen. All other functions work as in BoopBox. To switch back, install the other firmware ([the trainer](docs/trainer.md)).
 - **No FM-1 at hand?** [The emulator](https://boopbox.replit.app/webapp/emu/) runs the real firmware in the browser, with a drawing of the FM-1 on the page. [The home page](https://boopbox.replit.app/) shows what BoopBox does.
@@ -409,7 +409,7 @@ The **SONG screen** (tap SAVE on TRACKS, or SAVE + key 16) shows the chain, and 
 
 ## The web editor
 
-Connect the FM-1 by USB. Open the editor in Chrome or Edge from the [home page](https://boopbox.replit.app/), from the installer page, or with **`scripts/OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`). Press **Connect**. The editor follows the device live: if you turn a knob on the FM-1, the editor moves.
+Connect the FM-1 by USB. Open the editor in Chrome or Edge from the [home page](https://boopbox.replit.app/), from the installer page, or with **`project/scripts/OPEN-EDITOR.bat`** (`http://localhost:8766/webapp/editor/`). Press **Connect**. The editor follows the device live: if you turn a knob on the FM-1, the editor moves.
 
 **Offline (2.6).** *Download for offline use* (at the bottom of the side bar, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html`. This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click the file. It opens in Chrome or Edge without internet (Chrome asks once to allow MIDI) and works as the online editor. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
 

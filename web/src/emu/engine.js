@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // (1.8) The BoopBox emulator's engine: the firmware runs in emu-worklet.js (an AudioWorklet), with
-// boopbox-emu.wasm (tools/build_emu.py). The flash (projects, songs, presets, settings) is kept in this browser
+// boopbox-emu.wasm (project/tools/build_emu.py). The flash (projects, songs, presets, settings) is kept in this browser
 // (IndexedDB) between visits. No React here: Emulator.jsx draws the panel and calls these.
 export const BUTTONS = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+"];
 export const B = Object.fromEntries(BUTTONS.map((n, i) => [n, i]));
@@ -10,7 +10,7 @@ export const BLACK = (k) => [1, 3, 5, 8, 10].includes(k % 12);
 export const NKEYS = 27;
 const FS = 44100;
 
-/* the two firmwares the page runs (tools/build_emu.py, with --trainer for the second), each with its own flash kept in
+/* the two firmwares the page runs (project/tools/build_emu.py, with --trainer for the second), each with its own flash kept in
    this browser: their sample sets differ, so one's projects are not the other's */
 export const FIRMWARE = {
   main: { label: "BoopBox", wasm: "boopbox-emu.wasm", key: "fm1", file: "boopbox-emulator-flash.bin" },

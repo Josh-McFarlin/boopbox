@@ -6,7 +6,7 @@ const { extname, resolve, sep } = require("node:path");
 const { createRoomService } = require("./server/rooms.cjs");
 
 const ROOT = resolve(__dirname, "docs");
-const SITE_ROOT = resolve(__dirname, "build/replit-site");
+const SITE_ROOT = resolve(__dirname, "project/build/replit-site");
 const MIME = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",

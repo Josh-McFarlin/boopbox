@@ -13,15 +13,15 @@ Each source file keeps the copyright lines it came with; changes made for BoopBo
 
 ## What is GPL-3.0-only
 
-- the firmware: `firmware/` (app, HAL, update loader)
-- the build script and tools: `scripts/`, `tools/`
+- the firmware: `project/firmware/` (app, HAL, update loader)
+- the build script and tools: `project/scripts/`, `project/tools/`
 - the web pages (installer, editor) and their tests: `web/` (not the Fukiai font, below)
-- the host tests: `tests/`
+- the host tests: `project/tests/`
 - BoopBox's own assets, all made by code in this tree:
-  - the logo, the app icons and the boot splash (`assets/logo/`, `web/icon-*.png`): `tools/gen_logo.py`
-  - the parameter icon atlas (`assets/icons.png`): `tools/gen_icon_art.py`
-  - the synthesized drum one-shots (`build/genwav`, used by SLICE's BREAK and for a GM role the CC0 kit lacks):
-    `tools/gen_drums.py`
+  - the logo, the app icons and the boot splash (`project/assets/logo/`, `web/icon-*.png`): `project/tools/gen_logo.py`
+  - the parameter icon atlas (`project/assets/icons.png`): `project/tools/gen_icon_art.py`
+  - the synthesized drum one-shots (`project/build/genwav`, used by SLICE's BREAK and for a GM role the CC0 kit lacks):
+    `project/tools/gen_drums.py`
 
 You may use, study, change and share BoopBox under the GPL, for any purpose. If you distribute BoopBox, or
 firmware derived from it, you must also give your recipients its complete corresponding source under the same
@@ -35,19 +35,19 @@ section 7 permission Felucca gave for combining them is not needed.
 
 | What | Licence | Where |
 | --- | --- | --- |
-| Instrument and drum samples (Versilian Studios VSCO-2 CE, VCSL; Sonic Pi: SCRCH) | CC0 1.0 | `assets/samples-cc0/`, provenance in `ATTRIBUTION.txt` there |
-| The hip-hop pack's E.PIANO (Greg Sullivan's Wurlitzer EP200 samples) | CC BY 3.0 | `assets/hiphop-pack/`, credits in `CREDITS.txt` there |
-| Terminus font 8x16: the FM-1's screen (Terminus Bold, ter-u16b), and the web editor's font (the regular ter-u16n; `tools/gen_webfont.py` makes it a TrueType font, `web/src/editor/assets/terminus.ttf`) | SIL OFL 1.1 | `assets/fonts/ter-u16b.bdf`, `assets/fonts/ter-u16n.bdf`, `assets/fonts/Terminus-LICENSE.txt` |
-| Pixelify Sans (The Pixelify Sans Project Authors) and DM Sans (The DM Sans Project Authors): the website's fonts, bundled from `@fontsource`; the logo's wordmark is Pixelify Sans Bold's pixels (`tools/gen_logo.py`) | SIL OFL 1.1 | `web/site/public/fonts/PixelifySans-OFL.txt`, `web/site/public/fonts/DMSans-OFL.txt` |
+| Instrument and drum samples (Versilian Studios VSCO-2 CE, VCSL; Sonic Pi: SCRCH) | CC0 1.0 | `project/assets/samples-cc0/`, provenance in `ATTRIBUTION.txt` there |
+| The hip-hop pack's E.PIANO (Greg Sullivan's Wurlitzer EP200 samples) | CC BY 3.0 | `project/assets/hiphop-pack/`, credits in `CREDITS.txt` there |
+| Terminus font 8x16: the FM-1's screen (Terminus Bold, ter-u16b), and the web editor's font (the regular ter-u16n; `project/tools/gen_webfont.py` makes it a TrueType font, `web/src/editor/assets/terminus.ttf`) | SIL OFL 1.1 | `project/assets/fonts/ter-u16b.bdf`, `project/assets/fonts/ter-u16n.bdf`, `project/assets/fonts/Terminus-LICENSE.txt` |
+| Pixelify Sans (The Pixelify Sans Project Authors) and DM Sans (The DM Sans Project Authors): the website's fonts, bundled from `@fontsource`; the logo's wordmark is Pixelify Sans Bold's pixels (`project/tools/gen_logo.py`) | SIL OFL 1.1 | `web/site/public/fonts/PixelifySans-OFL.txt`, `web/site/public/fonts/DMSans-OFL.txt` |
 | Fukiai icon font (Hügelton Instruments), web editor only | MIT | `web/src/editor/assets/fukiai.ttf`, `web/site/public/editor/FUKIAI-LICENSE.txt` |
-| CrispyZebra by Leo Kuroshita (<https://github.com/hugelton/CrispyZebra>): the PHASE engine's waveforms are a C port of its oscillator | GPL-3.0 | `firmware/src/eng_phase.c` |
+| CrispyZebra by Leo Kuroshita (<https://github.com/hugelton/CrispyZebra>): the PHASE engine's waveforms are a C port of its oscillator | GPL-3.0 | `project/firmware/src/eng_phase.c` |
 | klattsch by Tony Gies (<https://github.com/tgies/klattsch>): design reference for the VOICE (formant) engine; no code copied. Formant data from Klatt (1980) / Hillenbrand et al. (1995) | MIT (klattsch) | credit only |
-| msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis, ported to integer C by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used) | Apache-2.0 | `firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
-| DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models, ported to fixed point by Leo Kuroshita | MIT | `firmware/src/phys_dsp.c`, `firmware/src/phys_symp.c` (the notice is in each file) |
-| The second-core HAL after X0X by Charles Vestal and the dual-core work of Andre Rezemini (sloop-lab) | GPL-3.0 | `firmware/hal/fm1_cpu1.*`, `firmware/src/cpu1.*` (the notice is in each file) |
-| OberVave 3.3.2 by zvenson (<https://github.com/zvenson/obervave>, commit 099ccd6): the OBERVAVE engine's voice (oscillators, filters, filter envelope, LFO, vintage) adapted from `obv_dsp.h` / `obv_engine.h`, its curves (`tools/gen_tables.py obv_tables`) and its 70 programs (`tools/obervave/obv_params.h`, `obv_patches.h`, kept as they are; `tools/gen_obv.py` reads them) | GPL-3.0-only | `firmware/src/eng_obv.c`, `tools/obervave/`, `tools/gen_obv.py` |
-| Melodee 1.6.1 by Kerem Kilic (Ellic Studio) (<https://github.com/keremimo/melodee>, commit 165d177), with USB host enumeration and descriptor parsing by recursivefieldinstruments: the USB MIDI host (`usb_host.c` adapted: input only; `usb_host_desc.h` as it is; the host attach in `fm1_usb.h`) | GPL-3.0-only | `firmware/src/usb_host.c`, `firmware/src/usb_host_desc.h`, `firmware/hal/fm1_usb.h` (the notice is in each file) |
-| JIANT FM by Juan Ignacio Antonucci (Juan Jiant) (<https://github.com/juanjiant-bit/JIANT>, V10.6z..V10.7.10), after Velo by Charles Vestal (<https://github.com/charlesvestal/fm1-velocity>): the key velocity and pressure model, its calibration and the key scan's ADC sampling (`vel.c`, `vel_diag.c`, `hal/fm1_adc.h`, `hal/fm1_input.h` adapted), the host test's model (`tests/vel_test.c` adapted), the newer FM-1s' flash ID, the NRPN map's scheme | GPL-3.0-only | `firmware/src/keyvel.c`, `firmware/hal/fm1_adc.h`, `firmware/hal/fm1_input.h`, `tests/keyvel_test.c` (the notice is in each file) |
+| msfa by Google Inc. and Pascal Gauthier, from Dexed (<https://github.com/asb2m10/dexed>): the FM6 engine's synthesis, ported to integer C by Leo Kuroshita (Dexed itself is GPL-3.0; only msfa is used) | Apache-2.0 | `project/firmware/src/fm6_core.c`, `LICENSES/Apache-2.0-msfa.txt` |
+| DaisySP (Electrosmith, Emilie Gillet) and Rings' sympathetic strings (Emilie Gillet): the PHYS engine's models, ported to fixed point by Leo Kuroshita | MIT | `project/firmware/src/phys_dsp.c`, `project/firmware/src/phys_symp.c` (the notice is in each file) |
+| The second-core HAL after X0X by Charles Vestal and the dual-core work of Andre Rezemini (sloop-lab) | GPL-3.0 | `project/firmware/hal/fm1_cpu1.*`, `project/firmware/src/cpu1.*` (the notice is in each file) |
+| OberVave 3.3.2 by zvenson (<https://github.com/zvenson/obervave>, commit 099ccd6): the OBERVAVE engine's voice (oscillators, filters, filter envelope, LFO, vintage) adapted from `obv_dsp.h` / `obv_engine.h`, its curves (`project/tools/gen_tables.py obv_tables`) and its 70 programs (`project/tools/obervave/obv_params.h`, `obv_patches.h`, kept as they are; `project/tools/gen_obv.py` reads them) | GPL-3.0-only | `project/firmware/src/eng_obv.c`, `project/tools/obervave/`, `project/tools/gen_obv.py` |
+| Melodee 1.6.1 by Kerem Kilic (Ellic Studio) (<https://github.com/keremimo/melodee>, commit 165d177), with USB host enumeration and descriptor parsing by recursivefieldinstruments: the USB MIDI host (`usb_host.c` adapted: input only; `usb_host_desc.h` as it is; the host attach in `fm1_usb.h`) | GPL-3.0-only | `project/firmware/src/usb_host.c`, `project/firmware/src/usb_host_desc.h`, `project/firmware/hal/fm1_usb.h` (the notice is in each file) |
+| JIANT FM by Juan Ignacio Antonucci (Juan Jiant) (<https://github.com/juanjiant-bit/JIANT>, V10.6z..V10.7.10), after Velo by Charles Vestal (<https://github.com/charlesvestal/fm1-velocity>): the key velocity and pressure model, its calibration and the key scan's ADC sampling (`vel.c`, `vel_diag.c`, `hal/fm1_adc.h`, `hal/fm1_input.h` adapted), the host test's model (`project/tests/vel_test.c` adapted), the newer FM-1s' flash ID, the NRPN map's scheme | GPL-3.0-only | `project/firmware/src/keyvel.c`, `project/firmware/hal/fm1_adc.h`, `project/firmware/hal/fm1_input.h`, `project/tests/keyvel_test.c` (the notice is in each file) |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Contributions

@@ -6,8 +6,8 @@ const { createServer } = require("node:http");
 const { once } = require("node:events");
 const test = require("node:test");
 const { WebSocket } = require("ws");
-const { createRoomService, normalizeVoice, normalizeRoomPerformance } = require("../server/rooms.cjs");
-const config = require("../shared/room-config.json");
+const { createRoomService, normalizeVoice, normalizeRoomPerformance } = require("../../server/rooms.cjs");
+const config = require("../../shared/room-config.json");
 
 function createClient(url, browserId = randomUUID(), autoIdentify = true) {
   const ws = new WebSocket(url, { headers: { Origin: url.replace(/^ws:/, "http:").replace(/\/api\/rooms$/, "") } });
@@ -290,8 +290,8 @@ test("rooms relay bounded performances, sync tempo, and restore state for late j
 });
 
 test("physical FM-1 sequence edits update active listeners without sharing playback controls", async () => {
-  const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
-  const { connectFm1 } = await import("../web/src/rooms/device.js");
+  const { makeMockDevice } = await import("../../web/src/editor/lib/proto.js");
+  const { connectFm1 } = await import("../../web/src/rooms/device.js");
   const app = await startRoomServer();
   const clients = [];
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -308,7 +308,7 @@ test("physical FM-1 sequence edits update active listeners without sharing playb
   globalThis.document = { baseURI: "http://localhost/webapp/rooms/" };
 
   try {
-    const { RoomAudio } = await import("../web/src/rooms/audio.js");
+  const { RoomAudio } = await import("../../web/src/rooms/audio.js");
     const owner = createClient(app.url);
     const listener = createClient(app.url);
     clients.push(owner, listener);

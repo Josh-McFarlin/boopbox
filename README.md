@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
+<p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
 
 <p align="center"><b>A live groovebox firmware for the M-VAVE FM-1 — for any style.</b><br>
 Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/sloop-fm1">SLOOP</a> by isod89, which is based on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita / Hügelton Instruments.</p>
@@ -43,25 +43,26 @@ BoopBox has no factory patterns and no style of its own. You play everything tha
 
 ## Project layout
 
-**Device firmware**
+**Firmware project**
 
-- `firmware/` — FM-1 firmware source, hardware support, loader and host emulator.
-- `firmware/releases/` — versioned `.fwsc` packages used by the installer and release workflow.
+- `project/firmware/` — FM-1 firmware source, hardware support, loader and host emulator.
+- `project/firmware/releases/` — versioned `.fwsc` packages used by the installer and release workflow.
+- `project/assets/` — source samples, fonts, icons, logos and screenshots.
+- `project/tools/` — firmware and website generators, build helpers and checks.
+- `project/scripts/` — common build and local launch commands.
+- `project/tests/` — firmware, website and room-service tests.
+- `project/build/` — generated build output; ignored and rebuildable.
 
 **Website and room server**
 
 - `web/` — React/Vite website source: home, installer, editor, emulator and room browser.
 - `server.js` and `server/` — one Node server for the website and room WebSocket service.
 - `shared/` — room settings shared by the browser, server and tests.
-- `build/replit-site/` — generated website and firmware download output; rebuildable and not checked in.
+- `project/build/replit-site/` — generated website and firmware download output.
 
 **Project resources**
 
 - `docs/` — technical documentation and design notes.
-- `assets/` — source samples, fonts, icons, logos and screenshots.
-- `tools/` — firmware and website generators, build helpers and checks.
-- `scripts/` — common build and local launch commands.
-- `tests/` — firmware, website and room-service tests.
 - `.github/workflows/` — release and changelog checks.
 
 `src/repl_nix_workspace/` is Python packaging scaffolding for the build environment, not application source.
@@ -70,11 +71,11 @@ BoopBox has no factory patterns and no style of its own. You play everything tha
 
 ## Screenshots
 
-<p align="center"><img src="assets/screens/boopbox-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
+<p align="center"><img src="project/assets/screens/boopbox-screens.png" alt="BoopBox screens on the FM-1" width="760"></p>
 
-<p align="center"><sub>The screen of the FM-1 with eight tracks that play. The firmware's own code draws these images (<code>tools/make_screens.py</code>). See <a href="assets/screens/all/README.md">every screen of the firmware</a>.</sub></p>
+<p align="center"><sub>The screen of the FM-1 with eight tracks that play. The firmware's own code draws these images (<code>project/tools/make_screens.py</code>). See <a href="project/assets/screens/all/README.md">every screen of the firmware</a>.</sub></p>
 
-<p align="center"><img src="assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page" width="760"></p>
+<p align="center"><img src="project/assets/screens/editor-sound.png" alt="BoopBox web editor: the Sound page" width="760"></p>
 
 <p align="center"><sub>The Sound page of the web editor: the envelope, the LFOs and the effects of the selected track.</sub></p>
 
@@ -111,8 +112,8 @@ You do not need to download or compile anything. BoopBox keeps your projects, us
 
 ### Other ways
 
-- **Python:** get the `.fwsc` file of a [release](../../releases). Then run `python tools/fm1_install.py boopbox-X.Y.Z.fwsc`. This script needs `pip install mido python-rtmidi`.
-- **Build it yourself:** see [Building and tests](#building-and-tests). On Windows, `scripts/INSTALL-BOOPBOX.bat` builds BoopBox and opens the installer locally.
+- **Python:** get a `.fwsc` file from `project/firmware/releases/`. Then run `python project/tools/fm1_install.py boopbox-X.Y.Z.fwsc`. This script needs `pip install mido python-rtmidi`.
+- **Build it yourself:** see [Building and tests](#building-and-tests). On Windows, `project/scripts/INSTALL-BOOPBOX.bat` builds BoopBox and opens the installer locally.
 
 ### Going back
 
@@ -215,17 +216,17 @@ The version tags in the guides, for example *(2.6)*, show the SLOOP release that
 
 For the full steps, read [BUILDING.md](BUILDING.md). You need the JieLi toolchain and three files of the AC79 SDK. Then:
 
-- On Linux or macOS, run `scripts/build.sh`.
-- On Windows with WSL, run `scripts/INSTALL-BOOPBOX.bat`.
+- On Linux or macOS, run `project/scripts/build.sh`.
+- On Windows with WSL, run `project/scripts/INSTALL-BOOPBOX.bat`.
 
-Both commands build the firmware into `build/felucca.fwsc`. On Windows, the script also serves the installer and the editor on `http://localhost:8766`. On Linux or macOS, [BUILDING.md](BUILDING.md) tells you how to serve them.
+Both commands build the firmware into `project/build/felucca.fwsc`. On Windows, the script also serves the installer and the editor on `http://localhost:8766`. On Linux or macOS, [BUILDING.md](BUILDING.md) tells you how to serve them.
 
-`tests/run_tests.sh` runs the host test suite with no hardware. The tests cover audio output, CPU budgets, sequencer timing, the UI, flash storage, the update loader, MIDI, USB audio and the web pages.
+`project/tests/run_tests.sh` runs the host test suite with no hardware. The tests cover audio output, CPU budgets, sequencer timing, the UI, flash storage, the update loader, MIDI, USB audio and the web pages.
 
 ## Contributing
 
 - **Bugs and ideas:** [open an issue](../../issues). Tell us what you did, what you expected and what occurred. Also give the version from HOME menu → SYSTEM → ABOUT.
-- **Pull requests:** keep the style of the code around your change. Add a host test when you can. Make sure that `tests/run_tests.sh` passes. The release notes and the manual credit each contribution.
+- **Pull requests:** keep the style of the code around your change. Add a host test when you can. Make sure that `project/tests/run_tests.sh` passes. The release notes and the manual credit each contribution.
 - **Licence:** when you contribute, you agree to release your code under GPL-3.0, as the rest of BoopBox is.
 
 ## Credits and thanks

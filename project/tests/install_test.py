@@ -3,7 +3,7 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 """tools/fm1_install.py against a simulated FM-1 (no hardware, no mido).
 The fake device is the one in web/test_web.mjs: identity on the handshake,
-then "device asks, host answers" reads of the logical image. Run from the repo root:
+then "device asks, host answers" reads of the logical image. Run from project/:
   python3 tests/install_test.py
 Also checks logical_image/product_of against web/src/lib/fm1pkg.js (needs node and
 build/felucca.fwsc, skipped otherwise)."""
@@ -17,8 +17,9 @@ import threading
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "tools"))
+ROOT = Path(__file__).resolve().parents[2]
+PROJECT = ROOT / "project"
+sys.path.insert(0, str(PROJECT / "tools"))
 import fm1_install as I  # noqa: E402
 
 I.DELAY.update(open=0, start=0.01, reply=0, loader=0.01, reboot=0.01, retry=0.02, poll=0.05, hs=0.1,
@@ -294,7 +295,7 @@ def errors():
 
 
 def against_js():
-    clean = ROOT / "build/felucca.fwsc"
+    clean = PROJECT / "build/felucca.fwsc"
     if not shutil.which("node") or not clean.exists():
         print("logical image vs fm1pkg.js: skipped (needs node and build/felucca.fwsc)")
         return

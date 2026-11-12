@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-# Host tests (no hardware). Run from the repo root after scripts/build.sh:
+# Host tests (no hardware). The script switches to project/ and should be run after scripts/build.sh:
 #   tests/run_tests.sh
 #
 # Regression suite (tests/regress.c, tests/target_budget.py; details at the top of regress.c):
@@ -144,7 +144,7 @@ run "the render split over the two cores: every mode of the second core's host d
 # the web pages (Node.js) with the firmware's project format for the web editor's codec (web/test_web.mjs: gen,
 # load and capture again)
 web() {
-    $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/proj7_tool" tests/proj7_tool.c -lm && node web/test_web.mjs
+    $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/proj7_tool" tests/proj7_tool.c -lm && node ../web/test_web.mjs
 }
 if command -v node >/dev/null 2>&1; then
     run "web pages: editor protocol, samples, packages, update protocol" web
@@ -327,8 +327,8 @@ emu() {
 run "browser emulator: powers on, keys sound and light, pages, knobs, PLAY, MASTER, the flash kept across a power-on; its wasm" emu
 nrpn() {
     cc_run nrpn_test "$GH" tests/nrpn_test.c || return 1
-    "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" docs/NRPN.md ||
-        { echo "docs/NRPN.md differs from the firmware: $OUT/nrpn_test --write docs/NRPN.md"; return 1; }
+    "$OUT/nrpn_test" --write "$OUT/NRPN.md" && cmp -s "$OUT/NRPN.md" ../docs/NRPN.md ||
+        { echo "../docs/NRPN.md differs from the firmware: $OUT/nrpn_test --write ../docs/NRPN.md"; return 1; }
 }
 run "NRPN: track parameters by CC99/98, 14-bit CC6/38, selection kept and ended, drums, engines; docs/NRPN.md current" nrpn
 run "parameter locks: several a step, 32 a track, every engine, SLIDE, capture, saves keep the track's values" \
@@ -385,7 +385,7 @@ fi
 site_tests() {
     python3 tests/site_test.py || return 1
     [ -n "$pwa" ] || return 0
-    rm -rf "$OUT/pwa-site" && python3 web/make_site.py build/felucca.fwsc 2.7 "$OUT/pwa-site" >/dev/null &&
+    rm -rf "$OUT/pwa-site" && python3 ../web/make_site.py build/felucca.fwsc 2.7 "$OUT/pwa-site" >/dev/null &&
         NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}" node tests/pwa_test.mjs "$OUT/pwa-site"   # (a global Playwright too)
 }
 if [ -n "$pwa" ]; then

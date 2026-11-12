@@ -5,15 +5,15 @@
 
   index.html                  the home page (webapp/home/index.html with <base href="webapp/home/">): what BoopBox is
   firmware/boopbox-VER.fwsc   the package
-  firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (tools/build.py --trainer), offered as a
+  firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (project/tools/build.py --trainer), offered as a
                               second choice in the installer
   webapp/home/, webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
                               the React pages (web/site/, web/src/), built by Vite (npm run build, into
-                              build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
+                              project/build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
                               editor's version are written into their index.html here
-  webapp/emu/                 (1.8) the browser emulator: only with build/emu/boopbox-emu.wasm (tools/build_emu.py);
-                              BoopBox Trainer's too, to switch to, with build/emu/boopbox-trainer-emu.wasm
-                              (tools/build_emu.py --trainer)
+  webapp/emu/                 (1.8) the browser emulator: only with project/build/emu/boopbox-emu.wasm (project/tools/build_emu.py);
+                              BoopBox Trainer's too, to switch to, with project/build/emu/boopbox-trainer-emu.wasm
+                              (project/tools/build_emu.py --trainer)
   webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6; npm run build:offline): its
                               fonts and scripts inlined, its links to the installer and the font licence online;
                               opened from the disk in Chrome / Edge (file:// is a secure context: Web MIDI asks for
@@ -24,9 +24,9 @@
                               as content://, where Chrome refuses Web MIDI)
   src/                        not touched
 
-  web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta] [--trainer build/trainer-fw/felucca-trainer-X.Y.fwsc]
+  web/make_site.py project/build/felucca-X.Y.fwsc X.Y OUT_DIR [--beta] [--trainer project/build/trainer-fw/felucca-trainer-X.Y.fwsc]
   (--beta: web/beta_banner.html at the top of the installer: the beta channel, docs/beta)
-The Replit build writes OUT_DIR as build/replit-site/. Release checks and GitHub releases use a temporary OUT_DIR.
+The Replit build writes OUT_DIR as project/build/replit-site/. Release checks and GitHub releases use a temporary OUT_DIR.
 Needs Node.js: the pages are built with npm (npm ci in web/ the first time).
 
 The package identity (FM-1_9xx) is read from the package; the device reports it
@@ -43,12 +43,12 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
-BUILD = HERE.parent / "build"
+BUILD = HERE.parent / "project" / "build"
 _built = False
 
 
 def build_pages():
-    """the React pages with Vite: build/webapp-vite/ (the site's webapp/) and build/webapp-offline/editor/index.html
+    """the React pages with Vite: project/build/webapp-vite/ (the site's webapp/) and project/build/webapp-offline/editor/index.html
     (the editor in one file); once per run"""
     global _built
     if _built:
@@ -64,20 +64,20 @@ def build_pages():
 
 
 def emu_page(emu):
-    """(1.8) webapp/emu: the browser emulator (its page from Vite, build/emu/boopbox-emu.wasm from tools/build_emu.py);
+    """(1.8) webapp/emu: the browser emulator (its page from Vite, project/build/emu/boopbox-emu.wasm from project/tools/build_emu.py);
     without its wasm none at all, never an old one"""
     wasm = BUILD / "emu" / "boopbox-emu.wasm"
     if not wasm.exists():
         if emu.exists():
             shutil.rmtree(emu)
-        print("site: no emulator (python3 tools/build_emu.py first)")
+        print("site: no emulator (python3 project/tools/build_emu.py first)")
         return
     shutil.copy(wasm, emu / wasm.name)
     trainer = BUILD / "emu" / "boopbox-trainer-emu.wasm"   # (the page offers it when it is there)
     if trainer.exists():
         shutil.copy(trainer, emu / trainer.name)
     else:
-        print("site: no trainer in the emulator (python3 tools/build_emu.py --trainer first)")
+        print("site: no trainer in the emulator (python3 project/tools/build_emu.py --trainer first)")
 
 
 def offline_editor(html, version):
@@ -191,7 +191,7 @@ def main(pkg, version, out, trainer=None):
     shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)
     fw.mkdir(parents=True, exist_ok=True)
 
-    inst = app / "installer" / "index.html"          # the package it installs (tools/check_site.py reads this line)
+    inst = app / "installer" / "index.html"          # the package it installs (project/tools/check_site.py reads this line)
     html = inst.read_text(encoding="utf-8")
     if html.count("const meta = /*META*/null;") != 1:
         raise SystemExit("installer/index.html must contain 'const meta = /*META*/null;' once; update make_site.py")

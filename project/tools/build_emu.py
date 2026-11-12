@@ -5,7 +5,7 @@
 
 python3 tools/build_emu.py [--trainer]
 Writes build/emu/boopbox-emu.wasm (with --trainer: build/emu/boopbox-trainer-emu.wasm, BoopBox Trainer: the lessons,
-three sample sets fewer, its generated headers in build/emu/trainer-gen/) (the Vite dev server serves it at /emu/: cd web && npm run dev; web/make_site.py
+three sample sets fewer, its generated headers in build/emu/trainer-gen/) (the Vite dev server serves it at /emu/: cd ../web && npm run dev from project/; web/make_site.py
 puts it in the site). Needs clang with the wasm32 target and wasm-ld (lld),
 or Emscripten. No JieLi SDK, Docker or FM-1.
 """
