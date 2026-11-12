@@ -301,6 +301,15 @@ export class RoomAudio {
     this.syncMixSettings();
   }
 
+  setMix(mutedSlots, soloSlot) {
+    if (!Array.isArray(mutedSlots) || mutedSlots.length !== PLAYERS
+      || !mutedSlots.every((muted) => typeof muted === "boolean")
+      || !(soloSlot === null || (Number.isInteger(soloSlot) && soloSlot >= 0 && soloSlot < PLAYERS))) return;
+    this.mutedSlots = [...mutedSlots];
+    this.soloSlot = soloSlot;
+    this.syncMixSettings();
+  }
+
   syncMixSettings() {
     this.node?.port.postMessage({
       type: "mix",
@@ -313,9 +322,9 @@ export class RoomAudio {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
     this.voices[slot] = null;
     this.performances[slot] = null;
-    this.mutedSlots[slot] = false;
-    if (this.soloSlot === slot) this.soloSlot = null;
-    this.syncMixSettings();
+    const mutedSlots = [...this.mutedSlots];
+    mutedSlots[slot] = false;
+    this.setMix(mutedSlots, this.soloSlot === slot ? null : this.soloSlot);
     const next = this.queue.then(() => this.node?.port.postMessage({ type: "drop", slot }));
     this.queue = next.catch(() => {});
     return this.queue;

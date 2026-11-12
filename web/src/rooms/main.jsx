@@ -6,6 +6,7 @@ import { RoomAudio } from "./audio.js";
 import { getRoomBrowserIdentity } from "./browser-identity.js";
 import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
 import { createSoundEditSharingController } from "./edit-sharing.js";
+import { createRoomMixController } from "./mix.js";
 import RoomChat from "./chat-ui/RoomChat.jsx";
 import config from "../../../shared/room-config.json";
 import "../styles/site.css";
@@ -84,6 +85,16 @@ function RoomPage() {
   const voiceStateRef = useRef(new Map());
   const performanceStateRef = useRef(new Map());
   const heldRef = useRef(new Set());
+  const roomMixRef = useRef(null);
+  if (!roomMixRef.current) {
+    roomMixRef.current = createRoomMixController({
+      getAudio: () => audioRef.current,
+      onChange: ({ mutedSlots: nextMutedSlots, soloSlot: nextSoloSlot }) => {
+        setMutedSlots(nextMutedSlots);
+        setSoloSlot(nextSoloSlot);
+      },
+    });
+  }
 
   useEffect(() => { roomRef.current = room; }, [room]);
 
@@ -199,16 +210,13 @@ function RoomPage() {
           if (previousRoom?.id !== message.room?.id) {
             setChatMessages([]);
             setNameError("");
-            setMutedSlots([]);
-            setSoloSlot(null);
-            audioRef.current?.setSoloPlayer(null);
+            roomMixRef.current.reset();
           }
           roomRef.current = message.room;
           setRoom(message.room);
           setPlayers(message.players || []);
           const occupiedSlots = new Set((message.players || []).map((player) => player.slot));
-          setMutedSlots((current) => current.filter((slot) => occupiedSlots.has(slot)));
-          setSoloSlot((current) => current !== null && occupiedSlots.has(current) ? current : null);
+          roomMixRef.current.retainSlots(occupiedSlots);
           if (soundEditSharingRef.current.paused) send({ type: "sound_edit_sharing", paused: true });
           if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
           setStatus(`In a ${GENRES.find((item) => item.id === message.room.genre)?.label || "music"} room.`);
@@ -280,8 +288,7 @@ function RoomPage() {
         setPlayers([]);
         setChatMessages([]);
         setNameError("");
-        setMutedSlots([]);
-        setSoloSlot(null);
+        roomMixRef.current.reset();
         roomRef.current = null;
         voiceStateRef.current.clear();
         performanceStateRef.current.clear();
@@ -312,8 +319,11 @@ function RoomPage() {
       if (!audioRef.current) audioRef.current = new RoomAudio((err) => setError(err.message));
       await audioRef.current.start();
       setAudioEnabled(true);
-      for (const slot of mutedSlots) audioRef.current.setPlayerMuted(slot, true);
-      audioRef.current.setSoloPlayer(soloSlot);
+      const mix = roomMixRef.current.getState();
+      audioRef.current.setMix(
+        Array.from({ length: config.maxPlayers }, (_, slot) => mix.mutedSlots.includes(slot)),
+        mix.soloSlot,
+      );
       for (const saved of performanceStateRef.current.values()) saved.applied = false;
       reconcileRoomVoices(players);
       setStatus("Room audio is on. Connect an FM-1 or start the browser emulator to play.");
@@ -441,24 +451,11 @@ function RoomPage() {
   };
 
   const togglePlayerMute = (slot) => {
-    const muted = mutedSlots.includes(slot);
-    const nextMuted = muted ? mutedSlots.filter((item) => item !== slot) : [...mutedSlots, slot];
-    setMutedSlots(nextMuted);
-    audioRef.current?.setPlayerMuted(slot, !muted);
-    if (!muted && soloSlot === slot) {
-      setSoloSlot(null);
-      audioRef.current?.setSoloPlayer(null);
-    }
+    roomMixRef.current.toggleMute(slot);
   };
 
   const togglePlayerSolo = (slot) => {
-    const nextSolo = soloSlot === slot ? null : slot;
-    if (nextSolo !== null && mutedSlots.includes(nextSolo)) {
-      setMutedSlots(mutedSlots.filter((item) => item !== nextSolo));
-      audioRef.current?.setPlayerMuted(nextSolo, false);
-    }
-    setSoloSlot(nextSolo);
-    audioRef.current?.setSoloPlayer(nextSolo);
+    roomMixRef.current.toggleSolo(slot);
   };
 
   const createRoom = () => {
@@ -472,6 +469,7 @@ function RoomPage() {
   const leaveRoom = () => {
     stopAllNotes();
     send({ type: "leave" });
+    roomMixRef.current.reset();
     setDeviceMode("fm1");
     setEmulatorReady(false);
     emulatorHasPerformanceRef.current = false;
@@ -480,8 +478,6 @@ function RoomPage() {
     setPlayers([]);
     setChatMessages([]);
     setNameError("");
-    setMutedSlots([]);
-    setSoloSlot(null);
     voiceStateRef.current.clear();
     performanceStateRef.current.clear();
     for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);

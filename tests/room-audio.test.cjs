@@ -243,6 +243,77 @@ function roomPerformance(playing = false) {
   };
 }
 
+test("browser listeners keep solo and mute local and clear them when a room ends", async () => {
+  const originalDocument = global.document;
+  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  let modules;
+  try {
+    modules = await Promise.all([
+      import("../web/src/rooms/mix.js"),
+      import("../web/src/rooms/audio.js"),
+    ]);
+  } finally {
+    if (originalDocument === undefined) delete global.document;
+    else global.document = originalDocument;
+  }
+  const [{ createRoomMixController }, { RoomAudio }] = modules;
+  const makeListener = () => {
+    const rendererMessages = [];
+    const audio = Object.create(RoomAudio.prototype);
+    audio.mutedSlots = Array(8).fill(false);
+    audio.soloSlot = null;
+    audio.node = { port: { postMessage: (message) => rendererMessages.push(message) } };
+    return {
+      rendererMessages,
+      mix: createRoomMixController({
+        getAudio: () => audio,
+        onChange: () => {},
+      }),
+    };
+  };
+
+  const listenerA = makeListener();
+  const listenerB = makeListener();
+
+  listenerA.mix.toggleMute(1);
+  listenerA.mix.toggleSolo(2);
+  listenerB.mix.toggleMute(2);
+  listenerB.mix.toggleSolo(1);
+
+  assert.deepEqual(listenerA.mix.getState(), { mutedSlots: [1], soloSlot: 2 });
+  assert.deepEqual(listenerB.mix.getState(), { mutedSlots: [2], soloSlot: 1 });
+  assert.deepEqual(listenerA.rendererMessages.at(-1), {
+    type: "mix",
+    mutedSlots: [false, true, false, false, false, false, false, false],
+    soloSlot: 2,
+  });
+  assert.deepEqual(listenerB.rendererMessages.at(-1), {
+    type: "mix",
+    mutedSlots: [false, false, true, false, false, false, false, false],
+    soloSlot: 1,
+  });
+  assert.ok([...listenerA.rendererMessages, ...listenerB.rendererMessages]
+    .every((message) => message.type === "mix"),
+  "solo and mute are delivered only to each listener's local audio worklet");
+
+  listenerA.mix.reset();
+  assert.deepEqual(listenerA.mix.getState(), { mutedSlots: [], soloSlot: null });
+  assert.deepEqual(listenerA.rendererMessages.at(-1), {
+    type: "mix",
+    mutedSlots: Array(8).fill(false),
+    soloSlot: null,
+  });
+  assert.deepEqual(listenerB.mix.getState(), { mutedSlots: [2], soloSlot: 1 },
+    "resetting one listener does not change another listener's room mix");
+
+  listenerB.mix.retainSlots([0]);
+  assert.deepEqual(listenerB.mix.getState(), { mutedSlots: [], soloSlot: null },
+    "a room update removes mute and solo settings for departed players");
+  listenerB.mix.reset();
+  assert.deepEqual(listenerB.mix.getState(), { mutedSlots: [], soloSlot: null },
+    "leaving a room can safely reset an already-cleared mix");
+});
+
 test("room audio maps all eight factory tracks onto two local firmware groups", async () => {
   const originalDocument = global.document;
   global.document = { baseURI: "http://localhost/webapp/rooms/" };
