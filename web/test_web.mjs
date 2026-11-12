@@ -1550,11 +1550,14 @@ function editorTabs() {
       .map((m) => m[0].toLowerCase()).filter((c) => c !== "#000");
     const jsxHex = [...editorSrc.matchAll(/-\[#[0-9a-f]{3,8}\]|(?:color|background|fill|stroke(?:Style)?|fillStyle)\s*[:=]\s*["'`]#[0-9a-f]{3,8}\b/gi)]
       .map((m) => m[0]).filter((c) => !/#000\b/i.test(c));
-    ok(!hex.length && !jsxHex.length && /--t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a;/.test(css),
-      "editor: the track colours of the device (gfx.c UI_COL_DEF), colours only as tokens" + (hex.length || jsxHex.length ? ` (${hex.concat(jsxHex).join(" ")})` : ""));
-    const te = readFileSync(join(HERE, "../firmware/src/gfx.c"), "utf8");   /* (2.7: UI_COL_DEF, a theme may change them) */
-    ok(/UI_COL_DEF\[4\] = \{RGB\(40, 124, 255\), RGB\(30, 204, 112\), RGB\(255, 198, 24\), RGB\(255, 98, 26\)\}/.test(te),
-      "editor: ... the same four as the firmware's UI_COL");
+    ok(!hex.length && !jsxHex.length && /--t1: #00e4ff; --t2: #ff2cd4; --t3: #ff8c38; --t4: #a060ff;/.test(css)
+      && /--t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;/.test(css),
+      "editor: the track colours of the device (gfx.c SYNTH_TRK, SYNTH_TRK2), colours only as tokens" + (hex.length || jsxHex.length ? ` (${hex.concat(jsxHex).join(" ")})` : ""));
+    /* (the device's default theme since 1.1.0 is SYNTHWAVE, whose tracks are SYNTH_TRK and SYNTH_TRK2: gfx.c palette_set) */
+    const te = readFileSync(join(HERE, "../firmware/src/gfx.c"), "utf8");
+    ok(/SYNTH_TRK\[4\] = \{RGB\(0, 228, 255\), RGB\(255, 44, 212\), RGB\(255, 140, 56\), RGB\(160, 96, 255\)\}/.test(te)
+      && /SYNTH_TRK2\[4\] = \{RGB\(110, 140, 255\), RGB\(255, 112, 168\), RGB\(255, 214, 90\), RGB\(224, 128, 255\)\}/.test(te),
+      "editor: ... the same eight as the firmware's SYNTHWAVE tracks");
     const font = join(HERE, "src/editor/assets/terminus.ttf");
     ok(existsSync(font) && readFileSync(font).length > 20000 && readFileSync(font).readUInt32BE(0) === 0x00010000 && /url\("\.\/assets\/terminus\.ttf"\)/.test(css),
       "editor: the device's Terminus font (tools/gen_webfont.py)");

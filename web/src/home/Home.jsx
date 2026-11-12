@@ -3,22 +3,30 @@
 // the firmware's code: assets/screens/fm1/), then the way to the installer, the editor and the emulator.
 // Served at the site's root (make_site.py writes it with <base href="webapp/home/">) and at webapp/home/: every link
 // and image is relative to webapp/home/.
-import { Strip } from "../shared/Brand.jsx";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import tracks from "../../../assets/screens/fm1/tracks-1-4.png";
 import punch from "../../../assets/screens/fm1/layer-fx.png";
+import sounds from "../../../assets/screens/all/pages/save-presets.png";
 import drums from "../../../assets/screens/fm1/drums.png";
 import chords from "../../../assets/screens/fm1/chords.png";
 import notes from "../../../assets/screens/fm1/notes.png";
+import drive from "../../../assets/screens/fm1/vis-night-drive.png";
 import song from "../../../assets/screens/fm1/song.png";
 import patterns from "../../../assets/screens/fm1/patterns.png";
 import mix from "../../../assets/screens/fm1/layer-mix-5-8.png";
 import editorShot from "../../../assets/screens/editor-sound.png";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
-const C = { blue: "#287cff", green: "#1ecc70", yellow: "#ffc618", orange: "#ff621a" };
+const C = { blue: "#3ee6ff", green: "#c6ff3d", yellow: "#ffd23f", orange: "#ff4fd8" };   /* site.css: cyan, lime, yellow, magenta */
 const TEXT = { blue: "text-blue", green: "text-green", yellow: "text-yellow", orange: "text-orange" };
 
+/* the hero's four screens: the tracks, the sound browser, the drums, the visualiser */
+const HERO = [
+  [tracks, "The TRACKS screen: four tracks playing at 92 BPM, each with its steps and level", "orange"],
+  [sounds, "The sound browser: the ANALOG engine's sounds, 808 BOOM, 808 DIRTY, 808 SLIDE, SUB BASS, by engine", "blue"],
+  [drums, "The DRUMS screen: 16 sounds by 16 steps, each hit with its level", "green"],
+  [drive, "The visualiser: a car driving into a neon city, moving with the music", "orange"],
+];
 const STATS = [
   ["8", "tracks: six synths and two drum machines", "blue"],
   ["13", "synth engines, FM6 and physical models", "green"],
@@ -51,17 +59,18 @@ const STEPS = [
   ["3", "Press Install", "About a minute. Do not unplug the cable while it writes.", "yellow"],
 ];
 
-const btn = "inline-flex min-h-[52px] items-center px-7 py-4 text-[15px] font-semibold uppercase tracking-[.08em] no-underline";
-const PRIMARY = `${btn} bg-orange text-black hover:bg-fg`;
-const SECONDARY = `${btn} border border-[#3a3a42] text-fg hover:border-fg`;
-const KICKER = "m-0 mb-2.5 text-[13px] font-medium uppercase tracking-[.14em] text-dim";
+const PRIMARY = "arcade-btn bg-orange";
+const SECONDARY = "inline-flex min-h-[52px] items-center border-[3px] border-blue px-7 font-pixel text-[20px] font-bold leading-none text-blue "
+  + "no-underline hover:bg-blue hover:text-ink";
+const KICKER = "m-0 mb-4 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue";
+const H2 = "m-0 font-pixel font-bold text-fg";
 
-function Screen({ src, alt, caption, className = "" }) {
+function Screen({ src, alt, caption, color = "orange", className = "" }) {
   return (
     <figure className={`m-0 w-full max-w-[440px] min-w-0 flex-[1_1_360px] ${className}`}>
       <img src={src} alt={alt} width="240" height="240"
-        className="block aspect-square h-auto w-full rounded-[10px] shadow-[0_0_0_1px_var(--line)] [image-rendering:pixelated]" />
-      {caption ? <figcaption className="mt-3 text-[13px] text-dim">{caption}</figcaption> : null}
+        className="pixel-screen" style={{ boxShadow: `10px 10px 0 ${C[color]}` }} />
+      {caption ? <figcaption className="mt-5 text-[14px] text-dim">{caption}</figcaption> : null}
     </figure>
   );
 }
@@ -75,53 +84,52 @@ function Feature({ reverse, children, media }) {
   );
 }
 const H3 = ({ color, lead, children }) => (
-  <h3 className="m-0 mb-3 text-[26px] leading-tight font-bold"><span className={TEXT[color]}>{lead}</span> {children}</h3>
+  <h3 className="m-0 mb-3 font-pixel text-[30px] leading-[1.1] font-bold"><span className={TEXT[color]}>{lead}</span> {children}</h3>
 );
-const P = ({ children }) => <p className="m-0 mb-4 text-[#c4c4cc]">{children}</p>;
+const P = ({ children }) => <p className="m-0 mb-4 text-body">{children}</p>;
 const B = ({ children }) => <b className="text-fg">{children}</b>;
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-[16px] leading-[1.6] text-fg">
+    <div className="min-h-screen bg-bg text-[16px] leading-[1.6] text-body">
       <SiteHeader current="home" />
 
       <main>
         <section id="top" className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-12 px-6 pt-[72px] pb-14">
           <div className="min-w-0 flex-[1_1_480px]">
-            <p className={KICKER}>Free firmware for the M-VAVE FM-1</p>
-            <h1 className="m-0 mb-5 text-[40px] leading-[1.04] font-bold tracking-[-.02em] min-[600px]:text-[60px]">Turn the FM-1 into a groovebox you play live.</h1>
-            <p className="m-0 mb-7 max-w-[36em] text-[20px] leading-[1.45] text-[#c4c4cc]">Eight tracks, thirteen synth engines, 37 drum kits and 27
+            <p className={KICKER}>▶ Free firmware for the M-VAVE FM-1</p>
+            <h1 className="m-0 mb-6 font-pixel text-[46px] leading-[.98] font-bold text-balance min-[600px]:text-[68px]">Turn the FM-1 into
+              a <span className="text-orange">groovebox you play&nbsp;live.</span></h1>
+            <p className="m-0 mb-7 max-w-[36em] text-[20px] leading-[1.45] text-body">Eight tracks, thirteen synth engines, 37 drum kits and 27
               punch-in effects, under your hands. No factory patterns, nothing to load: everything you hear, you play. House, techno, hip-hop,
               drum &amp; bass, lo-fi, ambient: it does not pick a style for you.</p>
-            <div className="mb-5 flex flex-wrap gap-3">
+            <div className="mb-6 flex flex-wrap gap-4">
               <a href="../installer/" className={PRIMARY}>Install from the browser</a>
               <a href="../emu/" className={SECONDARY}>Try it first</a>
             </div>
             <p className="m-0 text-sm text-dim">Open source (GPL-3.0) · installs over USB in Chrome or Edge · go back to the official firmware any time</p>
           </div>
-          <figure className="m-0 max-w-[520px] min-w-0 flex-[1_1_420px]">
-            <img src={tracks} width="240" height="240" alt="The FM-1's screen under BoopBox: tracks 1 to 4 playing, 808 BOOM, RHODES, LOFI FLUTE and 808 DRUMS, at 92 BPM"
-              className="block aspect-square h-auto w-full rounded-[10px] shadow-[0_0_0_8px_#0b0b0d,0_0_0_9px_#3a3a42,0_30px_60px_#00000099] [image-rendering:pixelated]" />
-            <figcaption className="mt-[18px] text-[13px] text-dim">The FM-1's own screen: four tracks playing, each with its steps and level.</figcaption>
-          </figure>
+          <div className="grid max-w-[520px] min-w-0 flex-[1_1_420px] -rotate-2 grid-cols-2 gap-7 pr-2 pb-2">
+            {HERO.map(([src, alt, c]) => (
+              <img key={alt} src={src} alt={alt} width="240" height="240" className="pixel-screen" style={{ boxShadow: `8px 8px 0 ${C[c]}` }} />
+            ))}
+          </div>
         </section>
 
-        <Strip />
-
-        <section aria-label="BoopBox in numbers" className="mx-auto max-w-[1200px] px-6 py-12">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-2">
+        <section aria-label="BoopBox in numbers" className="border-y-4 border-t-orange border-b-blue bg-tile">
+          <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-x-6 gap-y-8 px-6 py-10 min-[700px]:grid-cols-3 min-[1000px]:grid-cols-6">
             {STATS.map(([big, label, c]) => (
-              <div key={label} className="min-h-[104px] border-t-[3px] bg-tile px-4 pt-4 pb-[18px]" style={{ borderColor: C[c] }}>
-                <b className={`block text-[34px] leading-[1.1] font-bold ${TEXT[c]}`}>{big}</b>
-                <span className="mt-1.5 block text-sm text-[#b8b8c0]">{label}</span>
+              <div key={label} className="min-w-0">
+                <b className={`block font-pixel text-[52px] leading-none font-bold ${TEXT[c]}`}>{big}</b>
+                <span className="mt-2 block text-[14px] leading-snug text-dim">{label}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section id="features" className="mx-auto max-w-[1200px] px-6 pt-10 pb-6">
+        <section id="features" className="mx-auto max-w-[1200px] px-6 pt-20 pb-6">
           <p className={KICKER}>Why BoopBox</p>
-          <h2 className="m-0 mb-14 max-w-[24em] text-balance text-[32px] leading-[1.1] font-bold tracking-[-.01em] min-[600px]:text-[40px]">
+          <h2 className={`${H2} mb-16 max-w-[24em] text-balance text-[36px] leading-none min-[600px]:text-[48px]`}>
             The most complete firmware for the <span className="whitespace-nowrap">FM-1</span>.</h2>
 
           <Feature media={<Screen src={punch} caption="FX held: loops, stutter, tape stop, DJ kills, rewind, reverb freeze."
@@ -131,20 +139,20 @@ export default function Home() {
               the button to open its pages; hold it and tap HOME to lock it open, both hands free.</P>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-1.5">
               {LAYERS.map(([name, what, c]) => (
-                <div key={name} className="border-l-[3px] bg-tile px-3 py-2.5" style={{ borderColor: C[c] }}>
-                  <b className="block font-mono text-[13px] tracking-[.04em]">{name}</b>
-                  <span className="block text-sm text-[#b8b8c0]">{what}</span>
+                <div key={name} className="pixel-panel px-3.5 py-3">
+                  <b className="mb-1.5 inline-block px-2 py-0.5 font-pixel text-[15px] font-bold text-ink" style={{ background: C[c] }}>{name}</b>
+                  <span className="block text-sm text-dim">{what}</span>
                 </div>
               ))}
             </div>
           </Feature>
 
-          <Feature reverse media={<Screen src={drums} caption="16 sounds × 16 steps, every hit with its level and roll."
+          <Feature reverse media={<Screen src={drums} color="green" caption="16 sounds × 16 steps, every hit with its level and roll."
             alt="The DRUMS screen: a 16 by 16 grid of an 808 kit, each hit with its level" />}>
             <H3 color="green" lead="Two drum tracks,">37 kits, 16 sounds on the keys</H3>
             <P>Kick to cowbell on the white keys; a black key doubles its neighbour for two-finger rolls. Hold OCT− or OCT+ for ghost or hard
               hits. Each hit keeps its level and a ratchet up to x4.</P>
-            <ul className="m-0 list-disc pl-5 text-[#c4c4cc] [&_li]:mb-1.5">
+            <ul className="m-0 list-disc pl-5 text-body [&_li]:mb-1.5">
               <li><B>Beats from the keys:</B> hold a few white keys on a drum track's PLAY page and a whole groove is written across the kit:
                 house, rock, boom bap, trap, break, dembow, drum &amp; bass, electro.</li>
               <li><B>37 level-matched kits:</B> 808, 909, 606, trap, drill, amapiano, afrobeat, jungle, synthwave, jazz brushes and more.</li>
@@ -152,24 +160,24 @@ export default function Home() {
             </ul>
           </Feature>
 
-          <Feature media={<Screen src={chords} caption="One key for the whole song, 16 scales, one-key chords and a progression the tracks follow."
+          <Feature media={<Screen src={chords} color="blue" caption="One key for the whole song, 16 scales, one-key chords and a progression the tracks follow."
             alt="The CHORDS screen: a progression VI, IV, I, V in C major that the tracks follow" />}>
             <H3 color="blue" lead="Thirteen engines,">DX7 cartridges included</H3>
             <P>Sliding 808s and acid 303s, a real Steinway, Rhodes, string machines, granular clouds, plucked guitars and sitar, supersaws.
               Every sound level-matched; 32 slots for your own.</P>
             <div className="mb-5 flex flex-wrap gap-1.5">
-              {ENGINES.map((e) => <span key={e} className="border border-line bg-tile px-2.5 py-1.5 font-mono text-[13px] text-[#e4e4ea]">{e}</span>)}
+              {ENGINES.map((e) => <span key={e} className="pixel-panel px-2.5 py-1.5 font-pixel text-[15px] text-fg">{e}</span>)}
             </div>
-            <p className="m-0 text-[#c4c4cc]"><B>Six-operator FM with DX7 patches:</B> drop a .syx cartridge on the editor and keep 27 patches on
+            <p className="m-0 text-body"><B>Six-operator FM with DX7 patches:</B> drop a .syx cartridge on the editor and keep 27 patches on
               the FM-1. <B>OberVave</B>'s analog polysynth comes with its 70 programs.</p>
           </Feature>
 
-          <Feature reverse media={<Screen src={notes} caption="The piano roll of a synth track, on the FM-1 itself."
+          <Feature reverse media={<Screen src={notes} color="yellow" caption="The piano roll of a synth track, on the FM-1 itself."
             alt="The NOTES screen: the piano roll of a synth track, notes on a timeline" />}>
             <H3 color="yellow" lead="Record a pass,">then another on top</H3>
             <P>Press REC while it plays and every pass is layered on top. Notes land where you heard them: the keys' latency is taken back. Or
               play freely with no tempo at all, and the loop's length sets the tempo.</P>
-            <ul className="m-0 list-disc pl-5 text-[#c4c4cc] [&_li]:mb-1.5">
+            <ul className="m-0 list-disc pl-5 text-body [&_li]:mb-1.5">
               <li>64 steps a track, each with its own length and division: polymeters that stay in phase.</li>
               <li>Parameter locks, micro timing and fill conditions on any step.</li>
               <li>Chords up to 4 notes a step, ties, slide, MPC swing.</li>
@@ -178,20 +186,20 @@ export default function Home() {
           </Feature>
 
           <Feature media={
-            <div className="grid w-full max-w-[440px] min-w-0 flex-[1_1_360px] grid-cols-2 gap-3 [&_img]:block [&_img]:aspect-square [&_img]:h-auto
-              [&_img]:w-full [&_img]:rounded-lg [&_img]:shadow-[0_0_0_1px_var(--line)] [&_img]:[image-rendering:pixelated]">
+            <div className="grid w-full max-w-[440px] min-w-0 flex-[1_1_360px] grid-cols-2 gap-5 [&_img]:block [&_img]:aspect-square [&_img]:h-auto
+              [&_img]:w-full [&_img]:border-[6px] [&_img]:border-deep [&_img]:[image-rendering:pixelated]">
               <img src={song} width="240" height="240" alt="The SONG screen: sections A and B of four bars, C and D empty, playing in loop mode" />
               <img src={patterns} width="240" height="240" alt="The PATTERNS screen: eight patterns for track 1 and the scenes" />
               <img src={mix} width="240" height="240" alt="The MIX screen: GLO held, four level bars with mute and solo, fill and tap tempo" />
-              <div className="flex flex-col justify-end rounded-lg bg-tile p-4">
-                <b className="text-[28px] leading-[1.1] text-orange">A–D</b>
-                <span className="text-sm text-[#b8b8c0]">sections, chained live or played in order</span>
+              <div className="pixel-panel flex flex-col justify-end p-4">
+                <b className="font-pixel text-[40px] leading-none text-orange">A–D</b>
+                <span className="text-sm text-dim">sections, chained live or played in order</span>
               </div>
             </div>}>
             <H3 color="orange" lead="Build a song">from four sections</H3>
             <P>Save the loop into sections A–D and jump between them on the next bar. Hold SAVE and tap several for a quick chain, or record the
               song as you perform it. Eight patterns a track, with scenes that switch them all at once.</P>
-            <p className="m-0 text-[#c4c4cc]">Master effects on top: <B>DUST</B> (an old sampler and a record), <B>DUCK</B> (the kick pumps the
+            <p className="m-0 text-body">Master effects on top: <B>DUST</B> (an old sampler and a record), <B>DUCK</B> (the kick pumps the
               synths), a DJ filter, and a <B>TEXTURE</B> bed of vinyl, tape, rain or your own sample.</p>
           </Feature>
 
@@ -200,61 +208,61 @@ export default function Home() {
         <section aria-label="More features" className="mx-auto max-w-[1200px] px-6 pt-0 pb-20">
           <div className="grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3">
             {MORE.map(([title, text, c]) => (
-              <div key={title} className="border-t-[3px] bg-tile px-[22px] pt-[22px] pb-6" style={{ borderColor: C[c] }}>
-                <h3 className="m-0 mb-2 text-lg leading-snug font-bold">{title}</h3>
-                <p className="m-0 text-[15px] text-[#b8b8c0]">{text}</p>
+              <div key={title} className="pixel-panel px-[22px] pt-5 pb-6">
+                <h3 className={`m-0 mb-2 font-pixel text-[22px] leading-snug font-bold ${TEXT[c]}`}>{title}</h3>
+                <p className="m-0 text-[15px] text-dim">{text}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section id="editor" className="border-y border-line bg-[#0b0b0d]">
+        <section id="editor" className="border-y-4 border-line bg-deep">
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-14 gap-y-10 px-6 py-20">
             <div className="min-w-0 flex-[1_1_400px]">
               <p className={KICKER}>The web editor</p>
-              <h2 className="m-0 mb-4 text-[36px] leading-[1.15] font-bold">The FM-1's screen, on a big one.</h2>
+              <h2 className={`${H2} mb-4 text-[40px] leading-none`}>The FM-1's screen, on a big one.</h2>
               <P>Plug the FM-1 in and the editor follows every knob you turn, live. Shape sounds, draw in a piano roll, import and export MIDI
                 files, build sample instruments and drum kits, keep a library of sounds, back up the whole FM-1.</P>
-              <ul className="m-0 mb-6 list-disc pl-5 text-[#c4c4cc] [&_li]:mb-1.5">
+              <ul className="m-0 mb-6 list-disc pl-5 text-body [&_li]:mb-1.5">
                 <li><B>LIVE page:</B> play a set from a laptop or a tablet: scenes, morphs, MIDI learn, a playlist of songs.</li>
                 <li><B>CHOP:</B> drop any recording, tap along, send the chops to the keys.</li>
                 <li><B>Works offline:</B> install it as an app, or download it as one file.</li>
               </ul>
               <div className="flex flex-wrap gap-3">
-                <a href="../editor/" className={`${SECONDARY} min-h-12 px-[22px] py-3.5 text-sm`}>Open the editor</a>
-                <a href="../editor/?mock=1" className="inline-flex min-h-12 items-center px-1 py-3.5 text-sm text-[#b8b8c0]">Try it with a simulated FM-1</a>
+                <a href="../editor/" className={SECONDARY}>Open the editor</a>
+                <a href="../editor/?mock=1" className="inline-flex min-h-12 items-center px-1 py-3.5 text-[15px] text-dim underline-offset-4 hover:text-blue hover:underline">Try it with a simulated FM-1</a>
               </div>
             </div>
             <figure className="m-0 min-w-0 flex-[1_1_520px]">
               <img src={editorShot} alt="The web editor's Sound page: the ENV, LFO and FX cards, four knobs a row in the track colours"
-                className="block h-auto w-full border border-line" />
-              <figcaption className="mt-3 text-[13px] text-dim">The Sound page: the device's own pages, four knobs a row in the track colours.</figcaption>
+                className="block h-auto w-full border-[6px] border-bg shadow-[10px_10px_0_var(--color-orange)]" />
+              <figcaption className="mt-5 text-[14px] text-dim">The Sound page: the device's own pages, four knobs a row in the track colours.</figcaption>
             </figure>
           </div>
         </section>
 
         <section id="emulator" className="mx-auto max-w-[1200px] px-6 py-20">
-          <div className="flex flex-wrap items-center justify-between gap-8 bg-tile p-6 min-[600px]:p-10">
+          <div className="flex flex-wrap items-center justify-between gap-8 bg-blue p-6 text-ink shadow-[12px_12px_0_var(--color-orange)] min-[600px]:p-10">
             <div className="min-w-0 flex-[1_1_520px]">
-              <p className={KICKER}>No FM-1 yet?</p>
-              <h2 className="m-0 mb-3 text-[32px] leading-[1.15] font-bold">Play the real firmware in your browser.</h2>
-              <p className="m-0 max-w-[40em] text-[#c4c4cc]">The emulator runs BoopBox itself: the same screen, sequencer and sound engines. Click
+              <p className="m-0 mb-2 font-pixel text-[18px] font-medium">No FM-1 yet?</p>
+              <h2 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold text-ink">Play the real firmware in your browser.</h2>
+              <p className="m-0 max-w-[40em]">The emulator runs BoopBox itself: the same screen, sequencer and sound engines. Click
                 the keys or use your computer's keyboard; your projects stay in the browser.</p>
             </div>
-            <a href="../emu/" className={PRIMARY}>Open the emulator</a>
+            <a href="../emu/" className="arcade-btn bg-ink !text-green [--shadow:var(--color-orange)]">Open the emulator ▶</a>
           </div>
         </section>
 
         <section id="install" className="mx-auto max-w-[1200px] px-6 pb-24">
-          <h2 className="m-0 mb-2 text-[36px] leading-[1.15] font-bold">Install in a minute, from the browser.</h2>
-          <p className="m-0 mb-8 max-w-[46em] text-[#c4c4cc]">No app, no account, no extra hardware: Chrome or Edge on a computer, and a USB data
+          <h2 className={`${H2} mb-3 text-[40px] leading-none`}>Install in a minute, from the browser.</h2>
+          <p className="m-0 mb-8 max-w-[46em] text-body">No app, no account, no extra hardware: Chrome or Edge on a computer, and a USB data
             cable straight into the FM-1.</p>
-          <ol className="m-0 mb-8 grid list-none grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-2 p-0">
+          <ol className="m-0 mb-10 grid list-none grid-cols-1 gap-3 p-0 min-[700px]:grid-cols-3">
             {STEPS.map(([n, title, text, c]) => (
-              <li key={n} className="border-t-[3px] bg-tile p-[22px]" style={{ borderColor: C[c] }}>
-                <b className={`mb-2.5 block text-[28px] leading-none ${TEXT[c]}`}>{n}</b>
-                <b className="mb-1 block text-[17px]">{title}</b>
-                <span className="block text-[15px] text-[#b8b8c0]">{text}</span>
+              <li key={n} className="pixel-panel p-[22px]">
+                <b className={`mb-3 block font-pixel text-[40px] leading-none ${TEXT[c]}`}>{n}</b>
+                <b className="mb-1 block font-pixel text-[22px] text-fg">{title}</b>
+                <span className="block text-[15px] text-dim">{text}</span>
               </li>
             ))}
           </ol>
@@ -266,7 +274,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-line">
+      <footer className="border-t-4 border-line">
         <div className="mx-auto flex max-w-[1200px] flex-wrap gap-x-12 gap-y-6 px-6 pt-8 pb-12 text-[13px] text-dim">
           <p className="m-0 flex-[1_1_420px]">BoopBox is based on <a href="https://github.com/isod89/sloop-fm1">SLOOP</a>, itself based on Felucca by
             Leo Kuroshita (@kurogedelic), <a href="https://hugelton.com">Hügelton Instruments</a>. GPL-3.0, no warranty. M-VAVE and FM-1 are

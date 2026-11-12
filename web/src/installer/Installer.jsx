@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { logicalImage, productOf } from "../lib/fm1pkg.js";
 import { Updater } from "../lib/fm1ota.js";
 import { useInstallPrompt } from "../shared/pwa.js";
-import { Strip } from "../shared/Brand.jsx";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { TEXT } from "./text.js";
 
@@ -117,44 +116,45 @@ export default function Installer({ meta }) {
 
   const statusText = status.key ? t(status.key) + status.arg : status.text;
   const dl = meta ? `boopbox-editor-${String(meta.version).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
-  const small = "text-[12.5px] text-dim mb-3.5";
-  const tileBtn = "inline-block mt-2 px-3.5 py-2.5 bg-tile text-fg no-underline cursor-pointer";
+  const small = "text-[13px] text-dim mb-3.5";
+  const tileBtn = "pixel-panel inline-flex min-h-11 items-center mt-2 px-4 py-2 font-pixel text-[17px] text-fg no-underline cursor-pointer hover:text-blue";
+  const bad = status.key && /fail|error|denied|nomidi|notfound|lost|bad/.test(status.key);
 
   return (
     <>
     <SiteHeader current="installer" />
-    <main className="mx-auto max-w-[560px] px-4 pt-8 pb-12">
-      <Strip className="mt-3 mb-8" />
+    <main className="mx-auto max-w-[640px] px-4 pt-12 pb-16">
       {meta && meta.banner ? <div dangerouslySetInnerHTML={{ __html: meta.banner }} /> : null}
-      <p className="m-0 mb-2 text-[13px] font-medium uppercase tracking-[.12em] text-dim">{meta ? `Installer · ${meta.version}` : "Installer"}</p>
-      <h1 className="m-0 mb-4 text-[30px] leading-[1.15] font-bold">{t("title")}</h1>
+      <p className="m-0 mb-4 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue">{meta ? `▶ Installer · ${meta.version}` : "▶ Installer"}</p>
+      <h1 className="m-0 mb-5 font-pixel text-[36px] leading-none font-bold text-balance min-[480px]:text-[44px]">{t("title")}</h1>
       <p className="mb-3.5">{t("intro")}</p>
       <p className="mb-3.5">{t("warn")}</p>
       {meta && meta.trainer ? (
-        <div id="pick" role="radiogroup" className="mb-3.5 grid grid-cols-1 gap-1.5 min-[421px]:grid-cols-2">
+        <div id="pick" role="radiogroup" className="mt-6 mb-6 grid grid-cols-1 gap-3 min-[421px]:grid-cols-2">
           {[["boopbox", "BoopBox", "pickBoop"], ["trainer", "BoopBox Trainer", "pickTrainer"]].map(([v, name, k]) => (
-            <label key={v} className="block cursor-pointer border-t-[3px] border-line bg-tile px-3 pt-2.5 pb-3 has-checked:border-orange
-              has-checked:outline has-checked:outline-orange has-focus-visible:outline-2 has-focus-visible:outline-fg">
+            <label key={v} className="group pixel-panel relative block cursor-pointer px-4 pt-3 pb-3.5 has-checked:bg-green has-checked:text-ink
+              has-checked:shadow-[5px_5px_0_var(--color-orange)] has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-fg">
               <input type="radio" name="fw" value={v} className="pointer-events-none absolute opacity-0" checked={choice === v}
                 disabled={writing} onChange={() => pick(v)} />
-              <b className="block text-[15px]">{name}</b><span className="block text-[12.5px] leading-[1.4] text-dim">{t(k)}</span>
+              <b className="block font-pixel text-[20px] text-fg group-has-checked:text-ink">{name}</b><span className="block text-[13.5px] leading-[1.4] text-dim group-has-checked:text-ink">{t(k)}</span>
             </label>
           ))}
         </div>
       ) : null}
       <p className="mb-3.5">
         <button id="go" type="button" disabled={writing || !image} onClick={install}
-          className="w-full cursor-pointer border-0 bg-orange py-4 text-[15px] font-semibold uppercase leading-none tracking-[.08em] text-black
-            disabled:cursor-default disabled:bg-tile disabled:text-dim">{t("install")}</button>
+          className="arcade-btn min-h-[64px] w-full bg-orange text-[26px]">{t("install")}</button>
       </p>
-      <progress max="100" value={bar} className="mt-4 h-1.5 w-full appearance-none border-0 bg-tile [&::-moz-progress-bar]:bg-orange
-        [&::-webkit-progress-bar]:bg-tile [&::-webkit-progress-value]:bg-orange" />
-      <p id="status" className={`mt-3.5 mb-3.5 min-h-[1.6em] tabular-nums ${status.key && /fail|error|denied|nomidi|notfound|lost|bad/.test(status.key) ? "text-red" : ""}`}>{statusText}</p>
-      <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-dim">{log}</pre>
+      {/* the bar in pixel blocks: magenta segments over the dark well */}
+      <progress max="100" value={bar} aria-label="Installed" className="mt-6 h-7 w-full appearance-none border-0 bg-deep p-1 shadow-[inset_0_0_0_3px_var(--line)]
+        [&::-moz-progress-bar]:bg-[repeating-linear-gradient(90deg,var(--color-orange)_0_16px,transparent_16px_20px)]
+        [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-[repeating-linear-gradient(90deg,var(--color-orange)_0_16px,transparent_16px_20px)]" />
+      <p id="status" className={`mt-4 mb-4 min-h-[1.6em] font-pixel text-[20px] tabular-nums ${bad ? "text-red" : "text-fg"}`}>{statusText}</p>
+      {log ? <pre className="mt-3 mb-6 max-h-40 overflow-auto whitespace-pre-wrap bg-deep p-3 text-[11px] text-dim">{log}</pre> : null}
       <a className={tileBtn} href="../editor/">{t("editor")}</a>
       <p className={small}><a href="../editor/boopbox-editor.html" download={dl} className="underline">{t("edOffline")}</a></p>
       {canInstallApp ? <p className="mb-3.5"><button type="button" className={`${tileBtn} border-0`} onClick={installApp}>{t("appInstall")}</button></p> : null}
-      <hr className="mt-7 mb-[18px] border-0 border-t border-line" />
+      <hr className="mt-8 mb-6 border-0 border-t-4 border-line" />
       <p className={small}>{t("direct")}</p>
       <p className={small}>{t("beta")}</p>
       <p className={small}>{t("brick")} <A href="https://github.com/kurogedelic/FM-1-transporter">FM-1-transporter</A></p>
