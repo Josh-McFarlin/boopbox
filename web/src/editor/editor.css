@@ -86,11 +86,13 @@
   select, input[type=text], input[type=number], input[type=search] {
     font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--s3); padding: 3px 6px; border-radius: 0; min-width: 0; }
   select { appearance: none; padding-right: 22px; cursor: pointer;
-           background: var(--bg) linear-gradient(45deg, transparent 50%, var(--fg2) 50%) no-repeat calc(100% - 13px) 55% / 6px 6px,
-                       linear-gradient(-45deg, transparent 50%, var(--fg2) 50%) no-repeat calc(100% - 7px) 55% / 6px 6px;
+           /* the arrow: two layers; the colour on its own (a colour is only valid in a background's last layer) */
+           background-color: var(--bg);
+           background-image: linear-gradient(45deg, transparent 50%, var(--fg2) 50%), linear-gradient(-45deg, transparent 50%, var(--fg2) 50%);
+           background-repeat: no-repeat; background-position: calc(100% - 13px) 55%, calc(100% - 7px) 55%; background-size: 6px 6px;
            padding-right: 26px; }
   select:hover:not(:disabled) { border-color: var(--dim); }
-  select[size], select[multiple] { background: var(--bg); padding: 0; }
+  select[size], select[multiple] { background-image: none; padding: 0; }
   select option { background: var(--bg); color: var(--fg); }
   select[size] option { padding: 2px 8px; }
   select[size] option:checked { background: var(--acc); color: #000; }
