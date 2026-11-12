@@ -69,6 +69,7 @@ function RoomChat({
   const [draftName, setDraftName] = useState(selfName);
   const [draftMessage, setDraftMessage] = useState("");
   const [mentionIndex, setMentionIndex] = useState(null);
+  const [mentionQuery, setMentionQuery] = useState("");
   const [activeMention, setActiveMention] = useState(0);
   const priorMessageCountRef = useRef(messages.length);
 
@@ -78,14 +79,11 @@ function RoomChat({
   );
   const mentionMatches = useMemo(() => {
     if (mentionIndex === null) return [];
-    const beforeCursor = draftMessage.slice(0, mentionIndex);
-    const match = beforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
-    if (!match) return [];
-    const query = match[1].toLocaleLowerCase();
+    const query = mentionQuery.toLocaleLowerCase();
     return sortedPlayers
       .filter((player) => player.name.toLocaleLowerCase().includes(query))
       .slice(0, 6);
-  }, [draftMessage, mentionIndex, sortedPlayers]);
+  }, [mentionIndex, mentionQuery, sortedPlayers]);
 
   useEffect(() => {
     setDraftName(selfName);
@@ -110,9 +108,11 @@ function RoomChat({
     const match = value.slice(0, cursorPosition).match(/(?:^|\s)@([^\s@]*)$/);
     if (match) {
       setMentionIndex(cursorPosition - match[1].length - 1);
+      setMentionQuery(match[1]);
       setActiveMention(0);
     } else {
       setMentionIndex(null);
+      setMentionQuery("");
     }
   };
 
@@ -128,6 +128,7 @@ function RoomChat({
     const nextCursor = textBefore.length + player.name.length + 1 + (needsSpace ? 1 : 0);
     setDraftMessage(nextValue);
     setMentionIndex(null);
+    setMentionQuery("");
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
@@ -141,6 +142,7 @@ function RoomChat({
     onSendMessage(text);
     setDraftMessage("");
     setMentionIndex(null);
+    setMentionQuery("");
   };
 
   const handleComposerKeyDown = (event) => {
@@ -163,6 +165,7 @@ function RoomChat({
       if (event.key === "Escape") {
         event.preventDefault();
         setMentionIndex(null);
+        setMentionQuery("");
         return;
       }
     }
