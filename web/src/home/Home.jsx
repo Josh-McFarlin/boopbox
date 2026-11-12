@@ -216,7 +216,7 @@ export default function Home() {
         </section>
 
         <section aria-label="More features" className="mx-auto max-w-[1200px] px-6 pt-0 pb-20">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3">
             {MORE.map(([title, text, c]) => (
               <div key={title} className="border-t-[3px] bg-tile px-[22px] pt-[22px] pb-6" style={{ borderColor: C[c] }}>
                 <h3 className="m-0 mb-2 text-lg leading-snug font-bold">{title}</h3>
