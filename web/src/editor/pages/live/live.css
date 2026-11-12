@@ -1,57 +1,103 @@
 /* SPDX-License-Identifier: GPL-3.0-only
-   The LIVE page (2.7) and LIVE pro. Plain CSS: the page's widgets are state-classed (cur / next / empty / on / act / ph
-   ...), the page has modes (#lv.learn / .locked / .simple / .nopro, html.lvfocus) and blinking keyframes. In the base
-   layer, after the editor's own control styles (as the old page had them: a plain button's hover and disabled look
-   still win where they did); the few rules that must beat .tog / .seg are in the components layer, at the end. */
+   The LIVE page (2.7) and LIVE pro: one screen. The transport and the stage tools on top, the sections and the scenes,
+   then the mixer (8 narrow strips in one row) with the effects and the master fx beside it; the keys in a drawer fixed
+   at the bottom of the window; the first steps and the shortcuts as overlays. Plain CSS: the page's widgets are
+   state-classed (cur / next / empty / on / act ...), the page has modes (#lv.learn / .locked / .simple / .nopro,
+   html.lvfocus) and blinking keyframes. In the base layer, after the editor's own control styles; the few rules that
+   must beat .tog / .seg are in the components layer, at the end. The knob, .lvknobs and .lvneeds are used by the drum
+   panel of the Sound page too (DrumPanel.jsx). */
 @layer base {
-  /* ---- 2.7: the LIVE page (the FM-1 under the hands: transport, sections, mixer, effects, keys) ---- */
-  #lv { --c: var(--trk); }
-  #lv .lvcard { background: var(--s1); border: 1px solid var(--line); padding: 14px 16px 16px; margin: 0 0 12px; min-width: 0; }
-  #lv .lvcard > p.dim { margin: 0 0 12px; }
-  #lv .lvcard > h2, #lv .lvhead h2 { display: flex; align-items: center; gap: 8px; color: var(--fg); text-transform: uppercase; font-size: 16px; line-height: 20px; margin: 0 0 10px; }
-  #lv .lvhead h2 { margin: 0; }
-  #lv .lvhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-bottom: 10px; }
-  #lv .lvhint { margin: 8px 0 0; }
+  /* the page fills the window (no footer, the keys' bar at the bottom) */
+  main:has(#lv) { padding-bottom: 52px !important; }
+  main:has(#lv) > footer { display: none; }
+  #lv { --c: var(--acc); display: flex; flex-direction: column; gap: 8px; }
   #lv button { touch-action: manipulation; }
   .lvneeds { color: var(--t3); border: 1px solid var(--t3); padding: 8px 12px; margin: 0 0 12px; }
-  .lvgrp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .lvtrans { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; }
+  #lv .lvneeds { margin: 0; padding: 4px 12px; }
+  .lvgrp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .lvknobs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+  @keyframes lvblink { 50% { opacity: .35; } }
+
+  /* a card: its head (title, one line, extra controls, "?"), the longer help over the card */
+  #lv .lvcard { position: relative; background: var(--s1); border: 1px solid var(--line); padding: 8px 10px 10px; min-width: 0; }
+  #lv .lvhead { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 6px; min-height: 24px; }
+  #lv .lvhead h2 { flex: none; color: var(--fg); text-transform: uppercase; margin: 0; }
+  #lv .lvsub { flex: 1 1 0; min-width: 0; color: var(--dim); font-family: var(--text-face); font-size: 14px; line-height: 20px;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lv .lvhead > button, #lv .lvhead .lvgrp button { padding: 2px 10px; }
+  .lvq { flex: none; min-width: 24px; height: 24px; padding: 0 6px; border: 1px solid var(--s3); color: var(--fg); background: var(--bg); }
+  #lv .lvq[aria-expanded="true"] { background: var(--acc); border-color: var(--acc); color: #000; }
+  .lvhelp { position: absolute; z-index: 30; left: 8px; right: 8px; top: 36px; max-height: 60vh; overflow-y: auto;
+            border: 1px solid var(--acc); background: var(--s2); padding: 10px 36px 10px 12px; box-shadow: 0 8px 24px rgb(0 0 0 / .5); }
+  .lvhelp p { margin: 0 0 6px; }
+  .lvhelp p:last-of-type { margin: 0; }
+  .lvhelpx { position: absolute; right: 4px; top: 4px; padding: 0 6px; }
+
+  /* ---- the top: the transport in one row, the stage tools under it */
+  .lvtrans { display: flex; flex-direction: column; gap: 6px; }
+  #lv .lvtrans > .lvhead { order: 2; margin: 0; }
+  #lv .lvtrans > .lvhelp { top: auto; bottom: 34px; }
   html.lvfocus #lv .lvtrans { position: sticky; top: 0; z-index: 4; }
-  .lvright { margin-left: auto; }
-  .lvbig { font-size: 32px; line-height: 32px; min-width: 132px; height: 64px; padding: 0 16px; }
+  .lvtrow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .lvsep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
+  .lvright { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .lvbig { font-size: 32px; line-height: 32px; min-width: 96px; height: 44px; padding: 0 12px; }
   .lvplay { background: var(--s2); color: var(--t2); border: 2px solid var(--t2); }
   .lvplay.on { background: var(--t2); color: #000; }
-  .lvrec { height: 64px; min-width: 96px; color: var(--red); border: 2px solid var(--red); background: var(--s2); }
+  .lvrec { height: 44px; min-width: 72px; padding: 0 10px; color: var(--red); border: 2px solid var(--red); background: var(--s2); }
   .lvrec.on { background: var(--red); color: #000; }
   .lvrec.wait { animation: lvblink .5s steps(1) infinite; }
   .lvundo { display: flex; flex-direction: column; gap: 2px; }
-  .lvundo button { padding: 4px 10px; }
-  .lvpos { display: grid; gap: 2px; min-width: 128px; }
-  .lvpos b { font-size: 32px; line-height: 32px; color: var(--fg); font-weight: 400; }
-  .lvbeat { display: flex; gap: 4px; }
-  .lvbeat i { width: 14px; height: 6px; background: var(--s3); }
+  #lv .lvundo button { padding: 0 8px; height: 21px; line-height: 20px; }
+  .lvpos { display: grid; grid-template-columns: auto auto; grid-template-rows: 24px 16px; column-gap: 8px; align-items: center; width: 132px; }
+  .lvpos b { font-size: 32px; line-height: 24px; color: var(--fg); font-weight: 400; grid-row: 1 / 3; }
+  .lvposwhat { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 16px; }
+  .lvbeat { display: flex; gap: 3px; }
+  .lvbeat i { width: 12px; height: 6px; background: var(--s3); }
   .lvbeat i.on { background: var(--fg); }
-  .lvfill { display: grid; height: 64px; min-width: 88px; place-content: center; text-align: center; border: 2px solid var(--s3); color: var(--t3); background: var(--s2); touch-action: none; }
+  .lvfill { display: grid; height: 44px; min-width: 64px; padding: 0 8px; place-content: center; text-align: center; border: 2px solid var(--s3);
+            color: var(--t3); background: var(--s2); touch-action: none; line-height: 16px; }
   .lvfill small { color: var(--dim); }
   .lvfill.on, .lvfill.act { background: var(--t3); color: #000; }
   .lvfill.on small, .lvfill.act small { color: #000; }
-  .lvcpu { min-width: 6ch; }
-  @keyframes lvblink { 50% { opacity: .35; } }
+  .lvtools { display: flex; align-items: center; gap: 6px; flex: none; }
+  #lv .lvtools button { padding: 2px 10px; }
+  .lvclock { display: flex; align-items: baseline; gap: 8px; text-align: left; text-transform: none; }
+  #lv .lvclock { background: none; padding: 0 6px; }
+  .lvclock b { color: var(--fg); font-weight: 400; }
+  .lvcpu { min-width: 7ch; text-align: right; }
+  .lvrecset { --lv: 0%; background: linear-gradient(90deg, var(--s3) var(--lv), var(--s2) var(--lv)); border: 1px solid var(--red); color: var(--red); }
+  .lvrecset.on { color: var(--fg); animation: lvblink 1s steps(1) infinite; }
+  .lvlearnbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; order: 3; }
+  .lvlearnmsg { color: var(--t3); }
+  /* the help menu (the first steps, the shortcuts) */
+  .lvmenuwrap { position: relative; }
+  #lv .lvhelpbtn { height: 32px; padding: 0 10px; }
+  .lvmenu { position: absolute; z-index: 40; right: 0; top: calc(100% + 4px); display: flex; flex-direction: column; min-width: 260px;
+            border: 1px solid var(--s3); background: var(--bg); box-shadow: 0 8px 24px rgb(0 0 0 / .5); }
+  #lv .lvmenu button { background: none; text-align: left; text-transform: none; padding: 8px 12px; display: flex; justify-content: space-between; }
+  #lv .lvmenu button:hover { background: var(--s2); }
+  .lvmenu kbd, .lvkeytab kbd { font: inherit; color: var(--dim); }
+
   /* a knob: drag up / down (Shift: fine), the wheel, the arrow keys; double-click: its default */
   .lk { display: grid; justify-items: center; gap: 0; width: 64px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
   .lk svg { width: 48px; height: 48px; display: block; }
   .lk .kb { fill: none; stroke: var(--s3); stroke-width: 4; }
-  .lk .kf { fill: none; stroke: var(--c, var(--trk)); stroke-width: 4; }
+  .lk .kf { fill: none; stroke: var(--c, var(--acc)); stroke-width: 4; }
   .lk .kl { color: var(--dim); text-transform: lowercase; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .lk .kv { color: var(--fg); white-space: nowrap; }
-  .lk.drag .kv, .lk:focus-visible .kv { color: var(--c, var(--trk)); }
-  .lvtrans .lk { width: 76px; }
-  .lvbpm { width: 80px; }
-  .lvbpm svg { width: 64px; height: 64px; }
-  .lvbpm .kv { font-size: 32px; line-height: 32px; }
-  /* sections A..D */
-  .lvsecrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .lvsec { height: 84px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 8px 12px;
+  .lk.drag .kv, .lk:focus-visible .kv { color: var(--c, var(--acc)); }
+  /* a knob on one line (the transport, the master fx): the dial, then its name over its value */
+  .lvtrans .lk, .lvmaster .lk { width: auto; grid-template-columns: 36px auto; grid-template-rows: 18px 18px; column-gap: 4px; justify-items: start; align-items: center; }
+  .lvtrans .lk svg, .lvmaster .lk svg { grid-row: 1 / 3; width: 36px; height: 36px; }
+  .lvtrans .lk .kl, .lvmaster .lk .kl { line-height: 18px; }
+  .lvtrans .lk .kv, .lvmaster .lk .kv { line-height: 18px; min-width: 3ch; }
+  .lvbpm .kv { color: var(--fg); }
+
+  /* ---- sections and scenes, side by side */
+  .lvrow2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .lvsecrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .lvsec { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
            border: 2px solid var(--c); background: var(--bg); color: var(--fg); text-transform: none; }
   .lvsec b { font-size: 32px; line-height: 32px; font-weight: 400; color: var(--c); }
   .lvsec small { color: var(--dim); text-transform: lowercase; }
@@ -60,76 +106,155 @@
   .lvsec.next { animation: lvblink .5s steps(1) infinite; }
   .lvsec.empty { border-color: var(--s3); }
   .lvsec.empty b { color: var(--s3); }
-  .lvstorerow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 10px 0 0; }
-  .lvstorerow span { margin-right: 6px; }
-  .lvstore { padding: 2px 10px; }
-  /* mixer, master fx, effects */
-  .lvcols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
-  .lvknobs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
-  .lvstrips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .lstrip { background: var(--bg); border: 1px solid var(--line); border-top: 4px solid var(--c); padding: 8px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .lvstorerow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 6px 0 0; min-height: 24px; }
+  .lvstorerow > .dim { margin-right: 4px; }
+  #lv .lvstore { padding: 2px 8px; }
+  .lvchainlist { color: var(--fg); min-width: 8ch; padding: 0 4px; }
+  .lvchainlist.run { color: var(--t2); }
+  .lvscnrow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  .lvscn { position: relative; height: 44px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 2px 6px;
+           border: 2px solid var(--t1); background: var(--bg); color: var(--fg); text-transform: none; overflow: hidden; line-height: 18px; }
+  .lvscn b { font-weight: 400; color: var(--t1); }
+  .lvscn small { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .lvscn kbd { position: absolute; right: 4px; top: 2px; font: inherit; color: var(--dim); }
+  .lvscn.empty { border-color: var(--s3); }
+  .lvscn.empty b { color: var(--s3); }
+  .lvscn.cur { background: linear-gradient(90deg, var(--t1) var(--m, 100%), var(--bg) var(--m, 100%)); }
+  .lvscn.cur b, .lvscn.cur small, .lvscn.cur kbd { color: #000; }
+  .lvscn.store { border-style: dashed; border-color: var(--red); }
+  .lvxrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; min-height: 24px; }
+  .lvxrow .lvxf-wrap { flex-basis: 260px; }
+  #lv .lvxrow > button { padding: 2px 8px; }
+  #lv .lvxrow select { padding-top: 0; padding-bottom: 0; }
+  .lvxf-wrap { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .lvxf { flex: 1; min-width: 60px; }
+
+  /* ---- the mixer and, beside it, the effects and the master fx */
+  .lvcols { display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 8px; align-items: stretch; }
+  .lvside { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .lvmix { display: flex; flex-direction: column; }
+  #lv .lvsoundlink { flex: none; background: none; color: var(--acc); text-transform: none; padding: 0 4px; }
+  #lv .lvsoundlink:hover { text-decoration: underline; background: none; }
+  .lvstrips { flex: 1; display: grid; grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); gap: 4px; }
+  .lstrip { position: relative; background: var(--bg); border: 1px solid var(--line); border-top: 3px solid var(--c); padding: 4px;
+            display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .lstrip.target { border-color: var(--c); }
   .lstrip.muted .lsbody { opacity: .4; }
-  .lstrip.rec .lsnum { background: var(--red); }
-  .lshead { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .lsnum { background: var(--c); color: #000; padding: 0 6px; flex: none; }
-  .lsname { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lssnd { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px; }
-  .lssound { width: 100%; color: var(--fg); }
+  .lshead { display: flex; align-items: center; gap: 4px; min-width: 0; height: 20px; }
+  .lsnum { position: relative; background: var(--c); color: #000; padding: 0 4px; flex: none; line-height: 20px; }
+  .lsdot { position: absolute; right: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); border: 2px solid var(--bg); }
+  .lsname { flex: 1; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lsfav { flex: none; width: 16px; padding: 0; color: var(--t3); background: none; border: 0; }
+  #lv .lsfav { padding: 0; background: none; }
+  .lssound { width: 100%; min-width: 0; color: var(--fg); }
+  #lv .lssound { padding: 2px 12px 2px 4px; background-position: right 1px center; }
+  .lsnavrow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; }
   .lsnav { padding: 3px 8px; }
+  #lv .lsnavrow button { padding: 0; height: 24px; }
+  #lv .lsmore[aria-expanded="true"] { background: var(--acc); color: #000; }
   .lsprog { height: 3px; background: var(--s2); }
   .lsprog i { display: block; height: 100%; width: 0; background: var(--c); }
-  .lsbody { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 6px; align-items: start; }
-  .lsknobs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 0; justify-items: center; }
-  .lstrip .lk { width: 100%; min-width: 0; }
-  .lstrip .lk .kl { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .lstrip .lk svg { width: 40px; height: 40px; }
+  .lsbody { flex: 1; min-height: 96px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .lslvl { color: var(--fg2); line-height: 16px; }
   .lsbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
   .lsbtns .lssel { grid-column: 1 / 3; }
-  #lv .lsbtns button { padding: 8px 4px; }
+  #lv .lsbtns button { padding: 0 2px; height: 26px; }
+  /* the strip's "more" panel: pan, filter, sends, drive */
+  .lsmorebox { position: absolute; z-index: 25; top: 76px; left: -1px; width: 228px; padding: 8px; border: 1px solid var(--c);
+               background: var(--s1); box-shadow: 0 8px 24px rgb(0 0 0 / .55); }
+  .lsmorebox.right { left: auto; right: -1px; }
+  .lsmorebox[hidden] { display: none; }
+  .lsmorehead { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-family: var(--text-face); font-size: 13px; line-height: 18px; }
+  .lsmorehead .lsnum { font-family: var(--font-px, inherit); }
+  .lsknobs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 4px; justify-items: center; }
+  .lsknobs .lk { width: 100%; }
+  .lsknobs .lk svg { width: 40px; height: 40px; }
   /* a fader: drag, a click on its track, the wheel, the keys; the track's meter beside it */
   .lfd { display: flex; gap: 4px; height: 216px; cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .lsbody .lfd { flex: 1; height: auto; min-height: 80px; }
   .lfd .ft { position: relative; width: 22px; background: var(--s2); }
   .lfd .ff { position: absolute; left: 0; right: 0; bottom: 0; background: var(--c); opacity: .85; }
   .lfd .fc { position: absolute; left: -3px; right: -3px; height: 6px; background: var(--fg); }
   .lfd .fm { position: relative; width: 6px; background: var(--s2); }
   .lfd .fm i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--t2); transition: height 80ms linear; }
   .lfd:focus-visible .fc { background: var(--c); }
-  .lvfxg { margin-top: 10px; }
-  .lvfxg > .dim { display: block; margin-bottom: 4px; text-transform: lowercase; }
-  .lvfxpads { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; }
-  .lvfx { height: 56px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 6px 8px;
-          white-space: normal; text-align: left; text-transform: none; border: 1px solid var(--s3); background: var(--bg); color: var(--fg); touch-action: none; }
+  /* the punch-in effects: four groups of small pads */
+  .lvfxg + .lvfxg { margin-top: 4px; }
+  .lvfxg > .dim { display: block; line-height: 16px; text-transform: lowercase; }
+  .lvfxpads { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+  .lvfx { position: relative; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; white-space: nowrap; overflow: hidden; text-align: left;
+          text-transform: none; border: 1px solid var(--s3); background: var(--bg); color: var(--fg); touch-action: none; }
   .lvfx b { font-weight: 400; }
-  .lvfx kbd { font: inherit; color: var(--dim); }
+  .lvfx kbd { position: absolute; right: 2px; top: 0; font: inherit; font-size: 10px; line-height: 12px; color: var(--dim); }
   #lv .lvfx.on, #lv .lvfx.act { background: var(--t4); border-color: var(--t4); color: #000; }
   #lv .lvfx.on kbd, #lv .lvfx.act kbd { color: #000; }
-  /* the keys: two octaves and a C; the drum track: 16 pads */
-  .lvplaybox .seg button { min-width: 36px; }
-  .lvoct { min-width: 9ch; text-align: center; color: var(--fg); }
+  /* the master fx */
+  .lvmrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+  .lvmvol { display: flex; align-items: center; gap: 8px; }
+  .lvmbtns { display: flex; gap: 3px; }
+  #lv .lvmbtns button { padding: 2px 6px; }
+  .lvthrow { border: 1px solid var(--t1); color: var(--t1); background: var(--bg); touch-action: none; }
+  #lv .lvthrow.on, #lv .lvthrow.act { background: var(--t1); color: #000; }
+
+  /* ---- the keys: a drawer at the bottom of the window (a slim bar; open: over the page) */
+  .lvdrawer { position: fixed; z-index: 20; left: 200px; right: 0; bottom: 0; border-top: 1px solid var(--line); background: var(--bg);
+              box-shadow: 0 -8px 24px rgb(0 0 0 / .35); }
+  html.lvfocus .lvdrawer { left: 0; }
+  .lvdbar { display: flex; align-items: center; gap: 16px; padding: 6px 32px; min-height: 44px; }
+  #lv .lvdbar button { padding: 2px 8px; }
+  #lv .lvdbar .lvdtog { padding: 4px 14px; }
+  .lvdtrk button { min-width: 32px; }
+  .lvoct { min-width: 8ch; text-align: center; color: var(--fg); }
+  .lvdpanel { padding: 8px 32px 0; max-height: 70vh; overflow-y: auto; }
+  .lvdpanel[hidden] { display: none; }
+  #lv .lvdpanel .lvcard { border-top: 3px solid var(--c); }
   .lvplaybox input[type=range] { width: 120px; }
+  .lvvel { min-width: 3ch; color: var(--fg); }
   .lvchan { color: var(--red); margin: 0 0 8px; }
-  .lvkeys { position: relative; display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 2px; height: 168px; touch-action: none; }
-  .lvkeys .wk { height: 168px; background: var(--fg2); border: 0; border-bottom: 4px solid var(--dim); padding: 0 0 8px; display: flex; align-items: flex-end; justify-content: center; color: var(--s3); touch-action: none; }
+  .lvkeys { position: relative; display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 2px; height: 150px; touch-action: none; }
+  .lvkeys .wk { height: 150px; background: var(--fg2); border: 0; border-bottom: 4px solid var(--dim); padding: 0 0 8px; display: flex; align-items: flex-end;
+                justify-content: center; color: var(--s3); touch-action: none; }
   .lvkeys .wk:hover { background: var(--fg); }
-  .lvkeys .bk { position: absolute; top: 0; z-index: 1; height: 100px; width: calc(100% / 15 * .62); left: calc((var(--x) + 1) * 100% / 15 - 100% / 15 * .31);
+  .lvkeys .bk { position: absolute; top: 0; z-index: 1; height: 90px; width: calc(100% / 15 * .62); left: calc((var(--x) + 1) * 100% / 15 - 100% / 15 * .31);
                 background: #000; border: 1px solid var(--s3); padding: 0 0 6px; display: flex; align-items: flex-end; justify-content: center; color: var(--dim); touch-action: none; }
   .lvkeys .bk:hover { background: var(--s2); }
   .lvkeys kbd { font: inherit; }
   #lv .lvkeys .wk.on, #lv .lvkeys .bk.on { background: var(--trk); color: #000; }
-  .lvpads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; max-width: 760px; }
-  .lvpad { height: 76px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 8px 10px;
+  .lvpads { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .lvpad { height: 64px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 6px 8px;
            border: 1px solid var(--s3); background: var(--bg); color: var(--fg); text-transform: none; touch-action: none; }
   .lvpad b { font-weight: 400; }
   .lvpad kbd { font: inherit; color: var(--dim); }
-  #lv .lvpad.on { background: var(--t4); border-color: var(--t4); color: #000; }
+  #lv .lvpad.on { background: var(--trk); border-color: var(--trk); color: #000; }
   #lv .lvpad.on kbd { color: #000; }
-  .lvkeyshelp { margin: 4px 0 0; }
-  /* the playlist */
-  .lvpl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; counter-reset: pl; }
+  .lvkeys.roll .wk, .lvpads.roll .lvpad { box-shadow: inset 0 -4px var(--t3); }
+  .lvkeys.erase .wk, .lvpads.erase .lvpad { box-shadow: inset 0 -4px var(--red); }
+  .lvxsel { display: grid; gap: 2px; min-width: 80px; align-self: center; }
+  .lvxsel .dim { text-transform: lowercase; }
+  .lvrollrate .lk { width: auto; grid-template-columns: 32px auto; grid-template-rows: 16px 16px; column-gap: 4px; justify-items: start; }
+  .lvrollrate .lk svg { grid-row: 1 / 3; width: 32px; height: 32px; }
+
+  /* ---- the overlays: the first steps, the keyboard shortcuts */
+  .lvover { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgb(0 0 0 / .6); padding: 24px; }
+  .lvovbox { width: min(680px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; border: 1px solid var(--acc); background: var(--s1);
+             padding: 16px 20px; box-shadow: 0 16px 48px rgb(0 0 0 / .6); }
+  .lvovhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .lvovhead h2 { text-transform: uppercase; color: var(--acc); }
+  .lvovfoot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
+  .lvovfoot p { margin: 0; }
+  .lvsteps { margin: 0; padding-left: 22px; display: grid; gap: 8px; list-style: decimal; font-family: var(--text-face); font-size: 15px; line-height: 22px; }
+  .lvkeytab { width: 100%; border-collapse: collapse; }
+  .lvkeytab th, .lvkeytab td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .lvkeytab th { width: 40%; font-weight: 400; text-transform: none; }
+  .lvkeytab kbd { text-transform: none; }
+  .lvkeytab th kbd { color: var(--fg); }
+  .lvkeytab td { font-family: var(--text-face); font-size: 15px; line-height: 20px; color: var(--fg2); }
+
+  /* the playlist (the everything view: its own panel under the mixer) */
+  .lvpl { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 4px; counter-reset: pl; }
   .lvpl li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; counter-increment: pl; }
   .lvplgo { display: grid; grid-template-columns: 2.5ch minmax(0, 1fr) auto; align-items: center; gap: 8px; text-align: left; text-transform: none;
-            background: var(--bg); border: 1px solid var(--s3); color: var(--fg); padding: 8px 10px; }
+            background: var(--bg); border: 1px solid var(--s3); color: var(--fg); padding: 4px 8px; }
   .lvplgo::before { content: counter(pl); color: var(--dim); }
   .lvplgo b { font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lvplgo small { color: var(--dim); }
@@ -137,114 +262,32 @@
   .lvpl li.at .lvplgo { animation: lvblink .5s steps(1) infinite; }
   .lvplact { display: flex; gap: 2px; }
   .lvplact button { padding: 4px 8px; }
-  .lvplbar { margin: 10px 0 0; }
-  /* ---- LIVE pro: scenes, the PERFORM card, the steps, MIDI learn, the stage tools ---- */
-  .lvscnrow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
-  .lvscn { position: relative; height: 72px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; padding: 6px 8px;
-           border: 2px solid var(--t1); background: var(--bg); color: var(--fg); text-transform: none; overflow: hidden; }
-  .lvscn b { font-size: 24px; line-height: 24px; font-weight: 400; color: var(--t1); }
-  .lvscn small { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .lvscn kbd { position: absolute; right: 6px; top: 6px; font: inherit; color: var(--dim); }
-  .lvscn.empty { border-color: var(--s3); }
-  .lvscn.empty b { color: var(--s3); }
-  .lvscn.cur { background: linear-gradient(90deg, var(--t1) var(--m, 100%), var(--bg) var(--m, 100%)); }
-  .lvscn.cur b, .lvscn.cur small, .lvscn.cur kbd { color: #000; }
-  .lvscn.store { border-style: dashed; border-color: var(--red); }
-  .lvxrow { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 8px; margin-top: 10px; }
-  .lvxf { width: 100%; }
-  .lvperf { --c: var(--trk); border-top: 4px solid var(--c); }
-  .lvperftrk { color: var(--c); }
-  .lvptabs { display: flex; flex-wrap: wrap; gap: 2px; margin-left: auto; }
-  .lvptab { padding: 4px 10px; }
-  #lv .lvptab[aria-selected="true"] { background: var(--c); color: #000; }
-  .lvxgrp { margin-top: 8px; }
-  .lvxgrp > .dim { display: block; margin-bottom: 2px; text-transform: lowercase; }
-  .lvxsel { display: grid; gap: 2px; min-width: 96px; align-self: center; }
-  .lvperf .lvknobs { align-items: center; }
-  .lvxsel .dim { text-transform: lowercase; }
-  .lvgrid { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; overflow-x: auto; }
-  .lvgr { display: grid; grid-template-columns: repeat(16, minmax(28px, 1fr)); gap: 2px; }
-  .lvgrid.drum .lvgr { grid-template-columns: 9ch repeat(16, minmax(22px, 1fr)); }
-  .lvgl { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: center; }
-  .lvgc { height: 34px; padding: 0; border: 1px solid var(--s3); background: var(--bg); color: var(--fg); font-size: inherit; text-transform: none; }
-  .lvgrid.drum .lvgc { height: 22px; }
-  .lvgc.beat { border-left-color: var(--dim); }
-  #lv .lvgc.on { background: var(--c); color: #000; border-color: var(--c); }
-  .lvgc.out { opacity: .3; }
-  .lvgc.ph { box-shadow: inset 0 0 0 2px var(--fg); }
-  .lvgc.fillonly { border-bottom: 3px solid var(--t3); }
-  .lvgc.nofill { border-bottom: 3px solid var(--red); }
-  .lsfav { margin-left: auto; padding: 0 6px; color: var(--t3); background: none; border: 0; }
-  .lvtools { flex-basis: 100%; }
-  .lvclock { display: grid; text-align: left; background: none; border: 0; padding: 0 8px 0 0; text-transform: none; }
-  .lvclock b { font-size: 24px; line-height: 24px; font-weight: 400; color: var(--fg); }
-  .lvrecset { --lv: 0%; background: linear-gradient(90deg, var(--s3) var(--lv), var(--s2) var(--lv)); border: 2px solid var(--red); color: var(--red); }
-  .lvrecset.on { color: var(--fg); animation: lvblink 1s steps(1) infinite; }
-  .lvlearnbar { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .lvlearnmsg { color: var(--t3); }
-  #lv.learn [data-lvm] { outline: 1px dashed var(--t3); outline-offset: 1px; }
-  /* (the mapped controls and the one waiting: a <style> the page writes, Live.jsx LearnStyle) */
-  #lv.locked .lvcard { pointer-events: none; }
-  #lv.locked .lvcard > * { opacity: .85; }
-  #lv.locked .lvlockbtn { pointer-events: auto; opacity: 1; }
+  .lvplbar { margin: 8px 0 0; }
   .lvcue { margin: 0 0 8px; }
   .lvcue p { margin: 0 0 2px; }
   .lvcue p:first-child b { font-size: 20px; color: var(--t2); font-weight: 400; }
-  @media (max-width: 760px) {
-    .lvscnrow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .lvxrow { grid-template-columns: auto minmax(0, 1fr) auto; }
-    .lvxrow > .dim, .lvxrow > b { display: none; }
-  }
-  /* a page a newcomer can read: each card's line and "?", the first steps, the essentials view */
-  .lvsub { display: flex; align-items: center; gap: 8px; margin: -4px 0 10px; color: var(--dim); }
-  .lvtrans > .lvsub, .lvtrans > .lvhelp { flex-basis: 100%; margin: 0; }
-  .lvq { min-width: 28px; height: 24px; padding: 0 6px; border: 1px solid var(--s3); color: var(--fg); background: var(--bg); }
-  #lv .lvq[aria-expanded="true"] { background: var(--t3); border-color: var(--t3); color: #000; }
-  .lvhelp { border-left: 3px solid var(--t3); background: var(--s2); padding: 8px 12px; margin: 0 0 10px; }
-  .lvhelp p { margin: 0 0 6px; }
-  .lvhelp p:last-child { margin: 0; }
-  .lvguide { border: 1px solid var(--t3); }
-  .lvsteps { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 6px; list-style: decimal; }
-  .lvguidebtn { margin: 0 0 12px; }
-  .lvtabsub { margin: 0 0 4px; }
+
+  /* modes: MIDI learn, the lock, the essentials view, a firmware without LIVE pro */
+  #lv.learn [data-lvm] { outline: 1px dashed var(--t3); outline-offset: 1px; }
+  /* (the mapped controls and the one waiting: a <style> the page writes, Live.jsx LearnStyle) */
+  #lv.locked .lvcard, #lv.locked .lvdrawer { pointer-events: none; }
+  #lv.locked .lvcard > * { opacity: .85; }
+  #lv.locked .lvlockbtn { pointer-events: auto; opacity: 1; }
   #lv.simple .lvadv { display: none !important; }
   #lv.nopro .lvxpro { display: none !important; }
-  .lvthrow { height: 48px; min-width: 96px; border: 1px solid var(--t1); color: var(--t1); background: var(--bg); touch-action: none; }
-  #lv .lvthrow.on, #lv .lvthrow.act { background: var(--t1); color: #000; }
-  .lvchainlist { color: var(--fg); min-width: 10ch; padding: 0 6px; }
-  .lvchainlist.run { color: var(--t2); }
-  .lvpattools { margin: 6px 0 0; }
-  .lvkeys.roll .wk, .lvpads.roll .lvpad { box-shadow: inset 0 -4px var(--t3); }
-  .lvkeys.erase .wk, .lvpads.erase .lvpad { box-shadow: inset 0 -4px var(--red); }
-  .lvrollrate .lvxsel { min-width: 80px; }
 
   /* full screen: the page alone (the side bar and the header go) */
-  html.lvfocus #root > div { grid-template-columns: minmax(0, 1fr); }
-  html.lvfocus #root > div > aside, html.lvfocus main > header { display: none !important; }
-  html.lvfocus main { padding: 12px 16px 16px; }
+  html.lvfocus #root > div.grid { grid-template-columns: minmax(0, 1fr) !important; }
+  html.lvfocus #root > header, html.lvfocus #root > div.grid > aside, html.lvfocus main > header { display: none !important; }
+  html.lvfocus main { padding: 12px 16px 52px !important; }
   html.lvfocus #p-live { padding-top: 0; }
-  @media (max-width: 1180px) {
-    .lvcols { grid-template-columns: minmax(0, 1fr); }
-  }
-  @media (max-width: 760px) {
-    .lvtrans { gap: 10px 16px; position: static; }
-    .lvright { margin-left: 0; }
-    .lvbig { min-width: 96px; height: 56px; }
-    .lvstrips { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
-    .lstrip { flex: 0 0 168px; scroll-snap-align: start; }
-    .lvsec { height: 68px; }
-    .lvkeys, .lvkeys .wk { height: 136px; }
-    .lvkeys .bk { height: 80px; }
-    .lvkeys kbd, .lvpad kbd, .lvfx kbd, .lvkeyshelp { display: none; }
-    .lvpad { height: 64px; }
-    .lvfxpads { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
 }
 @layer components {
   #lv .lsmute[aria-pressed="true"] { background: var(--red); color: #000; }
   #lv .lssolo[aria-pressed="true"] { background: var(--fg); color: #000; }
   #lv .lssel[aria-pressed="true"] { background: var(--c); color: #000; }
-  #lv .lvplaybox .seg button[aria-pressed="true"] { background: var(--trk); color: #000; }
+  #lv .lvdtrk button[aria-pressed="true"] { background: var(--c); color: #000; }
+  #lv .lvdtrk button:not([aria-pressed="true"]) { color: var(--c); }
   #lv .lvlearnbtn[aria-pressed="true"] { background: var(--t3); color: #000; }
   #lv .lvlockbtn[aria-pressed="true"] { background: var(--red); color: #000; }
 }

@@ -2,10 +2,11 @@
 // The LIVE page's own controls: a knob (drag up / down, the wheel, the arrow keys, double-click: its default), a fader
 // (the same, and a click on its track) and a button that holds while pressed. The drum panel on the Sound page uses
 // them too. Each control carries what MIDI learn drives (pro.js lvxMidi): node._lvo {min, max, set}, node.press /
-// node.release, named by data-lvm.
+// node.release, named by data-lvm. Ctl: a device parameter as a knob or a list.
 import { useEffect, useRef, useState } from "react";
+import { F, fmtValue } from "../../lib/proto.js";
 import { notify } from "../../core/app.js";
-import { LV } from "./state.js";
+import { LV, lvGlobal, lvGv, lvParam } from "./state.js";
 
 function lvArc(a0, a1, r = 18) {
   const p = (a) => [24 + r * Math.cos(a), 24 + r * Math.sin(a)];
@@ -149,4 +150,24 @@ export function SyncSelect({ value, children, selRef, ...rest }) {
   return (
     <select ref={(n) => { ref.current = n; if (selRef) selRef(n); }} defaultValue={String(value)} {...rest}>{children}</select>
   );
+}
+
+/* a device parameter: a list (enum) or a knob. scope 0: track tr's P_*, 1: a global; d: its DESC */
+export function Ctl({ scope, id, tr, d, lbl }) {
+  if (!d) return null;
+  const get = () => (scope ? lvGv(id) : (LV.tr[tr] || { p: [] }).p[id] ?? d.def ?? 0);
+  const set = (v, f = true) => { if (scope) lvGlobal(id, v, f); else lvParam(tr, id, v); };
+  const mid = scope ? `g:${id}` : `s${tr}:${id}`;
+  if (d.fmt === F.ENUM && d.names && d.names.length) {
+    return (
+      <label className="lvxsel"><span className="dim">{(lbl || d.label).toLowerCase()}</span>
+        <SyncSelect aria-label={lbl || d.label} data-lvm={mid} value={get()} onChange={(e) => set(+e.target.value)}
+          selRef={(s) => { if (s) s._lvo = { min: d.min, max: d.max, set: (v) => { s.value = String(v); set(v); } }; }}>
+          {d.names.map((n, k) => <option key={k} value={String(d.min + k)}>{n}</option>)}
+        </SyncSelect>
+      </label>
+    );
+  }
+  return <Knob label={(lbl || d.label).toLowerCase()} o={{ min: d.min, max: d.max, def: d.def, bip: d.min < 0, get, set, mid,
+    fmt: (v) => { const [x, u] = fmtValue(d, v); return u && u !== "%" ? `${x} ${u}`.toLowerCase() : x + (u || ""); } }} />;
 }
