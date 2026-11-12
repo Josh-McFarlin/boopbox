@@ -103,6 +103,26 @@ test("room audio maps all eight factory tracks onto two local firmware groups", 
   try {
     const { RoomAudio } = await import("../web/src/rooms/audio.js");
     const audio = new RoomAudio(() => {});
+    const messages = [];
+    audio.node = { port: { postMessage: (message) => messages.push(message) }, disconnect() {} };
+    const ownPerformance = roomPerformance();
+    const peerPerformance = roomPerformance();
+    peerPerformance.currentScene = 2;
+    peerPerformance.tracks[0].patterns[0].steps[0][1][0] = 67;
+    peerPerformance.tracks[0].chain = [1, 2];
+    peerPerformance.tracks[0].chainEnabled = true;
+    peerPerformance.scenes.patterns[2][0] = 3;
+    await audio.setPerformance(0, ownPerformance);
+    await audio.setPerformance(1, peerPerformance);
+    const ownState = messages.find((message) => message.type === "state" && message.slot === 0 && message.group === 0).state;
+    const peerState = messages.find((message) => message.type === "state" && message.slot === 1 && message.group === 0).state;
+    assert.equal(ownState.currentScene, 0);
+    assert.equal(peerState.currentScene, 2);
+    assert.notDeepEqual(ownState.tracks[0].roomPatterns[0].bytes, peerState.tracks[0].roomPatterns[0].bytes);
+    assert.deepEqual(ownState.tracks[0].chain, []);
+    assert.deepEqual(peerState.tracks[0].chain, [1, 2]);
+    assert.equal(ownState.roomScenes.patterns[2][0], 2);
+    assert.equal(peerState.roomScenes.patterns[2][0], 3);
     const untouchedPreset = audio.players[3][0].mock.state.tracks[0].preset;
     await audio.setPerformance(7, roomPerformance());
     const synthTrack = audio.players[7][0].mock.state.tracks[0];

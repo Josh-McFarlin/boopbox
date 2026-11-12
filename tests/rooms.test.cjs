@@ -157,13 +157,28 @@ test("rooms relay bounded performances, sync tempo, and restore state for late j
     await Promise.all([owner.ready, guest.ready]);
     const created = await createRoom(owner);
     guest.send({ type: "join", roomId: created.room.id });
-    await guest.next("room_state");
+    const joinedState = await guest.next("room_state");
+    const guestId = joinedState.players.find((player) => player.id !== created.players[0].id)?.id;
+    assert.ok(guestId);
 
     const performance = roomPerformance();
     owner.send({ type: "performance", performance });
     const shared = await guest.next("performance");
     assert.equal(shared.performance.tracks[0].patterns[0].steps[0][1][0], 60);
     assert.equal(shared.performance.tracks[3].voice.kit, 5);
+
+    const guestPerformance = roomPerformance();
+    guestPerformance.currentScene = 2;
+    guestPerformance.tracks[0].patterns[0].steps[0][1][0] = 67;
+    guestPerformance.tracks[0].chain = [1, 2];
+    guestPerformance.tracks[0].chainEnabled = true;
+    guestPerformance.scenes.patterns[2][0] = 3;
+    guest.send({ type: "performance", performance: guestPerformance });
+    const guestShare = await owner.next("performance", (message) => message.playerId === guestId);
+    assert.equal(guestShare.performance.tracks[0].patterns[0].steps[0][1][0], 67);
+    assert.deepEqual(guestShare.performance.tracks[0].chain, [1, 2]);
+    assert.equal(guestShare.performance.currentScene, 2);
+    assert.equal(guestShare.performance.scenes.patterns[2][0], 3);
 
     owner.send({ type: "transport", playing: true, tempo: 124 });
     const transport = await guest.next("transport");
@@ -180,6 +195,11 @@ test("rooms relay bounded performances, sync tempo, and restore state for late j
     assert.equal(restored.performance.playing, true);
     assert.equal(restored.performance.tempo, 124);
     assert.equal(restored.performance.tracks[0].patterns[0].steps[0][1][0], 60);
+    const restoredGuest = await lateJoiner.next("performance", (message) => message.playerId === guestId);
+    assert.equal(restoredGuest.performance.playing, false);
+    assert.equal(restoredGuest.performance.tempo, 124);
+    assert.equal(restoredGuest.performance.tracks[0].patterns[0].steps[0][1][0], 67);
+    assert.deepEqual(restoredGuest.performance.tracks[0].chain, [1, 2]);
 
     const arbitrary = roomPerformance();
     arbitrary.tracks[0].sample = [1, 2, 3];

@@ -266,7 +266,7 @@ function RoomPage() {
       }, () => {
         setError("The FM-1 performance could not be synced. Check the USB connection and try again.");
       });
-      setStatus("FM-1 connected. Syncing its stock sounds, patterns, and tempo to the room.");
+      setStatus("FM-1 connected. Sharing its stock-sound performance with the room.");
     } catch (err) {
       setFm1State("disconnected");
       setError(err.message);
@@ -283,7 +283,7 @@ function RoomPage() {
     try {
       const performance = await fm1Ref.current.getPerformanceSnapshot();
       if (!performance) throw new Error("The FM-1 could not read its current performance.");
-      setStatus("Synced all shareable FM-1 tracks and patterns.");
+      setStatus("Sharing the FM-1 performance with the room.");
     } catch (err) {
       setError(err.message);
     }
@@ -321,7 +321,7 @@ function RoomPage() {
         <header className="rooms-hero">
           <p className="rooms-kicker">LIVE MUSIC · UP TO 8 PLAYERS</p>
           <h1>Jam rooms</h1>
-          <p>Jam with up to seven other FM-1 players. Each device renders everyone’s stock sounds, live notes, patterns, and chains with the firmware audio engine.</p>
+          <p>Jam with up to seven other FM-1 players. Each device mixes everyone’s stock-sound performances, while every player keeps their own patterns, scenes, and chains.</p>
           <div className="rooms-status" role="status" aria-live="polite">
             <span className={`status-dot ${socketState === "connected" ? "is-connected" : ""}`} aria-hidden="true" />
             {status}
@@ -351,7 +351,7 @@ function RoomPage() {
               </div>
               <div className="room-control-card">
                 <h3>Play from your FM-1</h3>
-                <p>Connect the USB MIDI cable. Stock sounds, track edits, patterns, and chains sync to the room; playback start and stop stay individual while tempo is shared.</p>
+                <p>Connect the USB MIDI cable. Your patterns, scenes, and chains remain your own and are mixed with other players, not copied onto their devices. Only firmware stock sounds are allowed; starts and stops stay individual while room tempo is shared.</p>
                 <div className="control-row">
                   <button className="button button-primary" type="button" onClick={connectDevice}>
                     {fm1State === "connected" ? "Reconnect FM-1" : "Connect FM-1"}

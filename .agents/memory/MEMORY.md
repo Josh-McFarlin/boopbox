@@ -1,0 +1,1 @@
+- [Room musical ownership](room-musical-ownership.md) — each player keeps personal patterns, scenes, and chains; room audio mixes stock-sound performances.
