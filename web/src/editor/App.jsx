@@ -132,6 +132,9 @@ export default function App() {
   const isReady = ready();
   useEffect(() => {                                        /* the selected track's colour, for the places that show a track */
     document.documentElement.style.setProperty("--trk", tcol(dev && dev.info && dev.info.ntrk ? dev.sel || 0 : 0));
+    /* the site header's height (--hdr): the editor below it is one window tall, not one window plus the header */
+    const h = document.querySelector("body > #root > header, #root > header");
+    if (h) document.documentElement.style.setProperty("--hdr", h.offsetHeight + "px");
   });
   /* what the page needs before it can show: an FM-1 */
   let hint = "", show = true;
@@ -145,13 +148,13 @@ export default function App() {
     <>
     <SiteHeader current="editor" base={SITE} />
     <DesktopOnly />
-    <div className="grid min-h-screen grid-cols-[200px_minmax(0,1fr)] max-[999px]:hidden">
-      <aside className="sticky top-0 flex h-screen flex-col gap-4 overflow-y-auto border-r border-line px-3 py-5">
+    <div className="grid min-h-[calc(100vh-var(--hdr,88px))] grid-cols-[200px_minmax(0,1fr)] max-[999px]:hidden">
+      <aside className="sticky top-0 flex h-[calc(100vh-var(--hdr,88px))] flex-col gap-4 overflow-y-auto border-r border-line px-3 py-5">
         <Tabs />
         <SideLinks />
       </aside>
 
-      <main className="min-w-0 px-8 pb-28">
+      <main className={`min-w-0 px-8 ${want === "live" ? "pb-14" : "pb-28"}`}>
         <header className="sticky top-0 z-5 border-b border-line bg-bg pt-4 pb-3">
           <div className="flex min-h-9 items-center gap-4">
             <h1 className="flex-none text-big whitespace-nowrap text-acc">{t(TAB_NAME[want])}</h1>
@@ -168,7 +171,8 @@ export default function App() {
         </header>
         {hint ? <p className="my-8 text-dim">{t(app.MOCK && hint === "needDevice" ? "previewLocalConnect" : hint)}</p> : null}
         {show && Page ? <section key={want} className="pt-5" id={`p-${want}`} data-tab={want}><Page /></section> : null}
-        <footer className="mt-10 border-t border-line pt-4 text-dim [&_a]:text-fg2">
+        {/* (not on LIVE: one screen, its keys drawer at the bottom) */}
+        <footer hidden={want === "live"} className="mt-10 border-t border-line pt-4 text-dim [&_a]:text-fg2">
           <p className="m-0">BoopBox, based on <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">SLOOP</a> and on Felucca by Leo
           Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>. GPL-3.0.
           {" "}{t("foot")} M-VAVE and FM-1 are trademarks of their respective owners.{" "}

@@ -8,8 +8,6 @@
    panel of the Sound page too (DrumPanel.jsx). */
 @layer base {
   /* the page fills the window (no footer, the keys' bar at the bottom) */
-  main:has(#lv) { padding-bottom: 52px !important; }
-  main:has(#lv) > footer { display: none; }
   #lv { --c: var(--acc); display: flex; flex-direction: column; gap: 8px; }
   #lv button { touch-action: manipulation; }
   .lvneeds { color: var(--t3); border: 1px solid var(--t3); padding: 8px 12px; margin: 0 0 12px; }
