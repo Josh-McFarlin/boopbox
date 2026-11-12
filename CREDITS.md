@@ -73,9 +73,9 @@ The users of SLOOP asked for, tested and reported most of each SLOOP update. Som
 [LICENSING.md](LICENSING.md) gives the full list, with the licence and the files of each item. In short:
 
 - **Samples:** Versilian Studios VSCO-2 CE and VCSL, and Sonic Pi (CC0). Wurlitzer EP200 samples by Greg Sullivan (CC BY 3.0).
-- **Fonts and icons:** Terminus and Terminus Bold (SIL OFL 1.1). Fukiai by Hügelton Instruments (MIT), in the web editor.
+- **Fonts and icons:** Terminus and Terminus Bold (SIL OFL 1.1). Pixelify Sans and DM Sans (SIL OFL 1.1), on the website; the logo's wordmark is set in Pixelify Sans Bold. Fukiai by Hügelton Instruments (MIT), in the web editor.
 - **Engines:** PHASE after CrispyZebra by Leo Kuroshita (GPL-3.0). VOICE after klattsch by Tony Gies (MIT). FM6 uses msfa from Dexed, by Google Inc. and Pascal Gauthier (Apache-2.0). Leo Kuroshita ported it to integer C for Felucca 1.0. PHYS uses models from DaisySP and Rings, by Electrosmith and Emilie Gillet (MIT).
-- **BoopBox art:** `tools/gen_icon_art.py` and `tools/gen_logo.py` draw the parameter icons and the logo (GPL-3.0).
+- **BoopBox art:** `tools/gen_icon_art.py` and `tools/gen_logo.py` draw the parameter icons and the pixel-art logo (GPL-3.0).
 
 ## Interface ideas
 

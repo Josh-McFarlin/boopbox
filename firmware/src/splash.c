@@ -1,37 +1,37 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* BoopBox boot splash: the logo (tools/gen_logo.py -> boopbox_logo.h: 16 colours, RLE runs of
- * (run - 1) << 4 | colour), drawn into the canvas in bands of at most 120 rows. */
+ * (run - 1) << 4 | colour), drawn into the canvas in bands of at most 120 rows; or the wordmark alone (1 bit a pixel). */
 #ifndef UI_SMALL                 /* (2.7) compiled for size: not the audio path (gfx.c UI_SMALL); the host tests: nothing */
 #define UI_SMALL
 #endif
-#ifndef FELUCCA_LOGO_TEXT       /* (2.7) 1: the boot logo as text, "BOOP" in the four track colours and "BOX" white (4.6 KB
-                                 * of flash less); the default since the groovebox upgrade (the flash is full); 0: the bitmap logo */
+#ifndef FELUCCA_LOGO_TEXT       /* (2.7) 1: the boot logo as text, the wordmark "boopbox" (Pixelify Sans Bold, the website's
+                                 * font: tools/gen_logo.py), "boop" in the four track colours and "box" white (over 4 KB of
+                                 * flash less); the default since the groovebox upgrade (the flash is full); 0: the bitmap logo */
 #define FELUCCA_LOGO_TEXT 1
 #endif
+#include "boopbox_logo.h"
+/* the wordmark "boopbox" into the canvas, its top left at (x, y), each of the glyphs' pixels 2 x 2 (190 x 38): "boop" in
+ * the tracks' colours, "box" white (the boot logo; MENU > ABOUT, ui_menu.c) */
+UI_SMALL static void boopbox_word(int32_t x, int32_t y)
+{
+    uint32_t i, r, c, bits;
+    for (i = 0; i < BOOPBOX_WORD_N; i++) {
+        uint16_t col = i < 4u ? (pal_neon ? UI_COL[i] : UI_COL_DEF[i]) : C_WHITE;
+        int32_t gx = x + (int32_t)(i * BOOPBOX_GLYPH_ADV * 2u);
+        for (r = 0; r < BOOPBOX_GLYPH_H; r++)
+            for (bits = BOOPBOX_GLYPHS[BOOPBOX_WORD[i]][r], c = 0; c < BOOPBOX_GLYPH_W; c++)
+                if (bits >> (BOOPBOX_GLYPH_W - 1u - c) & 1u)
+                    cv_rect(gx + (int32_t)(c * 2u), y + (int32_t)(r * 2u), 2, 2, col);
+    }
+}
 #if FELUCCA_LOGO_TEXT
 UI_SMALL static void boopbox_logo_draw(uint32_t y0)
 {
-    static const char L[7] = {'B', 'O', 'O', 'P', 'B', 'O', 'X'};
-    uint32_t i, w = text_w(&FONT_L, "BOOPBOX"), k = w * 3u <= 232u ? 3u : 2u, h = 32u, off, y, x;
-    int32_t px = 0;
-    char c[2] = {0, 0};
-    cv_begin(240, h * k, C_BLACK);
-    for (i = 0; i < 7u; i++) {                          /* small, at the top left: B O O P the tracks' colours, B O X white */
-        c[0] = L[i];
-        px = cv_text(px, 0, &FONT_L, c, i < 4u ? (pal_neon ? UI_COL[i] : UI_COL_DEF[i]) : C_WHITE);
-    }
-    off = (240u - w * k) / 2u;
-    for (y = h * k; y-- > 0;)                           /* then k times as big, in place (from the end: nothing read is
-                                                         * overwritten before) */
-        for (x = w * k; x-- > 0;)
-            cv_px[y * 240u + off + x] = cv_px[(y / k) * 240u + x / k];
-    for (y = 0; y < h * k; y++)                         /* (the small one's left-over columns) */
-        for (x = 0; x < off; x++)
-            cv_px[y * 240u + x] = swap16(C_BLACK);
-    cv_blit(0, y0 + 60u);
+    cv_begin(240, BOOPBOX_GLYPH_H * 2u, C_BLACK);
+    boopbox_word((240 - BOOPBOX_WORD_W * 2) / 2, 0);   /* centred */
+    cv_blit(0, y0 + 73u);
 }
 #else
-#include "boopbox_logo.h"
 UI_SMALL static void boopbox_logo_draw(uint32_t y0)
 {
     uint32_t r0;

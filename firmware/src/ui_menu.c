@@ -7,6 +7,7 @@
  * its row), PRESETS moves the cursor; OCT+ steps the cursor's setting round or opens it (CALIBRATION, ABOUT),
  * OCT- closes (from ABOUT: back to the section). */
 /* ------------------------------------------------------------ menu --- */
+static void boopbox_word(int32_t x, int32_t y);    /* the wordmark (splash.c): ABOUT's title */
 /* (2.7: USB SERIAL only in a build with the serial console, FELUCCA_CDC=1: the FM-1's build has none) */
 enum { MI_COLOR, MI_ZOOM, MI_ACCEL, MI_LIGHTS, MI_KEYS, MI_NOTES, MI_LOWCUT, MI_USB,
 #if FELUCCA_CDC
@@ -172,12 +173,7 @@ UI_SMALL static void draw_menu(void)
         cv_begin(240, pass ? 95u : 124u, C_BLACK);
         cv_oy = pass ? -124 : 0;
         if (ui.menu == 2) {
-            {
-                int32_t x = cv_text(4, 4, &FONT_L, "BOOPBOX", C_WHITE) + 8;
-                uint32_t k;
-                for (k = 0; k < 8u; k++)            /* the logo's display: eight bars, the tracks' colours */
-                    cv_rect(x + (int32_t)(k & 3u) * 14, k < 4u ? 12 : 21, 10, 6, UI_COL[k]);
-            }
+            boopbox_word(4, 0);                     /* the logo's wordmark (Pixelify Sans Bold, as on the website) */
             cv_text(4, 36, &FONT_S, "BASED ON SLOOP & FELUCCA", C_AMB);
             cv_text(4, 54, &FONT_S, FELUCCA_VERSION, C_HI);
             ui_text_r(54, __DATE__, C_GRAY);   /* build date */

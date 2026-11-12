@@ -13,6 +13,15 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.4
+
+**A new look for the logo.** The logo now matches the [website](https://josh-mcfarlin.github.io/boopbox/): the name
+is set in the website's pixel font (Pixelify Sans Bold), and the boombox is pixel art. On the FM-1, the boot screen
+and **MENU → SYSTEM → ABOUT** show the new wordmark, *boop* in the four track colours and *box* in white. The
+installer, the web editor, the app icons and the logos in this repository use it too.
+
+Nothing else changed: projects, presets and settings from 1.9.3 open as before.
+
 ## 1.9.3
 
 **The sound browser's knobs and lights.** In the [sound browser](GUIDE.md#the-sound-browser), **PRESETS** now moves

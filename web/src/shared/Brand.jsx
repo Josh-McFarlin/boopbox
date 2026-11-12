@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The BoopBox logo: the boombox icon (assets/logo/boopbox-icon.svg, inline: its black ground and case made transparent, its
-// colour bars in the site's palette) and the name set in the site's pixel font; and the strip of the four colours.
+// The BoopBox logo: the pixel-art boombox icon (assets/logo/boopbox-icon.svg, inline: its black ground made transparent,
+// its colour bars in the site's palette; 30 x 29 pixels, drawn 1.5 px a pixel) and the name set in the site's pixel font
+// (tools/gen_logo.py draws the same wordmark from the font's pixels); and the strip of the four colours.
 import icon from "../../../assets/logo/boopbox-icon.svg?raw";
 
 /* the icon's bars: the FM-1's track colours -> the site's magenta, cyan, lime and yellow (light row: their tints) */
@@ -13,7 +14,7 @@ const ICON = icon.replace(/fill="#000"/g, 'fill="transparent"')
 export function Logo({ className = "" }) {
   return (
     <span className={`inline-flex items-center gap-2 leading-none ${className}`}>
-      <span className="block w-[46px] shrink-0 [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ICON }} />
+      <span className="block w-[45px] shrink-0 [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: ICON }} />
       <span className="font-bold text-[#ffffff] [font-family:'Pixelify_Sans',ui-monospace,monospace] text-[30px] tracking-[.01em]">boopbox</span>
     </span>
   );

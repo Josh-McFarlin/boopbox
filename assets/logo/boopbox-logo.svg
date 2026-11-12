@@ -1,28 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" width="900" height="260" role="img" aria-label="BoopBox">
-<rect width="900" height="260" fill="#000"/>
-<path d="M80 84 V64 A16 16 0 0 1 96 48 H164 A16 16 0 0 1 180 64 V84" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<rect x="28" y="84" width="204" height="136" rx="28" fill="#000" stroke="#F2F2F2" stroke-width="12"/>
-<rect x="54.00" y="98.00" width="32.00" height="10.00" rx="5.00" fill="#287CFF"/>
-<rect x="94.00" y="98.00" width="32.00" height="10.00" rx="5.00" fill="#1ECC70"/>
-<rect x="134.00" y="98.00" width="32.00" height="10.00" rx="5.00" fill="#FFC618"/>
-<rect x="174.00" y="98.00" width="32.00" height="10.00" rx="5.00" fill="#FF621A"/>
-<rect x="54.00" y="112.00" width="32.00" height="10.00" rx="5.00" fill="#88B6FF"/>
-<rect x="94.00" y="112.00" width="32.00" height="10.00" rx="5.00" fill="#83E2B0"/>
-<rect x="134.00" y="112.00" width="32.00" height="10.00" rx="5.00" fill="#FFDF7F"/>
-<rect x="174.00" y="112.00" width="32.00" height="10.00" rx="5.00" fill="#FFA881"/>
-<circle cx="88" cy="168" r="29" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<circle cx="88" cy="168" r="10" fill="#F2F2F2"/>
-<circle cx="172" cy="168" r="29" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<circle cx="172" cy="168" r="10" fill="#F2F2F2"/>
-<circle cx="316.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<line x1="286.00" y1="78.00" x2="286.00" y2="140.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
-<circle cx="406.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<circle cx="496.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<circle cx="586.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<line x1="556.00" y1="140.00" x2="556.00" y2="206.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
-<circle cx="676.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<line x1="646.00" y1="78.00" x2="646.00" y2="140.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
-<circle cx="766.00" cy="140.00" r="30.00" fill="none" stroke="#F2F2F2" stroke-width="12"/>
-<line x1="826.00" y1="110.00" x2="874.00" y2="170.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
-<line x1="874.00" y1="110.00" x2="826.00" y2="170.00" stroke="#F2F2F2" stroke-width="12" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 264" width="1080" height="264" role="img" aria-label="BoopBox" shape-rendering="crispEdges">
+<rect width="1080" height="264" fill="#000"/>
+<path d="M88 16h96v8h-96zM80 24h112v8h-112zM80 32h24v8h-24zM168 32h24v8h-24zM80 40h16v8h-16zM176 40h16v8h-16zM80 48h16v8h-16zM176 48h16v8h-16zM24 56h224v8h-224zM16 64h240v8h-240zM16 72h24v8h-24zM232 72h24v8h-24zM16 80h16v8h-16zM240 80h16v8h-16zM16 88h16v8h-16zM240 88h16v8h-16zM16 96h16v8h-16zM240 96h16v8h-16zM16 104h16v8h-16zM240 104h16v8h-16zM16 112h16v8h-16zM240 112h16v8h-16zM16 120h16v8h-16zM240 120h16v8h-16zM16 128h16v8h-16zM240 128h16v8h-16zM16 136h16v8h-16zM64 136h48v8h-48zM160 136h48v8h-48zM240 136h16v8h-16zM16 144h16v8h-16zM56 144h64v8h-64zM152 144h64v8h-64zM240 144h16v8h-16zM16 152h16v8h-16zM48 152h24v8h-24zM104 152h24v8h-24zM144 152h24v8h-24zM200 152h24v8h-24zM240 152h16v8h-16zM16 160h16v8h-16zM48 160h16v8h-16zM112 160h16v8h-16zM144 160h16v8h-16zM208 160h16v8h-16zM240 160h16v8h-16zM16 168h16v8h-16zM48 168h16v8h-16zM80 168h16v8h-16zM112 168h16v8h-16zM144 168h16v8h-16zM176 168h16v8h-16zM208 168h16v8h-16zM240 168h16v8h-16zM16 176h16v8h-16zM48 176h16v8h-16zM80 176h16v8h-16zM112 176h16v8h-16zM144 176h16v8h-16zM176 176h16v8h-16zM208 176h16v8h-16zM240 176h16v8h-16zM16 184h16v8h-16zM48 184h16v8h-16zM112 184h16v8h-16zM144 184h16v8h-16zM208 184h16v8h-16zM240 184h16v8h-16zM16 192h16v8h-16zM48 192h24v8h-24zM104 192h24v8h-24zM144 192h24v8h-24zM200 192h24v8h-24zM240 192h16v8h-16zM16 200h16v8h-16zM56 200h64v8h-64zM152 200h64v8h-64zM240 200h16v8h-16zM16 208h16v8h-16zM64 208h48v8h-48zM160 208h48v8h-48zM240 208h16v8h-16zM16 216h16v8h-16zM240 216h16v8h-16zM16 224h24v8h-24zM232 224h24v8h-24zM16 232h240v8h-240zM24 240h224v8h-224z" fill="#F2F2F2"/>
+<path d="M48 88h32v8h-32zM48 96h32v8h-32z" fill="#287CFF"/>
+<path d="M96 88h32v8h-32zM96 96h32v8h-32z" fill="#1ECC70"/>
+<path d="M144 88h32v8h-32zM144 96h32v8h-32z" fill="#FFC618"/>
+<path d="M192 88h32v8h-32zM192 96h32v8h-32z" fill="#FF621A"/>
+<path d="M48 112h32v8h-32zM48 120h32v8h-32z" fill="#88B6FF"/>
+<path d="M96 112h32v8h-32zM96 120h32v8h-32z" fill="#83E2B0"/>
+<path d="M144 112h32v8h-32zM144 120h32v8h-32z" fill="#FFDF7F"/>
+<path d="M192 112h32v8h-32zM192 120h32v8h-32z" fill="#FFA881"/>
+<path d="M304 72h24v8h-24zM304 80h24v8h-24zM304 88h24v8h-24zM304 96h24v8h-24zM304 104h72v8h-72zM304 112h72v8h-72zM304 120h88v8h-88zM304 128h24v8h-24zM368 128h24v8h-24zM304 136h24v8h-24zM368 136h24v8h-24zM304 144h24v8h-24zM368 144h24v8h-24zM304 152h24v8h-24zM368 152h24v8h-24zM304 160h24v8h-24zM368 160h24v8h-24zM304 168h88v8h-88zM320 176h56v8h-56zM320 184h56v8h-56zM432 104h56v8h-56zM432 112h56v8h-56zM416 120h88v8h-88zM416 128h24v8h-24zM480 128h24v8h-24zM416 136h24v8h-24zM480 136h24v8h-24zM416 144h24v8h-24zM480 144h24v8h-24zM416 152h24v8h-24zM480 152h24v8h-24zM416 160h24v8h-24zM480 160h24v8h-24zM416 168h88v8h-88zM432 176h56v8h-56zM432 184h56v8h-56zM544 104h56v8h-56zM544 112h56v8h-56zM528 120h88v8h-88zM528 128h24v8h-24zM592 128h24v8h-24zM528 136h24v8h-24zM592 136h24v8h-24zM528 144h24v8h-24zM592 144h24v8h-24zM528 152h24v8h-24zM592 152h24v8h-24zM528 160h24v8h-24zM592 160h24v8h-24zM528 168h88v8h-88zM544 176h56v8h-56zM544 184h56v8h-56zM656 104h56v8h-56zM656 112h56v8h-56zM640 120h88v8h-88zM640 128h24v8h-24zM704 128h24v8h-24zM640 136h24v8h-24zM704 136h24v8h-24zM640 144h24v8h-24zM704 144h24v8h-24zM640 152h24v8h-24zM704 152h24v8h-24zM640 160h24v8h-24zM704 160h24v8h-24zM640 168h88v8h-88zM640 176h72v8h-72zM640 184h72v8h-72zM640 192h24v8h-24zM640 200h24v8h-24zM640 208h24v8h-24zM640 216h24v8h-24zM752 72h24v8h-24zM752 80h24v8h-24zM752 88h24v8h-24zM752 96h24v8h-24zM752 104h72v8h-72zM752 112h72v8h-72zM752 120h88v8h-88zM752 128h24v8h-24zM816 128h24v8h-24zM752 136h24v8h-24zM816 136h24v8h-24zM752 144h24v8h-24zM816 144h24v8h-24zM752 152h24v8h-24zM816 152h24v8h-24zM752 160h24v8h-24zM816 160h24v8h-24zM752 168h88v8h-88zM768 176h56v8h-56zM768 184h56v8h-56zM880 104h56v8h-56zM880 112h56v8h-56zM864 120h88v8h-88zM864 128h24v8h-24zM928 128h24v8h-24zM864 136h24v8h-24zM928 136h24v8h-24zM864 144h24v8h-24zM928 144h24v8h-24zM864 152h24v8h-24zM928 152h24v8h-24zM864 160h24v8h-24zM928 160h24v8h-24zM864 168h88v8h-88zM880 176h56v8h-56zM880 184h56v8h-56zM976 104h24v8h-24zM1040 104h24v8h-24zM976 112h24v8h-24zM1040 112h24v8h-24zM976 120h40v8h-40zM1024 120h40v8h-40zM992 128h24v8h-24zM1024 128h24v8h-24zM992 136h56v8h-56zM1008 144h24v8h-24zM992 152h56v8h-56zM992 160h24v8h-24zM1024 160h24v8h-24zM976 168h40v8h-40zM1024 168h40v8h-40zM976 176h24v8h-24zM1040 176h24v8h-24zM976 184h24v8h-24zM1040 184h24v8h-24z" fill="#F2F2F2"/>
 </svg>

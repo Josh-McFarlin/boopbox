@@ -62,7 +62,7 @@ Build options (environment, `0` or `1`). The defaults are in `firmware/src/feluc
 | `FELUCCA_CDC` | 1 | USB serial console |
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
-| `FELUCCA_LOGO_TEXT` | 1 | the boot logo as text. It uses 4.6 KB less flash than the bitmap logo (0). |
+| `FELUCCA_LOGO_TEXT` | 1 | the boot logo as the wordmark alone ("boopbox" in Pixelify Sans Bold, 1 bit a pixel). It uses over 4 KB less flash than the bitmap logo (0), the pixel boombox over the wordmark. |
 | `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME). It uses about 10.8 KB with its six styles. 0 leaves it out. |
 | `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: the styles that the build includes, one bit for each style (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY). SELECT skips the other styles. |
 | `FELUCCA_EDITOR` | 1 | the SysEx of the web editor (14 KB). With 0, the editor gets no reply. Updates and USB rescue stay. |
