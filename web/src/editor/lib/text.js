@@ -211,6 +211,17 @@ export const TEXT = {
     /* ---- */
     /* ---- */
     /* @SOUND-SETTINGS: this page group's new strings go right below this line */
+    tipValue: "Drag up or down to change (Shift: finer). Double-click: back to the default.",
+    tipSlider: "Drag, or click and use the mouse wheel or arrow keys (Shift: steps of 10). Double-click: back to the default.",
+    sndPresetsOf: "Presets", sndAllEngines: "All engines", sndSearch: "Search presets", sndNoMatch: "No preset matches.",
+    sndPresetTip: "Click to load this preset on the track (it replaces the track's sound)", sndCurrent: "Now on the track",
+    sndActions: "This sound", sndCtlTitle: "How the controls work",
+    sndTabEngine: "Engine", sndTabEnv: "Envelope", sndTabLfo: "LFO", sndTabFx: "Effects", sndTabVoice: "Voice", sndTabArp: "Arp & key",
+    sndTabsLabel: "Sound parameters",
+    setTabMidi: "MIDI", setTabMaster: "Master", setTabAbout: "About", setTabsLabel: "Settings",
+    midiChannels: "Channels", midiChannelsHint: "The MIDI channel each track listens to (OFF: the track ignores MIDI notes).",
+    midiTrackN: "Track {n}", midiDrums: "Drums", midiMore: "Other MIDI settings",
+    midiNote: "A change here goes to the FM-1 at once.",
     /* ---- */
     /* ---- */
     /* ---- */
