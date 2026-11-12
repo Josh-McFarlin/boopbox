@@ -14,7 +14,7 @@ The build makes three files in `build/`:
 `http://localhost:8766/webapp/installer/`. The script needs three items: Python 3 with Pillow on Windows, a WSL
 distribution with the JieLi toolchain, and the three SDK files (below) in `build/deps/ac79`.
 If your WSL distribution is different, set `SLOOP_WSL_DISTRO` (default `Ubuntu`). If your toolchain location is different, set `SLOOP_TOOLCHAIN` (a Linux path, default
-`/root/.jieli/toolchain`).
+`/root/.jieli/toolchain`). For example, in PowerShell: `$env:SLOOP_WSL_DISTRO = 'MinUI-Build'`.
 
 ## Prerequisites (macOS)
 
@@ -67,7 +67,7 @@ Build options (environment, `0` or `1`). The defaults are in `firmware/src/feluc
 | `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: the styles that the build includes, one bit for each style (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY). SELECT skips the other styles. |
 | `FELUCCA_EDITOR` | 1 | the SysEx of the web editor (14 KB). With 0, the editor gets no reply. Updates and USB rescue stay. |
 
-The flash is full. The default build leaves 320 B of the app slot free (1.9.0, with the beats from the keys). Version 1.8 left 2,032 B free, with key velocity. Two changes made room for key velocity: the firmware reads the font in place, and it computes the display curves (`docs/memory-savings-analysis.md` F4, F9). To make room, the firmware also builds three tables in RAM at power-on (see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
+The flash is almost full. The default build of 1.9.3 leaves 2,364 B of the app slot free. Version 1.9.0 left 320 B free, and version 1.8 left 2,032 B free. Two changes made room for key velocity in 1.8: the firmware reads the font in place, and it computes the display curves (`docs/memory-savings-analysis.md` F4, F9). To make room, the firmware also builds two tables in RAM: the sine table at power-on and the 2^x table of FM6 at first use (see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the
 visualiser (`FELUCCA_VIS=0 FELUCCA_LOGO_TEXT=0`).
 
 If the app does not fit, the build fails and tells you. The build does not leave out anything by itself. See `docs/groovebox-performance.md` for the measured sizes.
