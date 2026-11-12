@@ -397,21 +397,6 @@ function RoomPage() {
     return () => window.removeEventListener("message", onEmulatorMessage);
   }, [deviceMode, playNote, send, stopAllNotes]);
 
-  const sharePerformance = async () => {
-    if (!fm1Ref.current) {
-      setError("Connect the FM-1 first.");
-      return;
-    }
-    setError("");
-    try {
-      const performance = await fm1Ref.current.getPerformanceSnapshot();
-      if (!performance) throw new Error("The FM-1 could not read its current performance.");
-      setStatus("Sharing the FM-1 performance with the room.");
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   const toggleSoundEditSharing = () => {
     const paused = !soundEditsPausedRef.current;
     soundEditsPausedRef.current = paused;
@@ -526,7 +511,7 @@ function RoomPage() {
               </div>
               <div className="room-control-card">
                 <h3>{deviceMode === "emulator" ? "Play from the emulator" : "Play from your device"}</h3>
-                <p>Your patterns, scenes, and chains remain your own and are mixed with other players, not copied onto their devices. Only firmware stock sounds are allowed; starts and stops stay individual while room tempo is shared.</p>
+                <p>Stock engine, preset, sound-control, pattern, scene, and chain changes sync automatically. Your music stays attached to your player, not copied onto other devices; starts and stops stay individual while room tempo is shared.</p>
                 <div className="control-row">
                   {deviceMode === "emulator" ? (
                     <button className="button button-primary" type="button" onClick={usePhysicalDevice}>Use physical FM-1</button>
@@ -536,8 +521,6 @@ function RoomPage() {
                         {fm1State === "connected" ? "Reconnect FM-1" : "Connect FM-1"}
                       </button>
                       <button className="button button-secondary" type="button" onClick={useEmulator}>Use browser emulator</button>
-                      <button className="button button-secondary" type="button" onClick={sharePerformance}
-                        disabled={fm1State !== "connected"}>Sync full performance</button>
                     </>
                   )}
                 </div>
@@ -549,7 +532,7 @@ function RoomPage() {
                   <p className="emulator-sync-status" role="status" aria-live="polite">
                     {soundEditsPaused
                       ? "Live sound edits are paused. Shared sounds, notes, and playback continue."
-                      : "Live sound edits are shared automatically."}
+                      : "Preset, sound-control, and performance changes sync automatically."}
                   </p>
                 </div>
                 {deviceMode === "emulator" && (

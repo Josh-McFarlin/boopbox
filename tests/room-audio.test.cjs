@@ -38,13 +38,17 @@ async function connectMockFm1() {
     value: { requestMIDIAccess: async () => mock.access },
   });
   const edits = [];
+  const performances = [];
   const performanceWaiters = [];
   let device;
   try {
     device = await connectFm1(() => {}, () => {}, (...edit) => edits.push(edit), (performance) => {
+      performances.push(performance);
       performanceWaiters.shift()?.(performance);
     });
-    await device.getPerformanceSnapshot();
+    if (!performances.length) {
+      await new Promise((resolve) => performanceWaiters.push(resolve));
+    }
   } catch (error) {
     if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
     else delete globalThis.navigator;
@@ -54,6 +58,7 @@ async function connectMockFm1() {
     mock,
     device,
     edits,
+    performances,
     waitForNextPerformance() {
       return new Promise((resolve) => performanceWaiters.push(resolve));
     },
@@ -65,11 +70,10 @@ async function connectMockFm1() {
   };
 }
 
-test("FM-1 track switches require explicitly sharing the newly selected voice", async () => {
+test("FM-1 track switches automatically share the selected stock voice", async () => {
   const fixture = await connectMockFm1();
   try {
     const { mock, device, edits } = fixture;
-    await device.getSelectedVoice();
     let value = mock.state.tracks[0].p[68] + 1;
     const firstEdit = [0, 68, value];
     mock.sim.param(0, 68, value);
@@ -78,36 +82,37 @@ test("FM-1 track switches require explicitly sharing the newly selected voice", 
 
     const refreshed = fixture.waitForNextPerformance();
     mock.sim.track(1);
-    await refreshed;
-    value = mock.state.tracks[1].p[68] + 1;
-    mock.sim.param(1, 68, value);
+    const performance = await refreshed;
+    assert.equal(performance.tracks[1].voice.engine, mock.state.tracks[1].engine);
+    assert.equal(performance.tracks[1].voice.preset, mock.state.tracks[1].preset);
+    const firstTrackOneValue = mock.state.tracks[1].p[68] + 1;
+    mock.sim.param(1, 68, firstTrackOneValue);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.deepEqual(edits, [firstEdit]);
+    assert.deepEqual(edits, [firstEdit, [1, 68, firstTrackOneValue]]);
 
     const stillSharedValue = mock.state.tracks[0].p[68] + 1;
     mock.sim.param(0, 68, stillSharedValue);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.deepEqual(edits, [firstEdit, [0, 68, stillSharedValue]]);
+    assert.deepEqual(edits, [firstEdit, [1, 68, firstTrackOneValue], [0, 68, stillSharedValue]]);
 
-    await device.getSelectedVoice();
-    value += 1;
-    mock.sim.param(1, 68, value);
+    const secondTrackOneValue = mock.state.tracks[1].p[68] + 1;
+    mock.sim.param(1, 68, secondTrackOneValue);
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.deepEqual(edits, [
       firstEdit,
+      [1, 68, firstTrackOneValue],
       [0, 68, stillSharedValue],
-      [1, 68, value],
+      [1, 68, secondTrackOneValue],
     ]);
   } finally {
     fixture.close();
   }
 });
 
-test("FM-1 preset reloads require explicitly sharing the reloaded voice", async () => {
+test("FM-1 preset reloads automatically share the new voice and later edits", async () => {
   const fixture = await connectMockFm1();
   try {
-    const { mock, device, edits } = fixture;
-    await device.getSelectedVoice();
+    const { mock, edits } = fixture;
     let value = mock.state.tracks[0].p[68] + 1;
     const firstEdit = [0, 68, value];
     mock.sim.param(0, 68, value);
@@ -115,15 +120,11 @@ test("FM-1 preset reloads require explicitly sharing the reloaded voice", async 
     assert.deepEqual(edits, [firstEdit]);
 
     const refreshed = fixture.waitForNextPerformance();
-    mock.sim.reload();
-    await refreshed;
+    const nextVoice = mock.sim.reload();
+    const performance = await refreshed;
+    assert.equal(performance.tracks[0].voice.engine, nextVoice.engine);
+    assert.equal(performance.tracks[0].voice.preset, nextVoice.preset);
     value = mock.state.tracks[0].p[68] + 1;
-    mock.sim.param(0, 68, value);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.deepEqual(edits, [firstEdit]);
-
-    await device.getSelectedVoice();
-    value += 1;
     mock.sim.param(0, 68, value);
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.deepEqual(edits, [

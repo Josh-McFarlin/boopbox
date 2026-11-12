@@ -139,7 +139,6 @@ export async function connectFm1(
   for (const pair of pairs) {
     const link = new Link((data) => pair.output.send(data), { timeout: 400 });
     let sharedVoices = new Map();
-    const invalidatedVoices = new Set();
     let selectedTrack = 0;
     let soundEditsPaused = false;
     const heldTrackByNote = new Map();
@@ -156,7 +155,6 @@ export async function connectFm1(
       if (frame.cmd === CMD.RELOAD) {
         const reload = parse[CMD.RELOAD](frame.a);
         sharedVoices.delete(reload.track);
-        invalidatedVoices.add(reload.track);
         globalThis.clearTimeout(refreshTimer);
         refreshTimer = globalThis.setTimeout(() => refreshPerformance(), 350);
         return;
@@ -235,7 +233,6 @@ export async function connectFm1(
             const selected = parse[CMD.TRACK](await link.request(req.track()));
             selectedTrack = selected.sel;
             for (let track = 0; track < dumps.length; track += 1) {
-              if (invalidatedVoices.has(track)) continue;
               const voice = cleanVoice(dumps[track]);
               if (voice && voice.engine !== config.engineNames.length) {
                 sharedVoices.set(track, {
@@ -314,10 +311,8 @@ export async function connectFm1(
           }
           if (voice.engine !== config.engineNames.length) {
             sharedVoices.set(selection.sel, { ...voice, params: { ...voice.params } });
-            invalidatedVoices.delete(selection.sel);
           } else {
             sharedVoices.delete(selection.sel);
-            invalidatedVoices.add(selection.sel);
           }
           return voice;
         },
