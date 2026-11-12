@@ -25,18 +25,46 @@ BoopBox has no factory patterns and no style of its own. You play everything tha
 
 ## Contents
 
-1. [Screenshots](#screenshots)
-2. [Features](#features)
-3. [Install](#install)
-4. [Your first beat in 60 seconds](#your-first-beat-in-60-seconds)
-5. [Compatibility](#compatibility)
-6. [Troubleshooting](#troubleshooting)
-7. [Specifications](#specifications)
-8. [Documentation](#documentation)
-9. [Building and tests](#building-and-tests)
-10. [Contributing](#contributing)
-11. [Credits and thanks](#credits-and-thanks)
-12. [Licence](#licence)
+1. [Project layout](#project-layout)
+2. [Screenshots](#screenshots)
+3. [Features](#features)
+4. [Install](#install)
+5. [Your first beat in 60 seconds](#your-first-beat-in-60-seconds)
+6. [Compatibility](#compatibility)
+7. [Troubleshooting](#troubleshooting)
+8. [Specifications](#specifications)
+9. [Documentation](#documentation)
+10. [Building and tests](#building-and-tests)
+11. [Contributing](#contributing)
+12. [Credits and thanks](#credits-and-thanks)
+13. [Licence](#licence)
+
+---
+
+## Project layout
+
+**Device firmware**
+
+- `firmware/` — FM-1 firmware source, hardware support, loader and host emulator.
+- `firmware/releases/` — versioned `.fwsc` packages used by the installer and release workflow.
+
+**Website and room server**
+
+- `web/` — React/Vite website source: home, installer, editor, emulator and room browser.
+- `server.js` and `server/` — one Node server for the website and room WebSocket service.
+- `shared/` — room settings shared by the browser, server and tests.
+- `build/replit-site/` — generated website and firmware download output; rebuildable and not checked in.
+
+**Project resources**
+
+- `docs/` — technical documentation and design notes.
+- `assets/` — source samples, fonts, icons, logos and screenshots.
+- `tools/` — firmware and website generators, build helpers and checks.
+- `scripts/` — common build and local launch commands.
+- `tests/` — firmware, website and room-service tests.
+- `.github/workflows/` — release and changelog checks.
+
+`src/repl_nix_workspace/` is Python packaging scaffolding for the build environment, not application source.
 
 ---
 
@@ -171,6 +199,7 @@ For more problems and solutions, read [Guide §25](GUIDE.md#25-backup-rescue-goi
 
 ## Documentation
 
+- [docs/README.md](docs/README.md) — map of the technical documents in `docs/`
 - [GUIDE.md](GUIDE.md) — **the complete guide**: every button, combination, layer, page, engine and editor page, with a cheat sheet
 - [BOOPBOX.md](BOOPBOX.md) — the manual: every page, layer, sound and kit
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release

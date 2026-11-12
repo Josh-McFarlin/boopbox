@@ -15,16 +15,16 @@ python3 tools/build_preview.py
 npm --prefix web ci
 
 shopt -s nullglob
-packages=(docs/firmware/boopbox-[0-9]*.fwsc)
+packages=(firmware/releases/boopbox-[0-9]*.fwsc)
 if ((${#packages[@]} == 0)); then
-  echo "build-site: no release firmware package found in docs/firmware" >&2
+  echo "build-site: no release firmware package found in firmware/releases" >&2
   exit 1
 fi
 mapfile -t packages < <(printf '%s\n' "${packages[@]}" | sort -V)
 package="${packages[${#packages[@]}-1]}"
 version="${package##*/boopbox-}"
 version="${version%.fwsc}"
-trainer="docs/firmware/boopbox-trainer-${version}.fwsc"
+trainer="firmware/releases/boopbox-trainer-${version}.fwsc"
 trainer_args=()
 if [[ -f "$trainer" ]]; then
   trainer_args=(--trainer "$trainer")

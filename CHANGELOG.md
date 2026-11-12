@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in each BoopBox release, newest first. A release's section is its
-release notes on GitHub: when a PR adds `docs/firmware/boopbox-X.Y.Z.fwsc`, it
+release notes on GitHub: when a PR adds `firmware/releases/boopbox-X.Y.Z.fwsc`, it
 must also add a `## X.Y.Z` section here (CI checks), and merging it into `main`
 publishes the release with that section as its notes
 (`.github/workflows/release-on-merge.yml`).

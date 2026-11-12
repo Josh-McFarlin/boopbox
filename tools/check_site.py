@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Check that a generated site is built for a firmware binary.
 
-  tools/check_site.py docs/firmware/boopbox-X.Y.Z.fwsc [--site build/replit-site]
+  tools/check_site.py firmware/releases/boopbox-X.Y.Z.fwsc [--site build/replit-site]
 
 The site is built by web/make_site.py from the firmware package and source pages.
 This checks, for the given binary:

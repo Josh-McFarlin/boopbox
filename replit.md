@@ -8,10 +8,10 @@ Use Run to start the **BoopBox website** workflow:
 npm run build && node server.js
 ```
 
-The build compiles the React/Vite pages, then the Node server serves those pages
-alongside the firmware downloads and WebAssembly files already in `docs/`. It
-also runs the in-memory room and WebSocket service on the same port. No database
-or external service is needed.
+The build compiles the React/Vite pages and assembles the complete site under
+`build/replit-site/` from `web/` and `firmware/releases/`. The Node server serves
+the pages, firmware downloads, WebAssembly files, and in-memory room/WebSocket
+service on the same port. No database or external service is needed.
 
 ## Publishing on a Reserved VM
 
@@ -37,9 +37,10 @@ website does not install any firmware.
 
 ## Source development
 
-`npm run build` writes the room and source-page output into ignored
-`build/webapp-vite/`; the Node server serves it without replacing the firmware
-files in `docs/`.
+`npm run build` writes the complete generated site into ignored
+`build/replit-site/`. Keep source documentation in `docs/` and versioned
+firmware packages in `firmware/releases/`; the build assembles them without
+committing generated website output.
 
 The existing web dependencies are installed under `web/`. To work directly on
 the React source, stop the website workflow before running another server on
@@ -49,8 +50,7 @@ Use the configured website workflow for a full room session. To work on the
 Vite source in isolation, run `cd web && npm ci && npm run dev`; the room page
 expects the Node server for its WebSocket connection.
 See `BUILDING.md` and `web/make_site.py` for assembling a complete site after
-source or firmware changes. Do not replace `docs/` with only Vite's output:
-that would omit the firmware and other release assets.
+source or firmware changes.
 
 Checks:
 

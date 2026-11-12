@@ -1,4 +1,4 @@
-# A PR into main that adds a firmware binary (docs/firmware/boopbox-X.Y.Z.fwsc)
+# A PR into main that adds a firmware binary (firmware/releases/boopbox-X.Y.Z.fwsc)
 # must also have a "## X.Y.Z" section in CHANGELOG.md: merging it publishes the
 # release with that section as its notes (release-on-merge.yml).
 # Shows on the PR the release notes it would publish.
@@ -10,7 +10,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'docs/firmware/*.fwsc'
+      - 'firmware/releases/*.fwsc'
       - 'CHANGELOG.md'
 
 permissions:
@@ -35,8 +35,8 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          added=$(git diff --name-only --diff-filter=AR "$BASE...$HEAD" -- 'docs/firmware/*.fwsc' \
-            | grep -E '^docs/firmware/boopbox-[0-9][^/]*\.fwsc$' || true)
+          added=$(git diff --name-only --diff-filter=A "$BASE...$HEAD" -- 'firmware/releases/*.fwsc' \
+            | grep -E '^firmware/releases/boopbox-[0-9][^/]*\.fwsc$' || true)
           if [ -z "$added" ]; then
             echo "No new firmware binary: no release, nothing to check."
             exit 0

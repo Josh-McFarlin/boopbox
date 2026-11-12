@@ -6,7 +6,7 @@ This page gives the flash, RAM and CPU cost of the BoopBox firmware. The current
 
 | Source | What it gives | Exact? |
 | --- | --- | --- |
-| **Release package** (`docs/firmware/boopbox-X.Y.Z.fwsc`) | The app size of a published release, decoded from the package. See "How to measure again". | Yes. The JieLi toolchain built each package. |
+| **Release package** (`firmware/releases/boopbox-X.Y.Z.fwsc`) | The app size of a published release, decoded from the package. See "How to measure again". | Yes. The JieLi toolchain built each package. |
 | **Real build** (`tools/build.py` with the JieLi pi32v2 toolchain jieli-linux-toolchains-20260730.1 and the AC79 SDK files) | App size, RAM, pool and `.lowram` figures, and the disassembly for `tests/target_budget.py`. | Yes |
 | **Proxy build** (`tools/proxy_size.py`) | The whole firmware compiled with the host clang for RISC-V RV32IMC at `-Os`. You can use it without the JieLi toolchain. | RAM, structs and constant tables: yes. Code size: no. |
 | **Host time** (`cc -O2` on an x86-64 host with 4 cores) | The time of the audio and sequencer code on the host. | Only the ratio between two runs on the same host is useful. |

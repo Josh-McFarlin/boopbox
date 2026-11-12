@@ -208,7 +208,7 @@ When a PR that adds a new firmware binary merges into `main`, GitHub publishes a
 
 1. Set the version in `firmware/src/ui.c` (`FELUCCA_VERSION "BOOPBOX X.Y.Z"`). Then build with
    `scripts/build.sh --release X.Y.Z`.
-2. Add `build/felucca-X.Y.Z.fwsc` to `docs/firmware/boopbox-X.Y.Z.fwsc` (and the matching trainer package, if releasing
+2. Add `build/felucca-X.Y.Z.fwsc` to `firmware/releases/boopbox-X.Y.Z.fwsc` (and the matching trainer package, if releasing
    it). These checked-in binaries are the inputs for the Replit installer and GitHub release. Do not commit generated
    website output under `docs/`; the *Changelog check* builds a temporary site for the candidate package and validates it.
 3. Add a `## X.Y.Z` section at the top of [CHANGELOG.md](CHANGELOG.md). Write it for the people who install the release.
