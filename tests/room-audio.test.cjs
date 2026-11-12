@@ -3,7 +3,69 @@
 const assert = require("node:assert/strict");
 const { readFile } = require("node:fs/promises");
 const { resolve } = require("node:path");
+const { once } = require("node:events");
+const { createServer } = require("node:http");
 const test = require("node:test");
+const { WebSocket } = require("ws");
+const { createRoomService } = require("../server/rooms.cjs");
+const roomConfig = require("../shared/room-config.json");
+
+function createRoomTestClient(url) {
+  const ws = new WebSocket(url, {
+    headers: { Origin: url.replace(/^ws:/, "http:").replace(/\/api\/rooms$/, "") },
+  });
+  const inbox = [];
+  const waiters = [];
+  let resolveIdentified;
+  const identified = new Promise((resolve) => { resolveIdentified = resolve; });
+  ws.on("message", (data) => {
+    const message = JSON.parse(data.toString());
+    if (message.type === "identified") resolveIdentified(message);
+    const index = waiters.findIndex((waiter) => waiter.match(message));
+    if (index >= 0) {
+      const [waiter] = waiters.splice(index, 1);
+      clearTimeout(waiter.timer);
+      waiter.resolve(message);
+    } else inbox.push(message);
+  });
+  const opened = once(ws, "open");
+  ws.on("open", () => ws.send(JSON.stringify({
+    v: roomConfig.protocolVersion,
+    type: "identify",
+    browserId: require("node:crypto").randomUUID(),
+  })));
+  return {
+    ws,
+    ready: opened.then(() => identified),
+    send(message) {
+      ws.send(JSON.stringify({ v: roomConfig.protocolVersion, ...message }));
+    },
+    next(type, predicate = () => true) {
+      const index = inbox.findIndex((message) => message.type === type && predicate(message));
+      if (index >= 0) return Promise.resolve(inbox.splice(index, 1)[0]);
+      return new Promise((resolve, reject) => {
+        const waiter = {
+          match: (message) => message.type === type && predicate(message),
+          resolve,
+          timer: setTimeout(() => {
+            const i = waiters.indexOf(waiter);
+            if (i >= 0) waiters.splice(i, 1);
+            reject(new Error(`Timed out waiting for ${type}`));
+          }, 2000),
+        };
+        waiters.push(waiter);
+      });
+    },
+    close() {
+      if (ws.readyState === WebSocket.CLOSED) return Promise.resolve();
+      return new Promise((resolve) => {
+        ws.once("close", resolve);
+        if (ws.readyState === WebSocket.CONNECTING) ws.terminate();
+        else ws.close();
+      });
+    },
+  };
+}
 
 test("FM-1 input relays only bounded note-on and note-off messages", async () => {
   const { parseKeyboardMessage } = await import("../web/src/rooms/keyboard-midi.js");
@@ -26,6 +88,70 @@ test("FM-1 input relays only bounded note-on and note-off messages", async () =>
   assert.equal(parseKeyboardMessage(Uint8Array.from([0xf0, 1, 0xf7])), null);
   assert.equal(parseKeyboardMessage(Uint8Array.from([0x90, 200, 100])), null);
   assert.equal(parseKeyboardMessage(Uint8Array.from([0x90, 60, 100, 0])), null);
+});
+
+test("unplugging an FM-1 relays a matching note-off to room listeners", async () => {
+  const server = createServer();
+  const service = createRoomService(server);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const { port } = server.address();
+  const url = `ws://127.0.0.1:${port}/api/rooms`;
+  const owner = createRoomTestClient(url);
+  const listener = createRoomTestClient(url);
+  const clients = [owner, listener];
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  let mock;
+  let device;
+  try {
+    await Promise.all([owner.ready, listener.ready]);
+    owner.send({ type: "create", genre: "house" });
+    const created = await owner.next("room_state");
+    listener.send({ type: "join", roomId: created.room.id });
+    await listener.next("room_state");
+    owner.send({ type: "voice", voice: { engine: 0, preset: 2 } });
+    await listener.next("voice");
+
+    const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
+    const { connectFm1 } = await import("../web/src/rooms/device.js");
+    const { playRoomNote, stopRoomNotes } = await import("../web/src/rooms/notes.js");
+    mock = makeMockDevice({ auto: false });
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: { requestMIDIAccess: async () => mock.access },
+    });
+    const heldNotes = new Set();
+    const send = (message) => owner.send(message);
+    device = await connectFm1(
+      (note, on, velocity, track) => playRoomNote(heldNotes, send, true, note, on, velocity, track),
+      (state) => {
+        if (state === "disconnected") stopRoomNotes(heldNotes, send);
+      },
+    );
+
+    device.input.onmidimessage({ data: Uint8Array.from([0x90, 60, 100]) });
+    const played = await listener.next("note_on");
+    assert.deepEqual(
+      { track: played.track, note: played.note, velocity: played.velocity },
+      { track: 0, note: 60, velocity: 100 },
+    );
+
+    mock.access.onstatechange({ port: { id: "mock-in", state: "disconnected" } });
+    const released = await listener.next("note_off");
+    assert.deepEqual(
+      { track: released.track, note: released.note },
+      { track: played.track, note: played.note },
+    );
+    assert.equal(heldNotes.size, 0);
+  } finally {
+    device?.close();
+    mock?.stop();
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+    await Promise.all(clients.map((client) => client.close()));
+    service.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 async function connectMockFm1() {

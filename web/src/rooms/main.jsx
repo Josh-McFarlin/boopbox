@@ -6,6 +6,7 @@ import { RoomAudio } from "./audio.js";
 import { applyPerformanceWithRetry } from "./performance-sync.js";
 import { getRoomBrowserIdentity } from "./browser-identity.js";
 import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
+import { playRoomNote, stopRoomNotes } from "./notes.js";
 import { createSoundEditSharingController } from "./edit-sharing.js";
 import { createRoomMixController } from "./mix.js";
 import RoomChat from "./chat-ui/RoomChat.jsx";
@@ -107,24 +108,11 @@ function RoomPage() {
   }, []);
 
   const stopAllNotes = useCallback(() => {
-    for (const key of heldRef.current) {
-      const [track, note] = key.split(":").map(Number);
-      send({ type: "note_off", track, note });
-    }
-    heldRef.current.clear();
-    send({ type: "panic" });
+    stopRoomNotes(heldRef.current, send);
   }, [send]);
 
   const playNote = useCallback((note, on, velocity = 96, track = 0) => {
-    if (!roomRef.current) return;
-    const key = `${track}:${note}`;
-    if (on) {
-      heldRef.current.add(key);
-      send({ type: "note_on", track, note, velocity });
-    } else {
-      heldRef.current.delete(key);
-      send({ type: "note_off", track, note });
-    }
+    playRoomNote(heldRef.current, send, !!roomRef.current, note, on, velocity, track);
   }, [send]);
 
   const applyVoice = useCallback((player) => {
