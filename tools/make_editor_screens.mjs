@@ -15,7 +15,7 @@ const { chromium } = require("playwright");
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(process.argv[2] || join(ROOT, "assets", "screens"));
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".ttf": "font/ttf",
-  ".wasm": "application/wasm", ".txt": "text/plain" };
+  ".wasm": "application/wasm", ".txt": "text/plain", ".woff2": "font/woff2", ".woff": "font/woff" };
 
 const server = createServer(async (q, r) => {
   try {

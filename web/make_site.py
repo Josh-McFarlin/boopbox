@@ -119,7 +119,7 @@ def app_files(out, version, fw_name, more=()):
         shutil.copy(HERE / f, app / f)
     manifest = {
         "name": "BoopBox", "short_name": "BoopBox", "id": "editor/", "start_url": "editor/", "scope": "./",
-        "display": "standalone", "background_color": "#000000", "theme_color": "#000000",
+        "display": "standalone", "background_color": "#160d2b", "theme_color": "#160d2b",
         "description": "BoopBox for the M-VAVE FM-1: the editor and the installer, also without internet",
         "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
                   {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},

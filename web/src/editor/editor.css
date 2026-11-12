@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only
-   The editor: the FM-1's screen on a big display. Black, the four track colours, the device's own Terminus pixel font
-   (tools/gen_webfont.py), 16 px and 32 px only so every pixel stays sharp. The accent (--trk) is the selected track's
-   colour, as the curves on the device. Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay
+   The editor: the FM-1's screen on a big display, in the site's "pocket arcade" look. The night indigo and purples of
+   the device's SYNTHWAVE theme (firmware/src/gfx.c SYNTH_BG, SYNTH_G), its eight track colours (SYNTH_TRK, SYNTH_TRK2),
+   the device's own Terminus pixel font (tools/gen_webfont.py), 16 px and 32 px only so every pixel stays sharp, and the
+   site's Pixelify Sans for the page and card titles. The accent (--trk) is the selected track's colour, as the curves
+   on the device. Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay
    hidden until it has loaded.
 
    Tailwind: the palette is the theme (bg-s1, text-dim, border-line, text-trk, bg-t3 ...), the pages use utilities.
@@ -14,11 +16,11 @@
 @font-face { font-family: "Fukiai"; src: url("./assets/fukiai.ttf") format("truetype"); font-display: block; unicode-range: U+EA00-EB09; }
 
 :root {
-  --bg: #000; --s1: #0b0b0e; --s2: #1a1a1e; --s3: #36363c; --line: #232329; --dim: #76767e; --fg2: #c4c4cc; --fg: #f2f2f2;
-  --red: #ff2c34; --t1: #287cff; --t2: #1ecc70; --t3: #ffc618; --t4: #ff621a; --trk: var(--t1);
-  /* tracks 5..8: a shade of 1..4, as the FM-1 draws them (gfx.c ui_shade: 45 % of the way to white) */
-  --t5: color-mix(in srgb, var(--t1) 55%, #fff); --t6: color-mix(in srgb, var(--t2) 55%, #fff);
-  --t7: color-mix(in srgb, var(--t3) 55%, #fff); --t8: color-mix(in srgb, var(--t4) 55%, #fff);
+  --bg: #160d2b; --s1: #1d1238; --s2: #2b1a52; --s3: #4a3680; --line: #3a2766; --dim: #a28ad8; --fg2: #ddd4fb; --fg: #ffffff;
+  --red: #ff4d6d;
+  /* the tracks: cyan, magenta, sunset orange, violet; 5..8 periwinkle, rose, gold, orchid (gfx.c SYNTH_TRK, SYNTH_TRK2) */
+  --t1: #00e4ff; --t2: #ff2cd4; --t3: #ff8c38; --t4: #a060ff; --trk: var(--t1);
+  --t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;
   --font: "BoopBox Terminus", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
   color-scheme: dark;
 }
@@ -52,6 +54,9 @@
          font-smooth: never; text-rendering: optimizeSpeed; font-variant-numeric: tabular-nums; }
   a { color: inherit; }
   h1, h2, h3 { font-weight: 400; margin: 0; font-size: 16px; line-height: 20px; }
+  /* the page's and the cards' titles: the site's pixel display face (bundled by the site header) */
+  h1.text-big, h2.text-big { font-family: "Pixelify Sans", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
+                             font-variant-ligatures: none; }
   ::selection { background: var(--trk); color: #000; }
   [hidden] { display: none !important; }
   label { white-space: nowrap; }
