@@ -139,6 +139,7 @@ export async function connectFm1(
   for (const pair of pairs) {
     const link = new Link((data) => pair.output.send(data), { timeout: 400 });
     let sharedVoices = new Map();
+    const invalidatedVoices = new Set();
     let selectedTrack = 0;
     let soundEditsPaused = false;
     const heldTrackByNote = new Map();
@@ -148,11 +149,14 @@ export async function connectFm1(
     let refreshTimer = null;
     let refreshing = false;
     let refreshTask = null;
+    let refreshPerformance = () => {};
     let performanceErrorReported = false;
     let lastTransport = null;
     link.onPush = (frame) => {
       if (frame.cmd === CMD.RELOAD) {
-        sharedVoices.clear();
+        const reload = parse[CMD.RELOAD](frame.a);
+        sharedVoices.delete(reload.track);
+        invalidatedVoices.add(reload.track);
         globalThis.clearTimeout(refreshTimer);
         refreshTimer = globalThis.setTimeout(() => refreshPerformance(), 350);
         return;
@@ -209,7 +213,7 @@ export async function connectFm1(
       keepalive = globalThis.setInterval(() => {
         if (!disconnected) link.request(req.ping(), { timeout: 300, retries: 0, quiet: true }).catch(() => {});
       }, 2000);
-      const refreshPerformance = () => {
+      refreshPerformance = () => {
         if (disconnected) return Promise.resolve(null);
         if (refreshTask) return refreshTask;
         refreshing = true;
@@ -230,13 +234,15 @@ export async function connectFm1(
             const live = parse[CMD.LIVE](await link.request(req.live(LIVE.STATE), { retries: 0, quiet: true }));
             const selected = parse[CMD.TRACK](await link.request(req.track()));
             selectedTrack = selected.sel;
-            sharedVoices = new Map();
             for (let track = 0; track < dumps.length; track += 1) {
+              if (invalidatedVoices.has(track)) continue;
               const voice = cleanVoice(dumps[track]);
               if (voice && voice.engine !== config.engineNames.length) {
                 sharedVoices.set(track, {
                   engine: voice.engine, preset: voice.preset, params: { ...voice.params },
                 });
+              } else {
+                sharedVoices.delete(track);
               }
             }
             const performance = buildRoomPerformance(project, dumps, live, info);
@@ -306,8 +312,13 @@ export async function connectFm1(
           if (!voice) {
             throw new Error("Choose a built-in synth preset or a factory drum kit. User samples and custom presets cannot be shared.");
           }
-          if (voice.engine !== config.engineNames.length) sharedVoices.set(selection.sel, { ...voice, params: { ...voice.params } });
-          else sharedVoices.delete(selection.sel);
+          if (voice.engine !== config.engineNames.length) {
+            sharedVoices.set(selection.sel, { ...voice, params: { ...voice.params } });
+            invalidatedVoices.delete(selection.sel);
+          } else {
+            sharedVoices.delete(selection.sel);
+            invalidatedVoices.add(selection.sel);
+          }
           return voice;
         },
         setSoundEditsPaused(paused) {

@@ -28,6 +28,113 @@ test("FM-1 input relays only bounded note-on and note-off messages", async () =>
   assert.equal(parseKeyboardMessage(Uint8Array.from([0x90, 60, 100, 0])), null);
 });
 
+async function connectMockFm1() {
+  const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
+  const { connectFm1 } = await import("../web/src/rooms/device.js");
+  const mock = makeMockDevice({ auto: false });
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: { requestMIDIAccess: async () => mock.access },
+  });
+  const edits = [];
+  const performanceWaiters = [];
+  let device;
+  try {
+    device = await connectFm1(() => {}, () => {}, (...edit) => edits.push(edit), (performance) => {
+      performanceWaiters.shift()?.(performance);
+    });
+    await device.getPerformanceSnapshot();
+  } catch (error) {
+    if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+    else delete globalThis.navigator;
+    throw error;
+  }
+  return {
+    mock,
+    device,
+    edits,
+    waitForNextPerformance() {
+      return new Promise((resolve) => performanceWaiters.push(resolve));
+    },
+    close() {
+      device.close();
+      if (previousNavigator) Object.defineProperty(globalThis, "navigator", previousNavigator);
+      else delete globalThis.navigator;
+    },
+  };
+}
+
+test("FM-1 track switches require explicitly sharing the newly selected voice", async () => {
+  const fixture = await connectMockFm1();
+  try {
+    const { mock, device, edits } = fixture;
+    await device.getSelectedVoice();
+    let value = mock.state.tracks[0].p[68] + 1;
+    const firstEdit = [0, 68, value];
+    mock.sim.param(0, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [firstEdit]);
+
+    const refreshed = fixture.waitForNextPerformance();
+    mock.sim.track(1);
+    await refreshed;
+    value = mock.state.tracks[1].p[68] + 1;
+    mock.sim.param(1, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [firstEdit]);
+
+    const stillSharedValue = mock.state.tracks[0].p[68] + 1;
+    mock.sim.param(0, 68, stillSharedValue);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [firstEdit, [0, 68, stillSharedValue]]);
+
+    await device.getSelectedVoice();
+    value += 1;
+    mock.sim.param(1, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [
+      firstEdit,
+      [0, 68, stillSharedValue],
+      [1, 68, value],
+    ]);
+  } finally {
+    fixture.close();
+  }
+});
+
+test("FM-1 preset reloads require explicitly sharing the reloaded voice", async () => {
+  const fixture = await connectMockFm1();
+  try {
+    const { mock, device, edits } = fixture;
+    await device.getSelectedVoice();
+    let value = mock.state.tracks[0].p[68] + 1;
+    const firstEdit = [0, 68, value];
+    mock.sim.param(0, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [firstEdit]);
+
+    const refreshed = fixture.waitForNextPerformance();
+    mock.sim.reload();
+    await refreshed;
+    value = mock.state.tracks[0].p[68] + 1;
+    mock.sim.param(0, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [firstEdit]);
+
+    await device.getSelectedVoice();
+    value += 1;
+    mock.sim.param(0, 68, value);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.deepEqual(edits, [
+      firstEdit,
+      [0, 68, value],
+    ]);
+  } finally {
+    fixture.close();
+  }
+});
+
 test("FM-1 connection snapshots all factory tracks and routes keyboard notes", async () => {
   const { makeMockDevice } = await import("../web/src/editor/lib/proto.js");
   const { connectFm1 } = await import("../web/src/rooms/device.js");
