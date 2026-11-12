@@ -36,7 +36,7 @@ function Tabs() {
     <nav role="tablist" aria-orientation="vertical" onKeyDown={onKey} className="flex flex-col gap-0.5">
       {NAV.map(([head, tabs]) => (
         <div key={head} className="contents">
-          <div className="mt-4 mb-1 ml-3 text-dim uppercase opacity-80 first:mt-0">{t(head)}</div>
+          <div className="mt-4 mb-1 ml-4 text-dim uppercase opacity-80 first:mt-0">{t(head)}</div>
           {tabs.map(([tab, name, ic]) => (
             <button key={tab} type="button" role="tab" data-tab={tab} aria-selected={tab === want} tabIndex={tab === want ? 0 : -1}
               title={t("tabh_" + tab)} onClick={() => showTab(tab)}

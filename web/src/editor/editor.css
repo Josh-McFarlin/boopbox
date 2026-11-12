@@ -129,12 +129,15 @@
   .dim { color: var(--dim); }
   .bad { color: var(--red); }
   /* the icon font (html.fk: loaded) */
-  .ic { font-family: "Fukiai"; font-style: normal; font-weight: 400; font-synthesis: none; line-height: 1; margin-right: .4em;
-        -webkit-font-smoothing: antialiased; }
+  /* a fixed-width box, its glyph centred and lowered onto the text's middle (Fukiai draws above the pixel font's), so
+     the words after icons of different widths start in one column */
+  .ic { font-family: "Fukiai"; font-style: normal; font-weight: 400; font-synthesis: none; line-height: 1; margin-right: .45em;
+        -webkit-font-smoothing: antialiased; display: inline-block; width: 1.15em; text-align: center; vertical-align: -0.2em; }
   html:not(.fk) .ic { display: none; }
   /* wave choices: a page-drawn picker so the options carry an icon (Chrome 135+); native menus get words only */
   @supports (appearance: base-select) {
     select.wave, select.wave::picker(select) { appearance: base-select; }
+    select.wave { background-image: none !important; }   /* (it draws its own arrow) */
     select.wave > button { font: inherit; background: none; color: inherit; padding: 0; text-align: start; text-transform: none; }
     select.wave::picker(select) { border: 1px solid var(--s3); background: var(--bg); color: var(--fg); padding: 0; }
     select.wave option { padding: 2px 8px; min-block-size: 0; }
