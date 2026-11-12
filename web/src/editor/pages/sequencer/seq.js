@@ -22,8 +22,15 @@ export const drumView = () => drumGrid() && !!A.dev.dstepsOk;
 /* the page's own state: the selected step (v7), the piano roll (2.5), the MIDI file being imported, the drum paint */
 export const SQ = {
   sel: 0,
-  hl: -1,                 /* the row of the step list just jumped to (highlighted a moment) */
+  lane: -1,               /* the drum lane selected in the drum grid (its hit shows in the step inspector) */
+  last: null,             /* the last note used on this page: what a click on an empty step puts there */
+  added: -1,              /* the cell a click just filled (its double click must not take it away again) */
 };
+export const NEW_VEL = 100;                              /* a new note's velocity */
+export const defNote = () => SQ.last ?? (isDrum() ? 36 : 60);
+/* a step with nothing to play: REST, or NOTE with no notes (a TIE holds the step before it) */
+export const stepEmpty = (s) => !s || s.time === 2 || (s.time === 0 && !s.n);
+const REST = () => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0 });
 
 /* the row of the step list (its inputs) -> step i; v: {notes, time, acc, sl, vel} as typed. -> false: the notes are bad */
 export async function writeStep(i, v) {
@@ -36,7 +43,8 @@ export async function writeStep(i, v) {
   if (notes.length && !old.n && time === 2) time = 0;   /* typing notes into an empty step makes it play */
   const s = { n: notes.length, notes: all, time, flags: (v.acc ? 1 : 0) | (v.sl ? 2 : 0),
     vel: Math.max(0, Math.min(127, +v.vel || 0)), lvl: old.lvl, rat: old.rat };   /* v5: level / ratchet kept */
-  if (s.n && !s.vel) s.vel = 96;
+  if (s.n && !s.vel) s.vel = NEW_VEL;
+  if (notes.length) SQ.last = notes[notes.length - 1];
   stepEdit.set(i, performance.now());
   try {
     const r = parse[CMD.STEP_SET](await rq(req.stepSet(i, s)));
@@ -47,10 +55,76 @@ export async function writeStep(i, v) {
   return true;
 }
 
+/* step i becomes s at once (drawn now), then STEP_SET; a newer edit of the same step queued replaces this one (Link
+   coalesces by key), and only the last reply is kept */
+export async function putStep(i, s) {
+  const dev = A.dev;
+  if (!dev || !dev.steps[i]) return;
+  const old = dev.steps[i];
+  const v = { n: s.n, notes: s.notes.concat([0, 0, 0, 0]).slice(0, 4), time: s.time, flags: s.flags, vel: s.vel, lvl: old.lvl || 0, rat: old.rat || 0 };
+  dev.steps[i] = { ...old, ...v, index: i };
+  stepEdit.set(i, performance.now());
+  notify();
+  try {
+    const r = parse[CMD.STEP_SET](await rq(req.stepSet(i, v), { key: "step:" + i }));
+    if (dev !== A.dev || dev.link.hasQueued("step:" + i)) return;
+    dev.steps[i] = r;
+    notify();
+  } catch (err) { report(err); }
+}
+/* the notes a step plays (a REST or a TIE: none) */
+export const notesOf = (s) => (s && s.time === 0 ? s.notes.slice(0, s.n) : []);
+/* the notes of step i are `notes` now: none makes it a rest, some make it play (a new note at NEW_VEL) */
+export function setNotes(i, notes) {
+  const s = A.dev.steps[i];
+  if (!notes.length) { putStep(i, REST()); return; }
+  SQ.last = notes[notes.length - 1];
+  const was = !stepEmpty(s) && s.time === 0;
+  putStep(i, { n: notes.length, notes, time: 0, flags: was ? s.flags : 0, vel: was && s.vel ? s.vel : NEW_VEL });
+}
+/* a key of the inspector's piano: the note goes into the step's chord, or out of it (4 at most) */
+export function toggleNote(i, p) {
+  const cur = notesOf(A.dev.steps[i]);
+  if (cur.includes(p)) { setNotes(i, cur.filter((x) => x !== p)); return true; }
+  if (cur.length >= 4) return false;
+  setNotes(i, cur.concat(p));
+  return true;
+}
+/* the step's type: 0 NOTE (a step with no notes gets the last note used), 1 TIE, 2 REST (the notes are kept) */
+export function setTime(i, time) {
+  const s = A.dev.steps[i];
+  if (time === 0 && !s.n) { setNotes(i, [defNote()]); return; }
+  putStep(i, { ...s, notes: s.notes.slice(), time, vel: time === 0 && !s.vel ? NEW_VEL : s.vel });
+}
+export const setFlag = (i, bit, on) => { const s = A.dev.steps[i]; putStep(i, { ...s, notes: s.notes.slice(), flags: on ? s.flags | bit : s.flags & ~bit }); };
+export const setVel = (i, v) => { const s = A.dev.steps[i]; putStep(i, { ...s, notes: s.notes.slice(), vel: Math.max(0, Math.min(127, v | 0)) }); };
+export const restStep = (i) => { if (!stepEmpty(A.dev.steps[i])) putStep(i, REST()); };
+
+/* the step grid: a click on an empty step puts the last note used there (and selects it), on a step with notes it
+   selects it; a double click (not the one that just filled it) or Delete makes it a rest */
+let addedTimer = 0;
+const justAdded = (k) => { SQ.added = k; clearTimeout(addedTimer); addedTimer = setTimeout(() => { SQ.added = -1; }, 500); };
+export function gridClick(i) {
+  const dev = A.dev;
+  if (!dev || !dev.steps[i]) return;
+  SQ.sel = i;
+  if (stepEmpty(dev.steps[i])) { justAdded(i); setNotes(i, [defNote()]); } else notify();
+}
+export function gridDouble(i) {
+  if (SQ.added !== i) restStep(i);
+}
+/* the arrow keys: the selection moves by d steps */
+export function moveSel(d) {
+  SQ.sel = Math.max(0, Math.min(stepLen() - 1, SQ.sel + d));
+  notify();
+  return SQ.sel;
+}
+
 /* ---- SLOOP 2.5: LEN at hand, the piano roll of a synth track, MIDI files ---- */
-export const RV = { view: "grid", frac: 1 / 16, lo: null, rows: 25, trk: -1, drag: null, geo: null };   /* view: grid | roll */
-try { if (localStorage.getItem("sloop-seq-view") === "roll") RV.view = "roll"; } catch (e) { /* no storage */ }
-export const ROLL_ROW = 16, ROLL_LAB = 40;
+export const RV = { view: "grid", frac: 1 / 16, trk: -1, drag: null, geo: null };   /* view: grid (steps) | roll | list */
+try { const v = localStorage.getItem("sloop-seq-view"); if (["grid", "roll", "list"].includes(v)) RV.view = v; } catch (e) { /* no storage */ }
+/* the roll's pitches: C0 .. C8, scrolled inside its box */
+export const ROLL_ROW = 20, ROLL_LAB = 60, ROLL_LO = 12, ROLL_HI = 108;
 export const pDiv = () => pById("DIV", 30);
 export const curDiv = () => Math.max(0, Math.min(ROLL.DIV_PER_BAR.length - 1, A.dev.dump.p[pDiv()] | 0));
 const gBpm = () => { const dev = A.dev; const i = dev.gdesc.findIndex((d) => d && d.label === "BPM"); return i >= 0 ? dev.dump.g[i] : 120; };
@@ -66,17 +140,15 @@ export function setView(v) {
   try { localStorage.setItem("sloop-seq-view", v); } catch (e) { /* no storage */ }
   notify();
 }
-export function rollFit(len) {                           /* around the track's notes, the first time a track shows */
+/* the pitch the roll opens on (in the middle of its box): the middle of the track's notes, else between C3 and C5;
+   null when this track already showed (the box stays where the user scrolled it) */
+export function rollCenter(len) {
   const dev = A.dev, tr = dev.sel || 0;
-  if (RV.trk === tr && RV.lo != null) return;
+  if (RV.trk === tr) return null;
   RV.trk = tr;
   const ns = ROLL.chords(dev.steps, len).flatMap((c) => c.notes);
-  if (!ns.length) { RV.lo = 48; RV.rows = 25; return; }
-  const lo = Math.min(...ns), hi = Math.max(...ns);
-  RV.rows = Math.max(25, Math.min(49, hi - lo + 7));
-  RV.lo = Math.max(0, Math.min(128 - RV.rows, Math.round((lo + hi) / 2 - RV.rows / 2)));
+  return ns.length ? (Math.min(...ns) + Math.max(...ns)) / 2 : 60;
 }
-export function rollShift(d) { if (RV.lo != null) { RV.lo = Math.max(0, Math.min(128 - RV.rows, RV.lo + d)); notify(); } }
 export function rollNoteAt(h) {                          /* the chord (and its note) under the pointer */
   const dev = A.dev, own = ROLL.owner(dev.steps, h.i);
   if (own < 0) return null;
@@ -147,7 +219,7 @@ export async function midiImport() {
     }
     MIDI.MI = null;
     if (setlen) setLen(plan.len);
-    RV.lo = null;
+    RV.trk = -1;                                     /* (the roll opens on the new notes) */
     sayK("midiDone", String(plan.report.notes));
   } catch (err) { report(err); } finally { A.busy--; notify(); }
 }
@@ -230,15 +302,28 @@ export async function refreshLocks() {                   /* a STEP_CHANGED push:
    and one queued with the latest lanes (Link coalesces by key). */
 export const paint = { lvl: 0, rat: 0 };
 export function setPaint(k, v) { paint[k] = v; notify(); }
+/* the drum grid's clicks, as the step grid's: an empty cell gets a hit (the level / roll chosen above) and is selected,
+   a hit is selected (Shift: one level louder), a double click or Delete takes it away */
 export function drumClick(i, l, shift) {
   const dev = A.dev;
   if (!dev || !dev.dsteps[i]) return;
-  selectStep(i);
+  SQ.sel = i; SQ.lane = l;
+  const on = (dev.dsteps[i].on >> l) & 1;
+  if (on && shift) drumSet(i, l, { lvl: LV_ORDER[(LV_ORDER.indexOf(dev.dsteps[i].lvl[l]) + 1) % 4] });   /* louder, then GHOST again */
+  else if (on) notify();
+  else { justAdded(i * 16 + l); drumSet(i, l, { on: true, lvl: paint.lvl, rat: paint.rat }); }
+}
+export function drumDouble(i, l) {
+  if (SQ.added !== i * 16 + l) drumSet(i, l, { on: false });
+}
+/* lane l of drum step i: on or off, its level, its roll */
+export function drumSet(i, l, v) {
+  const dev = A.dev;
+  if (!dev || !dev.dsteps[i]) return;
   const d = { ...dev.dsteps[i], lvl: dev.dsteps[i].lvl.slice(), rat: dev.dsteps[i].rat.slice() };
-  const on = (d.on >> l) & 1;
-  if (on && shift) d.lvl[l] = LV_ORDER[(LV_ORDER.indexOf(d.lvl[l]) + 1) % 4];   /* louder, then GHOST again */
-  else if (on && d.lvl[l] === paint.lvl && d.rat[l] === paint.rat) { d.on &= ~(1 << l); d.lvl[l] = d.rat[l] = 0; }
-  else { d.on |= 1 << l; d.lvl[l] = paint.lvl; d.rat[l] = paint.rat; }
+  const on = v.on ?? !!((d.on >> l) & 1);
+  if (!on) { d.on &= ~(1 << l); d.lvl[l] = d.rat[l] = 0; }
+  else { d.on |= 1 << l; if (v.lvl != null) d.lvl[l] = v.lvl; if (v.rat != null) d.rat[l] = v.rat; }
   dev.dsteps[i] = d;
   dev.steps[i] = drumAsStep(d);
   stepEdit.set(i, performance.now());
