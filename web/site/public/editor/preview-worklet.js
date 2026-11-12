@@ -97,8 +97,17 @@ export class RoomFirmwareAudio {
   constructor(module) {
     this.players = Array.from({ length: 8 }, () => [new FirmwareAudio(module), new FirmwareAudio(module)]);
     this.active = Array.from({ length: 8 }, () => [false, false]);
+    this.mutedSlots = Array(8).fill(false);
+    this.soloSlot = null;
     this.left = new Float32Array(0);
     this.right = new Float32Array(0);
+  }
+  setMix(mutedSlots, soloSlot) {
+    if (!Array.isArray(mutedSlots) || mutedSlots.length !== 8
+      || !mutedSlots.every((muted) => typeof muted === "boolean")
+      || !(soloSlot === null || (Number.isInteger(soloSlot) && soloSlot >= 0 && soloSlot < 8))) return;
+    this.mutedSlots = [...mutedSlots];
+    this.soloSlot = soloSlot;
   }
   sync(slot, group, state) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length
@@ -147,15 +156,18 @@ export class RoomFirmwareAudio {
       this.left = new Float32Array(left.length);
       this.right = new Float32Array(right.length);
     }
-    const activePlayers = this.active.filter((groups) => groups.some(Boolean)).length;
+    const canHear = (slot) => !this.mutedSlots[slot] && (this.soloSlot === null || this.soloSlot === slot);
+    const activePlayers = this.active.filter((groups, slot) => canHear(slot) && groups.some(Boolean)).length;
     if (!activePlayers) return;
     const gain = 0.25 / Math.sqrt(activePlayers);
     for (let slot = 0; slot < this.players.length; slot += 1) {
+      const audible = canHear(slot);
       for (let group = 0; group < 2; group += 1) {
         if (!this.active[slot][group]) continue;
         this.left.fill(0);
         this.right.fill(0);
         this.players[slot][group].render(this.left, this.right);
+        if (!audible) continue;
         for (let frame = 0; frame < left.length; frame += 1) {
           left[frame] += this.left[frame] * gain;
           right[frame] += this.right[frame] * gain;
@@ -215,6 +227,7 @@ if (typeof registerProcessor === 'function') {
           else if (data.type === 'transport') this.dsp.transport(data.slot, data.tempo, data.playing, data.beat);
           else if (data.type === 'panic') this.dsp.panic(data.slot);
           else if (data.type === 'drop') this.dsp.drop(data.slot);
+          else if (data.type === 'mix') this.dsp.setMix(data.mutedSlots, data.soloSlot);
         } catch (error) { this.port.postMessage({ error: error.message }); }
       };
     }

@@ -290,6 +290,64 @@ test("pausing live sound edits preserves shared sounds while notes continue", as
   }
 });
 
+test("room names are unique and chat is live-only, bounded, and room-scoped", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const guest = createClient(app.url);
+    clients.push(owner, guest);
+    await Promise.all([owner.ready, guest.ready]);
+    const created = await createRoom(owner);
+    const ownerId = created.players[0].id;
+    assert.equal(created.players[0].name, "Player 1");
+
+    guest.send({ type: "join", roomId: created.room.id });
+    const joined = await guest.next("room_state");
+    const guestId = joined.players.find((player) => player.id !== ownerId).id;
+    assert.equal(joined.players.find((player) => player.id === guestId).name, "Player 2");
+
+    owner.send({ type: "set_name", name: "DJ_Alpha" });
+    await owner.next("player_name", (message) => message.playerId === ownerId && message.name === "DJ_Alpha");
+    await guest.next("player_name", (message) => message.playerId === ownerId && message.name === "DJ_Alpha");
+    guest.send({ type: "set_name", name: "dj_alpha" });
+    assert.equal((await guest.next("error")).code, "name_taken");
+    guest.send({ type: "set_name", name: "B_Side" });
+    await owner.next("player_name", (message) => message.playerId === guestId && message.name === "B_Side");
+    await guest.next("player_name", (message) => message.playerId === guestId && message.name === "B_Side");
+
+    owner.send({ type: "chat", text: "Try the next scene?\n<script>alert(1)</script> @B_Side" });
+    const sent = await owner.next("chat", (message) => message.playerId === ownerId);
+    const received = await guest.next("chat", (message) => message.playerId === ownerId);
+    assert.equal(sent.id, received.id);
+    assert.equal(sent.name, "DJ_Alpha");
+    assert.equal(sent.text, "Try the next scene?\n<script>alert(1)</script> @B_Side");
+    assert.ok(Number.isFinite(sent.sentAt));
+
+    const lateJoiner = createClient(app.url);
+    clients.push(lateJoiner);
+    await lateJoiner.ready;
+    lateJoiner.send({ type: "join", roomId: created.room.id });
+    await lateJoiner.next("room_state");
+    await assert.rejects(lateJoiner.next("chat", () => true, 100), /Timed out waiting for chat/);
+
+    for (let index = 0; index < 7; index += 1) {
+      const text = `Planning note ${index}`;
+      owner.send({ type: "chat", text });
+      await owner.next("chat", (message) => message.text === text);
+      await guest.next("chat", (message) => message.text === text);
+    }
+    owner.send({ type: "chat", text: "One too many" });
+    assert.equal((await owner.next("error")).code, "chat_rate_limited");
+    owner.send({ type: "chat", text: "x".repeat(501) });
+    assert.equal((await owner.next("error")).code, "invalid_chat");
+    owner.send({ type: "set_name", name: "@invalid" });
+    assert.equal((await owner.next("error")).code, "invalid_name");
+  } finally {
+    await app.close(clients);
+  }
+});
+
 test("room capacity is eight and only members can share typed notes", async () => {
   const app = await startRoomServer();
   const clients = [];

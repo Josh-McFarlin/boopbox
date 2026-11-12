@@ -94,6 +94,8 @@ export class RoomAudio {
     this.voices = new Array(PLAYERS).fill(null);
     this.performances = new Array(PLAYERS).fill(null);
     this.roomClocks = new Array(PLAYERS).fill(null);
+    this.mutedSlots = new Array(PLAYERS).fill(false);
+    this.soloSlot = null;
     this.queue = Promise.resolve();
     this.context = null;
     this.node = null;
@@ -140,6 +142,7 @@ export class RoomAudio {
       this.gain = this.context.createGain();
       this.gain.gain.value = 0.75;
       this.node.connect(this.gain).connect(this.context.destination);
+      this.syncMixSettings();
       await this.queue;
       for (let slot = 0; slot < this.performances.length; slot += 1) {
         if (this.performances[slot]) this.syncPerformance(slot);
@@ -286,10 +289,33 @@ export class RoomAudio {
     this.node?.port.postMessage({ type: "transport", slot, tempo, playing, beat });
   }
 
+  setPlayerMuted(slot, muted) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
+    this.mutedSlots[slot] = !!muted;
+    this.syncMixSettings();
+  }
+
+  setSoloPlayer(slot) {
+    if (slot !== null && (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS)) return;
+    this.soloSlot = slot;
+    this.syncMixSettings();
+  }
+
+  syncMixSettings() {
+    this.node?.port.postMessage({
+      type: "mix",
+      mutedSlots: [...this.mutedSlots],
+      soloSlot: this.soloSlot,
+    });
+  }
+
   removeVoice(slot) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
     this.voices[slot] = null;
     this.performances[slot] = null;
+    this.mutedSlots[slot] = false;
+    if (this.soloSlot === slot) this.soloSlot = null;
+    this.syncMixSettings();
     const next = this.queue.then(() => this.node?.port.postMessage({ type: "drop", slot }));
     this.queue = next.catch(() => {});
     return this.queue;

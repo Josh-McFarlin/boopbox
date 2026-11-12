@@ -10,9 +10,32 @@ const SHAREABLE_DRUM_KITS = new Set(config.shareableDrumKits);
 const MAX_BUFFERED_BYTES = 1024 * 1024;
 const MAX_PROTOCOL_ERRORS = 5;
 const MAX_ROOM_CREATES_PER_MINUTE = 3;
+const MAX_ROOM_NAME_LENGTH = 24;
+const MAX_CHAT_MESSAGE_LENGTH = 500;
+const MAX_CHAT_MESSAGES_PER_WINDOW = 8;
+const CHAT_RATE_WINDOW_MS = 10_000;
+const MAX_NAME_CHANGES_PER_MINUTE = 5;
 
 function isIntegerInRange(value, min, max) {
   return Number.isSafeInteger(value) && value >= min && value <= max;
+}
+
+function normalizeRoomName(value) {
+  if (typeof value !== "string" || /[\p{Cc}\p{Cf}]/u.test(value) || value.includes("@")) return null;
+  const name = value.normalize("NFC").trim();
+  if (!name || Array.from(name).length > MAX_ROOM_NAME_LENGTH || !/^[\p{L}\p{N}_-]+$/u.test(name)) return null;
+  return name;
+}
+
+function normalizeChatText(value) {
+  if (typeof value !== "string") return null;
+  const text = value.normalize("NFC").replace(/\r\n?/gu, "\n").trim();
+  if (!text || text.length > MAX_CHAT_MESSAGE_LENGTH || /[\u0000-\u0009\u000b-\u001f\u007f]/u.test(text)) return null;
+  return text;
+}
+
+function roomNameKey(value) {
+  return value.toLocaleLowerCase();
 }
 
 function normalizeParameters(engine, value) {
@@ -238,6 +261,7 @@ function createRoomService(server, options = {}) {
       players: [...room.players.values()].map((player) => ({
         id: player.id,
         slot: player.slot,
+        name: player.name,
         voice: player.voice,
         hasPerformance: !!player.performance,
       })),
@@ -341,6 +365,22 @@ function createRoomService(server, options = {}) {
     return null;
   }
 
+  function nameIsTaken(room, name, exceptPlayerId = null) {
+    const key = roomNameKey(name);
+    return [...room.players.values()].some((player) =>
+      player.id !== exceptPlayerId && player.name && roomNameKey(player.name) === key);
+  }
+
+  function defaultRoomName(room, slot) {
+    const base = `Player ${slot + 1}`;
+    if (!nameIsTaken(room, base)) return base;
+    for (let suffix = 2; suffix <= playerLimit + 1; suffix += 1) {
+      const candidate = `${base}-${suffix}`;
+      if (!nameIsTaken(room, candidate)) return candidate;
+    }
+    return `Player-${randomUUID().slice(0, 8)}`;
+  }
+
   function joinRoom(player, room) {
     if (room.players.size >= playerLimit) {
       sendError(player, "room_full");
@@ -351,6 +391,9 @@ function createRoomService(server, options = {}) {
     room.expiresAt = null;
     player.room = room;
     player.slot = findFreeSlot(room);
+    if (!player.name || nameIsTaken(room, player.name)) {
+      player.name = defaultRoomName(room, player.slot);
+    }
     player.voice = null;
     player.performance = null;
     player.soundEditsPaused = false;
@@ -421,6 +464,50 @@ function createRoomService(server, options = {}) {
         if (!validEnvelope(message, [])) return protocolError(player);
         leaveRoom(player);
         break;
+      case "set_name": {
+        if (!validEnvelope(message, ["name"])) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        const name = normalizeRoomName(message.name);
+        if (!name) return protocolError(player, "invalid_name");
+        if (nameIsTaken(player.room, name, player.id)) return sendError(player, "name_taken");
+        if (name === player.name) break;
+        const now = Date.now();
+        player.nameChanges = player.nameChanges.filter((time) => now - time < 60_000);
+        if (player.nameChanges.length >= MAX_NAME_CHANGES_PER_MINUTE
+          || now - player.lastNameChangeAt < 1000) return sendError(player, "name_rate_limited");
+        player.nameChanges.push(now);
+        player.lastNameChangeAt = now;
+        player.name = name;
+        broadcast(player.room, {
+          type: "player_name",
+          playerId: player.id,
+          slot: player.slot,
+          name,
+        });
+        break;
+      }
+      case "chat": {
+        if (!validEnvelope(message, ["text"])) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        const text = normalizeChatText(message.text);
+        if (!text) return protocolError(player, "invalid_chat");
+        const now = Date.now();
+        player.chatTimes = player.chatTimes.filter((time) => now - time < CHAT_RATE_WINDOW_MS);
+        if (player.chatTimes.length >= MAX_CHAT_MESSAGES_PER_WINDOW) {
+          return sendError(player, "chat_rate_limited");
+        }
+        player.chatTimes.push(now);
+        broadcast(player.room, {
+          type: "chat",
+          id: randomUUID(),
+          playerId: player.id,
+          slot: player.slot,
+          name: player.name,
+          text,
+          sentAt: now,
+        });
+        break;
+      }
       case "voice": {
         if (!validEnvelope(message, ["voice"])) return protocolError(player);
         if (!player.room) return sendError(player, "not_in_room");
@@ -645,6 +732,7 @@ function createRoomService(server, options = {}) {
       ws,
       room: null,
       slot: null,
+      name: null,
       voice: null,
       performance: null,
       soundEditsPaused: false,
@@ -656,6 +744,9 @@ function createRoomService(server, options = {}) {
       lastPerformanceAt: 0,
       lastTransportAt: 0,
       lastListAt: 0,
+      lastNameChangeAt: 0,
+      nameChanges: [],
+      chatTimes: [],
     };
     safeSend(ws, { type: "connected", playerId: player.id });
     sendRoomList(ws);

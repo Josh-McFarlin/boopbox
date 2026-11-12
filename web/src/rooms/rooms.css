@@ -287,6 +287,14 @@
   margin-top: 20px;
 }
 
+.room-social-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, .85fr) minmax(0, 1.15fr);
+  gap: 20px;
+  align-items: stretch;
+  margin-top: 20px;
+}
+
 .room-control-card {
   padding: 20px;
 }
@@ -337,8 +345,23 @@
   padding: 20px;
 }
 
-.player-list li {
-  justify-content: flex-start;
+.room-social-grid .player-list {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.room-mix-hint {
+  margin: 8px 0 0;
+  color: #b7a9ca;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.room-social-grid .player-list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
 }
 
 .player-badge {
@@ -354,14 +377,35 @@
 }
 
 .player-name {
-  min-width: 90px;
+  min-width: 0;
   color: #fff;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .player-voice {
-  margin-left: auto;
-  text-align: right;
+  grid-column: 2;
+  margin: -5px 0 0;
+  text-align: left;
+}
+
+.player-audio-controls {
+  display: flex;
+  grid-column: 2;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.player-audio-controls .button {
+  min-height: 44px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.player-current-note {
+  grid-column: 2;
+  color: #a99aba;
+  font-size: 12px;
 }
 
 .room-safety-note {
@@ -373,7 +417,8 @@
 
 @media (max-width: 760px) {
   .room-browser,
-  .room-controls {
+  .room-controls,
+  .room-social-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -409,14 +454,8 @@
     min-width: 74px;
   }
 
-  .player-list li {
-    flex-wrap: wrap;
-  }
-
-  .player-voice {
-    width: calc(100% - 48px);
-    margin: -8px 0 0 46px;
-    text-align: left;
+  .room-social-grid .player-list li {
+    grid-template-columns: 32px minmax(0, 1fr);
   }
 }
 

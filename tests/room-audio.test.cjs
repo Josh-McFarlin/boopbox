@@ -148,6 +148,17 @@ test("room audio maps all eight factory tracks onto two local firmware groups", 
     assert.equal(drumTrack.engine, 13);
     assert.equal(drumTrack.p[63], 5);
     assert.equal(audio.players[3][0].mock.state.tracks[0].preset, untouchedPreset);
+    audio.setPlayerMuted(1, true);
+    assert.deepEqual(messages.at(-1), {
+      type: "mix",
+      mutedSlots: [false, true, false, false, false, false, false, false],
+      soloSlot: null,
+    });
+    audio.setSoloPlayer(1);
+    assert.equal(messages.at(-1).soloSlot, 1);
+    audio.removeVoice(1);
+    assert.equal(audio.soloSlot, null);
+    assert.equal(audio.mutedSlots[1], false);
     await audio.close();
   } finally {
     if (originalDocument === undefined) delete global.document;
@@ -208,6 +219,25 @@ test("room firmware renders all eight tracks and sequenced patterns for eight me
     assert.equal(dsp.players[0].length, 2);
     assert.equal(dsp.active.filter((groups) => groups.some(Boolean)).length, 8);
     assert.ok(peak > 0.001, `expected rendered audio, peak was ${peak}`);
+
+    dsp.active = Array.from({ length: 8 }, () => [true, false]);
+    for (let slot = 0; slot < 8; slot += 1) {
+      dsp.players[slot][0].render = (outLeft, outRight) => {
+        outLeft.fill(slot + 1);
+        outRight.fill(slot + 1);
+      };
+    }
+    const isolatedLeft = new Float32Array(16);
+    const isolatedRight = new Float32Array(16);
+    dsp.setMix(Array(8).fill(false), 3);
+    dsp.render(isolatedLeft, isolatedRight);
+    assert.ok(Math.abs(isolatedLeft[0] - 1) < 1e-6, "solo renders only the selected member");
+
+    dsp.setMix([false, false, false, true, false, false, false, false], null);
+    dsp.render(isolatedLeft, isolatedRight);
+    const expectedWithoutMutedMember = 32 * 0.25 / Math.sqrt(7);
+    assert.ok(Math.abs(isolatedLeft[0] - expectedWithoutMutedMember) < 1e-6,
+      "mute removes one member from this listener's local mix");
   } finally {
     await audio?.close();
     if (originalDocument === undefined) delete global.document;

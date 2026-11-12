@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
 import { buildEmulatorPerformance, connectFm1 } from "./device.js";
+import RoomChat from "./chat-ui/RoomChat.jsx";
 import config from "../../../shared/room-config.json";
 import "../styles/site.css";
 import "./rooms.css";
@@ -22,6 +23,11 @@ const ERROR_TEXT = {
   unsupported_voice: "That sound isn't available to share.",
   unsupported_sound_edit: "That sound control isn't available to share.",
   invalid_performance: "The room rejected an unsupported performance update.",
+  invalid_name: "Use 1–24 letters, numbers, underscores, or hyphens for your room name.",
+  name_taken: "That room name is already in use.",
+  name_rate_limited: "Wait a moment before changing your room name again.",
+  invalid_chat: "The message was empty, too long, or included unsupported control characters.",
+  chat_rate_limited: "Chat is moving quickly. Wait a moment before sending another message.",
 };
 const ENGINE_LABELS = config.engineNames;
 
@@ -47,8 +53,12 @@ function RoomPage() {
   const [rooms, setRooms] = useState([]);
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [nameError, setNameError] = useState("");
   const [genre, setGenre] = useState(GENRES[0].id);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [mutedSlots, setMutedSlots] = useState([]);
+  const [soloSlot, setSoloSlot] = useState(null);
   const [fm1State, setFm1State] = useState("disconnected");
   const [soundEditsPaused, setSoundEditsPaused] = useState(false);
   const [deviceMode, setDeviceMode] = useState("fm1");
@@ -159,8 +169,20 @@ function RoomPage() {
         } else if (message.type === "rooms") {
           setRooms(Array.isArray(message.rooms) ? message.rooms.slice(0, config.maxRooms) : []);
         } else if (message.type === "room_state") {
+          const previousRoom = roomRef.current;
+          if (previousRoom?.id !== message.room?.id) {
+            setChatMessages([]);
+            setNameError("");
+            setMutedSlots([]);
+            setSoloSlot(null);
+            audioRef.current?.setSoloPlayer(null);
+          }
+          roomRef.current = message.room;
           setRoom(message.room);
           setPlayers(message.players || []);
+          const occupiedSlots = new Set((message.players || []).map((player) => player.slot));
+          setMutedSlots((current) => current.filter((slot) => occupiedSlots.has(slot)));
+          setSoloSlot((current) => current !== null && occupiedSlots.has(current) ? current : null);
           if (soundEditsPausedRef.current) send({ type: "sound_edit_sharing", paused: true });
           if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
           setStatus(`In a ${GENRES.find((item) => item.id === message.room.genre)?.label || "music"} room.`);
@@ -193,6 +215,12 @@ function RoomPage() {
           applyVoice({ id: message.playerId, slot: message.slot, voice: message.voice });
           setPlayers((current) => current.map((player) => player.id === message.playerId
             ? { ...player, voice: message.voice } : player));
+        } else if (message.type === "player_name") {
+          setPlayers((current) => current.map((player) => player.id === message.playerId
+            ? { ...player, name: message.name } : player));
+          if (message.playerId === selfPlayerIdRef.current) setNameError("");
+        } else if (message.type === "chat") {
+          setChatMessages((current) => [...current, message].slice(-100));
         } else if (message.type === "sound_edit") {
           if (message.playerId !== selfPlayerIdRef.current) {
             audioRef.current?.setSoundParameter(message.slot, message.track, message.param, message.value)
@@ -206,7 +234,12 @@ function RoomPage() {
         } else if (message.type === "note_off") {
           if (message.playerId !== selfPlayerIdRef.current) audioRef.current?.note(message.slot, message.track, message.note, false);
         } else if (message.type === "error") {
-          setError(ERROR_TEXT[message.code] || "The room server rejected that request.");
+          const errorText = ERROR_TEXT[message.code];
+          if (["invalid_name", "name_taken", "name_rate_limited"].includes(message.code)) {
+            setNameError(errorText || "That room name could not be used.");
+          } else {
+            setError(errorText || "The room server rejected that request.");
+          }
         } else if (message.type === "server_closing") {
           setStatus("The room server is restarting. Reconnecting…");
         }
@@ -218,6 +251,10 @@ function RoomPage() {
         setStatus("Room server disconnected. Reconnecting…");
         setRoom(null);
         setPlayers([]);
+        setChatMessages([]);
+        setNameError("");
+        setMutedSlots([]);
+        setSoloSlot(null);
         roomRef.current = null;
         voiceStateRef.current.clear();
         performanceStateRef.current.clear();
@@ -248,6 +285,8 @@ function RoomPage() {
       if (!audioRef.current) audioRef.current = new RoomAudio((err) => setError(err.message));
       await audioRef.current.start();
       setAudioEnabled(true);
+      for (const slot of mutedSlots) audioRef.current.setPlayerMuted(slot, true);
+      audioRef.current.setSoloPlayer(soloSlot);
       for (const saved of performanceStateRef.current.values()) saved.applied = false;
       reconcileRoomVoices(players);
       setStatus("Room audio is on. Connect an FM-1 or start the browser emulator to play.");
@@ -385,6 +424,36 @@ function RoomPage() {
     }
   };
 
+  const setRoomName = (name) => {
+    setNameError("");
+    if (!send({ type: "set_name", name })) setNameError("Wait for the room server to reconnect.");
+  };
+
+  const sendRoomChat = (text) => {
+    if (!send({ type: "chat", text })) setError("Wait for the room server to reconnect before sending.");
+  };
+
+  const togglePlayerMute = (slot) => {
+    const muted = mutedSlots.includes(slot);
+    const nextMuted = muted ? mutedSlots.filter((item) => item !== slot) : [...mutedSlots, slot];
+    setMutedSlots(nextMuted);
+    audioRef.current?.setPlayerMuted(slot, !muted);
+    if (!muted && soloSlot === slot) {
+      setSoloSlot(null);
+      audioRef.current?.setSoloPlayer(null);
+    }
+  };
+
+  const togglePlayerSolo = (slot) => {
+    const nextSolo = soloSlot === slot ? null : slot;
+    if (nextSolo !== null && mutedSlots.includes(nextSolo)) {
+      setMutedSlots(mutedSlots.filter((item) => item !== nextSolo));
+      audioRef.current?.setPlayerMuted(nextSolo, false);
+    }
+    setSoloSlot(nextSolo);
+    audioRef.current?.setSoloPlayer(nextSolo);
+  };
+
   const createRoom = () => {
     setError("");
     if (!send({ type: "create", genre })) setError("Wait for the room server to connect.");
@@ -404,6 +473,10 @@ function RoomPage() {
     setSoundEditsPaused(false);
     fm1Ref.current?.setSoundEditsPaused(false);
     setPlayers([]);
+    setChatMessages([]);
+    setNameError("");
+    setMutedSlots([]);
+    setSoloSlot(null);
     voiceStateRef.current.clear();
     performanceStateRef.current.clear();
     for (let slot = 0; slot < config.maxPlayers; slot += 1) audioRef.current?.removeVoice(slot);
@@ -498,17 +571,62 @@ function RoomPage() {
               </section>
             )}
 
-            <div className="player-list" aria-label="Players in this room">
-              <h3>Players</h3>
-              <ul>
-                {players.slice().sort((a, b) => a.slot - b.slot).map((player) => (
-                  <li key={player.id}>
-                    <span className="player-badge" aria-hidden="true">{player.slot + 1}</span>
-                    <span className="player-name">Player {player.slot + 1}</span>
-                    <span className="player-voice">{performanceLabel(player)}</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="room-social-grid">
+              <section className="player-list" aria-labelledby="room-players-title">
+                <h3 id="room-players-title">Players</h3>
+                <p className="room-mix-hint">
+                  Mute or solo only changes the browser-rendered room mix here. Your own FM-1 or emulator stays audible.
+                </p>
+                <ul>
+                  {players.slice().sort((a, b) => a.slot - b.slot).map((player) => {
+                    const isSelf = player.id === selfPlayerIdRef.current;
+                    const isMuted = mutedSlots.includes(player.slot);
+                    const isSolo = soloSlot === player.slot;
+                    const name = player.name || `Player ${player.slot + 1}`;
+                    const hasSharedSound = Number.isInteger(player.sharedTracks)
+                      ? player.sharedTracks > 0
+                      : !!player.voice;
+                    return (
+                      <li key={player.id}>
+                        <span className="player-badge" aria-hidden="true">{player.slot + 1}</span>
+                        <span className="player-name">{name}{isSelf ? " (you)" : ""}</span>
+                        <span className="player-voice">{performanceLabel(player)}</span>
+                        {!isSelf && (
+                          <span className="player-audio-controls">
+                            <button className="button button-secondary" type="button"
+                              aria-pressed={isMuted}
+                              aria-label={`${isMuted ? "Unmute" : "Mute"} ${name} in your room mix`}
+                              disabled={!audioEnabled || !hasSharedSound}
+                              onClick={() => togglePlayerMute(player.slot)}>
+                              {isMuted ? "Unmute" : "Mute"}
+                            </button>
+                            <button className="button button-secondary" type="button"
+                              aria-pressed={isSolo}
+                              aria-label={`${isSolo ? "Stop soloing" : "Solo"} ${name} in your room mix`}
+                              disabled={!audioEnabled || !hasSharedSound}
+                              onClick={() => togglePlayerSolo(player.slot)}>
+                              {isSolo ? "Stop solo" : "Solo"}
+                            </button>
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+              <RoomChat
+                players={players.map((player) => ({
+                  id: player.id,
+                  slot: player.slot,
+                  name: player.name || `Player ${player.slot + 1}`,
+                }))}
+                messages={chatMessages}
+                selfName={players.find((player) => player.id === selfPlayerIdRef.current)?.name || ""}
+                nameError={nameError}
+                connected={socketState === "connected" && !!room}
+                onSetName={setRoomName}
+                onSendMessage={sendRoomChat}
+              />
             </div>
             <p className="room-safety-note">
               Only factory synth presets, factory drum kits, and bounded musical controls and sequence data are shared. User samples and custom presets are not shared; raw MIDI, SysEx, arbitrary data, and audio streams are never relayed.
