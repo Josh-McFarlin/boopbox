@@ -2,7 +2,6 @@
 // (1.8) The BoopBox emulator page: the FM-1 drawn, its screen, LEDs, keys, buttons and knobs, played with the mouse,
 // a touch screen or the computer's keyboard (engine.js runs the firmware).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Strip } from "../shared/Brand.jsx";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import {
   B, BLACK, BTNMAP, BUTTONS, FIRMWARE, KEYMAP, KNOBMAP, KNOBS, NKEYS, NOTE, download, drawScreen, firmwareFromUrl,
@@ -104,11 +103,12 @@ function Knob({ name, e, send, value, onValue }) {
 /* which firmware runs: BoopBox or BoopBox Trainer (shown when the site has the trainer's WebAssembly) */
 function FirmwareSwitch({ fw, onPick, disabled }) {
   return (
-    <div role="radiogroup" aria-label="Firmware" className="inline-flex border border-line">
+    <div role="radiogroup" aria-label="Firmware" className="inline-flex flex-wrap gap-2.5">
       {Object.entries(FIRMWARE).map(([k, f]) => (
         <button key={k} type="button" role="radio" aria-checked={fw === k} disabled={disabled}
           onClick={() => fw !== k && onPick(k)}
-          className={`cursor-pointer border-0 px-3.5 py-1.5 text-[13px] ${fw === k ? "bg-orange font-semibold text-black" : "bg-tile text-fg"}`}>
+          className={`min-h-11 cursor-pointer px-4 font-pixel text-[18px] font-bold uppercase ${fw === k
+            ? "border-0 bg-orange text-ink shadow-[4px_4px_0_var(--color-blue)]" : "border-[3px] border-line bg-transparent text-body hover:text-fg"}`}>
           {f.label}</button>
       ))}
     </div>
@@ -253,18 +253,19 @@ export default function Emulator() {
     else { bottom.push(key); wi++; }
   }
   const btn = (name) => <PanelButton key={name} name={name} led={leds[B[name]]} send={send} latched={latched} />;
-  const help = "text-fg font-semibold";
+  const help = "font-pixel text-[17px] font-bold text-fg";
 
   return (
     <>
     <SiteHeader current="emu" />
     <main className="mx-auto max-w-[1280px] px-4 pt-6 pb-12">
-      <h1 className="m-0 mb-1.5 text-[13px] font-medium uppercase tracking-[.12em] text-dim">BoopBox emulator</h1>
-      <p className="mb-[18px] max-w-[46em] text-[17px] leading-[1.35] min-[481px]:text-[19px]">The real BoopBox firmware, running in your browser:
+      <p className="m-0 mb-3 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue">▶ Play it</p>
+      <h1 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold min-[600px]:text-[52px]">BoopBox emulator</h1>
+      <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">The real BoopBox firmware, running in your browser:
         the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
-      <Strip className="mb-5" />
       {hasTrainer ? (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-dim">
+        <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 text-[14px] text-dim">
+          <span className="font-pixel text-[18px] text-dim">SELECT GAME</span>
           <FirmwareSwitch fw={fw} onPick={pick} disabled={starting} />
           <span>{fw === "trainer"
             ? "Lessons that teach three songs on the FM-1. Hold HOME for the level picker."
@@ -301,26 +302,27 @@ export default function Emulator() {
           </div>
         </div>
         {!on ? (
-          <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 rounded-[24px] bg-[#0b0b0dcc] p-4 text-center">
+          <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-4 rounded-[24px] bg-[#160d2bcc] p-4 text-center">
             <button type="button" disabled={starting} onClick={() => power()}
-              className="cursor-pointer border-0 bg-orange px-8 py-4 text-[15px] font-semibold uppercase leading-none tracking-[.08em] text-black">
-              {starting ? "Starting…" : "Power on"}</button>
-            <p className="m-0 text-[13px] text-dim">Sound needs a click to start. Best with headphones.</p>
+              className="arcade-btn min-h-[60px] bg-green px-9 text-[24px] [--shadow:var(--color-orange)]">
+              {starting ? "Starting…" : "▶ Power on"}</button>
+            <p className="m-0 text-[14px] text-body">Sound needs a click to start. Best with headphones.</p>
           </div>
         ) : null}
       </div>
 
-      <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-dim">
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] text-dim">
         <span className="mr-auto">{saved}</span>
-        <button type="button" className="cursor-pointer border border-line bg-tile px-3 py-1.5 text-fg" onClick={() => send({ t: "flash" })}>Download the flash</button>
-        <button type="button" className="cursor-pointer border border-line bg-tile px-3 py-1.5 text-fg" onClick={async () => {
+        <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={() => send({ t: "flash" })}>Download the flash</button>
+        <button type="button" className="pixel-panel min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue" onClick={async () => {
           if (!confirm(`Erase everything ${FIRMWARE[fw].label} saved in this browser (projects, songs, presets, settings${fw === "trainer" ? ", lesson progress" : ""})?`)) return;
           await flashErase(fw);
           location.reload();
         }}>Erase what is saved</button>
       </div>
 
-      <div className="mt-[26px] grid grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-x-[22px] gap-y-1.5 text-[13px] text-dim">
+      <h2 className="m-0 mt-10 mb-4 font-pixel text-[28px] leading-none text-green">HOW TO PLAY</h2>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3 text-[14px] leading-[1.75] text-body [&>div]:pixel-panel [&>div]:p-4">
         <div><b className={help}>Keys</b>: click them (lower on a key plays harder, with MENU › KEYS › VELOCITY on), or{" "}
           <kbd>Z</kbd> <kbd>S</kbd> <kbd>X</kbd> … <kbd>'</kbd> from F3 and <kbd>Q</kbd> <kbd>W</kbd> <kbd>3</kbd> … <kbd>Y</kbd> up to G5. On a phone, swipe the case under the keys to scroll them.</div>
         <div><b className={help}>Buttons</b>: hold them for their layer. <kbd>Shift</kbd>-click keeps one held, so the keyboard can play its
@@ -330,7 +332,7 @@ export default function Emulator() {
         <div><b className={help}>More buttons</b>: <kbd>1</kbd> FX, <kbd>2</kbd> SEL, <kbd>5</kbd> ENV, <kbd>7</kbd> LFO, <kbd>8</kbd> EDIT,{" "}
           <kbd>9</kbd> GLO, <kbd>0</kbd> SAVE, <kbd>-</kbd> ARP, <kbd>=</kbd> SEQ.</div>
       </div>
-      <p className="mt-[22px] text-[12.5px] text-dim">The panel is drawn, not photographed, to the FM-1's own layout and proportions. Not here:
+      <p className="mt-8 text-[13px] text-dim">The panel is drawn, not photographed, to the FM-1's own layout and proportions. Not here:
         USB and MIDI, USB audio, the web editor's link, your own samples, the keys' own velocity sensing. After JIANT FM's
         emulator. <a href="../installer/">Install BoopBox on your FM-1</a> · GPL-3.0.</p>
     </main>

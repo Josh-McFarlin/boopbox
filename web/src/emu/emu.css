@@ -2,10 +2,10 @@
    The emulator page: the site's Tailwind theme, plus the FM-1 itself. The panel is laid out as the real device is:
    every size and place below is in --u, one unit being one pixel of an 840-unit-wide FM-1 (its photo, measured),
    so the whole panel scales with the width it is given and keeps the device's proportions. On a phone the same parts
-   stack (the screen first, then the knobs and buttons, the keys at the bottom). */
+   stack (the screen first, then the knobs and buttons, the keys at the bottom). The panel keeps the FM-1's own colours
+   (its grey case, black rubber, orange LEDs: --led) whatever the page around it looks like. */
 @import "../styles/site.css";
 
-:root { --bg: #0b0b0d; }
 
 @layer components {
   .fm1-wrap { container-type: inline-size; }
@@ -14,7 +14,7 @@
   .fm1 {
     --u: calc(100cqw / 840);
     --case: #3a3a3d; --case-hi: #47474b; --case-lo: #2f2f32;
-    --well: #29292b; --rubber: #1d1d1f; --rubber-hi: #2c2c2f; --ink: #c8c8cc;
+    --well: #29292b; --rubber: #1d1d1f; --rubber-hi: #2c2c2f; --ink: #c8c8cc; --led: #ff621a;
     position: relative; display: grid; aspect-ratio: 840 / 500; padding: calc(30 * var(--u)) calc(27 * var(--u)) calc(28 * var(--u));
     grid-template-columns: calc(188 * var(--u)) calc(200 * var(--u)) 1fr;
     grid-template-rows: calc(255 * var(--u)) 1fr;
@@ -90,17 +90,17 @@
     box-shadow: 0 0 0 1px #0c0c0d, 0 calc(2 * var(--u)) 0 #0c0c0d, 0 1px 0 #3d3d41 inset; transition: transform .03s; }
   .fm1-btn .play { padding-bottom: calc(1.5 * var(--u)); margin-bottom: calc(1.5 * var(--u)); border-bottom: calc(1.3 * var(--u)) solid currentColor; }
   .fm1-btn[data-led="1"] { color: #ffb48a; }
-  .fm1-btn[data-led="2"] { color: #fff; background: linear-gradient(#ff8a4c, var(--color-orange)); text-shadow: 0 0 4px #7a2a00;
+  .fm1-btn[data-led="2"] { color: #fff; background: linear-gradient(#ff8a4c, var(--led)); text-shadow: 0 0 4px #7a2a00;
     box-shadow: 0 0 0 1px #0c0c0d, 0 calc(2 * var(--u)) 0 #0c0c0d, 0 0 calc(14 * var(--u)) #ff621a88; }
   /* the duty layers: half lit (3), breathing up to lit (4; the sound browser's HOME and SAVE) */
   .fm1-btn[data-led="3"], .fm1-btn[data-led="4"] { color: #fff; isolation: isolate; }
   .fm1-btn[data-led="3"]::before, .fm1-btn[data-led="4"]::before { content: ""; position: absolute; inset: 0; z-index: -1;
-    border-radius: inherit; background: linear-gradient(#ff8a4c, var(--color-orange)); opacity: .45; pointer-events: none; }
+    border-radius: inherit; background: linear-gradient(#ff8a4c, var(--led)); opacity: .45; pointer-events: none; }
   .fm1-btn[data-led="4"]::before { animation: fm1-breathe 2.4s ease-in-out infinite; }
   @keyframes fm1-breathe { 0%, 100% { opacity: .1; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .fm1-btn[data-led="4"]::before { animation: none; opacity: 1; } }
   .fm1-btn.down, .fm1-btn.held { transform: translateY(calc(2 * var(--u))); box-shadow: 0 0 0 1px #0c0c0d, 0 1px 0 #3d3d41 inset; }
-  .fm1-btn.held { outline: calc(2 * var(--u)) solid var(--color-orange); outline-offset: calc(2 * var(--u)); }
+  .fm1-btn.held { outline: calc(2 * var(--u)) solid var(--led); outline-offset: calc(2 * var(--u)); }
   .fm1-btn:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
 
   /* ---- the keybed: two rows of rubber pills, each with its light strip; the upper row sits over the gaps */
@@ -144,5 +144,5 @@
   .fm1-cap .fm1-hint { top: calc(100% + 7 * var(--u)); left: 50%; transform: translateX(-50%); font-size: calc(8 * var(--u)); }
   @container (max-width: 639px) { .fm1-hint { display: none !important; } }
 
-  kbd { @apply border border-line px-1 font-mono text-[11px] font-semibold text-fg; }
+  kbd { @apply bg-deep px-1.5 py-px font-mono text-[12px] font-bold text-blue; box-shadow: inset 0 0 0 2px var(--line); }
 }
