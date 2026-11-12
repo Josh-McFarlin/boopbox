@@ -353,6 +353,7 @@ function createRoomService(server, options = {}) {
     player.slot = findFreeSlot(room);
     player.voice = null;
     player.performance = null;
+    player.soundEditsPaused = false;
     room.players.set(player.id, player);
     safeSend(player.ws, roomState(room));
     sendPerformances(room, player.ws);
@@ -449,6 +450,7 @@ function createRoomService(server, options = {}) {
         if (!range || !isIntegerInRange(message.value, range[0], range[1])) {
           return protocolError(player, "unsupported_sound_edit");
         }
+        if (player.soundEditsPaused) break;
         if (player.performance) {
           const track = player.performance.tracks[message.track];
           track.voice = {
@@ -472,6 +474,14 @@ function createRoomService(server, options = {}) {
         });
         break;
       }
+      case "sound_edit_sharing": {
+        if (!validEnvelope(message, ["paused"]) || typeof message.paused !== "boolean") {
+          return protocolError(player);
+        }
+        if (!player.room) return sendError(player, "not_in_room");
+        player.soundEditsPaused = message.paused;
+        break;
+      }
       case "performance": {
         if (!validEnvelope(message, ["performance"])) return protocolError(player);
         if (!player.room) return sendError(player, "not_in_room");
@@ -485,6 +495,20 @@ function createRoomService(server, options = {}) {
           room.anchorBeat += (now - room.anchorAt) * room.tempo / 60_000;
           room.anchorAt = now;
           room.tempo = performance.tempo;
+        }
+        if (player.soundEditsPaused && player.performance) {
+          for (let track = 0; track < performance.tracks.length; track += 1) {
+            const currentVoice = player.performance.tracks[track].voice;
+            const nextVoice = performance.tracks[track].voice;
+            if (!currentVoice || !nextVoice || currentVoice.engine !== nextVoice.engine
+              || currentVoice.preset !== nextVoice.preset || currentVoice.kit !== nextVoice.kit) continue;
+            const allowlist = config.shareableParameters[currentVoice.engine] || {};
+            for (const parameter of Object.keys(allowlist)) {
+              if (Object.hasOwn(currentVoice.params || {}, parameter)) {
+                nextVoice.params = { ...(nextVoice.params || {}), [parameter]: currentVoice.params[parameter] };
+              }
+            }
+          }
         }
         player.performance = performance;
         player.voice = performance.tracks.find((track) => track.voice)?.voice || null;
@@ -623,6 +647,7 @@ function createRoomService(server, options = {}) {
       slot: null,
       voice: null,
       performance: null,
+      soundEditsPaused: false,
       activeNotes: new Map(),
       messageTimes: [],
       createTimes: [],

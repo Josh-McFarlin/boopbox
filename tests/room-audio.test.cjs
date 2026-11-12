@@ -60,6 +60,14 @@ test("FM-1 connection snapshots all factory tracks and routes keyboard notes", a
     mock.sim.knob(5, 4);
     await new Promise((resolve) => setTimeout(resolve, 20));
     assert.deepEqual(edits, [[0, 68, mock.state.tracks[0].p[68]]]);
+    device.setSoundEditsPaused(true);
+    mock.sim.knob(68, 4);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(edits.length, 1);
+    device.setSoundEditsPaused(false);
+    mock.sim.knob(68, 4);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(edits.length, 2);
     mock.state.tracks[0].engine = 9;
     mock.state.tracks[0].preset = 0;
     mock.state.tracks[0].p[70] = 8;

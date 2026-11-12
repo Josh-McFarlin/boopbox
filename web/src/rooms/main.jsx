@@ -50,6 +50,7 @@ function RoomPage() {
   const [genre, setGenre] = useState(GENRES[0].id);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [fm1State, setFm1State] = useState("disconnected");
+  const [soundEditsPaused, setSoundEditsPaused] = useState(false);
   const [deviceMode, setDeviceMode] = useState("fm1");
   const [emulatorReady, setEmulatorReady] = useState(false);
   const [status, setStatus] = useState("Connecting to the room server…");
@@ -63,6 +64,7 @@ function RoomPage() {
   const emulatorHasPerformanceRef = useRef(false);
   const audioRef = useRef(null);
   const roomRef = useRef(room);
+  const soundEditsPausedRef = useRef(soundEditsPaused);
   const voiceStateRef = useRef(new Map());
   const performanceStateRef = useRef(new Map());
   const heldRef = useRef(new Set());
@@ -159,6 +161,7 @@ function RoomPage() {
         } else if (message.type === "room_state") {
           setRoom(message.room);
           setPlayers(message.players || []);
+          if (soundEditsPausedRef.current) send({ type: "sound_edit_sharing", paused: true });
           if (message.clock) audioRef.current?.setTempo(message.clock.tempo);
           setStatus(`In a ${GENRES.find((item) => item.id === message.room.genre)?.label || "music"} room.`);
           const currentIds = new Set((message.players || []).map((player) => player.id));
@@ -267,7 +270,7 @@ function RoomPage() {
         setFm1State(state);
         if (state === "disconnected") stopAllNotes();
       }, (track, param, value) => {
-        if (roomRef.current) send({ type: "sound_edit", track, param, value });
+        if (roomRef.current && !soundEditsPausedRef.current) send({ type: "sound_edit", track, param, value });
       }, (performance) => {
         if (roomRef.current && !send({ type: "performance", performance })) {
           setError("Wait for the room server to reconnect.");
@@ -370,6 +373,18 @@ function RoomPage() {
     }
   };
 
+  const toggleSoundEditSharing = () => {
+    const paused = !soundEditsPausedRef.current;
+    soundEditsPausedRef.current = paused;
+    setSoundEditsPaused(paused);
+    fm1Ref.current?.setSoundEditsPaused(paused);
+    if (roomRef.current && !send({ type: "sound_edit_sharing", paused })) {
+      setError("Wait for the room server to reconnect.");
+    } else {
+      setError("");
+    }
+  };
+
   const createRoom = () => {
     setError("");
     if (!send({ type: "create", genre })) setError("Wait for the room server to connect.");
@@ -385,6 +400,9 @@ function RoomPage() {
     setEmulatorReady(false);
     emulatorHasPerformanceRef.current = false;
     setRoom(null);
+    soundEditsPausedRef.current = false;
+    setSoundEditsPaused(false);
+    fm1Ref.current?.setSoundEditsPaused(false);
     setPlayers([]);
     voiceStateRef.current.clear();
     performanceStateRef.current.clear();
@@ -449,6 +467,17 @@ function RoomPage() {
                         disabled={fm1State !== "connected"}>Sync full performance</button>
                     </>
                   )}
+                </div>
+                <div className="control-row">
+                  <button className="button button-secondary" type="button" onClick={toggleSoundEditSharing}
+                    aria-pressed={soundEditsPaused}>
+                    {soundEditsPaused ? "Resume live sound edits" : "Pause live sound edits"}
+                  </button>
+                  <p className="emulator-sync-status" role="status" aria-live="polite">
+                    {soundEditsPaused
+                      ? "Live sound edits are paused. Shared sounds, notes, and playback continue."
+                      : "Live sound edits are shared automatically."}
+                  </p>
                 </div>
                 {deviceMode === "emulator" && (
                   <p className="emulator-sync-status" role="status" aria-live="polite">

@@ -140,6 +140,7 @@ export async function connectFm1(
     const link = new Link((data) => pair.output.send(data), { timeout: 400 });
     let sharedVoices = new Map();
     let selectedTrack = 0;
+    let soundEditsPaused = false;
     const heldTrackByNote = new Map();
     let keepalive = null;
     let performanceTimer = null;
@@ -175,6 +176,7 @@ export async function connectFm1(
       if (!sharedVoice) return;
       const range = config.shareableParameters[sharedVoice.engine]?.[change.id];
       if (!range || !Number.isSafeInteger(change.value) || change.value < range[0] || change.value > range[1]) return;
+      if (soundEditsPaused) return;
       sharedVoice.params[change.id] = change.value;
       onParameter(change.track, change.id, change.value);
     };
@@ -307,6 +309,9 @@ export async function connectFm1(
           if (voice.engine !== config.engineNames.length) sharedVoices.set(selection.sel, { ...voice, params: { ...voice.params } });
           else sharedVoices.delete(selection.sel);
           return voice;
+        },
+        setSoundEditsPaused(paused) {
+          soundEditsPaused = !!paused;
         },
         getPerformanceSnapshot: refreshPerformance,
       };

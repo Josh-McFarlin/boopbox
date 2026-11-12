@@ -252,6 +252,44 @@ test("rooms share validated sound edits and retain them for later participants",
   }
 });
 
+test("pausing live sound edits preserves shared sounds while notes continue", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const peer = createClient(app.url);
+    clients.push(owner, peer);
+    await Promise.all([owner.ready, peer.ready]);
+    const created = await createRoom(owner);
+    peer.send({ type: "join", roomId: created.room.id });
+    await peer.next("room_state");
+
+    const original = roomPerformance();
+    original.tracks[0].voice.params[68] = 92;
+    owner.send({ type: "performance", performance: original });
+    const initial = await peer.next("performance");
+    assert.equal(initial.performance.tracks[0].voice.params[68], 92);
+
+    owner.send({ type: "sound_edit_sharing", paused: true });
+    owner.send({ type: "sound_edit", track: 0, param: 68, value: 100 });
+    await new Promise((resolve) => setTimeout(resolve, 1050));
+    const editedWhilePaused = roomPerformance();
+    editedWhilePaused.tracks[0].voice.params[68] = 100;
+    owner.send({ type: "performance", performance: editedWhilePaused });
+    const pausedSnapshot = await peer.next("performance");
+    assert.equal(pausedSnapshot.performance.tracks[0].voice.preset, 2);
+    assert.equal(pausedSnapshot.performance.tracks[0].voice.params[68], 92);
+
+    owner.send({ type: "note_on", track: 0, note: 61, velocity: 100 });
+    assert.equal((await peer.next("note_on")).note, 61);
+    owner.send({ type: "sound_edit_sharing", paused: false });
+    owner.send({ type: "sound_edit", track: 0, param: 68, value: 100 });
+    assert.equal((await peer.next("sound_edit")).value, 100);
+  } finally {
+    await app.close(clients);
+  }
+});
+
 test("room capacity is eight and only members can share typed notes", async () => {
   const app = await startRoomServer();
   const clients = [];
