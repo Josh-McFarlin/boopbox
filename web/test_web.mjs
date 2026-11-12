@@ -1527,7 +1527,7 @@ function editorTabs() {
   const pagesSrc = readFileSync(join(HERE, "src/editor/pages/index.js"), "utf8");
   const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.jsx";/gm)].map((x) => [x[1], x[2]]));
   const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/editor/pages", f + ".jsx"), "utf8")));
-  ok(TABS.length === 13 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
+  ok(TABS.length === 10 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
     `editor: ${TABS.length} tabs, one page each (${TABS.join(" ")})${stubs.length ? ", stubs: " + stubs : ""}`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(tabsSrc) && /try \{ localStorage/.test(tabsSrc) && /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc)
     && /addEventListener\("hashchange"/.test(tabsSrc), "editor: last tab in localStorage (try/catch) and in the URL hash");

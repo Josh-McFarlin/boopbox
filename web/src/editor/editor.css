@@ -2,9 +2,10 @@
    The editor: the FM-1's screen on a big display, in the site's "pocket arcade" look. The night indigo and purples of
    the device's SYNTHWAVE theme (firmware/src/gfx.c SYNTH_BG, SYNTH_G), its eight track colours (SYNTH_TRK, SYNTH_TRK2),
    the device's own Terminus pixel font (tools/gen_webfont.py), 16 px and 32 px only so every pixel stays sharp, and the
-   site's Pixelify Sans for the page and card titles. The accent (--trk) is the selected track's colour, as the curves
-   on the device. Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay
-   hidden until it has loaded.
+   site's Pixelify Sans for the page and card titles, DM Sans for the help text (sentences read better in it). Two
+   accents: --acc, fixed, for the interface's own state (the page's title, a pressed toggle, a primary button, the
+   focus ring); --trk, the selected track's colour, only where a track shows (its chip, its steps, its strip).
+   Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay hidden until it has loaded.
 
    Tailwind: the palette is the theme (bg-s1, text-dim, border-line, text-trk, bg-t3 ...), the pages use utilities.
    Native controls (buttons, selects, fields, sliders, checkboxes) get the device's look once, below in @layer base,
@@ -21,13 +22,16 @@
   /* the tracks: cyan, magenta, sunset orange, violet; 5..8 periwinkle, rose, gold, orchid (gfx.c SYNTH_TRK, SYNTH_TRK2) */
   --t1: #00e4ff; --t2: #ff2cd4; --t3: #ff8c38; --t4: #a060ff; --trk: var(--t1);
   --t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;
+  --acc: var(--t1);
   --font: "BoopBox Terminus", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  --text-face: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   color-scheme: dark;
 }
 
 @theme inline {
   --font-mono: var(--font);
   --font-sans: var(--font);
+  --font-text: var(--text-face);
   --color-bg: var(--bg);
   --color-s1: var(--s1);
   --color-s2: var(--s2);
@@ -38,6 +42,7 @@
   --color-fg: var(--fg);
   --color-red: var(--red);
   --color-trk: var(--trk);
+  --color-acc: var(--acc);
   --color-c: var(--c);
   --color-t1: var(--t1); --color-t2: var(--t2); --color-t3: var(--t3); --color-t4: var(--t4);
   --color-t5: var(--t5); --color-t6: var(--t6); --color-t7: var(--t7); --color-t8: var(--t8);
@@ -45,7 +50,7 @@
   --text-px--line-height: 20px;
   --text-big: 32px;
   --text-big--line-height: 32px;
-  --breakpoint-wide: 861px;
+  --breakpoint-wide: 1000px;   /* the editor is for a desktop: narrower, App.jsx shows a note instead */
 }
 
 @layer base {
@@ -57,7 +62,9 @@
   /* the page's and the cards' titles: the site's pixel display face (bundled by the site header) */
   h1.text-big, h2.text-big { font-family: "Pixelify Sans", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
                              font-variant-ligatures: none; }
-  ::selection { background: var(--trk); color: #000; }
+  /* help text: sentences in DM Sans (the values, labels and buttons stay in the device's pixel font) */
+  p, .help { font-family: var(--text-face); font-size: 15px; line-height: 22px; -webkit-font-smoothing: antialiased; text-rendering: auto; }
+  ::selection { background: var(--acc); color: #000; }
   [hidden] { display: none !important; }
   label { white-space: nowrap; }
   table { border-collapse: collapse; }
@@ -68,27 +75,30 @@
   button { font: inherit; color: var(--fg); background: var(--s2); border: 0; padding: 6px 12px; cursor: pointer;
            white-space: nowrap; text-transform: lowercase; }
   button:hover:not(:disabled) { background: var(--s3); }
-  button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--trk); outline-offset: 1px; }
-  button:disabled { color: var(--s3); background: var(--s1); cursor: default; }
-  button.pri { background: var(--trk); color: #000; }
+  button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+  /* disabled: still readable (its title says why it is off), never the colour of the background */
+  button:disabled { color: var(--dim); background: var(--s1); opacity: .6; cursor: not-allowed; }
+  button.pri { background: var(--acc); color: #000; }
   button.pri:hover:not(:disabled) { background: var(--fg); }
-  button.pri:disabled { background: var(--s2); color: var(--s3); }
+  button.pri:disabled { background: var(--s2); color: var(--dim); }
   button.warn:hover:not(:disabled) { background: var(--red); color: #000; }
   button:disabled .ic { opacity: .5; }
   select, input[type=text], input[type=number], input[type=search] {
     font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--s3); padding: 3px 6px; border-radius: 0; min-width: 0; }
   select { appearance: none; padding-right: 22px; cursor: pointer;
-           background: var(--bg) linear-gradient(45deg, transparent 50%, var(--dim) 50%) no-repeat calc(100% - 9px) 55% / 5px 5px,
-                       linear-gradient(-45deg, transparent 50%, var(--dim) 50%) no-repeat calc(100% - 4px) 55% / 5px 5px; }
+           background: var(--bg) linear-gradient(45deg, transparent 50%, var(--fg2) 50%) no-repeat calc(100% - 13px) 55% / 6px 6px,
+                       linear-gradient(-45deg, transparent 50%, var(--fg2) 50%) no-repeat calc(100% - 7px) 55% / 6px 6px;
+           padding-right: 26px; }
+  select:hover:not(:disabled) { border-color: var(--dim); }
   select[size], select[multiple] { background: var(--bg); padding: 0; }
   select option { background: var(--bg); color: var(--fg); }
   select[size] option { padding: 2px 8px; }
-  select[size] option:checked { background: var(--trk); color: #000; }
+  select[size] option:checked { background: var(--acc); color: #000; }
   input[type=search] { padding-left: 8px; }
   input::placeholder { color: var(--s3); }
   input[type=checkbox] { appearance: none; width: 16px; height: 16px; margin: 0; border: 1px solid var(--dim); background: var(--bg);
                          vertical-align: -3px; cursor: pointer; display: inline-grid; place-content: center; }
-  input[type=checkbox]:checked { background: var(--trk); border-color: var(--trk); }
+  input[type=checkbox]:checked { background: var(--acc); border-color: var(--acc); }
   input[type=checkbox]:checked::after { content: ""; width: 8px; height: 8px; background: #000; }
   /* a slider: a thin bar filled to the value (--a .. --p, set by the page), a small white handle; no native chrome */
   input[type=range] { appearance: none; -webkit-appearance: none; width: 100%; height: 16px; margin: 0; background: transparent; cursor: pointer; }
@@ -101,8 +111,8 @@
   input[type=range]:disabled { opacity: .3; }
   progress { appearance: none; -webkit-appearance: none; height: 6px; border: 0; background: var(--s3); vertical-align: middle; }
   progress::-webkit-progress-bar { background: var(--s3); }
-  progress::-webkit-progress-value { background: var(--trk); }
-  progress::-moz-progress-bar { background: var(--trk); }
+  progress::-webkit-progress-value { background: var(--acc); }
+  progress::-moz-progress-bar { background: var(--acc); }
 }
 
 @layer components {
@@ -112,7 +122,7 @@
   /* toggles: a segmented group, or one button that stays pressed (aria-pressed) */
   .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; }
   .seg button, button.tog { background: var(--s2); color: var(--dim); }
-  .seg button[aria-pressed="true"], button.tog[aria-pressed="true"] { background: var(--trk); color: #000; }
+  .seg button[aria-pressed="true"], button.tog[aria-pressed="true"] { background: var(--acc); color: #000; }
   .seg.ids button { text-transform: none; }
   .dim { color: var(--dim); }
   .bad { color: var(--red); }
@@ -126,8 +136,8 @@
     select.wave > button { font: inherit; background: none; color: inherit; padding: 0; text-align: start; text-transform: none; }
     select.wave::picker(select) { border: 1px solid var(--s3); background: var(--bg); color: var(--fg); padding: 0; }
     select.wave option { padding: 2px 8px; min-block-size: 0; }
-    select.wave option:checked { color: var(--trk); }
-    select.wave option:hover, select.wave option:focus-visible { background: var(--trk); color: #000; }
+    select.wave option:checked { color: var(--acc); }
+    select.wave option:hover, select.wave option:focus-visible { background: var(--acc); color: #000; }
     select.wave option::checkmark { display: none; }
   }
 }

@@ -1,106 +1,126 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
-// The editor's frame: the site's header, the side bar (pages, the device), the page's title and status, the track selector, the
-// page itself, the footer.
+// The editor's frame: the site's header; the side bar (the pages, one line each, then the links); the top bar (the
+// page's title and purpose, its actions corner #page-actions, the status, the FM-1 and Connect); the track selector;
+// the page itself; the transport bar at the bottom of the window. The editor is for a desktop browser: narrower than
+// 1000 px, a note says so instead.
 import { useEffect } from "react";
 import { A, hasTracks, isDrumTrk, ready, statusText, t, tcol, useApp } from "./core/app.js";
 import { selectTrack, toggleConnect } from "./core/device.js";
-import { DEV_TABS, NAV, TABS, TAB_NAME, TRACK_TABS, shownTab, showTab, tracksTabOk } from "./core/tabs.js";
+import { DEV_TABS, NAV, TABS, TAB_NAME, TRACK_TABS, shownTab, showTab } from "./core/tabs.js";
 import { useInstallPrompt } from "../shared/pwa.js";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { Ic } from "./ui/kit.jsx";
-import { PAGES, Preview } from "./pages/index.js";
+import { PAGES } from "./pages/index.js";
+import TransportBar from "./ui/TransportBar.jsx";
 
 /* the offline file's name: with the site's version (make_site.py writes window.BOOPBOX_VERSION) */
 const OFFLINE_NAME = typeof window !== "undefined" && window.BOOPBOX_VERSION
   ? `boopbox-editor-${String(window.BOOPBOX_VERSION).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
+const SITE = __OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/" : "../";
 
 function Tabs() {
-  const app = useApp();
+  useApp();
   const want = shownTab();
-  const visible = TABS.filter((x) => x !== "tracks" || tracksTabOk());
-  const onKey = (e) => {                                   /* arrow keys move between the tabs */
-    const dir = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 }[e.key];
+  const onKey = (e) => {                                   /* arrow keys move between the pages */
+    const dir = { ArrowDown: 1, ArrowUp: -1 }[e.key];
     if (!dir) return;
-    const i = visible.indexOf(want);
-    const n = visible[(i + dir + visible.length) % visible.length];
+    const i = TABS.indexOf(want);
+    const n = TABS[(i + dir + TABS.length) % TABS.length];
     e.preventDefault();
     showTab(n);
     document.querySelector(`[data-tab="${n}"]`)?.focus();
   };
   return (
-    <nav role="tablist" aria-orientation="vertical" onKeyDown={onKey}
-      className="order-3 flex w-full flex-row gap-0.5 overflow-x-auto wide:order-none wide:flex-col">
+    <nav role="tablist" aria-orientation="vertical" onKeyDown={onKey} className="flex flex-col gap-0.5">
       {NAV.map(([head, tabs]) => (
         <div key={head} className="contents">
-          <div className="mt-3.5 mb-1 ml-3 hidden lowercase text-s3 first:mt-0 wide:block">{t(head)}</div>
-          {tabs.map(([tab, name, ic]) => (tab === "tracks" && !tracksTabOk() ? null : (
+          <div className="mt-4 mb-1 ml-3 text-dim uppercase opacity-80 first:mt-0">{t(head)}</div>
+          {tabs.map(([tab, name, ic]) => (
             <button key={tab} type="button" role="tab" data-tab={tab} aria-selected={tab === want} tabIndex={tab === want ? 0 : -1}
               title={t("tabh_" + tab)} onClick={() => showTab(tab)}
-              className="group border-0 border-b-[3px] border-transparent bg-transparent px-3 py-1.5 text-left text-dim hover:bg-s1 hover:text-fg
-                aria-selected:border-trk aria-selected:bg-s2 aria-selected:text-fg wide:border-b-0 wide:border-l-4">
+              className="border-0 border-l-4 border-transparent bg-transparent px-3 py-1.5 text-left normal-case text-fg2 hover:bg-s1 hover:text-fg
+                aria-selected:border-acc aria-selected:bg-s2 aria-selected:text-fg">
               <Ic ic={ic}>{t(name)}</Ic>
-              <span className="mt-0.5 ml-[22px] hidden text-[13px] leading-4 whitespace-normal normal-case text-dim opacity-80
-                group-hover:opacity-100 group-aria-selected:opacity-100 wide:block">{t("tabd_" + tab)}</span>
             </button>
-          )))}
+          ))}
         </div>
       ))}
     </nav>
   );
 }
 
-function DeviceCard() {
-  const app = useApp();
-  const dev = app.dev;
+/* the side bar's foot: the installer, the app, the offline file */
+function SideLinks() {
   const [canInstall, install] = useInstallPrompt();
   return (
-    <div className="ml-auto flex flex-row flex-wrap items-center gap-2 bg-bg wide:sticky wide:-bottom-5 wide:mt-auto wide:-mb-5 wide:ml-0 wide:flex-col
-      wide:items-stretch wide:border-t wide:border-line wide:pt-4 wide:pb-5">
-      <div className="flex items-center gap-2 text-fg">
-        <span className={`size-2.5 flex-none ${dev && dev.dump ? "bg-t2 shadow-[0_0_8px_var(--t2)]" : dev ? "bg-t3" : "bg-s3"}`} />
-        <span>{t("fm1")}</span>
-      </div>
-      <span className="[overflow-wrap:anywhere] text-fg2">{dev && dev.info ? dev.info.version : ""}</span>
-      <span className="text-dim">{!dev || !dev.dump ? "" : t(dev.watch ? "live" : "polling")}</span>
-      {app.MOCK ? <span className="text-dim">{t("mock")}</span> : null}
-      <button id="connect" type="button" className="pri wide:w-full" disabled={app.connecting} onClick={toggleConnect}>
-        <Ic ic="port_usb_c">{t(dev ? "disconnect" : "connect")}</Ic>
-      </button>
-      <div className="flex justify-between gap-2">
-        <a className="dim" href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/installer/" : "../installer/"}
-          {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
-      </div>
-      {canInstall ? <button id="install" type="button" className="pri" onClick={install}>{t("install")}</button> : null}
-      {__OFFLINE__ ? null : <a className="dim" href="boopbox-editor.html" download={OFFLINE_NAME}>{t("offline")}</a>}
+    <div className="mt-auto flex flex-col gap-1.5 border-t border-line pt-3 text-dim [&_a]:text-dim [&_a:hover]:text-fg">
+      <a href={__OFFLINE__ ? SITE + "installer/" : "../installer/"} {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("installer")}</a>
+      {__OFFLINE__ ? null : <a href="boopbox-editor.html" download={OFFLINE_NAME} title={t("offline")}>{t("offlineShort")}</a>}
+      {canInstall ? <button id="install" type="button" onClick={install}>{t("install")}</button> : null}
     </div>
   );
 }
 
-/* the track selector (v3): the editor shows the selected track; its colour is the editor's accent (--trk) */
+/* the FM-1 in the top bar: a light (green: live, orange: connected without pushes, grey: none), its firmware, Connect */
+function Device() {
+  const app = useApp();
+  const dev = app.dev;
+  const light = dev && dev.dump ? "bg-t2" : dev ? "bg-t3" : "bg-s3";
+  const what = !dev ? t("notConnected") : [dev.info ? dev.info.version : "", dev.dump ? t(dev.watch ? "live" : "polling") : "", app.MOCK && !/MOCK/.test(dev.info?.version || "") ? t("mock") : ""]
+    .filter(Boolean).join(" · ");
+  return (
+    <div className="flex flex-none items-center gap-3">
+      <span className={`size-2.5 flex-none ${light}`} aria-hidden="true" />
+      <span className="max-w-[460px] overflow-hidden text-ellipsis whitespace-nowrap text-fg2" title={what}>
+        <span className="text-fg">{t("fm1")}</span> <span className="text-dim">{what}</span></span>
+      <button id="connect" type="button" className={dev ? "" : "pri"} disabled={app.connecting} onClick={toggleConnect}>
+        <Ic ic="port_usb_c">{t(dev ? "disconnect" : "connect")}</Ic>
+      </button>
+    </div>
+  );
+}
+
+/* the track selector (v3): the pages of one track edit the selected one; its colour marks it (only here) */
 function TrackBar() {
   const { dev } = useApp();
   const n = dev.info.ntrk;
   return (
-    <div className="mt-3.5 flex flex-wrap items-center gap-2">
-      <span className="mr-1 lowercase text-dim">{t("track")}</span>
-      <span className="seg gap-2" role="group">
+    <div className="mt-3 flex items-center gap-2">
+      <span className="mr-1 text-dim">{t("track")}</span>
+      <span className="grid flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} role="group">
         {Array.from({ length: n }, (_, i) => {
           const x = dev.mix && dev.mix.tracks[i];
           const nm = !x ? [isDrumTrk(i) ? "DRUMS" : "", ""] : x.engine >= dev.info.nengines ? [(dev.kitNames || [])[x.e0] || "", "drums"]
             : [(dev.names[x.engine] || [])[x.preset] || "", String(dev.info.engines[x.engine] || "").toLowerCase()];
           const on = i === (dev.sel || 0);
           return (
-            <button key={i} type="button" aria-pressed={on} title={`${t("track")} ${i + 1}`} onClick={() => selectTrack(i)} style={{ "--c": tcol(i) }}
-              className={`flex max-w-60 min-w-[150px] items-center gap-2.5 overflow-hidden py-0 pr-3 pl-0 normal-case
+            <button key={i} type="button" aria-pressed={on} title={`${t("track")} ${i + 1}: ${nm[0]} ${nm[1]}`} onClick={() => selectTrack(i)}
+              style={{ "--c": tcol(i) }}
+              className={`flex min-w-0 items-center gap-2 overflow-hidden py-0 pr-2 pl-0 normal-case
                 ${on ? "bg-s2! text-fg! shadow-[inset_0_-2px_var(--c)]" : "bg-s1! text-fg2!"}`}>
-              <span className={`grid size-8 flex-none place-content-center text-[16px] ${on ? "bg-c text-black" : "bg-s2 text-c"}`}>{i + 1}</span>
-              <span className="overflow-hidden text-ellipsis">{nm[0]} <span className="dim">{nm[1]}</span></span>
+              <span className={`grid size-8 flex-none place-content-center ${on ? "bg-c text-black" : "bg-s2 text-c"}`}>{i + 1}</span>
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{nm[0]} <span className="dim">{nm[1]}</span></span>
             </button>
           );
         })}
       </span>
+    </div>
+  );
+}
+
+/* narrower than 1000 px: the editor needs a desktop browser */
+function DesktopOnly() {
+  return (
+    <div className="hidden min-h-[70vh] items-center justify-center p-6 max-[999px]:flex">
+      <div className="max-w-[480px] border border-line bg-s1 p-6 text-center">
+        <h1 className="mb-3 text-big text-acc">{t("deskTitle")}</h1>
+        <p className="mb-4 text-fg2">{t("deskText")}</p>
+        <p className="m-0 flex justify-center gap-4 [&_a]:text-acc">
+          <a href={SITE + "home/"}>{t("deskGuide")}</a><a href={SITE + "emu/"}>{t("deskEmu")}</a>
+        </p>
+      </div>
     </div>
   );
 }
@@ -110,50 +130,54 @@ export default function App() {
   const dev = app.dev;
   const want = shownTab();
   const isReady = ready();
-  useEffect(() => {                                        /* the accent: the selected track's colour */
+  useEffect(() => {                                        /* the selected track's colour, for the places that show a track */
     document.documentElement.style.setProperty("--trk", tcol(dev && dev.info && dev.info.ntrk ? dev.sel || 0 : 0));
   });
-  /* what the page needs before it can show: an FM-1 (and, for samples and kits, its sample flash) */
+  /* what the page needs before it can show: an FM-1 */
   let hint = "", show = true;
   if (DEV_TABS.has(want)) {
     show = isReady;
     if (!dev) hint = "needDevice";
-    if (show && (want === "samples" || want === "kits") && !dev.smp) { show = false; hint = "smpNone"; }
   }
   const Page = PAGES[want];
+  const status = statusText();
   return (
     <>
-    <SiteHeader current="editor" base={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/" : "../"} />
-    <div className="grid min-h-screen grid-cols-[minmax(0,1fr)] wide:grid-cols-[232px_minmax(0,1fr)]">
-      <aside className="flex flex-row flex-wrap items-center gap-3 border-b border-line px-4 py-3 wide:sticky wide:top-0 wide:h-screen wide:flex-col
-        wide:flex-nowrap wide:items-stretch wide:gap-4 wide:overflow-y-auto wide:border-r wide:border-b-0 wide:px-4 wide:py-5">
+    <SiteHeader current="editor" base={SITE} />
+    <DesktopOnly />
+    <div className="grid min-h-screen grid-cols-[200px_minmax(0,1fr)] max-[999px]:hidden">
+      <aside className="sticky top-0 flex h-screen flex-col gap-4 overflow-y-auto border-r border-line px-3 py-5">
         <Tabs />
-        <DeviceCard />
+        <SideLinks />
       </aside>
 
-      <main className="min-w-0 px-4 pb-6 wide:px-8 wide:pb-8">
-        <header className="z-5 border-b border-line bg-bg pt-5 pb-3 wide:sticky wide:top-0">
-          <div className="flex min-h-8 items-end gap-4">
-            <h1 className="flex-none text-big whitespace-nowrap uppercase text-trk">{t(TAB_NAME[want])}</h1>
+      <main className="min-w-0 px-8 pb-28">
+        <header className="sticky top-0 z-5 border-b border-line bg-bg pt-4 pb-3">
+          <div className="flex min-h-9 items-center gap-4">
+            <h1 className="flex-none text-big whitespace-nowrap text-acc">{t(TAB_NAME[want])}</h1>
             <div id="status" role="status" aria-live="polite"
-              className={`ml-auto line-clamp-2 min-h-5 max-w-[70%] overflow-hidden text-right [overflow-wrap:anywhere] ${app.status.err ? "text-red" : "text-dim"}`}>
-              {statusText()}</div>
+              className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${app.status.err ? "text-red" : "text-dim"}`} title={status}>
+              {status}</div>
+            <Device />
           </div>
-          <p className="mt-1.5 mb-0 max-w-[75ch] text-dim empty:hidden">{t("tabh_" + want)}</p>
+          <div className="mt-1 flex min-h-8 items-center gap-4">
+            <p className="m-0 min-w-0 flex-1 text-dim">{t("tabh_" + want)}</p>
+            <div id="page-actions" className="flex flex-none items-center gap-2" />
+          </div>
           {isReady && hasTracks() && TRACK_TABS.has(want) ? <TrackBar /> : null}
         </header>
         {hint ? <p className="my-8 text-dim">{t(app.MOCK && hint === "needDevice" ? "previewLocalConnect" : hint)}</p> : null}
-        {app.MOCK && want !== "live" ? <Preview /> : null}
-        {show && Page ? <section className="pt-5" id={`p-${want}`} data-tab={want}><Page /></section> : null}
-        <footer className="mt-10 border-t border-line pt-4 text-s3 [&_a]:text-dim">
-          BoopBox, based on <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">SLOOP</a> and on Felucca by Leo
-          Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>. GPL-3.0.<br />
-          {t("foot")} M-VAVE and FM-1 are trademarks of their respective owners.<br />
-          <a href={__OFFLINE__ ? "https://josh-mcfarlin.github.io/boopbox/webapp/editor/FUKIAI-LICENSE.txt" : "FUKIAI-LICENSE.txt"}
-            {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("iconsCredit")}</a> · {t("fontCredit")}
+        {show && Page ? <section key={want} className="pt-5" id={`p-${want}`} data-tab={want}><Page /></section> : null}
+        <footer className="mt-10 border-t border-line pt-4 text-dim [&_a]:text-fg2">
+          <p className="m-0">BoopBox, based on <a href="https://github.com/isod89/sloop-fm1" target="_blank" rel="noopener">SLOOP</a> and on Felucca by Leo
+          Kuroshita (@kurogedelic), <a href="https://hugelton.com" target="_blank" rel="noopener">Hügelton Instruments</a>. GPL-3.0.
+          {" "}{t("foot")} M-VAVE and FM-1 are trademarks of their respective owners.{" "}
+          <a href={__OFFLINE__ ? SITE + "editor/FUKIAI-LICENSE.txt" : "FUKIAI-LICENSE.txt"}
+            {...(__OFFLINE__ ? { target: "_blank", rel: "noopener" } : {})}>{t("iconsCredit")}</a> · {t("fontCredit")}</p>
         </footer>
       </main>
     </div>
+    {want !== "live" ? <TransportBar /> : null}
     </>
   );
 }

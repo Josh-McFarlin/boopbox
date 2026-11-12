@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The editor's building blocks: icons (the Fukiai font), cards, and the device's parameter controls (a knob per
 // parameter, four a page, one track colour per knob: the FM-1's own pages on a big screen).
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { F, fmtValue } from "../lib/proto.js";
 import { GLYPH, HEAD_IC, PAGE_IC, WAVE_IC } from "../lib/glyphs.js";
 import { A, key, t, useApp } from "../core/app.js";
+import { labelOf } from "../lib/labels.js";
 import { touched, userSet } from "../core/device.js";
 
 /* icons stay hidden (html:not(.fk)) until the face has loaded; on failure, or from file://, words only */
@@ -36,14 +38,44 @@ export function Card({ title, ic, sub, id, className = "", children, hidden }) {
 }
 export function CardTitle({ ic, sub, children }) {
   return (
-    <h2 className="mb-3 flex items-center gap-2 text-big uppercase text-fg [&_.ic]:text-[20px]">
+    <h2 className="mb-3 flex items-center gap-2 text-big text-fg [&_.ic]:text-[20px]">
       <Ic ic={ic}>{children}</Ic>
       {sub != null ? <span className="ml-auto text-[16px] leading-4 lowercase text-dim">{sub}</span> : null}
     </h2>
   );
 }
+/* the page's send state, in the page header's right corner (App.jsx #page-actions), the same place on every page
+   that edits something the FM-1 only gets when sent: an "Unsent changes" badge while there is something to send, the
+   Send button (disabled, with its reason, when there is nothing), and optionally Read and a note (the memory used) */
+export function SendBar({ dirty, onSend, onRead, busy, sendLabel, readLabel, note, sendDisabled, why }) {
+  const [el, setEl] = useState(null);
+  useEffect(() => { setEl(document.getElementById("page-actions")); }, []);
+  if (!el) return null;
+  return createPortal(
+    <div className="flex items-center gap-2" data-sendbar="">
+      {note ? <span className="text-dim">{note}</span> : null}
+      {dirty ? <span className="bg-t7 px-2 py-0.5 text-black" role="status">{t("unsent")}</span> : null}
+      {onRead ? <button type="button" disabled={busy} onClick={onRead}><Ic ic="symbol_download">{readLabel || t("readFm1")}</Ic></button> : null}
+      <button type="button" className="pri" disabled={busy || sendDisabled || !dirty}
+        title={busy ? t("whyBusy") : sendDisabled ? why || "" : !dirty ? t("whyNothing") : ""} onClick={onSend}>
+        <Ic ic="symbol_upload">{sendLabel || t("sendFm1")}</Ic></button>
+    </div>, el);
+}
+
 /* a card's line of help under its title */
-export const Help = ({ children, className = "" }) => <p className={`dim mt-0 mb-3 ${className}`}>{children}</p>;
+export const Help = ({ children, className = "" }) => <p className={`dim mt-0 mb-3 max-w-[80ch] ${className}`}>{children}</p>;
+
+/* a "?" that opens a card's longer explanation in place (instead of paragraphs always on the page) */
+export function More({ children, label }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="tog ml-1 size-6 p-0 align-middle" aria-pressed={open} aria-expanded={open} title={label || t("moreHelp")}
+        onClick={() => setOpen(!open)}>?</button>
+      {open ? <div className="help my-2 max-w-[80ch] border-l-2 border-acc bg-bg px-3 py-2 text-fg2 [&_p]:my-1">{children}</div> : null}
+    </>
+  );
+}
 /* the parameter cards of a page: two columns on a wide screen */
 export const Groups = ({ children }) => <div className="groups columns-2 gap-4 [column-width:520px]">{children}</div>;
 export function Group({ title, ic, sub, children }) {
@@ -55,8 +87,23 @@ export function Group({ title, ic, sub, children }) {
   );
 }
 export function GroupPage({ title, ic }) {
-  return <h3 className="mt-2.5 mb-1.5 flex items-center uppercase text-dim first:mt-0 [h2+&]:mt-0"><Ic ic={ic}>{title}</Ic></h3>;
+  return <h3 className="mt-2.5 mb-1.5 flex items-center text-dim first:mt-0 [h2+&]:mt-0"><Ic ic={ic}>{title}</Ic></h3>;
 }
+
+/* the cards' and their rows' names in words (the device's page names: ENV DEST, LFO 2, SEL 2 ...) */
+export const GROUP_NAME = { ENV: "Envelope", LFO: "LFO", EDIT: "Engine", VOICE: "Voice", FX: "Effects", SEL: "Key & chords", ARP: "Arpeggiator",
+  "SEQ TIMING": "Timing", GLOBAL: "Tempo & tuning", MASTER: "Master effects", DRUMS: "Drums", MIDI: "MIDI", TEXTURE: "Texture" };
+export const PAGE_NAME = { ENV: "Shape", "ENV DEST": "Envelope moves", "ENV SYNC": "Tempo sync", LFO: "Wave", "LFO 2": "Timing", "LFO DEST": "LFO moves",
+  LEVEL: "Level", VOICE: "Voices", "VOICE 2": "Unison & pan", FX: "Sends & distortion", FILTER: "Filter", SLICER: "Slicer", INSERT: "Insert effect",
+  "INSERT 2": "Insert mix", DLY: "Delay (all tracks)", "REV/CHO": "Reverb & chorus (all tracks)", SEL: "Key & scale", "SEL 2": "Chords", ARP: "Pattern",
+  "ARP 2": "Feel", MIDI: "Channels", "MIDI 2": "Input", "MIDI 3": "Sync & remote", TEXTURE: "Bed", "TEXTURE 2": "Timing",
+  /* the engines' own page titles (DESC titles) */
+  OSC: "Oscillators", FLT: "Filter", OPS: "Operators", MOD: "Modulation", PHS: "Phase", LINE: "Line", CHIP: "Chip", MOTN: "Motion", SET: "Sample",
+  TONE: "Tone", VOWL: "Vowels", BARS: "Drawbars", GRAN: "Grains", SPRY: "Spray", PATCH: "Patch", BODY: "Body", EXCT: "Exciter", SRC: "Source",
+  MOVE: "Movement", PROGRAM: "Program", FILTER2: "Filter" };
+/* a context for labelOf(): the row's device page name, or the card's */
+const ctxOf = (group, page) => ({ "ENV DEST": "ENV DEST", "LFO DEST": "LFO DEST", LFO: "LFO", "LFO 2": "LFO", SLICER: "SLICER", INSERT: "INSERT",
+  "INSERT 2": "INSERT", DLY: "DLY", FX: "FX", FILTER: "FX" })[page] || group;
 export const Knobs = ({ children }) => (
   <div className="grid grid-cols-2 border-t border-line wide:grid-cols-4">{children}</div>
 );
@@ -170,9 +217,20 @@ export function Choice({ d, v, onChange, focusKey, className = "" }) {
 }
 export const isChoice = (d) => d.fmt === F.ENUM || d.fmt === F.NOTE || d.fmt === F.ONOFF;
 
+/* a parameter's name: the whole name, the device's short name beside it (small), what it does as the tooltip */
+export function ParamName({ label, ctx }) {
+  const [name, what] = labelOf(label, ctx);
+  const same = name.toUpperCase() === String(label).toUpperCase();
+  return (
+    <span className="line-clamp-2 min-h-10 min-w-0 cursor-help text-c" title={what ? `${name} (${label}): ${what}` : name}>
+      {name}{same ? null : <small className="ml-1.5 text-[16px] leading-4 whitespace-nowrap text-dim opacity-70">{label}</small>}
+    </span>
+  );
+}
+
 /* one of the device's parameters (s 0: the selected track's, 1: a global): its name, its value, its control. It sends
-   SET as the user moves it (device.js userSet); pushes and polling move it otherwise */
-export function Param({ s, id, index }) {
+   SET as the user moves it (device.js userSet); pushes and polling move it otherwise. ctx: where it is (labels.js) */
+export function Param({ s, id, index, ctx }) {
   useApp();
   const dev = A.dev;
   const d = s ? dev.gdesc[id] : dev.pdesc[id];
@@ -183,7 +241,7 @@ export function Param({ s, id, index }) {
   const choice = isChoice(d);
   return (
     <KnobBox index={index} enumLike={choice} pushed={pushed}>
-      <span className="overflow-hidden text-ellipsis whitespace-nowrap uppercase text-c">{d.label}</span>
+      <ParamName label={d.label} ctx={ctx} />
       {choice ? (
         <Choice d={d} v={v} focusKey={k} onChange={set}
           className={`mt-1.5 h-[34px] w-full border-line bg-s2 text-[16px] ${pushed ? "text-trk" : "text-c"}`} />
@@ -244,24 +302,25 @@ export function ParamGroups({ where }) {
         const live = ids.filter((id) => shown(s, id));
         if (!live.length) continue;
         const tt = g.engine && (dev.titles[dev.dump.engine] || [])[g.pages.findIndex((x) => x[0] === title)];
+        const ctx = g.engine ? info.engines[dev.dump.engine] : ctxOf(g.t, title);
         pages.push(
           <div key={title}>
-            {g.pages.length > 1 ? <GroupPage ic={PAGE_IC[tt || title]} title={tt || title} /> : null}
-            <Knobs>{live.map((id, i) => <Param key={id} s={s} id={id} index={i} />)}</Knobs>
+            {g.pages.length > 1 ? <GroupPage ic={PAGE_IC[tt || title]} title={PAGE_NAME[tt || title] || tt || title} /> : null}
+            <Knobs>{live.map((id, i) => <Param key={id} s={s} id={id} index={i} ctx={ctx} />)}</Knobs>
           </div>,
         );
       }
       if (!pages.length) continue;
+      const eng = info.engines[dev.dump.engine] || "";
       out.push(
-        <Group key={g.t} ic={HEAD_IC[g.t]} title={g.engine ? `EDIT ${info.engines[dev.dump.engine] || ""}` : g.t}
-          sub={pages.length > 1 ? `${pages.length} pages` : null}>{pages}</Group>,
+        <Group key={g.t} ic={HEAD_IC[g.t]} title={g.engine ? `${GROUP_NAME.EDIT}: ${eng}` : GROUP_NAME[g.t] || g.t}>{pages}</Group>,
       );
     }
   } else {
     /* unknown firmware layout: everything in id order, four knobs a row */
     const ids = (n, s, f) => Array.from({ length: n }, (_, i) => i).filter((i) => f(i) && shown(s, i));
     const box = (name, s, list, pre) => (
-      <Group key={name} ic={HEAD_IC[name]} title={name}>{pre}<Knobs>{list.map((id, i) => <Param key={id} s={s} id={id} index={i} />)}</Knobs></Group>
+      <Group key={name} ic={HEAD_IC[name]} title={GROUP_NAME[name] || name}>{pre}<Knobs>{list.map((id, i) => <Param key={id} s={s} id={id} index={i} />)}</Knobs></Group>
     );
     if (where === "groups") {
       out.push(box("INSTRUMENT", 0, ids(info.pcount, 0, (i) => i < info.pe0), <p className="dim">{t("layout")}</p>));
