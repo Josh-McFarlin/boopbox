@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 //
 // The LIVE page (2.7): the FM-1 under the hands. Its parts live in pages/live/: state.js (the state and the requests),
-// pro.js (LIVE pro: scenes, MIDI learn, the stage tools), the cards (Transport, Strips, Keys, Effects, Scenes, Perform,
-// Playlist, Guide) and controls.jsx (knob, fader, held button).
+// pro.js (LIVE pro: scenes, MIDI learn, the stage tools), the cards (Transport, Strips, Keys, Effects, Scenes, Playlist,
+// Guide) and controls.jsx (knob, fader, held button). One screen: the transport and the stage tools, the sections and
+// the scenes, the mixer with the effects beside it; the keys in a drawer at the bottom; the first steps and the
+// keyboard shortcuts as overlays.
 import { useEffect, useRef } from "react";
 import { CMD, LIVE, bank, parse } from "../lib/proto.js";
 import { A, drumLvGlobal, gDrLvl, notify, nTrk, op, rqf, t, useApp } from "../core/app.js";
@@ -14,12 +16,11 @@ import {
   lvOk, lvPro, lvReadTracks, lvSend, lvSolo, lvStart, lvStop, lvTap, lvTarget, lvTouched,
 } from "./live/state.js";
 import { LVS, lvxLearnPick, lvxMidi, lvxMidiOff, lvxMidiOn, lvxRecall, lvxRestore, lvxStop, lvxStore, lvxTips, lvxViewAll } from "./live/pro.js";
-import { Guide } from "./live/Guide.jsx";
+import { Overlays, lvGuideFirst, lvOverlay } from "./live/Guide.jsx";
 import { Sections, Transport } from "./live/Transport.jsx";
 import Scenes from "./live/Scenes.jsx";
 import Mixer from "./live/Strips.jsx";
 import Keys from "./live/Keys.jsx";
-import Perform from "./live/Perform.jsx";
 import { Effects, Master } from "./live/Effects.jsx";
 import Playlist, { lvSongNext, plRestore } from "./live/Playlist.jsx";
 import "./live/live.css";
@@ -84,13 +85,15 @@ function livePush(f) {
   }
 }
 
-/* the computer keyboard on the page (not in a field): see lvShortcuts */
+/* the computer keyboard on the page (not in a field): see lvxShortcutList (the ? key shows it) */
 const lvEditing = (e) => e.target.closest && e.target.closest("input:not([type=range]), select, textarea, [contenteditable='true']");
 const lvDown = new Map();                  /* e.code -> what its keyup ends */
 function lvKeyDown(e) {
   const dev = A.dev;
   if (A.tab !== "live" || !dev || !dev.dump || e.ctrlKey || e.metaKey || e.altKey || lvEditing(e)) return;
   if (e.repeat) { if (lvDown.has(e.code) || e.code === "Space") e.preventDefault(); return; }
+  if (e.key === "?") { e.preventDefault(); lvOverlay("keys"); return; }
+  if (LV.ui.over) { if (e.key === "Escape") { e.preventDefault(); LV.ui.over = null; notify(); } return; }   /* (an overlay: the page waits) */
   const k = e.key.toLowerCase(), digit = /^Digit(\d)$/.exec(e.code), li = LV_KEYS.indexOf(k);
   let up = null;
   const fk = /^F([1-8])$/.exec(e.key);
@@ -172,22 +175,23 @@ export default function Live() {
     if (dev && dev.dump) lvShow();
     return lvHide;
   }, [dev]);
-  useEffect(() => { lvxTips(ref.current); });         /* a tip on every control (a hover on a computer) */
+  useEffect(() => { lvxTips(ref.current); });
+  if (dev && dev.dump) lvGuideFirst();                /* the first steps: once, over the page */         /* a tip on every control (a hover on a computer) */
   const all = lvxViewAll();
   const cls = ["", LVS.learn ? "learn" : "", LVS.lock ? "locked" : "", all ? "" : "simple", lvPro() ? "" : "nopro"].join(" ");
   return (
     <div id="lv" ref={ref} className={cls}>
       <LearnStyle />
       {lvOk() ? null : <p className="lvneeds">{t("lvNeeds")}</p>}
-      <Guide />
       <Transport />
-      <Sections />
-      <Scenes />
+      <div className="lvrow2"><Sections /><Scenes /></div>
       <div className="lvcols">
-        <div className="lvmain"><Mixer /><Keys /><Perform /></div>
-        <div className="lvside"><Effects /><Master /><Playlist /></div>
+        <Mixer />
+        <div className="lvside"><Effects /><Master /></div>
       </div>
-      <p className="dim lvkeyshelp">{t("lvShortcuts")}</p>
+      <Playlist />
+      <Keys />
+      <Overlays />
     </div>
   );
 }

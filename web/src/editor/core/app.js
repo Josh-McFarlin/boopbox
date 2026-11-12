@@ -29,7 +29,8 @@ export const A = {
   needReload: false,    /* a RELOAD push came: re-read DESC, DUMP and steps when free */
   lastDump: 0,          /* Date.now() of the last DUMP */
   rewatch: false,
-  status: { key: null, arg: "", err: false },
+  status: { key: null, arg: "", err: false, at: 0 },
+  slotMode: "samples", /* the Sample slots page's mode: samples, kits, drumsynth (core/tabs.js) */
   blink: new Map(),     /* key -> time a push changed it (the control flashes) */
   MOCK: QS.get("mock") === "1",
   LEGACY: QS.get("legacy") === "1",
@@ -77,12 +78,18 @@ export const t = (k) => TEXT[A.lang][k] ?? k;
 export const tf = (k, vars) => String(t(k)).replace(/\{(\w+)\}/g, (m, n) => (vars && n in vars ? vars[n] : m));
 
 const ERR_KEYS = /fail|error|denied|nomidi|nodevice|noreply|lost|refused|full|bad/i;
-/* the status line (top right): a string key and what follows it,  */
+/* the status line (top right): a string key and what follows it. A message fades after STATUS_MS (an error stays
+   until the next message), so an old one never reads as something still to do */
+export const STATUS_MS = 6000;
+let statusTimer = 0;
 export function sayK(k, arg = "") {
-  A.status = { key: k, arg, err: ERR_KEYS.test(k) };
+  A.status = { key: k, arg, err: ERR_KEYS.test(k), at: Date.now() };
+  clearTimeout(statusTimer);
+  if (!A.status.err) statusTimer = setTimeout(notify, STATUS_MS + 50);
   notify();
 }
-export const statusText = () => (A.status.key ? t(A.status.key) + A.status.arg : "");
+export const statusText = () => (A.status.key && (A.status.err || Date.now() - (A.status.at || 0) < STATUS_MS) ? t(A.status.key) + A.status.arg : "");
+
 export function report(err) { if (err && err.message !== "closed") { console.warn(err); sayK("error", err.message); } }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

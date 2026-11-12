@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The Samples page (2.4): what the user slots USR1..n hold, then 1 the slot, 2 the sound (from files, one note each;
-// or CHOP, one recording cut in pieces), 3 send it and play it on a track. One draft for the files (smpPage.draft),
+// or CHOP, one recording cut in pieces), 3 send it and play it on a track (greyed, saying why, until it can be done). One draft for the files (smpPage.draft),
 // whichever slot it goes to. (The page shows only when the FM-1 reported its sample flash, dev.smp: App.jsx.)
 import { useEffect, useRef, useState } from "react";
 import { LEVEL_MIN, LOOP, SMP, matchGains, noteName, parseNote, withGain } from "../lib/proto.js";
-import { TCOL, hasTracks, notify, pickFile, sayK, t, useApp } from "../core/app.js";
-import { Card, Help, Ic, barVars } from "../ui/kit.jsx";
+import { TCOL, hasTracks, notify, pickFile, sayK, t, tf, useApp } from "../core/app.js";
+import { Card, Ic, More, barVars } from "../ui/kit.jsx";
 import { SB, draftBytes, decodeFile, holdToPlay, playInt16, playLoop, slotText, smpErase, smpUpload, smpUseOn, splitKeys } from "./samples/smp.js";
 import { CH, chopOver, chopSend, chopUsed } from "./samples/chop.js";
 import Chop from "./samples/Chop.jsx";
-import { Meter, NameInput, Step, useDrop } from "./samples/ui.jsx";
+import { Meter, NameInput, ShortHelp, Step, useDrop } from "./samples/ui.jsx";
+import { SlotTiles } from "./samples/SlotTiles.jsx";
 
 export const smpPage = { slot: 0, mode: "files", draft: { name: "", files: [] } };
 const ACCEPT = ".wav,audio/wav,audio/x-wav,audio/*";
@@ -85,22 +86,12 @@ function Drawn({ draw, className, title }) {
 function Slots() {
   const { dev } = useApp();
   const P = smpPage, n = dev.smp.nslots;
-  return (
-    <div className="dest slots4 mb-2.5 grid grid-cols-4 gap-2 max-wide:grid-cols-2" role="radiogroup" aria-label={t("smpStep1")}>
-      {Array.from({ length: n }, (_, k) => {
-        const x = dev.smp.slots[k];
-        return (
-          <button key={k} type="button" role="radio" data-k={k} aria-checked={k === P.slot ? "true" : "false"} className={x.zones ? "full" : ""}
-            onClick={() => { P.slot = k; notify(); }}>
-            <b>{`USR${k + 1}`}</b>
-            <span className="now">{x.zones ? `${x.name || "—"} · ${x.zones} ${t("zones")}` : t("empty")}</span>
-            <progress max={dev.smp.slotKiB} value={x.kib} />
-            <span className="cap">{`${x.kib} / ${dev.smp.slotKiB} KiB` + (k === 3 ? " · 2.4" : "")}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const tiles = Array.from({ length: n }, (_, k) => {
+    const x = dev.smp.slots[k];
+    return { id: k, title: `USR${k + 1}`, full: !!x.zones, now: x.zones ? `${x.name || "—"} · ${x.zones} ${t("zones")}` : "",
+      kib: x.kib, max: dev.smp.slotKiB };
+  });
+  return <SlotTiles label={t("smpStep1")} tiles={tiles} sel={P.slot} onPick={(k) => { P.slot = k; notify(); }} />;
 }
 
 /* ---- 2: a file of the slot */
@@ -192,12 +183,12 @@ function FilesPane() {
     <div className="pane">
       <div tabIndex="0" role="button" onClick={pick} {...drop}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }}
-        className={`dropzone mb-3 grid cursor-pointer place-items-center gap-1.5 border border-dashed bg-bg px-4 py-7 text-center hover:border-trk
-          ${over ? "over border-trk outline-2 -outline-offset-2 outline-trk outline-dashed" : "border-s3"}`}>
+        className={`dropzone mb-3 grid cursor-pointer place-items-center gap-1.5 border border-dashed bg-bg px-4 py-7 text-center hover:border-acc
+          ${over ? "over border-acc outline-2 -outline-offset-2 outline-acc outline-dashed" : "border-s3"}`}>
         <b className="font-normal text-fg">{t("smpDrop")}</b>
         <span className="dim">{t("smpDropHint")}</span>
       </div>
-      <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3 max-wide:grid-cols-1">
+      <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3">
         <div className="bar m-0"><span className="dim">{t("smpKeymap")}</span></div>
         <Meter max={SMP.MAX_DATA} value={Math.min(bytes, SMP.MAX_DATA)} over={bytes > SMP.MAX_DATA}>
           {(bytes > SMP.MAX_DATA ? t("smpTooBig") + " · " : "") +
@@ -217,14 +208,14 @@ function FilesPane() {
         </>
       ) : null}
       <p className="bar">
-        <button type="button" disabled={d.files.length < 2} onClick={() => {
+        <button type="button" disabled={d.files.length < 2} title={d.files.length < 2 ? t("smpWhyTwo") : t("matchHelp")} onClick={() => {
           const g = matchGains(d.files.map((f) => f.s));
           d.files.forEach((f, i) => { f.gain = g[i]; });
           sayK("levelsMatched");
           notify();
         }}><Ic ic="symbol_audio">{t("matchLevels")}</Ic></button>
-        <span className="dim">{t("matchHelp")}</span>
-        <button type="button" className="warn" onClick={() => { d.files = []; notify(); }}><Ic ic="symbol_trash">{t("clearList")}</Ic></button>
+        <button type="button" className="warn" disabled={!d.files.length || SB.busy} title={!d.files.length ? t("smpWhyNoList") : SB.busy ? t("whyBusy") : ""}
+          onClick={() => { d.files = []; notify(); }}><Ic ic="symbol_trash">{t("clearList")}</Ic></button>
       </p>
     </div>
   );
@@ -237,11 +228,32 @@ async function smpSendPage() {
   else if (await smpUpload(k, "smp", true, P.draft)) sayK("smpDone", `${k + 1}`);
   notify();
 }
-function sendReady() {
+/* why the sound cannot be sent yet ("" when it can) */
+function whySend() {
   const P = smpPage;
-  if (P.mode === "files") return P.draft.files.length && draftBytes(P.draft) <= SMP.MAX_DATA && P.draft.name;
+  if (SB.busy) return t("whyBusy");
+  if (P.mode === "files") {
+    const d = P.draft;
+    return !d.files.length ? t("smpWhyNoFiles") : draftBytes(d) > SMP.MAX_DATA ? t("smpWhyTooBig") : !d.name ? t("smpWhyName") : "";
+  }
   const U = chopUsed();
-  return CH.x && U.use.length && !chopOver(U.use) && CH.name;
+  return !CH.x ? t("smpWhyNoChop") : !U.use.length ? t("smpWhyNoPiece") : chopOver(U.use) ? t("smpWhyTooBig") : !CH.name ? t("smpWhyName") : "";
+}
+
+/* ---- 3: play it on a track */
+function UseOn({ k, zones }) {
+  const [trk, setTrk] = useState(0);
+  const why = SB.busy ? t("whyBusy") : !zones ? tf("smpWhyEmpty", { n: k + 1 }) : !hasTracks() ? t("smpNoEngine") : "";
+  return (
+    <div className="bar">
+      <label htmlFor="smpuse" className="dim">{t("smpUseOn")}</label>
+      <select id="smpuse" value={trk} disabled={!!why} title={why} style={{ color: TCOL[trk] }} onChange={(e) => setTrk(+e.target.value)}>
+        {[0, 1, 2].map((i) => <option key={i} value={i}>{`${t("track")} ${i + 1}`}</option>)}
+      </select>
+      <button type="button" id="smpapply" disabled={!!why} title={why || tf("smpApplyHint", { n: k + 1, i: trk + 1 })}
+        onClick={() => smpUseOn(trk, k)}>{t("smpApply")}</button>
+    </div>
+  );
 }
 
 export default function Samples() {
@@ -250,56 +262,46 @@ export default function Samples() {
   const P = smpPage, n = dev.smp.nslots;
   if (P.slot >= n) P.slot = 0;
   const k = P.slot, cur = dev.smp.slots[k], up = SB.up && SB.up.where === "smp" ? SB.up : null;
-  const help = t(P.mode === "files" ? "smpFilesHelp" : "smpChopHelp").split("\n");
+  const why = whySend();
   return (
     <div id="smpslots">
       <Card title={t("samples")} ic="symbol_waves">
-        <Help>{t("smpIntro")}</Help>
+        <ShortHelp text={t("smpIntro")} />
         <Step n={1} title={t("smpStep1")}>
           <Slots />
           <div className="bar">
-            <button type="button" className="warn" disabled={SB.busy || !cur.zones} onClick={() => smpErase(k)}>
+            <button type="button" className="warn" disabled={SB.busy || !cur.zones} title={SB.busy ? t("whyBusy") : !cur.zones ? tf("smpWhyEmpty", { n: k + 1 }) : ""}
+              onClick={() => smpErase(k)}>
               <Ic ic="symbol_trash">{t("smpEraseSlot").replace("{n}", k + 1)}</Ic>
             </button>
+            <span className="destnote text-fg2">
+              {(cur.zones ? t("smpReplaces").replace("{n}", k + 1).replace("{x}", cur.name || "—") : t("smpSlotFree").replace("{n}", k + 1))
+                + (n >= 4 && k >= 2 ? " " + t("smpKitHint") : "")}
+            </span>
           </div>
-          <p className="destnote mb-2.5 text-fg2">
-            {(cur.zones ? t("smpReplaces").replace("{n}", k + 1).replace("{x}", cur.name || "—") : t("smpSlotFree").replace("{n}", k + 1))
-              + (n >= 4 && k >= 2 ? " " + t("smpKitHint") : "")}
-          </p>
         </Step>
         <Step n={2} title={t("smpStep2")}>
           <div className="seg modes mb-2.5" role="tablist">
             {[["files", "smpModeFiles"], ["chop", "smpModeChop"]].map(([m, key]) => (
-              <button key={m} type="button" role="tab" data-m={m} aria-selected={m === P.mode ? "true" : "false"}
-                className={`px-4 py-2 normal-case ${m === P.mode ? "bg-trk text-black" : ""}`}
-                onClick={() => { P.mode = m; notify(); }}>{t(key)}</button>
+              <button key={m} type="button" role="tab" data-m={m} aria-selected={m === P.mode ? "true" : "false"} aria-pressed={m === P.mode ? "true" : "false"}
+                className="px-4 py-2 normal-case" onClick={() => { P.mode = m; notify(); }}>{t(key)}</button>
             ))}
           </div>
-          <div className="modehelp mb-3 max-w-[980px] text-fg2">
-            {help.map((x, i) => <p key={i} className={`mt-0 mb-1 ${i ? "" : "text-fg"}`}>{x}</p>)}
-          </div>
+          <ShortHelp className="modehelp" text={t(P.mode === "files" ? "smpFilesHelp" : "smpChopHelp")} />
           {P.mode === "files" ? <FilesPane /> : <div className="pane"><Chop /></div>}
         </Step>
-        <Step n={3} title={t("smpStep3")}>
+        <Step n={3} title={t("smpStep3")} off={!!why && !cur.zones} why={why && why !== t("whyBusy") ? why : ""}>
           <div className="bar">
             <span className="dim">{t("smpName")}</span>
             <NameInput value={P.mode === "chop" ? CH.name || "" : P.draft.name}
               onChange={(v) => { if (P.mode === "chop") CH.name = v; else P.draft.name = v; notify(); }} />
-            <button type="button" className="pri" disabled={SB.busy || !sendReady()} onClick={smpSendPage}>
+            <button type="button" className="pri" disabled={!!why} title={why} onClick={smpSendPage}>
               <Ic ic="symbol_upload">{t("smpSendTo").replace("{n}", k + 1)}</Ic>
             </button>
             <progress className="w-[180px]" max="1" value={up ? up.v : 0} hidden={!up} />
           </div>
-          <div className="bar">
-            <span className="dim">{t("smpPlayOn")}</span>
-            <div className="seg">
-              {[0, 1, 2].map((i) => (
-                <button key={i} type="button" data-i={i} style={{ "--c": TCOL[i] }} className="trk"
-                  disabled={SB.busy || !cur.zones || !hasTracks()} onClick={() => smpUseOn(i, k)}>{`${t("track")} ${i + 1}`}</button>
-              ))}
-            </div>
-          </div>
-          <p className="dim my-4">{t("smpWhere").replace(/\{n\}/g, k + 1)}</p>
+          <UseOn k={k} zones={cur.zones} />
+          <div className="my-3"><span className="dim">{t("smpWhereShort")}</span><More><p>{t("smpWhere").replace(/\{n\}/g, k + 1)}</p></More></div>
         </Step>
       </Card>
     </div>

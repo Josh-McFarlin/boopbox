@@ -2,7 +2,7 @@
 // The README's screenshots of the web editor, taken from its build (cd web && npm run build: build/webapp-vite/) in its
 // mock mode (?mock=1: a simulated FM-1, no hardware) in Chromium (Playwright).
 //   node tools/make_editor_screens.mjs [OUT_DIR]      (default: assets/screens)
-// Writes editor-sound.png, editor-midi-texture.png, editor-drumsynth.png, editor-pianoroll.png, editor-backup.png.
+// Writes editor-sound.png (the whole Sound page), editor-midi-texture.png, editor-drumsynth.png, editor-pianoroll.png, editor-backup.png.
 // (editor-cartridge.png needs a DX7 cartridge dropped on the FM6 panel: not made here.)
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
@@ -35,11 +35,16 @@ await page.goto(url);
 await page.waitForTimeout(500);                         /* (the page set up before Connect) */
 await page.click("#connect");
 await page.waitForTimeout(1500);
+await page.addStyleTag({ content: "#transport { display: none !important; }" });   /* (fixed at the window's foot, over the cards) */
 
 /* the union of the boxes of the groups / cards of a panel whose heading starts with one of the names */
 async function boxOf(panel, names) {
   return page.evaluate(([panel, names]) => {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    if (names[0] === "=") {                             /* the whole page, as it shows */
+      const r = document.getElementById(panel).getBoundingClientRect();
+      return { x: r.left, y: r.top + scrollY, width: r.width, height: r.height };
+    }
     if (names[0] === "*") {                             /* the panel's visible cards and groups, all of them */
       for (const c of document.querySelectorAll(`#${panel} [data-card]`)) {
         if (!c.offsetParent) continue;
@@ -72,14 +77,17 @@ async function shot(tab, panel, names, file, before) {
   console.log(`editor: ${file} (${Math.round(clip.width)}x${Math.round(clip.height)})`);
 }
 
-await shot("sound", "p-sound", ["ENV", "LFO", "FX"], "editor-sound.png");
-await shot("settings", "p-settings", ["MIDI", "TEXTURE"], "editor-midi-texture.png");
-await shot("drumsynth", "p-drumsynth", ["*"], "editor-drumsynth.png");   /* (the whole panel: the kit and its sound) */
+await shot("sound", "p-sound", ["="], "editor-sound.png");                /* (the presets and the Engine tab) */
+await shot("settings", "p-settings", ["Channels", "Other MIDI"], "editor-midi-texture.png");
+await shot("slots", "p-slots", ["*"], "editor-drumsynth.png", async () => {   /* (Sample slots, its Drum synth tab) */
+  await page.getByRole("tab", { name: "Drum synth" }).click();
+  await page.waitForTimeout(600);
+});
 await shot("sequencer", "p-sequencer", ["Steps"], "editor-pianoroll.png", async () => {
   await page.getByRole("button", { name: "Piano roll" }).click();
   await page.waitForTimeout(600);
 });
-await shot("projects", "p-projects", ["Songs", "Backup"], "editor-backup.png");
+await shot("save", "p-save", ["Files"], "editor-backup.png");
 
 await browser.close();
 server.close();

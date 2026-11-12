@@ -1043,10 +1043,13 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
     && js(ARR.decode(await get1())) === js(ARR.decode(now)), "song: mock: read, send (rc 0), a bad one (rc 2), a new one while playing (rc 3)");
   done();
   /* the page */
-  {   /* the LEN control (1..the device's steps); the grid renders from LEN, the roll redraws in an effect */
+  {   /* the LEN control (the device's LEN knob, one control, in the timing row); the grid renders from LEN, the roll
+         redraws in an effect */
     const seq = readFileSync(join(HERE, "src/editor/pages/Sequencer.jsx"), "utf8");
-    ok(/type="number" id="lenval" min="1" max=\{dev\.info\.nstep\}/.test(seq) && /pSlen\(\)/.test(editorSrc) && /useEffect\(/.test(seq),
-      "editor: the LEN control (1..64), the grid and roll redrawn when LEN changes");
+    const rollSrc = readFileSync(join(HERE, "src/editor/pages/sequencer/Roll.jsx"), "utf8");
+    ok(/const ids = \[pSlen\(\), pDiv\(\), pById\("SWG", 31\), pById\("GATE", 32\)\]/.test(seq) && /<Param [^>]*ctx="SEQ TIMING"/.test(seq)
+      && !/id="lenval"/.test(seq) && /pSlen\(\)/.test(editorSrc) && /const len = stepLen\(\)/.test(seq) && /useEffect\(\(\) => \{\s*drawRoll/.test(rollSrc),
+      "editor: the LEN control (one, in the timing row), the grid and roll redrawn when LEN changes");
   }
 }
 
@@ -1527,7 +1530,7 @@ function editorTabs() {
   const pagesSrc = readFileSync(join(HERE, "src/editor/pages/index.js"), "utf8");
   const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.jsx";/gm)].map((x) => [x[1], x[2]]));
   const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/editor/pages", f + ".jsx"), "utf8")));
-  ok(TABS.length === 13 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
+  ok(TABS.length === 10 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
     `editor: ${TABS.length} tabs, one page each (${TABS.join(" ")})${stubs.length ? ", stubs: " + stubs : ""}`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(tabsSrc) && /try \{ localStorage/.test(tabsSrc) && /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc)
     && /addEventListener\("hashchange"/.test(tabsSrc), "editor: last tab in localStorage (try/catch) and in the URL hash");

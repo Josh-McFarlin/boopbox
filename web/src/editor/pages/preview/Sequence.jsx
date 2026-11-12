@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The preview's step sequence: a row of 16 steps for each track (pages of 16 when it is longer), following playback; a
-// click turns a step on or off, a double click opens the note dialog; a drum track shows its hits on one row and,
+// click on an empty step adds a note, on a note opens the note dialog, a double click or Delete makes it a rest (as the
+// Sequencer page's grid); a drum track shows its hits on one row and,
 // opened, a row for each sound.
-import { DRUM_LANES, noteName } from "../../lib/proto.js";
+import { DRUM_LANES, noteName, previewSetStepNotes } from "../../lib/proto.js";
 import { A, notify, report, t, tcol } from "../../core/app.js";
 import { selectTrack } from "../../core/device.js";
 import { showTab } from "../../core/tabs.js";
-import { PV, noteOf, posOf, previewCellClick, previewOpenNote } from "./state.js";
+import { PV, noteOf, posOf, previewCellClick, previewOpenNote, previewSequenceClick } from "./state.js";
 
 const groups = new Map();   /* track -> its rows' element (hovered or focused: its page stays still) */
 const ROW = "preview-seq-row grid grid-cols-[128px_minmax(0,1fr)] gap-2 mt-1 max-[680px]:grid-cols-[72px_minmax(0,1fr)] max-[680px]:gap-1";
@@ -52,13 +53,53 @@ function cellView(k, drum, lane, s, index, len) {
   const tie = !drum && s?.time === 1;
   const hits = drum && lane === -2 && s ? DRUM_LANES.filter((_, l) => s.on & (1 << l)).map(([, name]) => name) : [];
   const on = drum ? lane === -2 ? hits.length > 0 : !!(s?.on & (1 << lane)) : notes.length > 0 || tie;
-  const stored = !drum && s?.n > 0 ? s.notes.slice(0, s.n).map(noteName) : [];
   const text = drum ? lane === -2 ? hits.length > 1 ? String(hits.length) : on ? "●" : "" : on ? "●" : ""
-    : tie ? "→" : stored.length ? stored[0] + (stored.length > 1 ? "+" + (stored.length - 1) : "") : "+";
+    : tie ? "→" : notes.length ? notes[0] + (notes.length > 1 ? "+" + (notes.length - 1) : "") : "+";
   const content = drum ? lane === -2 ? hits.join(", ") || t("previewRest") : DRUM_LANES[lane][1] : tie ? t("previewTie")
-    : on ? notes.join(", ") : s?.n > 0 ? s.notes.slice(0, s.n).map(noteName).join(", ") : noteName(noteOf(k));
-  const description = `${t(lane === -2 ? "previewShowDrumGrid" : !drum && s?.n > 0 ? on ? "previewDeactivate" : "previewReactivate" : on ? "previewRemove" : "previewAdd")} · ${content} · ${t("track")} ${k + 1} · ${t("previewStep")} ${index + 1}`;
+    : on ? notes.join(", ") : noteName(noteOf(k));
+  /* what a click does (the same words as the Sequencer page's grid) */
+  const act = lane === -2 ? t("previewShowDrumGrid") : !on ? t("previewAdd")
+    : drum ? t("sqPvHitDouble") : `${t("sqPvClick")} · ${t("sqPvDouble")}`;
+  const description = `${act} · ${content} · ${t("track")} ${k + 1} · ${t("previewStep")} ${index + 1}`;
   return { on, text, description, unused: index >= len };
+}
+
+/* the clicks, as the Sequencer page's grid: an empty step gets a note (the one chosen beside the track), a note opens
+   the note dialog (this grid's "selected step"), a double click or Delete makes it a rest; a drum cell: an empty one
+   gets a hit, a double click or Delete takes the hit away */
+const pending = new Map();   /* cell key -> the timer of a click that may become a double click */
+let added = "";              /* the cell a click just filled: its double click keeps it */
+function filledOf(k, drum, lane, s) {
+  if (drum) return !!(s?.on & (1 << lane));
+  return !!s && (s.time === 1 || (s.time === 0 && s.n > 0));
+}
+function clearCell(k, drum, lane, index) {
+  const s = (drum ? A.mock.state.tracks[k].dstep : A.mock.state.tracks[k].step)[index];
+  if (!filledOf(k, drum, lane, s)) return;
+  if (drum) previewSequenceClick(k, index, lane);
+  else previewSequenceClick(k, index, -1, { ...s, notes: s.notes.slice(), time: 2 });
+}
+function cellClick(e, key, k, drum, lane, index) {
+  if (lane === -2) { previewCellClick(e, key, k, lane, index); return; }
+  const s = (drum ? A.mock.state.tracks[k].dstep : A.mock.state.tracks[k].step)[index];
+  if (e.detail > 1) return;                            /* (the double click handles it) */
+  if (!filledOf(k, drum, lane, s)) {
+    added = key;
+    setTimeout(() => { if (added === key) added = ""; }, 500);
+    if (drum) previewSequenceClick(k, index, lane);
+    else previewSequenceClick(k, index, -1, previewSetStepNotes(s, [noteOf(k)]));
+    return;
+  }
+  if (drum) return;                                    /* a hit: focused (selected) */
+  clearTimeout(pending.get(key));
+  pending.set(key, setTimeout(() => { pending.delete(key); previewOpenNote(key, k, index).catch(report); }, 250));
+}
+function cellDouble(key, k, drum, lane, index) {
+  if (lane === -2) return;
+  clearTimeout(pending.get(key));
+  pending.delete(key);
+  if (added === key) return;
+  clearCell(k, drum, lane, index);
 }
 
 function Cells({ k, drum, lane = -1, source, page, len, position }) {
@@ -73,12 +114,13 @@ function Cells({ k, drum, lane = -1, source, page, len, position }) {
           <button key={i} type="button" data-track={k} data-lane={lane} data-step={index} disabled={v.unused}
             aria-pressed={lane !== -2 ? v.on : undefined} aria-controls={lane === -2 ? `preview-drum-details-${k}` : undefined}
             aria-expanded={lane === -2 ? PV.drumOpen.has(k) : undefined}
-            aria-label={v.description} title={v.description + (!drum ? " · " + t("previewDoubleClick") : "")}
-            className={`preview-seq-cell flex h-7 items-center justify-center overflow-hidden border p-0 hover:enabled:border-c hover:enabled:bg-s3
+            aria-label={v.description} title={v.description}
+            className={`preview-seq-cell flex h-7 items-center justify-center overflow-hidden border p-0 normal-case hover:enabled:border-c hover:enabled:bg-s3
               focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-c ${look} ${v.unused ? "invisible" : ""}
               ${v.on ? "on" : ""} ${cur ? "is-current" : ""} ${lane === -2 ? "seq-drum-brief" : ""}`}
-            onClick={(e) => previewCellClick(e, key, k, lane, index)}
-            onDoubleClick={!drum ? () => previewOpenNote(key, k, index).catch(report) : undefined}>
+            onClick={(e) => cellClick(e, key, k, drum, lane, index)}
+            onDoubleClick={() => cellDouble(key, k, drum, lane, index)}
+            onKeyDown={(e) => { if ((e.key === "Delete" || e.key === "Backspace") && lane !== -2) { e.preventDefault(); clearCell(k, drum, lane, index); } }}>
             <span className="preview-seq-note max-[680px]:hidden" aria-hidden="true">{v.text}</span>
             <span className={`seq-hit h-3 w-1 bg-current ${v.on ? "hidden max-[680px]:block" : "hidden"}`} aria-hidden="true" />
           </button>
