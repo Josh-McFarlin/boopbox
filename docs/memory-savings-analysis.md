@@ -320,7 +320,7 @@ Changes that gave no saving:
 - `UAC_FIR` (1,920 B) already stores half its phases (it is symmetric). 10 taps fails the 16 kHz SNR of `tests/uac_test.c`.
 - `abuf` is the minimum for halves of 256 frames. 128 frames saves 2 KB, but it doubles the ISR rate and changes the UAC bands.
 - `FELUCCA_CDC=0` already removes `console.c`.
-- An 8-bit canvas is not possible, because the visualiser uses gradients on each row.
+- An 8-bit canvas is not possible, because the visualizer uses gradients on each row.
 - `--gc-sections` finds 12 B.
 
 ## 4. Flash: the sample data
@@ -435,7 +435,7 @@ There is no inexpensive change. The features set the sizes of the delay line, th
 
 - The delay at half rate or half length (−64 KB). Either 1/4 notes clamp below 82 BPM, or the repeats lose the top octave.
 - The punch ring in 8-bit companded form (−32 KB). The loops get more noise.
-- A 240 x 62 canvas drawn in two passes (−29,760 B, about 9 draw sites). The scene passes of the visualiser double.
+- A 240 x 62 canvas drawn in two passes (−29,760 B, about 9 draw sites). The scene passes of the visualizer double.
 - Fewer STUT buffers or arenas (−8 KB each). One fewer track can use STUT or a big engine at the same time.
 
 The pool has 13 KB free with 8 KB reserved. The 1.9.3 proxy build gives the same pool size as 1.3.0. Thus there is no pressure, unless a new pool buffer is necessary.

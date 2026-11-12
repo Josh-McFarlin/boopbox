@@ -14,8 +14,8 @@ Other pages give more data:
 | The build, all options | `BUILDING.md` |
 
 **Status in one line:** each feature below has host tests in `tests/run_tests.sh`. The host tests compile the
-firmware code for the PC and simulate the inputs of the FM-1. The default build fits the flash. In 1.9.0, 320 B of
-the app slot were free (`BUILDING.md`).
+firmware code for the PC and simulate the inputs of the FM-1. The default build fits the flash. In 1.9.3, 2,364 B of
+the app slot are free (`docs/groovebox-performance.md`, section 1).
 
 ## 1. Implemented
 

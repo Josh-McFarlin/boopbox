@@ -53,7 +53,7 @@ proxy build of the 1.9.3 tree (`tools/proxy_size.py`), except where the table na
 
 | Resource | Size | Used | Notes |
 | --- | --- | --- | --- |
-| Flash, app slot (XIP) | 581,564 B (`APP_SLOT` 0x8DFBC) | 320 B free in 1.9.0 (`BUILDING.md`) | The built-in sample data (`SMP_DATA`) is 256,496 B. If the app does not fit, the build fails. It does not remove a feature by itself. |
+| Flash, app slot (XIP) | 581,564 B (`APP_SLOT` 0x8DFBC) | 2,364 B free in 1.9.3 (`docs/groovebox-performance.md`) | The built-in sample data (`SMP_DATA`) is 256,496 B. If the app does not fit, the build fails. It does not remove a feature by itself. |
 | RAM region (.data + .bss) | 98,304 B | 81,197 B | The largest object is `trk[8]` (19,136 B). |
 | Pool (.pool, zeroed) | 344,064 B (0x54000) | 331,004 B | `build.py` demands 8,192 B of headroom, so 4,868 B are usable. The contents are below. |
 | NOINIT | 15,696 B (0x3D50) | 15,360 B in `proj_slot[4]` | The four section slots (4 x 3,840 B). They stay through a reset. |

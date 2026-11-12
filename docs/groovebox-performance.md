@@ -27,7 +27,7 @@ These sizes come from the release packages. The CRC16 of each decoded app agrees
 
 | Release | App (B) | Free (B) | What changed the size |
 | --- | ---: | ---: | --- |
-| 1.0.0 | 580,956 | 608 | Eight tracks, patterns, harmony, the visualiser with six styles |
+| 1.0.0 | 580,956 | 608 | Eight tracks, patterns, harmony, the visualizer with six styles |
 | 1.1.0 | 577,760 | 3,804 | Three tables built in RAM at power-on, the six scenes, the sound browser, SYNTHWAVE |
 | 1.2.0 | 579,752 | 1,812 | The UX review changes |
 | 1.3.0 | 580,024 | 1,540 | Presets leveled below the master limiter |
@@ -94,7 +94,7 @@ Other large constants in the 1.9.3 proxy object (exact):
 | --- | ---: | --- |
 | The bitmap boot logo (`FELUCCA_LOGO_TEXT=1` is the default) | 4,592 B (measured before 1.0.0) | Still left out. The boot screen shows "BoopBox" as text in the track colors. |
 | The top recording of the BASS set (C#, note 73) | 9,372 B (exact) | Still left out. The F# recording (note 66) plays notes 63 and up. Notes below 70 sound as before. |
-| SLOOP's twelve visualiser styles | | Replaced in 1.1.0 by six scenes (PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, KEY CITY). All six are in the default build (`FELUCCA_VIS_STYLES` 0x3F). |
+| SLOOP's twelve visualizer styles | | Replaced in 1.1.0 by six scenes (PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, KEY CITY). All six are in the default build (`FELUCCA_VIS_STYLES` 0x3F). |
 | The 32 kHz rate of the GM kit cymbals | 10,726 B (exact) | Removed in 1.7.0. The cymbals lose the octave above 11 kHz. |
 | The last 0.2 s of each VIBES recording | 6,618 B (exact) | Removed in 1.7.0 |
 
@@ -117,9 +117,9 @@ You can set these flags by hand. The default build does not set them.
 | Flag | Saves | Measured on | Result |
 | --- | ---: | --- | --- |
 | `FELUCCA_EDITOR=0` | 13,872 B | The groovebox upgrade tree, before 1.0.0 | The web editor gets no reply from the FM-1 |
-| `FELUCCA_VIS=0` | 10,752 B | 1.1.0 | No visualiser |
+| `FELUCCA_VIS=0` | 10,752 B | 1.1.0 | No visualizer |
 
-The SYNTHWAVE palette and the cleared rows of the CHORDS screen cost 1,112 B in 1.1.0. The visualiser cost 10,752 B in 1.1.0: its frame (the update, the FFT, the name) was 2,640 B, and the six scenes were the rest.
+The SYNTHWAVE palette and the cleared rows of the CHORDS screen cost 1,112 B in 1.1.0. The visualizer cost 10,752 B in 1.1.0: its frame (the update, the FFT, the name) was 2,640 B, and the six scenes were the rest.
 
 With `FELUCCA_EDITOR=0`, the web editor gets no reply from the FM-1. Thus you cannot edit, back up or upload samples over USB. M-UPGRADE updates, the USB rescue (`recovery.c`, OCT− at power-on), USB-MIDI and USB audio stay. `ota_service` still reads every SysEx frame and drops the frames of the editor.
 
@@ -144,14 +144,14 @@ Growth by milestone (real build, the default flags of each tree):
 | G: UI integration | 599,320 | +904 |
 | **Growth** | | **+29,144** |
 
-The upgrade then removed the bitmap logo (4,592 B), the visualiser (8,980 B) and the top BASS recording (9,372 B). The app became 576,212 B, with 5,352 B free.
+The upgrade then removed the bitmap logo (4,592 B), the visualizer (8,980 B) and the top BASS recording (9,372 B). The app became 576,212 B, with 5,352 B free.
 
 The cost of single features (real build, before 1.0.0). Each figure comes from a build with the entry points of that feature made empty:
 
 | Feature | Saves (B) |
 | --- | ---: |
 | The SysEx of the web editor (`FELUCCA_EDITOR=0`) | 13,872 |
-| The SLOOP visualiser (twelve styles) | 8,980 |
+| The SLOOP visualizer (twelve styles) | 8,980 |
 | The bitmap boot logo | 4,592 |
 | Harmony (engine, live chords, CHORDS screen) | 4,200 |
 | Step components (engine and COMP strip) | 3,492 |
@@ -172,12 +172,12 @@ Build variants (real build, before 1.0.0, with the top BASS recording still in):
 
 | Variant | Result |
 | --- | ---: |
-| The 2.8.3 defaults (bitmap logo, visualiser) | 17,756 B over |
+| The 2.8.3 defaults (bitmap logo, visualizer) | 17,756 B over |
 | Text logo | 13,164 B over |
-| Text logo, no visualiser | 4,184 B over |
+| Text logo, no visualizer | 4,184 B over |
 | No web editor | 3,900 B over |
 | Text logo, no web editor | Fits, 708 B free |
-| Text logo, no visualiser, no web editor | Fits, 9,352 B free |
+| Text logo, no visualizer, no web editor | Fits, 9,352 B free |
 
 The removal of the BASS recording gave 9,372 B more to each of these variants.
 
@@ -203,8 +203,8 @@ The largest objects in the RAM region (1.9.3 proxy): `trk[8]` 19,136 B, `ins[8]`
 | Tree | RAM region used (B) |
 | --- | ---: |
 | SLOOP 2.8.3 | 59,308 |
-| The groovebox upgrade, visualiser out (before 1.0.0) | 74,684 |
-| 1.1.0 (visualiser in, font and two tables in RAM) | 85,484 |
+| The groovebox upgrade, visualizer out (before 1.0.0) | 74,684 |
+| 1.1.0 (visualizer in, font and two tables in RAM) | 85,484 |
 | 1.3.0 | 85,516 |
 | 1.3.1 | 85,468 |
 
