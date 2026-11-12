@@ -13,7 +13,6 @@ import notes from "../../../assets/screens/fm1/notes.png";
 import song from "../../../assets/screens/fm1/song.png";
 import patterns from "../../../assets/screens/fm1/patterns.png";
 import mix from "../../../assets/screens/fm1/layer-mix-5-8.png";
-import drive from "../../../assets/screens/fm1/vis-night-drive.png";
 import editorShot from "../../../assets/screens/editor-sound.png";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
@@ -27,6 +26,15 @@ const STATS = [
   ["37", "drum kits, 808 to amapiano", "orange"],
   ["27", "punch-in effects on the keys", "blue"],
   ["64", "steps a track, with locks and fills", "green"],
+];
+/* why BoopBox: a number each, then what it means */
+const REASONS = [
+  ["0", "Installs to try it", "The real firmware runs in your browser, with the same screen, sequencer and sound. Play it before you change anything on your FM-1.", "orange"],
+  ["1 min", "To install, from Chrome", "Over USB, with every byte checked. If an install stops halfway, press Install again. USB rescue and the official firmware are always there.", "blue"],
+  ["223", "Sounds at the same volume", "Thirteen engines, from 808s and acid to a Steinway, DX7 FM and the OberVave polysynth. Change sound mid-song and the level holds.", "green"],
+  ["8", "Tracks at once", "Six synths and two drum machines, 64 steps each, with locks, fills, eight patterns a track and scenes that switch them together.", "yellow"],
+  ["127", "Velocity levels from the FM-1's own keys", "Play harder and it plays louder, with aftertouch. Plug a USB keyboard into the FM-1 and that plays it too.", "blue"],
+  ["2.5 s", "Until your work is saved", "Autosave, undo and redo for everything, and a full backup from the web editor, which follows every knob you turn.", "green"],
 ];
 const LAYERS = [
   ["FX · punch", "27 effects on the whole mix", "orange"],
@@ -121,13 +129,22 @@ export default function Home() {
         </section>
 
         <section id="features" className="mx-auto max-w-[1200px] px-6 pt-10 pb-6">
-          <p className={KICKER}>What makes it different</p>
-          <h2 className="m-0 mb-14 max-w-[20em] text-[32px] leading-[1.1] font-bold tracking-[-.01em] min-[600px]:text-[40px]">
-            Every button is a layer. Hold it, and the keys change job.</h2>
+          <p className={KICKER}>Why BoopBox</p>
+          <h2 className="m-0 mb-10 max-w-[24em] text-balance text-[32px] leading-[1.1] font-bold tracking-[-.01em] min-[600px]:text-[40px]">
+            The most complete firmware for the <span className="whitespace-nowrap">FM-1</span>.</h2>
+          <div className="mb-24 grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3">
+            {REASONS.map(([big, title, text, c]) => (
+              <div key={title} className="border-t-[3px] bg-tile px-5 pt-5 pb-[22px]" style={{ borderColor: C[c] }}>
+                <b className={`block text-[30px] leading-[1.1] font-bold ${TEXT[c]}`}>{big}</b>
+                <h3 className="m-0 mt-2 mb-1.5 text-lg leading-snug font-bold">{title}</h3>
+                <p className="m-0 text-[15px] text-[#b8b8c0]">{text}</p>
+              </div>
+            ))}
+          </div>
 
           <Feature media={<Screen src={punch} caption="FX held: loops, stutter, tape stop, DJ kills, rewind, reverb freeze."
             alt="The PUNCH screen: FX held, the 27 effects laid out on the keys: loops, stutter, reverse, tape stop, kills, rewind, freeze" />}>
-            <H3 color="orange" lead="Play it live:">hold a button, touch a key</H3>
+            <H3 color="orange" lead="27 effects, mutes and fills">under your fingers</H3>
             <P>Hold FX and the 16 white keys become 27 punch-in effects, locked to the tempo. Hold GLO for mutes, solos, fills and tap tempo. Tap
               the button to open its pages; hold it and tap HOME to lock it open, both hands free.</P>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-1.5">
@@ -142,7 +159,7 @@ export default function Home() {
 
           <Feature reverse media={<Screen src={drums} caption="16 sounds × 16 steps, every hit with its level and roll."
             alt="The DRUMS screen: a 16 by 16 grid of an 808 kit, each hit with its level" />}>
-            <H3 color="green" lead="Two drum machines,">16 sounds on the keys</H3>
+            <H3 color="green" lead="Two drum tracks,">37 kits, 16 sounds on the keys</H3>
             <P>Kick to cowbell on the white keys; a black key doubles its neighbour for two-finger rolls. Hold OCT− or OCT+ for ghost or hard
               hits. Each hit keeps its level and a ratchet up to x4.</P>
             <ul className="m-0 list-disc pl-5 text-[#c4c4cc] [&_li]:mb-1.5">
@@ -155,7 +172,7 @@ export default function Home() {
 
           <Feature media={<Screen src={chords} caption="One key for the whole song, 16 scales, one-key chords and a progression the tracks follow."
             alt="The CHORDS screen: a progression VI, IV, I, V in C major that the tracks follow" />}>
-            <H3 color="blue" lead="Thirteen engines,">223 sounds, browsed by kind</H3>
+            <H3 color="blue" lead="Thirteen engines,">DX7 cartridges included</H3>
             <P>Sliding 808s and acid 303s, a real Steinway, Rhodes, string machines, granular clouds, plucked guitars and sitar, supersaws.
               Every sound level-matched; 32 slots for your own.</P>
             <div className="mb-5 flex flex-wrap gap-1.5">
@@ -167,7 +184,7 @@ export default function Home() {
 
           <Feature reverse media={<Screen src={notes} caption="The piano roll of a synth track, on the FM-1 itself."
             alt="The NOTES screen: the piano roll of a synth track, notes on a timeline" />}>
-            <H3 color="yellow" lead="Records as you play,">no click needed</H3>
+            <H3 color="yellow" lead="Record a pass,">then another on top</H3>
             <P>Press REC while it plays and every pass is layered on top. Notes land where you heard them: the keys' latency is taken back. Or
               play freely with no tempo at all, and the loop's length sets the tempo.</P>
             <ul className="m-0 list-disc pl-5 text-[#c4c4cc] [&_li]:mb-1.5">
@@ -189,19 +206,13 @@ export default function Home() {
                 <span className="text-sm text-[#b8b8c0]">sections, chained live or played in order</span>
               </div>
             </div>}>
-            <H3 color="orange" lead="Songs">you play with your hands</H3>
+            <H3 color="orange" lead="Build a song">from four sections</H3>
             <P>Save the loop into sections A–D and jump between them on the next bar. Hold SAVE and tap several for a quick chain, or record the
               song as you perform it. Eight patterns a track, with scenes that switch them all at once.</P>
             <p className="m-0 text-[#c4c4cc]">Master effects on top: <B>DUST</B> (an old sampler and a record), <B>DUCK</B> (the kick pumps the
               synths), a DJ filter, and a <B>TEXTURE</B> bed of vinyl, tape, rain or your own sample.</p>
           </Feature>
 
-          <Feature reverse media={<Screen src={drive} caption="NIGHT DRIVE: the city is the spectrum, the road the beat."
-            alt="The visualiser: a car driving into a neon city at night, the buildings moving with the music" />}>
-            <H3 color="blue" lead="Made for a stage,">even a dark one</H3>
-            <P>Buttons and keys can glow so a black FM-1 stays readable; the notes playing can light their keys. Tap HOME on the tracks screen
-              and the screen becomes a visualiser that moves with the music: palms, a night drive, a city, a horizon.</P>
-          </Feature>
         </section>
 
         <section aria-label="More features" className="mx-auto max-w-[1200px] px-6 pt-0 pb-20">
