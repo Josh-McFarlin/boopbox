@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteHeader from "../shared/SiteHeader.jsx";
 import { RoomAudio } from "./audio.js";
+import { applyPerformanceWithRetry } from "./performance-sync.js";
 import { getRoomBrowserIdentity } from "./browser-identity.js";
 import { buildEmulatorPerformance, connectFm1, syncEmulatorSnapshot } from "./device.js";
 import { createSoundEditSharingController } from "./edit-sharing.js";
@@ -136,20 +137,16 @@ function RoomPage() {
   }, []);
 
   const applyPerformance = useCallback((playerId, slot, performance, clock = null) => {
-    if (!performance) return;
-    const key = JSON.stringify(performance);
-    const saved = performanceStateRef.current.get(playerId);
-    if (saved?.key === key && (saved.applied || !audioRef.current)) return;
-    const state = { key, performance, applied: false };
-    performanceStateRef.current.set(playerId, state);
-    if (playerId === selfPlayerIdRef.current) {
-      state.applied = true;
-      return;
-    }
-    if (!audioRef.current) return;
-    audioRef.current.setPerformance(slot, performance, clock)
-      .then(() => { state.applied = true; })
-      .catch((err) => setError(err.message));
+    applyPerformanceWithRetry({
+      states: performanceStateRef.current,
+      audio: audioRef.current,
+      playerId,
+      slot,
+      performance,
+      clock,
+      shouldApply: playerId !== selfPlayerIdRef.current,
+      onError: (err) => setError(err.message),
+    });
   }, []);
 
   const reconcileRoomVoices = useCallback((currentPlayers) => {
@@ -243,6 +240,7 @@ function RoomPage() {
           if (saved) {
             saved.performance.playing = message.playing;
             if (message.clock) saved.performance.tempo = message.clock.tempo;
+            if (message.clock) saved.clock = message.clock;
             saved.key = JSON.stringify(saved.performance);
           }
         } else if (message.type === "voice") {

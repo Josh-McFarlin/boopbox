@@ -11,6 +11,91 @@ const { WebSocket } = require("ws");
 const config = require("../shared/room-config.json");
 const { createRoomService, normalizeRoomPerformance } = require("../server/rooms.cjs");
 
+test("room listener retries a failed performance update and applies the saved version", async () => {
+  const { applyPerformanceWithRetry } = await import("../web/src/rooms/performance-sync.js");
+  const states = new Map();
+  const errors = [];
+  const calls = [];
+  const performance = { version: 1 };
+  const audio = {
+    async setPerformance(_slot, next) {
+      calls.push(next.version);
+      if (calls.length === 1) throw new Error("temporary renderer failure");
+    },
+  };
+
+  applyPerformanceWithRetry({
+    states, audio, playerId: "listener", slot: 2, performance,
+    onError: (error) => errors.push(error.message), retryDelayMs: 5,
+  });
+  await wait(30);
+
+  assert.deepEqual(calls, [1, 1]);
+  assert.equal(states.get("listener").applied, true);
+  assert.deepEqual(errors, []);
+});
+
+test("a newer room performance supersedes an older scheduled retry", async () => {
+  const { applyPerformanceWithRetry } = await import("../web/src/rooms/performance-sync.js");
+  const states = new Map();
+  const errors = [];
+  const calls = [];
+  const audio = {
+    async setPerformance(_slot, performance) {
+      calls.push(performance.version);
+      if (performance.version === 1) throw new Error("older update failed");
+    },
+  };
+
+  applyPerformanceWithRetry({
+    states, audio, playerId: "listener", slot: 2, performance: { version: 1 },
+    onError: (error) => errors.push(error.message), retryDelayMs: 30,
+  });
+  await wait(0);
+  applyPerformanceWithRetry({
+    states, audio, playerId: "listener", slot: 2, performance: { version: 2 },
+    onError: (error) => errors.push(error.message), retryDelayMs: 30,
+  });
+  await wait(50);
+
+  assert.deepEqual(calls, [1, 2]);
+  assert.equal(states.get("listener").performance.version, 2);
+  assert.equal(states.get("listener").applied, true);
+  assert.deepEqual(errors, []);
+});
+
+test("a permanently failing performance reports its error after bounded retries", async () => {
+  const { applyPerformanceWithRetry } = await import("../web/src/rooms/performance-sync.js");
+  const states = new Map();
+  const errors = [];
+  let attempts = 0;
+  applyPerformanceWithRetry({
+    states,
+    audio: { async setPerformance() { attempts += 1; throw new Error("renderer unavailable"); } },
+    playerId: "listener",
+    slot: 2,
+    performance: { version: 1 },
+    onError: (error) => errors.push(error.message),
+    retryDelayMs: 5,
+    maxRetries: 2,
+  });
+  await wait(40);
+  applyPerformanceWithRetry({
+    states,
+    audio: { async setPerformance() { attempts += 1; throw new Error("renderer unavailable"); } },
+    playerId: "listener",
+    slot: 2,
+    performance: { version: 1 },
+    onError: (error) => errors.push(error.message),
+    retryDelayMs: 5,
+    maxRetries: 2,
+  });
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(errors, ["renderer unavailable"]);
+  assert.equal(states.get("listener").failed, true);
+});
+
 function createEmulatorWorklet(messages) {
   let Processor;
   class AudioWorkletProcessor {
