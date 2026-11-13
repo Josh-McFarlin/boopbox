@@ -5,7 +5,7 @@ export const SPECIAL = [
   ["OCT− held at power-on", "USB rescue: install again from the browser"],
   ["OCT− + OCT+ held at power-on", "hardware calibration: teach every button and knob"],
   ["OCT− + OCT+ held 5 s, stopped", "update mode (your work is saved first)"],
-  ["Any layer + tap HOME", "locks the layer open: both hands free. Any other button unlocks it"],
+  ["Any layer + tap HOME", "locks the layer open so both hands are free; any other button unlocks it"],
   ["GO values (LOAD, SAVE, NEW…)", "one click arms (TURN AGAIN), a second within ~1.5 s acts"],
   ["SAVE + key 5–8 on a used section", "press again within 3 s to save over it"],
 ];

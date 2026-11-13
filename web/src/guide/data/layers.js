@@ -10,7 +10,7 @@ export const LAYERS = [
     white: WHITE, black: BLACK, knobs: ["SWING", "LEVEL", "STEPS", "PAN"],
     more: [["OCT− / OCT+", "octave −3 … +3 (both: 0)"], ["SELECT", "the tempo"], ["ALGORITHM", "the track, 1–8"], ["PRESETS", "the sound browser"]] },
   { id: "DRUM", button: null, name: "Nothing held, drum track", title: "Drums", color: "green", shot: "drums/drums-kit",
-    blurb: "A drum track has 16 sounds, one a white key. A black key plays the sound of the white key on its left, so two fingers can roll one sound. Hold OCT− for ghost hits and OCT+ for hard ones.",
+    blurb: "A drum track has 16 sounds, one per white key. A black key plays the sound of the white key on its left, so two fingers can roll one sound. Hold OCT− for ghost hits and OCT+ for hard ones.",
     white: DRUMS, black: BLACK_AFTER.map((w) => DRUMS[w]), knobs: ["SWING", "LEVEL", "STEPS", "PAN"],
     more: [["OCT− held", "ghost hits"], ["OCT+ held", "hard hits"], ["PRESETS", "the kit (46 of them)"], ["tap SEQ / EDIT", "the DRUMS grid / the kit page"]] },
   { id: "FX", button: "FX", name: "Hold FX", title: "PUNCH", color: "orange", shot: "layers/layer-fx",

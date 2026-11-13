@@ -8,5 +8,5 @@ export const FIRST_BEAT = [
   ["A bass line", "Turn ALGORITHM to track 1 (808 BOOM), press REC and play a bass line.", "pages/seq-notes"],
   ["Chords with one finger", "Hold SEL and press the key of your song. Select track 2, hold SEL and turn KNOB 1 to 7TH: each white key now plays a chord of the key.", "layers/layer-scl"],
   ["Punch in", "Hold FX and hold a key for an effect. While you hold FX, turn KNOB 2 for DUST and KNOB 3 for DUCK.", "layers/layer-fx"],
-  ["Oops?", "EDIT + OCT− undoes. EDIT + OCT+ redoes.", "layers/layer-edit"],
+  ["Undo", "EDIT + OCT− undoes. EDIT + OCT+ redoes.", "layers/layer-edit"],
 ];
