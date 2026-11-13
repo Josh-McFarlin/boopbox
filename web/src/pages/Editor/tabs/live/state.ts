@@ -10,13 +10,42 @@
 
    This module: the page's state (LV) and its requests; the components render from LV and call notify(). */
 import { CMD, DRUM_LANES, LIVE, mixer, parse, req } from "../../lib/proto.ts";
+import type { Dev } from "../../core/app.ts";
+import type { LiveState } from "../../lib/proto.ts";
 import {
   A, drumFocus, drumLvGlobal, gEng, getDescOrNull, isDrumTrk, notify, nTrk, report, rq, sayK, selfLoad,
 } from "../../core/app.ts";
 import { userSet } from "../../core/device.ts";
 import { PV, previewLiveState, startPreview } from "../preview/state.ts";
 
-export const LV = {
+/** a track as the page read it (TRACK, TRACK_DUMP) */
+export interface LvTrack { engine?: number; preset?: number; level?: number; mute?: number; p: number[] }
+/** a note held (or, with op, a ROLL / ERASE held on the FM-1) */
+export interface LvHeld { ch?: number; note: number; track: number; lit?: string | null; op?: string }
+/** a held button's node: what MIDI learn presses (controls.tsx Hold) */
+export interface HoldNode extends HTMLButtonElement { press?: () => void; release?: () => void }
+/** a song of the playlist: a song file (proto songObjects) and LIVE pro's tempo and cue */
+export interface PlSong {
+  name?: string; format?: string; objects?: { id: number }[]; live?: { bpm?: number | null; note?: string } | null;
+  [k: string]: unknown;
+}
+export interface LvPlaylist { songs: PlSong[]; cur: number; auto: boolean; loading: boolean; at: number; pct: number; restored: boolean }
+/** the page's own UI state: the overlay, the help menu, the keys drawer, the strip whose "more" panel is open, FILL's node */
+export interface LvUi { over?: "guide" | "keys" | null; menu?: boolean; guideAsked?: boolean; keys?: boolean; more?: number; fill?: HoldNode }
+export type KMode = "play" | "roll" | "erase";
+export interface LvState {
+  built: Dev | null; timer: ReturnType<typeof setInterval> | 0; polling: boolean; s: LiveState | null; at: number;
+  tr: LvTrack[]; touch: Map<string, number>;
+  target: number; oct: number; vel: number; dlv: number; latch: boolean; fxHeld: number;
+  held: Map<string, LvHeld>; lit: Set<string>; stale: boolean;
+  dump: number; kitNames: string[] | null; ui: LvUi;
+  kmode: KMode; chain: number[]; solo: number;
+  pl: LvPlaylist;
+  next?: number; lastNote?: number;           /* (the track read next; the last note played) */
+  thr?: number; vol?: number; volAt?: number; /* (the THROWs held, the master level set here and when) */
+}
+
+export const LV: LvState = {
   built: null, timer: 0, polling: false, s: null, at: 0,        /* s: the last state (parse[CMD.LIVE]) */
   tr: [],                 /* per track: {engine, preset, level, mute, p: [] (TRACK_DUMP)} */
   touch: new Map(),       /* "kind:i" -> time of the user's last change (their value wins for a moment) */
@@ -30,15 +59,15 @@ export const LV = {
 };
 /* the core's isDrumTrk reads the LIVE page's tracks too (A.lvTracks: as the old code read LV.tr) */
 A.lvTracks = LV.tr;
-export function setTracks(tr) { LV.tr = tr; A.lvTracks = tr; }
+export function setTracks(tr: LvTrack[]): void { LV.tr = tr; A.lvTracks = tr; }
 
 export const lvOk = () => !!A.dev && !!A.dev.info && A.dev.info.proto >= 12;
-export const lvTouched = (k) => performance.now() - (LV.touch.get(k) || 0) < 900;
-export const lvTouch = (k) => LV.touch.set(k, performance.now());
+export const lvTouched = (k: string): boolean => performance.now() - (LV.touch.get(k) || 0) < 900;
+export const lvTouch = (k: string): Map<string, number> => LV.touch.set(k, performance.now());
 /* parameter ids by their labels (core.h P_* / params.c G_*; the numbers: 2.7's) */
-export const lvP = (label, def) => { const dev = A.dev; const i = dev.pdesc.findIndex((d, k) => d && k < dev.info.pe0 && d.label === label); return i >= 0 ? i : def; };
-export const lvG = (label, def) => { const i = A.dev.gdesc.findIndex((d, k) => d && k > gEng() && d.label === label); return i >= 0 ? i : def; };
-export const lvGany = (label, def) => { const i = A.dev.gdesc.findIndex((d) => d && d.label === label); return i >= 0 ? i : def; };
+export const lvP = (label: string, def: number): number => { const dev = A.dev!; const i = dev.pdesc.findIndex((d, k) => d && k < dev.info!.pe0 && d.label === label); return i >= 0 ? i : def; };
+export const lvG = (label: string, def: number): number => { const i = A.dev!.gdesc.findIndex((d, k) => d && k > gEng() && d.label === label); return i >= 0 ? i : def; };
+export const lvGany = (label: string, def: number): number => { const i = A.dev!.gdesc.findIndex((d) => d && d.label === label); return i >= 0 ? i : def; };
 export const LVP = () => ({ pan: lvP("PAN", 39), filt: lvP("FILT", 50), rev: lvP("REV", 36), dly: lvP("DLY", 35), cho: lvP("CHO", 34), dst: lvP("DST", 33),
   mode: lvP("MODE", 17), hold: lvP("HOLD", 23), mute: lvP("MUTE", 40) });
 export const LVG = () => ({ bpm: lvGany("BPM", 0), swing: lvGany("SWING", 1), filt: lvG("FILT", 29), dust: lvG("DUST", 27), duck: lvG("DUCK", 28),
@@ -46,17 +75,17 @@ export const LVG = () => ({ bpm: lvGany("BPM", 0), swing: lvGany("SWING", 1), fi
   other: lvG("OTHER", 36), route: lvGany("IN", 14), fxCh: lvG("FX CH", 45), drMap: lvG("DR MAP", 46), remote: lvG("REMOTE", 47) });
 /* a track's kind: from what the page read of it (TRACK_DUMP) first: the selected track's DUMP, which isDrumTrk trusts,
    is not read again while the page shows (another track selected here kept the old one's kind) */
-export const lvDrum = (i) => {
+export const lvDrum = (i: number): boolean => {
   const o = LV.tr[i], dev = A.dev;
   if (o && o.engine !== undefined && dev && dev.info) return o.engine >= dev.info.nengines;
   return isDrumTrk(i);
 };
-export const lvDrumLv = (i) => lvDrum(i) && drumLvGlobal();   /* a level that is G_DRLVL (four-track firmware) */
-export const lvNum = (i) => (lvDrum(i) ? (nTrk() >= 8 ? "D" + (i + 1) : "D") : String(i + 1));   /* (eight tracks: two drum tracks) */
-export const lvGv = (id) => (A.dev && A.dev.dump ? A.dev.dump.g[id] : 0);
+export const lvDrumLv = (i: number): boolean => lvDrum(i) && drumLvGlobal();   /* a level that is G_DRLVL (four-track firmware) */
+export const lvNum = (i: number): string => (lvDrum(i) ? (nTrk() >= 8 ? "D" + (i + 1) : "D") : String(i + 1));   /* (eight tracks: two drum tracks) */
+export const lvGv = (id: number): number => (A.dev && A.dev.dump ? A.dev.dump.g[id] : 0);
 
 /* ---- requests: the buttons' ones go first in the queue and are never sent twice (a mute is a toggle) */
-export async function lvSend(op, ...a) {
+export async function lvSend(op: number, ...a: number[]): Promise<LiveState | null> {
   if (!lvOk()) return null;
   try {
     const s = parse[CMD.LIVE](await rq(req.live(op, ...a), { front: true, retries: 0 }));
@@ -64,12 +93,12 @@ export async function lvSend(op, ...a) {
     return s;
   } catch (e) { report(e); return null; }
 }
-export const lvKey = (layer, w, down) => lvSend(LIVE.KEY, layer, w, down ? 1 : 0);
-export async function lvTap(layer, w) { await lvKey(layer, w, true); return lvKey(layer, w, false); }
+export const lvKey = (layer: number, w: number, down: boolean): Promise<LiveState | null> => lvSend(LIVE.KEY, layer, w, down ? 1 : 0);
+export async function lvTap(layer: number, w: number): Promise<LiveState | null> { await lvKey(layer, w, true); return lvKey(layer, w, false); }
 
 /* ---- the state, read while the page shows */
 /* (LIVE pro: each state read also moves the set's timer and the steps' grid; pro.js sets it) */
-export const lvTicks = { state: () => {} };
+export const lvTicks: { state: () => void } = { state: () => {} };
 async function lvPoll() {
   const d = A.dev;
   if (!d || !d.dump || A.tab !== "live" || document.hidden || LV.polling || LV.pl.loading) return;
@@ -79,11 +108,11 @@ async function lvPoll() {
     else if (Date.now() - LV.at > 600) { LV.at = Date.now(); await lvReadTracks(false); }
     if (d === A.dev && Date.now() - LV.dump > 1500) {   /* one track's sound a time: what the FM-1 changed shows */
       LV.dump = Date.now();
-      LV.next = ((LV.next ?? -1) + 1) % (d.info.ntrk || 4);
+      LV.next = ((LV.next ?? -1) + 1) % (d.info!.ntrk || 4);
       await lvReadTrack(LV.next);
       if (LV.next === 0) await lvReadTracks(false);
     }
-  } catch (e) { if (e.message !== "closed" && !/^timeout/.test(e.message)) report(e); }
+  } catch (e) { const m = (e as Error).message; if (m !== "closed" && !/^timeout/.test(m)) report(e); }
   finally { LV.polling = false; }
 }
 export function lvStart() {
@@ -97,8 +126,8 @@ export function lvStop() {
   lvAllOff();
   if (LV.fxHeld >= 0) { lvSend(LIVE.FX, LV.fxHeld, 0); LV.fxHeld = -1; }   /* (a latched effect too: the page is gone) */
 }
-export async function lvReadTracks(dumps = true) {
-  const d = A.dev;
+export async function lvReadTracks(dumps = true): Promise<void> {
+  const d = A.dev!;
   const tr = parse[CMD.TRACK](await rq(req.track(), { key: "live:track" }));
   if (d !== A.dev) return;
   tr.tracks.forEach((x, i) => {
@@ -111,9 +140,9 @@ export async function lvReadTracks(dumps = true) {
   if (dumps) for (let i = 0; i < tr.ntrk; i++) await lvReadTrack(i);
   notify();
 }
-export async function lvReadTrack(i) {
-  const d = A.dev;
-  const r = parse[CMD.TRACK_DUMP](await rq(req.trackDump(i), { key: "live:dump:" + i }), d.info);
+export async function lvReadTrack(i: number): Promise<void> {
+  const d = A.dev!;
+  const r = parse[CMD.TRACK_DUMP](await rq(req.trackDump(i), { key: "live:dump:" + i }), d.info!);
   if (d !== A.dev) return;
   const o = LV.tr[i] || (LV.tr[i] = { p: [] });
   r.p.forEach((v, k) => { if (!lvTouched(`p:${i}:${k}`)) o.p[k] = v; });
@@ -121,25 +150,25 @@ export async function lvReadTrack(i) {
   notify();
 }
 /* the drum kits' names: the drum track's KIT (DESC of P_E0 with the drum track selected) */
-export async function lvKits() {
-  const dev = A.dev;
+export async function lvKits(): Promise<void> {
+  const dev = A.dev!;
   if (dev.kitNames && dev.kitNames.length) { LV.kitNames = dev.kitNames; return; }
   const ds = drumFocus(), sel = dev.sel;
   if (ds < 0) return;
   try {
     if (sel !== ds) await rq(req.track(ds));
-    const kd = await getDescOrNull(0, dev.info.pe0);
+    const kd = await getDescOrNull(0, dev.info!.pe0);
     if (kd && kd.label === "KIT") LV.kitNames = dev.kitNames = kd.names;
   } finally { if (sel !== ds) await rq(req.track(sel)).catch(() => {}); }
 }
 
 /* ---- what the state shows */
-export function lvApply(s) {
+export function lvApply(s: LiveState | null): void {
   const dev = A.dev;
   if (!s || !dev) return;
   const was = LV.s;
   LV.s = s;
-  if (!lvTouched("g:bpm")) { const id = LVG().bpm; if (dev.dump.g[id] !== s.bpm) dev.dump.g[id] = s.bpm; }
+  if (!lvTouched("g:bpm")) { const id = LVG().bpm; if (dev.dump!.g[id] !== s.bpm) dev.dump!.g[id] = s.bpm; }
   s.tracks.forEach((x, i) => {
     const o = LV.tr[i];
     if (o && !lvTouched("lv:" + i)) o.mute = (s.mutes >> i) & 1;
@@ -152,46 +181,46 @@ export function lvApply(s) {
 }
 
 /* ---- the mix: level / mute (TRACK_MIX), the rest (TRACK_PARAM; the drum track's sends are globals) */
-export async function lvSetMix(i) {
-  const o = LV.tr[i], dev = A.dev;
+export async function lvSetMix(i: number): Promise<void> {
+  const o = LV.tr[i], dev = A.dev!;
   try {
-    const r = await mixer.setMix(rq, i, o.level, o.mute, { key: "mix:" + i, front: true });
+    const r = await mixer.setMix(rq, i, o.level!, o.mute!, { key: "mix:" + i, front: true });
     if (!dev.link.hasQueued("mix:" + i) && !lvTouched("lv:" + i)) { o.level = r.level; o.mute = r.mute; notify(); }
   } catch (e) { report(e); }
   if (i === dev.sel) LV.stale = true;
-  if (dev.mix && dev.mix.tracks[i]) { dev.mix.tracks[i].level = o.level; dev.mix.tracks[i].mute = o.mute; }
+  if (dev.mix && dev.mix.tracks[i]) { dev.mix.tracks[i].level = o.level!; dev.mix.tracks[i].mute = o.mute!; }
 }
-export function lvLevel(i, v) { LV.tr[i].level = v; lvTouch("lv:" + i); notify(); lvSetMix(i); }
-export function lvMute(i, on) { LV.tr[i].mute = on ? 1 : 0; lvTouch("lv:" + i); notify(); lvSetMix(i); }
-export async function lvParam(i, id, v) {
-  const o = LV.tr[i], dev = A.dev;
+export function lvLevel(i: number, v: number): void { LV.tr[i].level = v; lvTouch("lv:" + i); notify(); lvSetMix(i); }
+export function lvMute(i: number, on: boolean): void { LV.tr[i].mute = on ? 1 : 0; lvTouch("lv:" + i); notify(); lvSetMix(i); }
+export async function lvParam(i: number, id: number, v: number): Promise<void> {
+  const o = LV.tr[i], dev = A.dev!;
   o.p[id] = v;
   lvTouch(`p:${i}:${id}`);
   notify();
-  if (i === dev.sel) { LV.stale = true; dev.dump.p[id] = v; }
+  if (i === dev.sel) { LV.stale = true; dev.dump!.p[id] = v; }
   try {
     const r = parse[CMD.TRACK_PARAM](await rq(req.trackParam(i, id, v), { key: `tp:${i}:${id}`, front: true }));
     if (!dev.link.hasQueued(`tp:${i}:${id}`) && !lvTouched(`p:${i}:${id}`)) { o.p[id] = r.value; notify(); }
   } catch (e) { report(e); }
 }
-export function lvGlobal(id, v, final = true) {
+export function lvGlobal(id: number, v: number, final = true): void {
   lvTouch("g:" + id);
   if (id === LVG().bpm) lvTouch("g:bpm");
   userSet(1, id, v, final);
   notify();
 }
-export async function lvSolo(i) {
-  const dev = A.dev;
+export async function lvSolo(i: number): Promise<void> {
+  const dev = A.dev!;
   if (!lvOk()) return;
-  if (dev.info.proto >= 13) { LV.solo ^= 1 << i; notify(); await lvSend(LIVE.SOLO_TRK, i); return; }   /* v13: any track */
-  if ((i >> 2) !== ((dev.sel | 0) >> 2)) return;      /* (before v13 the GLO keys solo the selected track's bank of four) */
+  if (dev.info!.proto >= 13) { LV.solo ^= 1 << i; notify(); await lvSend(LIVE.SOLO_TRK, i); return; }   /* v13: any track */
+  if ((i >> 2) !== (((dev.sel ?? 0) | 0) >> 2)) return;      /* (before v13 the GLO keys solo the selected track's bank of four) */
   LV.solo ^= 1 << i;
   notify();
   await lvTap(LIVE.LY_MIX, LIVE.SOLO + (i & 3));
 }
 /* the keys play this track: it is selected on the FM-1 too (REC records it; OTHER = SEL channels reach it) */
-export async function lvTarget(i) {
-  const dev = A.dev;
+export async function lvTarget(i: number): Promise<void> {
+  const dev = A.dev!;
   lvAllOff();
   LV.target = i;
   notify();
@@ -199,8 +228,8 @@ export async function lvTarget(i) {
   try { dev.sel = parse[CMD.TRACK](await rq(req.track(i), { front: true })).sel; LV.stale = true; } catch (e) { report(e); }
   notify();
 }
-export async function lvSound(i, e, p) {         /* a sound for track i (PRESET acts on the selected track) */
-  const dev = A.dev, sel = dev.sel;
+export async function lvSound(i: number, e: number, p: number): Promise<void> {         /* a sound for track i (PRESET acts on the selected track) */
+  const dev = A.dev!, sel = dev.sel ?? 0;
   try {
     if (sel !== i) await rq(req.track(i), { front: true });
     selfLoad();
@@ -212,31 +241,31 @@ export async function lvSound(i, e, p) {         /* a sound for track i (PRESET 
   } catch (err) { report(err); }
 }
 /* the next / previous sound of the track's engine (the drum track: kit) */
-export function lvStep(i, d) {
-  const o = LV.tr[i], dev = A.dev;
+export function lvStep(i: number, d: number): void {
+  const o = LV.tr[i], dev = A.dev!;
   if (!o) return;
   if (lvDrum(i)) {
-    const nk = (LV.kitNames || []).length || 46, v = ((o.p[dev.info.pe0] ?? 0) + d + nk) % nk;
-    lvParam(i, dev.info.pe0, v);
+    const nk = (LV.kitNames || []).length || 46, v = ((o.p[dev.info!.pe0] ?? 0) + d + nk) % nk;
+    lvParam(i, dev.info!.pe0, v);
     return;
   }
-  const names = dev.names[o.engine] || [];
+  const names = dev.names[o.engine!] || [];
   if (!names.length) return;
-  lvSound(i, o.engine, ((o.preset ?? 0) + d + names.length) % names.length);
+  lvSound(i, o.engine!, ((o.preset ?? 0) + d + names.length) % names.length);
 }
-export async function lvStore(k, t) {
+export async function lvStore(k: number, t: (k: string) => string): Promise<LiveState | null | undefined> {
   if (!lvOk()) return;
   const used = LV.s && (LV.s.ready >> k) & 1;
   if (used && !confirm(t("lvStoreAsk").replace("{x}", "ABCD"[k]))) return;
   if (used) await lvTap(LIVE.LY_SONG, LIVE.STORE + k);     /* (over a used section the FM-1 asks for a second press) */
   const s = await lvTap(LIVE.LY_SONG, LIVE.STORE + k);
-  A.dev.slotUsed[k] = true;
+  A.dev!.slotUsed[k] = 1;
   sayK("lvStored", "ABCD"[k]);
   return s;
 }
 
 /* ---- notes: plain MIDI on the track's channel; the drum track: its 16 sounds as GM notes, or 36.. with DR MAP 1-16 */
-export function lvChan(i) {
+export function lvChan(i: number): { ch?: number; sel?: boolean; err?: string } {
   const g = LVG(), route = lvGv(g.route);
   if (route === 1) return { err: "lvClock" };
   if (route >= 2) return { ch: route - 2 };      /* IN = CH n: that channel, on the selected track */
@@ -249,9 +278,9 @@ export function lvChan(i) {
 }
 export const lvPro = () => lvOk() && !!(LV.s && LV.s.pro);   /* (2.7) the firmware has the page's own ops 6..12 */
 const LV_ROLL_LVL = [1, 2, 0, 3];          /* GHOST SOFT NORM HARD -> the FM-1's levels (core.h LV_*) */
-const lvxLaneOf = (note) => (lvGv(LVG().drMap) ? (note - 36) & 15 : DRUM_LANES.findIndex(([n]) => n === note));
+const lvxLaneOf = (note: number): number => (lvGv(LVG().drMap) ? (note - 36) & 15 : DRUM_LANES.findIndex(([n]) => n === note));
 /* lit: what shows pressed while the note sounds (LV.lit) */
-export function lvNoteOn(token, track, note, vel, lit) {
+export function lvNoteOn(token: string, track: number, note: number, vel: number, lit?: string): void {
   const dev = A.dev;
   if (!dev || LV.held.has(token)) return;
   if (LV.kmode && LV.kmode !== "play" && lvPro()) {    /* (2.7) ROLL / ERASE while held, on the FM-1 itself */
@@ -265,12 +294,12 @@ export function lvNoteOn(token, track, note, vel, lit) {
   const c = lvChan(track);
   if (c.err) { sayK(c.err); return; }
   if (c.sel && dev.sel !== track) { lvTarget(track); return; }
-  dev.output.send([0x90 | c.ch, note & 127, Math.max(1, Math.min(127, vel | 0))]);
+  dev.output.send([0x90 | c.ch!, note & 127, Math.max(1, Math.min(127, vel | 0))]);
   LV.held.set(token, { ch: c.ch, note, track, lit });
   if (!lvDrum(track)) LV.lastNote = note & 127;          /* (LIVE pro: a step the grid adds plays this note) */
-  if (A.MOCK) startPreview().then((ok) => { if (ok && LV.held.get(token)) PV.audio.note(track, note, true); }).catch(() => {});
+  if (A.MOCK) startPreview().then((ok) => { if (ok && LV.held.get(token)) PV.audio?.note(track, note, true); }).catch(() => {});
 }
-export function lvNoteOff(token) {
+export function lvNoteOff(token: string): void {
   const h = LV.held.get(token);
   if (!h) return;
   LV.held.delete(token);
@@ -279,31 +308,31 @@ export function lvNoteOff(token) {
     if (h.op === "roll") lvSend(LIVE.ROLL, h.track, h.note, 0, 0); else lvSend(LIVE.ERASE, h.track, h.note, 0);
     return;
   }
-  try { if (A.dev) A.dev.output.send([0x80 | h.ch, h.note & 127, 0]); } catch (e) { /* unplugged */ }
+  try { if (A.dev) A.dev.output.send([0x80 | h.ch!, h.note & 127, 0]); } catch (e) { /* unplugged */ }
   if (A.MOCK) PV.audio?.note(h.track, h.note, false);
 }
-export function lvAllOff() {
+export function lvAllOff(): void {
   for (const tok of [...LV.held.keys()]) lvNoteOff(tok);
   if (LV.fxHeld >= 0 && !LV.latch) { lvSend(LIVE.FX, LV.fxHeld, 0); LV.fxHeld = -1; }
   if (LV.ui.fill && LV.ui.fill.release) LV.ui.fill.release();
 }
-export const lvDrumNote = (lane) => (lvGv(LVG().drMap) ? 36 + lane : DRUM_LANES[lane][0]);
+export const lvDrumNote = (lane: number): number => (lvGv(LVG().drMap) ? 36 + lane : DRUM_LANES[lane][0]);
 export const LV_KEYS = ["a", "w", "s", "e", "d", "f", "t", "g", "y", "h", "u", "j", "k", "o", "l", "p"];
 export const LV_VEL = [40, 70, 100, 127];        /* GHOST SOFT NORM HARD */
 
 /* ---- the effects: hold, or LATCH (one at a time, as on the FM-1) */
-export function lvFx(fx, on) {
+export function lvFx(fx: number, on: boolean): void {
   if (!lvOk()) return;
   if (on) { LV.fxHeld = fx; lvSend(LIVE.FX, fx, 1); }
   else if (LV.fxHeld === fx) { LV.fxHeld = -1; lvSend(LIVE.FX, fx, 0); }
 }
-export const LV_FX_GROUPS = [["lvFxLoops", [0, 1, 2, 3, 24, 4, 5, 6, 7, 19, 23]], ["lvFxTone", [8, 9, 16, 17, 18, 10]],
+export const LV_FX_GROUPS: [key: string, fxs: number[]][] = [["lvFxLoops", [0, 1, 2, 3, 24, 4, 5, 6, 7, 19, 23]], ["lvFxTone", [8, 9, 16, 17, 18, 10]],
   ["lvFxColour", [11, 12, 20, 21, 14]], ["lvFxMove", [13, 15, 22, 25, 26]]];
-export function lvPanic() { lvAllOff(); if (LV.s && LV.s.fx >= 0) lvSend(LIVE.FX, LV.s.fx, 0); }
+export function lvPanic(): void { lvAllOff(); if (LV.s && LV.s.fx >= 0) lvSend(LIVE.FX, LV.s.fx, 0); }
 
 /* full screen: the side bar and the header go, the page fills the screen (and the display, where the browser can) */
 export const lvFocused = () => document.documentElement.classList.contains("lvfocus");
-export function lvFull() {
+export function lvFull(): void {
   const on = !lvFocused();
   document.documentElement.classList.toggle("lvfocus", on);
   try {

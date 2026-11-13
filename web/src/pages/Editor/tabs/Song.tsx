@@ -2,12 +2,18 @@
 // The Song page: the order of the sections A..D (the device's SONG screen) as a timeline, and what happens at its end.
 // (A song as one file: the Save & load page.)
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
+import clsx from "clsx";
 import { ARR, CMD, crc32, parse, req } from "../lib/proto.ts";
+import type { ArrRow } from "../lib/proto.ts";
+import type { Dev } from "../core/app.ts";
 import { A, notify, op, rq, sayK, t, tf, useApp } from "../core/app.ts";
 import { SG } from "../core/shared.ts";
+import type { SongRow } from "../core/shared.ts";
 import { Card, SendBar } from "../ui/kit.tsx";
 import { HelpMore } from "./patterns/ui.tsx";
 import { Stepper } from "./song/Num.tsx";
+import { bad, seg, tog, togId, warn } from "../ui/styles.ts";
 
 /* ---- SLOOP 2.5: the Song page: the order of the sections A..D (the device's SONG screen, from the browser) ----
    SG.rows: the entries grouped ({scene, bars, times}: the same section and bars in a row is one block played `times`);
@@ -15,25 +21,25 @@ import { Stepper } from "./song/Num.tsx";
    SG.rawFirst / SG.keepEnd: a region set on the FM-1 that is not "from a block to the end", kept until changed here;
    SG.base: the song as read, to tell unsent changes */
 const LET = "ABCD";
-const emptySec = (dev, s) => dev.slotUsed[s] != null && !dev.slotUsed[s];   /* (PROJECT: used 0 / 1; null: not known) */
-const total = (rows) => rows.reduce((a, r) => a + Math.max(1, r.times | 0), 0);
-const startOf = (rows, k) => total(rows.slice(0, k));
+const emptySec = (dev: Dev, s: number): boolean => dev.slotUsed[s] != null && !dev.slotUsed[s];   /* (PROJECT: used 0 / 1; null: not known) */
+const total = (rows: SongRow[]): number => rows.reduce((a, r) => a + Math.max(1, r.times | 0), 0);
+const startOf = (rows: SongRow[], k: number): number => total(rows.slice(0, k));
 
 /* the loop region from the block picked: from its first entry to the end (null: the whole song) */
-function regionOf() {
-  const rows = SG.rows, n = total(rows), k = Math.max(0, rows.indexOf(SG.loopFrom));
+function regionOf(): { first: number; end: number } | null {
+  const rows = SG.rows!, n = total(rows), k = Math.max(0, rows.indexOf(SG.loopFrom!));
   let first = startOf(rows, k);
   if (SG.rawFirst != null && SG.rawFirst > first && SG.rawFirst < first + rows[k].times) first = SG.rawFirst;
   const end = SG.keepEnd != null && SG.keepEnd > first && SG.keepEnd <= n ? SG.keepEnd : n;
   return first === 0 && end === n ? null : { first, end };
 }
-const songOf = () => ({ loop: !!SG.loop, entries: ARR.expand(SG.rows), region: regionOf() });
-const sig = () => JSON.stringify(songOf());
-const songDirty = () => !!SG.rows && SG.base != null && sig() !== SG.base;
+const songOf = () => ({ loop: !!SG.loop, entries: ARR.expand(SG.rows!), region: regionOf() });
+const sig = (): string => JSON.stringify(songOf());
+const songDirty = (): boolean => !!SG.rows && SG.base != null && sig() !== SG.base;
 
-async function readSong() {
+async function readSong(): Promise<void> {
   const dev = A.dev;
-  if (!dev || !(dev.info.proto >= 6)) { Object.assign(SG, { rows: null, err: "songOld" }); notify(); return; }
+  if (!dev || !(dev.info!.proto >= 6)) { Object.assign(SG, { rows: null, err: "songOld" }); notify(); return; }
   const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));
   const it = L.rc ? null : L.items.find((x) => x.id === 1);
   if (!it) throw new Error("the settings are not readable (rc " + L.rc + ")");
@@ -45,20 +51,20 @@ async function readSong() {
     data.set(g.data, off);
   }
   if (!ARR.ok(data)) { Object.assign(SG, { rows: null, err: "songOld" }); notify(); return; }
-  const song = ARR.decode(data), rows = ARR.group(song.entries), n = song.entries.length, r = song.region;
+  const song = ARR.decode(data), rows: ArrRow[] = ARR.group(song.entries), n = song.entries.length, r = song.region;
   let k = 0;
   if (r) while (k + 1 < rows.length && startOf(rows, k + 1) <= r.first) k++;
   Object.assign(SG, { bytes: data, rows, loop: song.loop, region: r, err: "", loopFrom: rows[k] || null,
     rawFirst: r && r.first !== startOf(rows, k) ? r.first : null, keepEnd: r && r.end < n ? r.end : null });
-  SG.sel = Math.min(SG.sel | 0, rows.length - 1);
+  SG.sel = Math.min(SG.sel! | 0, rows.length - 1);
   SG.base = rows.length ? sig() : "";
   notify();
 }
-async function sendSong() {
+async function sendSong(): Promise<void> {
   if (!A.dev || !SG.rows) return;
   const song = songOf();
   if (!ARR.valid(song)) { sayK("songBad"); return; }
-  const d = ARR.encode(SG.bytes, song);
+  const d = ARR.encode(SG.bytes!, song);
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(1, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
   if (r.rc) throw new Error(`song: begin rc ${r.rc}`);
   for (let off = 0; off < d.length; off += 256) {
@@ -71,17 +77,18 @@ async function sendSong() {
   await readSong();
   sayK("songSent");
 }
-function songEdit(fn) { fn(); notify(); }
-function move(from, to) {
-  if (to < 0 || to >= SG.rows.length || from === to) return;
-  songEdit(() => { const [x] = SG.rows.splice(from, 1); SG.rows.splice(to, 0, x); SG.sel = to; });
+function songEdit(fn: () => void): void { fn(); notify(); }
+function move(from: number, to: number): void {
+  const rows = SG.rows!;
+  if (to < 0 || to >= rows.length || from === to) return;
+  songEdit(() => { const [x] = rows.splice(from, 1); rows.splice(to, 0, x); SG.sel = to; });
 }
-const blockLabel = (r) => tf("songBlock", { s: LET[r.scene], b: r.bars, n: Math.max(1, r.times | 0) });
+const blockLabel = (r: SongRow): string => tf("songBlock", { s: LET[r.scene], b: r.bars, n: Math.max(1, r.times | 0) });
 
 /* the song as a timeline: a block per entry, as wide as it plays (bars × times), the colour of its section */
-function Timeline({ dev }) {
-  const [drag, setDrag] = useState(null), [over, setOver] = useState(null);
-  const rows = SG.rows;
+function Timeline({ dev }: { dev: Dev }) {
+  const [drag, setDrag] = useState<number | null>(null), [over, setOver] = useState<number | null>(null);
+  const rows = SG.rows!;
   let bar = 1;
   return (
     <div id="songrows" className="flex min-h-[76px] w-full gap-1 overflow-x-auto pb-1" role="listbox" aria-label={t("songTimeline")}>
@@ -90,7 +97,7 @@ function Timeline({ dev }) {
         bar += len;
         return (
           <button key={k} type="button" role="option" aria-selected={k === SG.sel} draggable title={t("songDragHint")}
-            style={{ "--c": `var(--t${r.scene + 1})`, flexGrow: len, flexBasis: 0 }}
+            style={{ "--c": `var(--t${r.scene + 1})`, flexGrow: len, flexBasis: 0 } as CSSProperties}
             onClick={() => { SG.sel = k; notify(); }}
             onDragStart={(e) => { setDrag(k); e.dataTransfer.setData("text/plain", "song:" + k); e.dataTransfer.effectAllowed = "move"; }}
             onDragEnd={() => { setDrag(null); setOver(null); }}
@@ -102,7 +109,7 @@ function Timeline({ dev }) {
               ${over === k && drag !== k ? "shadow-[inset_4px_0_0_var(--acc)]" : ""} ${empty ? "border-dashed" : ""}`}>
             <span className="whitespace-nowrap text-fg">{blockLabel(r)}</span>
             <span className="whitespace-nowrap text-[14px] text-dim">{tf("songBarAt", { n: from })}{empty ? <span className="text-red">{" · " + t("songEmptyShort")}</span> : null}</span>
-            {SG.loop && r === (SG.rows[Math.max(0, SG.rows.indexOf(SG.loopFrom))]) && SG.rows.length > 1
+            {SG.loop && r === (rows[Math.max(0, rows.indexOf(SG.loopFrom!))]) && rows.length > 1
               ? <span className="absolute top-1 right-1.5 text-acc" title={t("songLoopMark")}>{"↻"}</span> : null}
           </button>
         );
@@ -112,8 +119,8 @@ function Timeline({ dev }) {
 }
 
 /* the block picked: its section, its bars, how many times it plays, its place */
-function EntryEditor({ dev, n }) {
-  const k = SG.sel, r = SG.rows[k];
+function EntryEditor({ dev, n }: { dev: Dev; n: number }) {
+  const rows = SG.rows!, k = SG.sel!, r = rows[k];
   if (!r) return null;
   const full = n >= ARR.STEPS;
   return (
@@ -123,19 +130,19 @@ function EntryEditor({ dev, n }) {
         <span className="text-dim">{blockLabel(r)}</span>
         <span className="ml-auto inline-flex gap-1.5">
           <button type="button" disabled={k === 0} title={k === 0 ? t("songFirst") : t("songEarlier")} onClick={() => move(k, k - 1)}>{"← " + t("songEarlier")}</button>
-          <button type="button" disabled={k === SG.rows.length - 1} title={k === SG.rows.length - 1 ? t("songLast") : t("songLater")}
+          <button type="button" disabled={k === rows.length - 1} title={k === rows.length - 1 ? t("songLast") : t("songLater")}
             onClick={() => move(k, k + 1)}>{t("songLater") + " →"}</button>
-          <button type="button" className="warn" id="songdel" disabled={SG.rows.length < 2} title={SG.rows.length < 2 ? t("songOneLeft") : ""}
-            onClick={() => songEdit(() => { SG.rows.splice(k, 1); SG.sel = Math.max(0, k - 1); })}>{t("songDel")}</button>
+          <button type="button" className={warn} id="songdel" disabled={rows.length < 2} title={rows.length < 2 ? t("songOneLeft") : ""}
+            onClick={() => songEdit(() => { rows.splice(k, 1); SG.sel = Math.max(0, k - 1); })}>{t("songDel")}</button>
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
         <span className="inline-flex items-center gap-2">
           <span>{t("songSection")}</span>
-          <span className="seg ids" id="songsec" role="group" aria-label={t("songSection")}>
+          <span className={seg} id="songsec" role="group" aria-label={t("songSection")}>
             {[0, 1, 2, 3].map((s) => (
-              <button key={s} type="button" aria-pressed={r.scene === s} style={{ "--c": `var(--t${s + 1})` }}
-                className="min-w-[44px] border-b-4 border-c" title={emptySec(dev, s) ? t("songSecEmpty") : ""}
+              <button key={s} type="button" aria-pressed={r.scene === s} style={{ "--c": `var(--t${s + 1})` } as CSSProperties}
+                className={clsx(togId, "min-w-[44px] border-b-4 border-c")} title={emptySec(dev, s) ? t("songSecEmpty") : ""}
                 onClick={() => songEdit(() => { r.scene = s; })}>{LET[s] + (emptySec(dev, s) ? "°" : "")}</button>
             ))}
           </span>
@@ -149,36 +156,36 @@ function EntryEditor({ dev, n }) {
             onChange={(v) => songEdit(() => { r.times = v; })} />
         </span>
       </div>
-      <p className="help mt-3 mb-0 text-dim">{t("songTimesHelp")}</p>
+      <p className="mt-3 mb-0 text-dim">{t("songTimesHelp")}</p>
     </div>
   );
 }
 
 function SongBody() {
-  const dev = A.dev, rows = SG.rows;
+  const dev = A.dev!, rows = SG.rows!;
   const n = total(rows), bars = rows.reduce((a, r) => a + r.bars * Math.max(1, r.times | 0), 0);
-  if (SG.sel == null || SG.sel >= rows.length) SG.sel = Math.max(0, Math.min(SG.sel | 0, rows.length - 1));
+  if (SG.sel == null || SG.sel >= rows.length) SG.sel = Math.max(0, Math.min(SG.sel! | 0, rows.length - 1));
   if (SG.loopFrom && !rows.includes(SG.loopFrom)) SG.loopFrom = rows[0];
-  const lk = Math.max(0, rows.indexOf(SG.loopFrom));
+  const lk = Math.max(0, rows.indexOf(SG.loopFrom!));
   const full = n >= ARR.STEPS;
   return (
     <div id="songbody">
       <Timeline dev={dev} />
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button type="button" id="songadd" disabled={full} title={full ? tf("songFull", { max: ARR.STEPS }) : t("songAddHint")} onClick={() => songEdit(() => {
-          const at = Math.min(SG.sel + 1, rows.length), last = rows[at - 1];
+          const at = Math.min(SG.sel! + 1, rows.length), last = rows[at - 1];
           rows.splice(at, 0, { scene: last ? (last.scene + 1) % 4 : 0, bars: last ? last.bars : 4, times: 1 });
           SG.sel = at;
         })}>{t("songAdd")}</button>
-        <span id="songsum" className={n > ARR.STEPS ? "bad" : "text-dim"}>{tf("songSum", { n, max: ARR.STEPS, bars })}</span>
+        <span id="songsum" className={n > ARR.STEPS ? bad : "text-dim"}>{tf("songSum", { n, max: ARR.STEPS, bars })}</span>
       </div>
-      {rows.some((r) => emptySec(dev, r.scene)) ? <p className="bad mt-2 mb-0" id="songempty">{t("songEmpty")}</p> : null}
+      {rows.some((r) => emptySec(dev, r.scene)) ? <p className={clsx(bad, "mt-2 mb-0")} id="songempty">{t("songEmpty")}</p> : null}
       <EntryEditor dev={dev} n={n} />
       <div className="mt-4 flex flex-wrap items-center gap-3" id="songend">
         <span>{t("songEnds")}</span>
-        <span className="seg" id="songloop">
-          <button type="button" aria-pressed={!SG.loop} onClick={() => songEdit(() => { SG.loop = false; })}>{t("songLoopOff")}</button>
-          <button type="button" aria-pressed={!!SG.loop} onClick={() => songEdit(() => { SG.loop = true; })}>{t("songLoopOn")}</button>
+        <span className={seg} id="songloop">
+          <button type="button" className={tog} aria-pressed={!SG.loop} onClick={() => songEdit(() => { SG.loop = false; })}>{t("songLoopOff")}</button>
+          <button type="button" className={tog} aria-pressed={!!SG.loop} onClick={() => songEdit(() => { SG.loop = true; })}>{t("songLoopOn")}</button>
         </span>
         <select id="songrf" aria-label={t("songLoopFrom")} disabled={!SG.loop} title={!SG.loop ? t("songLoopFromWhy") : ""} value={String(lk)}
           onChange={(e) => songEdit(() => { SG.loopFrom = rows[+e.target.value]; SG.rawFirst = null; SG.keepEnd = null; })}>
@@ -206,7 +213,7 @@ export default function Song() {
         onSend={() => op(sendSong)} onRead={() => { if (dirty && !confirm(t("songDiscard"))) return; op(readSong); }} />
       <Card title={t("songTitle")} ic="control_arrow_loop">
         <HelpMore line={t("songHelp1")}>{t("songHelp")}</HelpMore>
-        {SG.err ? <p className="bad" id="songerr">{t(SG.err)}</p> : null}
+        {SG.err ? <p className={bad} id="songerr">{t(SG.err)}</p> : null}
         {SG.rows ? <SongBody /> : null}
       </Card>
     </>
