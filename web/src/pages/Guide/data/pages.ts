@@ -53,7 +53,7 @@ export const PAGES: PageGroup[] = [
     ["NOTES", "pages/seq-notes", ["NOTE cursor", "PITCH", "LEN in steps", "FORCE: GHOST … ACC"], "A piano roll of the track. Hold OCT+ for the note's sheet: slide, nudge, fill, move, copy, delete, locks."],
     ["TIMING", "pages/seq-timing", ["LEN 1–64 steps", "DIV 1/4 … 2BAR", "SWG track swing", "GATE note length"], ""],
     ["PLAY", "pages/seq-play", ["DIR: FWD, REV, PEND, RAND", "SEED 0–255", "—", "—"], "On a drum track, hold white keys here to write a whole beat."],
-    ["PATTERNS", "pages/seq-patterns", ["PATTERN cursor", "QUANT", "COPY (twice)", "CLEAR (twice)"], "Eight patterns a track; keys 1–8 are pads, 9–16 launch scenes."],
+    ["PATTERNS", "pages/seq-patterns", ["PATTERN cursor", "QUANT", "COPY (twice)", "CLEAR (twice)"], "Eight patterns per track; keys 1–8 are pads, 9–16 launch scenes."],
     ["CHAIN", "pages/seq-chain", ["SLOT", "its PATTERN", "REPEAT ×1–×16", "PLAY on / off"], "A playlist of the track's patterns."],
     ["SCENES", "pages/seq-scenes", ["SCENE", "QUANT", "NAME", "the PATTERN of the track"], "Every track's pattern at once. Also: hold SEQ, tap SAVE."],
     ["SONG", "pages/seq-song", ["song step", "its section A–D", "its length in bars", "steps in the song"], "The section chain. REC stores the loop, OCT− loop / song."],

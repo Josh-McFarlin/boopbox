@@ -12,7 +12,7 @@ export default function Chords() {
         <div>
           <h3 className={`${H3} !text-green`}>One finger, one chord</h3>
           <p className="m-0 mb-4 text-[15px]">Hold SEL and turn KNOB 1. With a chord mode on, the white keys walk the scale from C4: C4 plays the I chord, D4 the II… Every chord
-            is built from the scale, so it always fits.</p>
+            is built from the scale, so it stays in key.</p>
           <div className="grid grid-cols-3 gap-1.5">
             {CHORD_MODES.map(([k, v]) => <div key={k} className={`${pixelPanel} px-3 py-2`}><b className="block font-pixel text-[16px] text-fg">{k}</b><span className="text-[14px] text-dim">{v}</span></div>)}
           </div>

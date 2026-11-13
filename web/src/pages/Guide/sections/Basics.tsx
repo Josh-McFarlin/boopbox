@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// 02 · The big ideas: the eight tracks and their colours; tap, hold and lock.
+// 02 · Basics: the eight tracks and their colours; tap, hold and lock.
 import { Card, B } from "../components/ui.tsx";
 import { IDEAS, TRACKS } from "../data/basics.ts";
 import { C } from "../data/theme.ts";

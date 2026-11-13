@@ -338,8 +338,8 @@ const Emulator: React.FC = () => {
         <>
           <p className="m-0 mb-3 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue">▶ Play it</p>
           <h1 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold min-[600px]:text-[52px]">BoopBox emulator</h1>
-          <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">The real BoopBox firmware, running in your browser:
-            the same screen, sequencer and sound engines as on the M-VAVE FM-1. Try it before you install, or work on a beat away from the device.</p>
+          <p className="mb-6 max-w-[46em] text-[17px] leading-[1.45]">This is the actual BoopBox firmware running in your browser, with the same
+            screen, sequencer and sound engines as the M-VAVE FM-1. Try it before you install, or work on a beat when you're away from the device.</p>
         </>
       )}
       {hasTrainer && !roomMode ? (

@@ -41,7 +41,7 @@ const ERROR_TEXT: Record<string, string | undefined> = {
   name_taken: "That room name is already in use.",
   name_rate_limited: "Wait a moment before changing your room name again.",
   invalid_chat: "The message was empty, too long, or included unsupported control characters.",
-  chat_rate_limited: "Chat is moving quickly. Wait a moment before sending another message.",
+  chat_rate_limited: "You’re sending messages too fast. Wait a moment.",
 };
 const ENGINE_LABELS = config.engineNames;
 
@@ -525,7 +525,7 @@ const Rooms: React.FC = () => {
         <header className="mb-[36px] max-w-[780px]">
           <p className={KICKER}>LIVE MUSIC · UP TO 8 PLAYERS</p>
           <h1 className="m-0 text-[clamp(40px,7vw,68px)] font-extrabold leading-none tracking-[-.045em] text-white">Jam rooms</h1>
-          <p className="max-w-[680px] text-[17px] leading-[1.65] text-[#c8bddb]">Jam with up to seven other BoopBox players. Each FM-1 or browser emulator mixes everyone’s stock-sound performances, while every player keeps their own patterns, scenes, and chains.</p>
+          <p className="max-w-[680px] text-[17px] leading-[1.65] text-[#c8bddb]">Jam with up to seven other BoopBox players. You hear everyone’s parts through your own FM-1 or the emulator. Only stock sounds are shared, and your patterns, scenes and chains stay yours.</p>
           <div className="flex min-h-[24px] items-center gap-[10px] text-[14px] text-[#ddd3ec]" role="status" aria-live="polite">
             <span className={clsx("h-[9px] w-[9px] rounded-full", socketState === "connected"
               ? "bg-[#a8f45c] shadow-[0_0_0_4px_rgb(168_244_92/12%)]"
@@ -550,14 +550,14 @@ const Rooms: React.FC = () => {
             <div className="mt-5 grid grid-cols-2 items-start gap-5 max-[760px]:grid-cols-1">
               <div className={clsx(CARD, "p-5")}>
                 <h3 className={CARD_TITLE}>Hear the room</h3>
-              <p className={CONTROL_TEXT}>Enable audio once to hear the other players’ tracks and sequences locally. Your own device or emulator stays audible directly, without a doubled browser copy.</p>
+              <p className={CONTROL_TEXT}>Turn on room audio to hear the other players. You still hear your own FM-1 or emulator directly, and the browser won’t play it a second time.</p>
                 <button className={button("primary")} type="button" onClick={startAudio}>
                   {audioEnabled ? "Restart room audio" : "Enable room audio"}
                 </button>
               </div>
               <div className={clsx(CARD, "p-5")}>
                 <h3 className={CARD_TITLE}>{deviceMode === "emulator" ? "Play from the emulator" : "Play from your device"}</h3>
-                <p className={CONTROL_TEXT}>Stock engine, preset, sound-control, pattern, scene, and chain changes sync automatically. Your music stays attached to your player, not copied onto other devices; starts and stops stay individual while room tempo is shared.</p>
+                <p className={CONTROL_TEXT}>When you change a stock sound, pattern, scene or chain, the room hears it. Nothing is copied onto anyone else’s device. Everyone shares the tempo, but each player starts and stops on their own.</p>
                 <div className={CONTROL_ROW}>
                   {deviceMode === "emulator" ? (
                     <button className={button("primary")} type="button" onClick={usePhysicalDevice}>Use physical FM-1</button>
@@ -577,13 +577,13 @@ const Rooms: React.FC = () => {
                   </button>
                   <p className={clsx(CONTROL_TEXT, "mb-0")} role="status" aria-live="polite">
                     {soundEditsPaused
-                      ? "Live sound edits are paused. Shared sounds, notes, and playback continue."
-                      : "Preset, sound-control, and performance changes sync automatically."}
+                      ? "Sound edits aren’t being shared right now. The room still hears your notes and playback."
+                      : "Your sound and pattern changes are shared with the room."}
                   </p>
                 </div>
                 {deviceMode === "emulator" && (
                   <p className={clsx(CONTROL_TEXT, "mb-0")} role="status" aria-live="polite">
-                    {emulatorReady ? "Emulator connected; performance syncs automatically." : "Start the emulator below to connect it to this room."}
+                    {emulatorReady ? "Emulator connected." : "Start the emulator below to connect it to this room."}
                   </p>
                 )}
               </div>
@@ -605,7 +605,7 @@ const Rooms: React.FC = () => {
               <section className={clsx(CARD, "mt-0 min-w-0 p-5")} aria-labelledby="room-players-title">
                 <h3 className={CARD_TITLE} id="room-players-title">Players</h3>
                 <p className="mt-2 mb-0 text-[13px] leading-[1.45] text-[#b7a9ca]">
-                  Mute or solo only changes the browser-rendered room mix here. Your own FM-1 or emulator stays audible.
+                  Mute and solo only change what you hear in this browser. Your own FM-1 or emulator keeps playing.
                 </p>
                 <ul className={LIST}>
                   {players.slice().sort((a, b) => a.slot - b.slot).map((player) => {
@@ -659,7 +659,7 @@ const Rooms: React.FC = () => {
               />
             </div>
             <p className="mt-5 mb-0 text-[12px] leading-[1.5] text-[#a99aba]">
-              Only factory synth presets, factory drum kits, and bounded musical controls and sequence data are shared. User samples and custom presets are not shared; raw MIDI, SysEx, arbitrary data, and audio streams are never relayed.
+              Rooms share factory presets, factory drum kits, knob moves and sequences. Your own samples and presets stay on your device, and no raw MIDI, SysEx or audio goes through the server.
             </p>
           </section>
         ) : (
@@ -667,7 +667,7 @@ const Rooms: React.FC = () => {
             <section className={clsx(CARD, "p-6", PANEL_PHONE)} aria-labelledby="create-title">
               <p className={KICKER}>START A SESSION</p>
               <h2 className={PANEL_TITLE} id="create-title">Create a room</h2>
-              <p className="leading-[1.55] text-[#c8bddb]">Pick a genre to help other musicians find the sound you’re after.</p>
+              <p className="leading-[1.55] text-[#c8bddb]">The genre shows in the room list so people know what you’re playing.</p>
               <label className="mt-[22px] mb-2 block font-bold text-[#f4edff]" htmlFor="room-genre">Genre</label>
               <select className={clsx("mb-[14px] min-h-[48px] w-full rounded-[9px] border border-[#796597] bg-[#120b20] px-3 text-white", SELECT_FOCUS)}
                 id="room-genre" value={genre} onChange={(event) => setGenre(event.target.value)}>
@@ -691,7 +691,7 @@ const Rooms: React.FC = () => {
               {rooms.length === 0 ? (
                 <div className="mt-[22px] rounded-[12px] border border-dashed border-[#614d79] p-[22px] leading-[1.5] text-[#c8bddb]">
                   <p className="mt-0 font-extrabold text-white">No rooms yet.</p>
-                  <p className="mb-0">Create one and invite other BoopBox players to join.</p>
+                  <p className="mb-0">Create one and other players can join it from this list.</p>
                 </div>
               ) : (
                 <ul className={clsx(LIST, "max-h-[420px] overflow-y-auto pr-[2px]")}>
