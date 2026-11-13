@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""The BoopBox logo, in pixels like the website's (web/src/shared/Brand.jsx): a pixel-art boombox (a handle, a body
+"""The BoopBox logo, in pixels like the website's (web/src/components/Brand.tsx): a pixel-art boombox (a handle, a body
 with notched corners, two speakers) whose display holds eight level bars, the eight tracks: 1..4 on top in the four
 track colours (blue, green, yellow, orange), 5..8 below in their shades (as the firmware draws tracks 5..8: gfx.c
 ui_shade); and the wordmark "boopbox" in Pixelify Sans Bold, the website's font, drawn from its pixels (GLYPHS).

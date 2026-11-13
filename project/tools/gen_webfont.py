@@ -3,7 +3,7 @@
 """The FM-1's own font for the web editor: Terminus 8x16 (assets/fonts/ter-u16n.bdf, SIL OFL 1.1), as a
 TrueType font whose outlines are the bitmap's pixels (each row's runs of lit pixels as rectangles), so the
 editor shows the same letters as the screen, crisp at 16 px and its multiples. Written to
-web/src/editor/assets/terminus.ttf; Vite bundles it (and inlines it into the offline one-file editor, which also
+web/src/assets/fonts/terminus.ttf; Vite bundles it (and inlines it into the offline one-file editor, which also
 runs from file://, where a font file next to it may not load).
   tools/gen_webfont.py [OUT.ttf]
 Needs fontTools (pip install fonttools)."""
@@ -99,7 +99,7 @@ def build(path):
 
 
 def main():
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "web" / "src" / "editor" / "assets" / "terminus.ttf"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "web" / "src" / "assets" / "fonts" / "terminus.ttf"
     ttf, n = build(BDF)
     out.write_bytes(ttf)
     print(f"web font: {n} glyphs, {len(ttf)} B TTF -> {out}")

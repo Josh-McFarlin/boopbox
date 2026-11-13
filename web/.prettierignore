@@ -1,0 +1,8 @@
+node_modules
+package-lock.json
+site/public
+EDITOR_PROTOCOL.md
+*.py
+# the pages' HTML: make_site.py fills in placeholders (/*META*/null, /*VERSION*/null, <!--PWA-->) as written
+site/**/*.html
+sw.js

@@ -90,7 +90,7 @@ More details:
 - **Step components.** The behavior of each type is a definition of this firmware. `docs/groovebox-controls.md`
   lists them. They are not copies from another instrument.
 - **The web editor.** It reads the working project (backup object 0, format 7) and changes it in the browser
-  (`web/src/editor/lib/proto.js`, `PROJ7`). Then it sends the project back whole. The FM-1 loads it immediately. This
+  (`web/src/pages/Editor/lib/proto.ts`, `PROJ7`). Then it sends the project back whole. The FM-1 loads it immediately. This
   is possible only while the song is stopped. `tests/proj7_tool.c` compares this codec with the capture and the load
   of the firmware.
 - **Song sections in the web editor.** The Patterns page edits only the working project. To edit a section A..D,
@@ -149,7 +149,7 @@ On Windows with WSL:
 site into `build/boopbox-site` and serves it on `http://localhost:8766`. Then it opens the installer in the browser.
 
 To open the editor again later, run `scripts/OPEN-EDITOR.bat`. It serves `build/boopbox-site` and opens
-`http://localhost:8766/webapp/editor/`.
+`http://localhost:8766/editor/`.
 
 Notes about the build:
 
@@ -176,7 +176,7 @@ python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
 cd /tmp/felucca-site && python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000/webapp/installer/` in Chrome or Edge. Web MIDI needs `localhost`.
+Then open `http://localhost:8000/installer/` in Chrome or Edge. Web MIDI needs `localhost`.
 
 Recovery:
 

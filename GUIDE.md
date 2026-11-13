@@ -67,9 +67,9 @@ A version tag shows the release that added a feature. *(1.8)* and other 1.x tags
 
 ## 1. Install and update
 
-**From the browser (recommended).** Open the [installer page](https://boopbox.replit.app/webapp/installer/) in **Chrome or Edge**. Connect the FM-1 with a USB data cable. Connect the cable directly, with no hub. Press **INSTALL**. Allow MIDI access. Wait for *Done*. The FM-1 restarts and shows the BoopBox logo.
+**From the browser (recommended).** Open the [installer page](https://boopbox.replit.app/installer/) in **Chrome or Edge**. Connect the FM-1 with a USB data cable. Connect the cable directly, with no hub. Press **INSTALL**. Allow MIDI access. Wait for *Done*. The FM-1 restarts and shows the BoopBox logo.
 
-**From the source folder (Windows).** Double-click **`project/scripts/INSTALL-BOOPBOX.bat`**. This script builds the firmware and opens the installer at `http://localhost:8766/webapp/installer/`. Keep the black window open until the installation is complete. **`project/scripts/OPEN-EDITOR.bat`** opens the web editor.
+**From the source folder (Windows).** Double-click **`project/scripts/INSTALL-BOOPBOX.bat`**. This script builds the firmware and opens the installer at `http://localhost:8766/installer/`. Keep the black window open until the installation is complete. **`project/scripts/OPEN-EDITOR.bat`** opens the web editor.
 
 **Updating** keeps your projects, presets, samples, kits and settings. The installer does a check of the package (SHA-256). Before the update loader of BoopBox starts the new firmware, it does a second check of the package (CRC). A damaged package is refused before anything is written.
 
@@ -77,7 +77,7 @@ A version tag shows the release that added a feature. *(1.8)* and other 1.x tags
 
 **Before you go back to an older BoopBox**, save a backup in the editor. A project that a newer BoopBox saved can fail to open correctly on an older BoopBox. The release notes in [CHANGELOG.md](CHANGELOG.md) tell you when this occurs.
 
-<a id="the-emulator-18"></a>**Try it first in the browser (1.8).** [The emulator](https://boopbox.replit.app/webapp/emu/) runs the real BoopBox firmware (screen, sequencer, sound). The page shows a drawing of the FM-1. Play it with the mouse, a touch screen or the keys of the computer. The names of the computer keys are printed faintly on the controls. Your projects stay in the browser. [The home page](https://boopbox.replit.app/) shows what BoopBox does. It has links to the installer, the editor and the emulator.
+<a id="the-emulator-18"></a>**Try it first in the browser (1.8).** [The emulator](https://boopbox.replit.app/emu/) runs the real BoopBox firmware (screen, sequencer, sound). The page shows a drawing of the FM-1. Play it with the mouse, a touch screen or the keys of the computer. The names of the computer keys are printed faintly on the controls. Your projects stay in the browser. [The home page](https://boopbox.replit.app/) shows what BoopBox does. It has links to the installer, the editor and the emulator.
 
 ---
 
@@ -1271,11 +1271,11 @@ SLOOP 2.5: on the **Drum synth** tab of the editor's **Sample slots** page, you 
 
 ## 24. The web editor
 
-Open the editor in **Chrome or Edge** with the FM-1 on USB. Open it from the [home page](https://boopbox.replit.app/), the [installer page](https://boopbox.replit.app/webapp/installer/), the [editor link](https://boopbox.replit.app/webapp/editor/), or **`project/scripts/OPEN-EDITOR.bat`**. Then press **Connect** (allow MIDI). The editor follows the device live: when you turn a knob on the FM-1, the editor moves. It looks like the FM-1: the colours of the tracks and the pixel font of the FM-1. The editor is for a computer: it needs a window at least 1000 px wide. In a narrower window, it shows a note.
+Open the editor in **Chrome or Edge** with the FM-1 on USB. Open it from the [home page](https://boopbox.replit.app/), the [installer page](https://boopbox.replit.app/installer/), the [editor link](https://boopbox.replit.app/editor/), or **`project/scripts/OPEN-EDITOR.bat`**. Then press **Connect** (allow MIDI). The editor follows the device live: when you turn a knob on the FM-1, the editor moves. It looks like the FM-1: the colours of the tracks and the pixel font of the FM-1. The editor is for a computer: it needs a window at least 1000 px wide. In a narrower window, it shows a note.
 
 **Offline (2.6).** *Download for offline use* (at the bottom of the side bar, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html` (for example, `boopbox-editor-1.9.4.html`). This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it. It opens in Chrome or Edge without internet (Chrome asks one time to allow MIDI), and it works as the online editor does. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
 
-**As an app, also on Android (2.6).** Open the [online editor](https://boopbox.replit.app/webapp/editor/) or the installer one time with internet. Then use *Install the app* (at the bottom of the side bar, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs).
+**As an app, also on Android (2.6).** Open the [online editor](https://boopbox.replit.app/editor/) or the installer one time with internet. Then use *Install the app* (at the bottom of the side bar, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs).
 
 The app stays the online site, kept by the browser. Thus it uses the same sound library as the online editor. It also gets each new BoopBox version automatically the next time it opens online. On Android, use the app, not the downloaded file: Chrome on Android does not allow MIDI in a downloaded file.
 

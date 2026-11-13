@@ -3,23 +3,64 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "vite",
     "dev": "vite",
     "build": "vite build",
     "build:offline": "vite build --mode offline",
-    "test": "node test_web.mjs"
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests && node test_web.mjs",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:node": "node test_web.mjs",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "prettier": "prettier --ignore-unknown --write .",
+    "validate": "./scripts/validate",
+    "prepare": "cd .. && husky web/.husky || true"
   },
   "dependencies": {
     "@fontsource/dm-sans": "5.3.0",
     "@fontsource/jersey-10": "5.3.0",
     "@fontsource/pixelify-sans": "5.3.0",
+    "clsx": "^2.1.1",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.10",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "@vitest/ui": "^5.1.0",
+    "concurrently": "^10.0.7",
+    "eslint": "^10.14.0",
+    "eslint-config-ts-prefixer": "^5.1.0",
+    "eslint-import-resolver-node": "^0.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
+    "jsdom": "^31.0.1",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.10.1",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "4.3.3",
+    "typescript": "^6.0.3",
     "vite": "8.3.5",
-    "vite-plugin-singlefile": "2.3.4"
+    "vite-plugin-singlefile": "2.3.4",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "lint-staged": {
+    "*": "prettier --ignore-unknown --write",
+    "*.{js,jsx,ts,tsx}": "eslint --fix"
   }
 }

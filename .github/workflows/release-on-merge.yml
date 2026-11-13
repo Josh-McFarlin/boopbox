@@ -106,7 +106,7 @@ jobs:
           if [ -f "$site/firmware/boopbox-trainer-$VER.fwsc" ]; then
             cp "$site/firmware/boopbox-trainer-$VER.fwsc" "$dir/"
           fi
-          cp "$site/webapp/editor/boopbox-editor.html" "$dir/boopbox-editor-$VER.html"
+          cp "$site/editor/boopbox-editor.html" "$dir/boopbox-editor-$VER.html"
           (cd "$dir" && sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS.txt")
           mv "$RUNNER_TEMP/SHA256SUMS.txt" "$dir/"
           cat "$dir/SHA256SUMS.txt"

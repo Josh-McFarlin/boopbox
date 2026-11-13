@@ -68,7 +68,7 @@ function createRoomTestClient(url) {
 }
 
 test("FM-1 input relays only bounded note-on and note-off messages", async () => {
-  const { parseKeyboardMessage } = await import("../../web/src/rooms/keyboard-midi.js");
+  const { parseKeyboardMessage } = await import("../../web/src/pages/Rooms/keyboardMidi.ts");
   assert.deepEqual(parseKeyboardMessage(Uint8Array.from([0x90, 60, 110])), {
     note: 60,
     on: true,
@@ -112,9 +112,9 @@ test("unplugging an FM-1 relays a matching note-off to room listeners", async ()
     owner.send({ type: "voice", voice: { engine: 0, preset: 2 } });
     await listener.next("voice");
 
-    const { makeMockDevice } = await import("../../web/src/editor/lib/proto.js");
-    const { connectFm1 } = await import("../../web/src/rooms/device.js");
-    const { playRoomNote, stopRoomNotes } = await import("../../web/src/rooms/notes.js");
+    const { makeMockDevice } = await import("../../web/src/pages/Editor/lib/proto.ts");
+    const { connectFm1 } = await import("../../web/src/pages/Rooms/device.ts");
+    const { playRoomNote, stopRoomNotes } = await import("../../web/src/pages/Rooms/notes.ts");
     mock = makeMockDevice({ auto: false });
     Object.defineProperty(globalThis, "navigator", {
       configurable: true,
@@ -155,8 +155,8 @@ test("unplugging an FM-1 relays a matching note-off to room listeners", async ()
 });
 
 async function connectMockFm1() {
-    const { makeMockDevice } = await import("../../web/src/editor/lib/proto.js");
-    const { connectFm1 } = await import("../../web/src/rooms/device.js");
+    const { makeMockDevice } = await import("../../web/src/pages/Editor/lib/proto.ts");
+    const { connectFm1 } = await import("../../web/src/pages/Rooms/device.ts");
   const mock = makeMockDevice({ auto: false });
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   Object.defineProperty(globalThis, "navigator", {
@@ -263,7 +263,7 @@ test("FM-1 preset reloads automatically share the new voice and later edits", as
 });
 
 test("sound-edit pause survives switching away from and back to an FM-1", async () => {
-  const { createSoundEditSharingController } = await import("../../web/src/rooms/edit-sharing.js");
+  const { createSoundEditSharingController } = await import("../../web/src/pages/Rooms/editSharing.ts");
   const sharing = createSoundEditSharingController();
   const first = await connectMockFm1();
   let second;
@@ -293,8 +293,8 @@ test("sound-edit pause survives switching away from and back to an FM-1", async 
 });
 
 test("FM-1 connection snapshots all factory tracks and routes keyboard notes", async () => {
-    const { makeMockDevice } = await import("../../web/src/editor/lib/proto.js");
-    const { connectFm1 } = await import("../../web/src/rooms/device.js");
+    const { makeMockDevice } = await import("../../web/src/pages/Editor/lib/proto.ts");
+    const { connectFm1 } = await import("../../web/src/pages/Rooms/device.ts");
   const mock = makeMockDevice({ auto: false });
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   let midiOptions;
@@ -371,12 +371,12 @@ function roomPerformance(playing = false) {
 
 test("browser listeners keep solo and mute local and clear them when a room ends", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   let modules;
   try {
     modules = await Promise.all([
-      import("../../web/src/rooms/mix.js"),
-      import("../../web/src/rooms/audio.js"),
+      import("../../web/src/pages/Rooms/mix.ts"),
+      import("../../web/src/pages/Rooms/audio.ts"),
     ]);
   } finally {
     if (originalDocument === undefined) delete global.document;
@@ -442,9 +442,9 @@ test("browser listeners keep solo and mute local and clear them when a room ends
 
 test("room audio maps all eight factory tracks onto two local firmware groups", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   try {
-    const { RoomAudio } = await import("../../web/src/rooms/audio.js");
+    const { RoomAudio } = await import("../../web/src/pages/Rooms/audio.ts");
     const audio = new RoomAudio(() => {});
     const messages = [];
     audio.node = { port: { postMessage: (message) => messages.push(message) }, disconnect() {} };
@@ -503,11 +503,11 @@ test("room audio maps all eight factory tracks onto two local firmware groups", 
 
 test("room firmware renders all eight tracks and sequenced patterns for eight members", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   let audio;
   try {
     const [{ RoomAudio }, { FirmwareAudio, RoomFirmwareAudio }] = await Promise.all([
-      import("../../web/src/rooms/audio.js"),
+      import("../../web/src/pages/Rooms/audio.ts"),
       import("../../web/site/public/editor/preview-worklet.js"),
     ]);
     audio = new RoomAudio(() => {});

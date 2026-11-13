@@ -51,11 +51,10 @@ function staticTarget(pathname) {
     return fileExists(home) ? home : resolve(ROOT, "index.html");
   }
 
-  if (pathname.startsWith("/webapp/") || pathname.startsWith("/firmware/")) {
-    const generated = resolve(SITE_ROOT, `.${pathname}`);
-    if (generated.startsWith(`${SITE_ROOT}${sep}`) && fileOrDirectoryExists(generated)) {
-      return generated;
-    }
+  // the generated site first (its pages, assets and firmware, at the root), then docs/
+  const generated = resolve(SITE_ROOT, `.${pathname}`);
+  if (generated.startsWith(`${SITE_ROOT}${sep}`) && fileOrDirectoryExists(generated)) {
+    return generated;
   }
 
   const file = resolve(ROOT, `.${pathname}`);
@@ -75,11 +74,6 @@ const server = createServer((req, res) => {
     pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
   } catch {
     res.writeHead(400).end("Bad request");
-    return;
-  }
-
-  if (pathname === "/webapp/home" || pathname === "/webapp/home/") {
-    res.writeHead(308, { Location: "/" }).end();
     return;
   }
 

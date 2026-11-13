@@ -290,8 +290,8 @@ test("rooms relay bounded performances, sync tempo, and restore state for late j
 });
 
 test("physical FM-1 sequence edits update active listeners without sharing playback controls", async () => {
-  const { makeMockDevice } = await import("../../web/src/editor/lib/proto.js");
-  const { connectFm1 } = await import("../../web/src/rooms/device.js");
+  const { makeMockDevice } = await import("../../web/src/pages/Editor/lib/proto.ts");
+  const { connectFm1 } = await import("../../web/src/pages/Rooms/device.ts");
   const app = await startRoomServer();
   const clients = [];
   const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
@@ -305,10 +305,10 @@ test("physical FM-1 sequence edits update active listeners without sharing playb
     configurable: true,
     value: { requestMIDIAccess: async () => mock.access },
   });
-  globalThis.document = { baseURI: "http://localhost/webapp/rooms/" };
+  globalThis.document = { baseURI: "http://localhost/rooms/" };
 
   try {
-  const { RoomAudio } = await import("../../web/src/rooms/audio.js");
+  const { RoomAudio } = await import("../../web/src/pages/Rooms/audio.ts");
     const owner = createClient(app.url);
     const listener = createClient(app.url);
     clients.push(owner, listener);
