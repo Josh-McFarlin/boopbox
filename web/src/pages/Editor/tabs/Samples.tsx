@@ -65,14 +65,14 @@ function drawKeymap(cv: HTMLCanvasElement, files: SmpFile[], keys: [number, numb
 function drawLoopWave(cv: HTMLCanvasElement, f: SmpFile): void {
   const w = cv.width = Math.max(120, cv.clientWidth || 600), h = cv.height = 48, g = cv.getContext("2d")!;
   const cs = getComputedStyle(cv), s = f.s, n = s.length, [ls, le] = LOOP.range(f);
-  const col = cs.getPropertyValue("--c").trim(), dim = css("--s3");
+  const col = cs.getPropertyValue("--c").trim(), S3 = css("--s3");
   g.clearRect(0, 0, w, h);
   for (let x = 0; x < w; x++) {
     const a = Math.floor(x / w * n), b = Math.max(a + 1, Math.floor((x + 1) / w * n));
     let pk = 0;
     for (let i = a; i < b && i < n; i += 2) pk = Math.max(pk, Math.abs(s[i]));
     const y = Math.max(1, Math.round(pk / 32768 * (h / 2 - 2)));
-    g.fillStyle = b > ls && a <= le ? col : dim;
+    g.fillStyle = b > ls && a <= le ? col : S3;
     g.fillRect(x, h / 2 - y, 1, y * 2);
   }
   g.fillStyle = col;
