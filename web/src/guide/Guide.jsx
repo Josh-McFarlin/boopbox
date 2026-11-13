@@ -281,7 +281,7 @@ export default function Guide() {
         <Toc />
         <main className="min-w-0">
           <Section id="panel" kicker="01 · The map" title="The panel"
-            intro="Four knobs and the octave buttons on the left, the screen, KNOB 1–4 and twelve buttons on the right, 11 black and 16 white keys below. KNOB 1–4 always set the four dials at the bottom of the screen, and each knob has the colour of its tracks.">
+            intro="Four knobs and the octave buttons on the left, the screen, KNOB 1–4 and twelve buttons on the right, 11 black and 16 white keys below. KNOB 1–4 always set the four dials at the bottom of the screen.">
             <PanelExplorer />
           </Section>
 
@@ -290,7 +290,7 @@ export default function Guide() {
               {TRACKS.map(([n, kind, c]) => (
                 <div key={n} className="pixel-panel px-3 py-3" style={{ opacity: n > 4 ? 0.8 : 1 }}>
                   <b className="block font-pixel text-[36px] leading-none" style={{ color: C[c] }}>{n}</b>
-                  <span className="block text-[14px] text-dim">{kind} · KNOB {((n - 1) % 4) + 1}</span>
+                  <span className="block text-[14px] text-dim">{kind}</span>
                 </div>
               ))}
             </div>

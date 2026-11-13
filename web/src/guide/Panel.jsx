@@ -8,7 +8,6 @@ const LINE = "var(--body)";
 const INK = "#160d2b";
 const KNOBS = [["MASTER", 167, 143], ["SELECT", 352, 143], ["PRESETS", 167, 303], ["ALGORITHM", 352, 303],
   ["KNOB1", 985, 143, "KNOB1"], ["KNOB2", 1175, 143, "KNOB2"], ["KNOB3", 1367, 143, "KNOB3"], ["KNOB4", 1560, 143, "KNOB4"]];
-const KNOB_COL = { KNOB1: C.blue, KNOB2: C.green, KNOB3: C.yellow, KNOB4: C.orange };
 const ROW1 = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO"];
 const ROW2 = ["HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC"];
 const BX = [930, 1048, 1166, 1284, 1401, 1518];
@@ -55,9 +54,10 @@ export default function Panel({ layer, sel, onSel, screen }) {
         const fn = id.startsWith("KNOB") ? layer.knobs[+id[4] - 1] : null;
         return (
           <Hit key={id} id={id} label={name} sel={sel} onSel={onSel}>
-            <circle cx={x} cy={y} r="44" fill={on ? lc : "var(--deep)"} stroke={on ? "var(--fg)" : LINE} strokeWidth="5" />
-            <circle cx={x} cy={y} r="31" fill="none" stroke={on ? INK : (KNOB_COL[id] || LINE)} strokeWidth="5" />
-            <line x1={x} y1={y - 30} x2={x} y2={y - 14} stroke={on ? INK : LINE} strokeWidth="5" strokeLinecap="round" />
+            {on ? <circle cx={x} cy={y} r="54" fill="none" stroke={lc} strokeWidth="6" /> : null}
+            <circle cx={x} cy={y} r="44" fill="#000" stroke={on ? "var(--fg)" : LINE} strokeWidth="5" />
+            <circle cx={x} cy={y} r="31" fill="#000" stroke="#3a3a3a" strokeWidth="4" />
+            <line x1={x} y1={y - 30} x2={x} y2={y - 14} stroke="#ffffff" strokeWidth="5" strokeLinecap="round" />
             <text x={x} y={y - 62} textAnchor="middle" fontSize="27" fontWeight="700" fill="var(--fg)" className="font-pixel">{name}</text>
             {fn && fn !== "—" ? <text x={x} y={y + 76} textAnchor="middle" fontSize="23" fill={lc} className="font-pixel">{fn}</text> : null}
           </Hit>
