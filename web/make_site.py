@@ -7,7 +7,7 @@
   firmware/boopbox-VER.fwsc   the package
   firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (project/tools/build.py --trainer), offered as a
                               second choice in the installer
-  webapp/home/, webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
+  webapp/home/, webapp/guide/, webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
                               the React pages (web/site/, web/src/), built by Vite (npm run build, into
                               project/build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
                               editor's version are written into their index.html here
@@ -185,7 +185,7 @@ def main(pkg, version, out, trainer=None):
 
     build_pages()
     app, fw = out / "webapp", out / "firmware"
-    for d in ("home", "installer", "editor", "emu", "rooms", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
+    for d in ("home", "guide", "installer", "editor", "emu", "rooms", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
         if (app / d).exists():
             shutil.rmtree(app / d)
     shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)

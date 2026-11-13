@@ -12,11 +12,12 @@ const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
 const LINKS = [
   ["home", "Features", "home/"],
   ["editor", "Web editor", "editor/"],
+  ["guide", "Guide", "guide/"],
   ["emu", "Try it", "emu/"],
   ["installer", "Install", "installer/"],
 ];
 
-/* current: the page shown ("home", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline
+/* current: the page shown ("home", "guide", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline
    editor) */
 export default function SiteHeader({ current, base = "../" }) {
   const A = ({ k, page, children, ...p }) => {
@@ -29,7 +30,6 @@ export default function SiteHeader({ current, base = "../" }) {
         <A page="home/" aria-label="BoopBox home" className="block no-underline"><Logo /></A>
         <nav aria-label="Main" className="flex flex-auto flex-wrap gap-x-[22px] gap-y-1 text-[18px] font-medium [&_a]:text-[#c9bdf0] [&_a]:no-underline [&_a:hover]:text-[#3ee6ff]">
           {LINKS.map(([k, label, page]) => <A key={k} k={k} page={page}>{label}</A>)}
-          <a href={`${GITHUB}/blob/main/GUIDE.md`}>Guide</a>
           <a href={GITHUB}>GitHub</a>
         </nav>
         <a href={base + "installer/"} {...(current === "installer" ? { "aria-current": "page" } : {})}

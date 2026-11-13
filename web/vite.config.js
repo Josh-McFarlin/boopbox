@@ -2,7 +2,7 @@
 // The BoopBox site: React + Vite + Tailwind. Pages under site/, relative URLs
 // everywhere (base "./"), so the build drops into the site's webapp/ folder as it is (web/make_site.py).
 //
-//   npm run dev                      the pages at http://localhost:5173/home/ /installer/ /editor/ /emu/ (editor: ?mock=1
+//   npm run dev                      the pages at http://localhost:5173/home/ /guide/ /installer/ /editor/ /emu/ (editor: ?mock=1
 //                                    for a simulated FM-1)
 //   npm run build                    -> ../project/build/webapp-vite/        (make_site.py copies it into webapp/)
 //   npm run build:offline            -> ../project/build/webapp-offline/editor/index.html: the editor in one file, for the
@@ -60,6 +60,7 @@ export default defineConfig(({ mode }) => {
           ? { editor: resolve(SITE, "editor/index.html") }
           : {
               home: resolve(SITE, "home/index.html"),
+              guide: resolve(SITE, "guide/index.html"),
               installer: resolve(SITE, "installer/index.html"),
               editor: resolve(SITE, "editor/index.html"),
               emu: resolve(SITE, "emu/index.html"),
