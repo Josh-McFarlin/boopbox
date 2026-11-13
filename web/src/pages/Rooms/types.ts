@@ -21,7 +21,7 @@ export interface RoomPattern {
   steps: (RoomDrumStep | RoomSynthStep)[];
   micro: [index: number, amount: number][];
   fill: [index: number, condition: number][];
-  locks: [step: number, slide: number, param: number, value: number][];
+  locks: [step: number, slide: boolean, param: number, value: number][];
   components: [step: number, type: number, a: number, b: number][];
   dir: number;
   seed: number;

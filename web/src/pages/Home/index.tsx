@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The home page: what BoopBox is and what it does, with the FM-1's own screens (project/tools/make_screens.py draws them with
 // the firmware's code: project/assets/screens/fm1/), then the way to the installer, the editor and the emulator.
-// Served at the site's root (make_site.py copies the page from webapp/home/ and sets its base to webapp/home/ so
+// Served at the site's root (make_site.py copies the page from home/ and sets its base to home/ so
 // relative assets resolve correctly).
 import type React from "react";
 import type { ReactNode } from "react";

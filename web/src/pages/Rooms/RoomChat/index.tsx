@@ -223,7 +223,7 @@ function RoomChat({
       <header className="flex items-center justify-between gap-4 border-b border-[#493766] bg-[rgb(36_22_64/78%)] px-5 py-[17px] max-[480px]:px-[14px]">
         <div className="min-w-0">
           <p className={clsx(PIXEL, "mt-0 mb-[2px] text-[12px] font-bold uppercase tracking-[.08em] text-[#d1bfef]")}>Room channel</p>
-          <h2 className={clsx(PIXEL, "m-0 text-[22px] leading-[1.15] text-white")} id={`${composerId}-title`}>Chat</h2>
+          <h2 className={clsx(PIXEL, "m-0 text-[25px] leading-[1.15] tracking-[-.025em] text-white")} id={`${composerId}-title`}>Chat</h2>
         </div>
         <div
           className="inline-flex flex-none items-center gap-2 text-[12px] font-bold text-[#b7a9ca] max-[480px]:gap-[6px] max-[480px]:text-[11px]"

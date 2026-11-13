@@ -78,6 +78,7 @@
   button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   /* disabled: still readable (its title says why it is off), never the colour of the background */
   button:disabled { color: var(--dim); background: var(--s1); opacity: .6; cursor: not-allowed; }
+  /* TO REMOVE once the tabs use ui/styles.ts: button.pri, button.warn, button:disabled .ic (and ".help" above) */
   button.pri { background: var(--acc); color: #000; }
   button.pri:hover:not(:disabled) { background: var(--fg); }
   button.pri:disabled { background: var(--s2); color: var(--dim); }
@@ -117,6 +118,7 @@
   progress::-moz-progress-bar { background: var(--acc); }
 }
 
+/* TO REMOVE once the tabs use ui/styles.ts */
 @layer components {
   /* a row of controls */
   .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }

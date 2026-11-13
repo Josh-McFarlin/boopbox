@@ -12,7 +12,7 @@ import { initTabs } from "./core/tabs.ts";
 import { loadIconFont } from "./ui/kit.tsx";
 import { registerServiceWorker } from "../../lib/pwa.ts";
 import { initPages } from "./tabs/index.ts";
-import App from "./index.tsx";
+import Editor from "./index.tsx";
 
 document.documentElement.lang = A.lang;
 initTabs();
@@ -21,4 +21,4 @@ startDeviceLoops();
 loadIconFont();
 registerServiceWorker();
 if (!A.MOCK && !navigator.requestMIDIAccess) sayK("nomidi");
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")!).render(<Editor />);

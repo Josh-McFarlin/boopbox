@@ -22,7 +22,7 @@ function makePlayer() {
   const input = [...mock.access.inputs.values()][0];
   const output = [...mock.access.outputs.values()][0];
   if (!input || !output) throw new Error("The local firmware audio engine could not start.");
-  const link = new Link((data) => output.send(data), { timeout: 500 });
+  const link = new Link((data) => output.send!(data), { timeout: 500 });
   input.onmidimessage = (event: { data: Uint8Array }) => link.receive(event.data);
   return { mock, input, link, ready: link.request(req.info()) };
 }
@@ -68,9 +68,20 @@ function makePatternBytes(pattern: RoomPattern | null | undefined, drum: boolean
   return PROJ7.patBytes(value, drum);
 }
 
+/* the preview engine's state (previewSnapshot) with what a room adds: the player's transport, scene, patterns and the
+   room clock's beat */
+interface RoomPreviewSnapshot {
+  tracks: object[];
+  playing?: boolean;
+  currentScene?: number | null;
+  hasVoice?: boolean;
+  roomBeat?: number;
+  roomScenes?: { names: number[]; patterns: number[][] };
+}
+
 function performanceGroupSnapshot(mock: RoomMock, performance: RoomPerformance, group: number, clock: RoomClock | null) {
   mock.state.g[0] = performance.tempo;
-  const snapshot = previewSnapshot(mock.state, false);
+  const snapshot = previewSnapshot(mock.state, false) as RoomPreviewSnapshot;
   snapshot.playing = performance.playing;
   snapshot.currentScene = performance.currentScene;
   snapshot.hasVoice = performance.tracks.slice(group * 4, group * 4 + 4).some((track) => !!track.voice);

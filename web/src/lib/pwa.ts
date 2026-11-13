@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The site without internet (webapp/sw.js, made by make_site.py): opened once online, the installer, the firmware and
+// The site without internet (sw.js at the site's root, made by make_site.py): opened once online, the installer, the firmware and
 // the editor work offline too, still on https (Android: a downloaded file opens as content://, where Chrome refuses
 // MIDI). Not in the dev server (no sw.js there) nor in the offline one-file editor (a file has no site).
 import { useEffect, useState } from "react";

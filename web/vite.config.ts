@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: offline ? 100_000_000 : 4096,
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
-        input: offline
+        input: (offline
           ? { editor: resolve(SITE, "editor/index.html") }
           : {
               home: resolve(SITE, "home/index.html"),
@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
               installer: resolve(SITE, "installer/index.html"),
               editor: resolve(SITE, "editor/index.html"),
               emu: resolve(SITE, "emu/index.html"),
-            },
+            }) as Record<string, string>,
       },
     },
   };

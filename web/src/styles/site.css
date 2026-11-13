@@ -2,7 +2,8 @@
    The home page's, the installer's and the emulator's look ("pocket arcade"): the FM-1's own pixel screen scaled up.
    Deep violet, magenta, cyan and lime; Jersey 10 for headings and labels, DM Sans for text (both SIL OFL 1.1,
    bundled from @fontsource, so the pages need no font host and work offline). Tailwind, with the palette as theme
-   tokens (bg-bg, text-dim, bg-tile, border-line, text-blue ...). The four accent names stay the track colours' names
+   tokens (bg-bg, text-dim, bg-tile, border-line, text-blue ...); the shared looks (the arcade button, the pixel screen
+   and panel) are class strings in src/components/styles.ts. The four accent names stay the track colours' names
    (orange, blue, green, yellow): here they are magenta, cyan, lime and yellow. */
 @import "tailwindcss";
 @import "@fontsource/jersey-10/latin-400.css";
@@ -20,6 +21,15 @@
   --color-orange: #ff4fd8;
   --color-red: #ff6b8a;
   --color-ink: #160d2b;
+
+  /* the emulator's breathing button LED (a duty layer: the sound browser's HOME and SAVE) */
+  --animate-fm1-breathe: fm1-breathe 2.4s ease-in-out infinite;
+  @keyframes fm1-breathe { 0%, 100% { opacity: .1; } 50% { opacity: 1; } }
+
+  /* Rooms */
+  /* a jam room's chat message as it arrives */
+  --animate-room-chat-arrive: room-chat-arrive .22s ease-out both;
+  @keyframes room-chat-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 }
 
 @theme inline {
@@ -43,18 +53,3 @@
   a { color: inherit; }
   h1, h2, h3 { @apply text-fg; }
 }
-
-@layer components {
-  /* a chunky button with an offset shadow in a second colour, pressed in when held */
-  .arcade-btn { @apply inline-flex min-h-[52px] cursor-pointer items-center justify-center border-0 px-7 font-pixel text-[20px] font-bold
-    leading-none text-ink no-underline transition-transform; box-shadow: 5px 5px 0 var(--shadow, var(--color-blue)); }
-  .arcade-btn:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--shadow, var(--color-blue)); }
-  .arcade-btn:active { transform: translate(4px, 4px); box-shadow: 1px 1px 0 var(--shadow, var(--color-blue)); }
-  .arcade-btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
-  .arcade-btn:disabled { @apply cursor-default bg-tile text-dim; box-shadow: none; transform: none; }
-}
-
-/* a pixel screen: the FM-1's 240 x 240 shown crisp, in a thick dark bezel */
-@utility pixel-screen { display: block; aspect-ratio: 1; height: auto; width: 100%; border: 6px solid var(--deep); image-rendering: pixelated; }
-/* a panel drawn with a pixel-thick inside border (a utility, so variants such as [&>div]:pixel-panel work) */
-@utility pixel-panel { background: var(--tile); box-shadow: inset 0 0 0 3px var(--line); }

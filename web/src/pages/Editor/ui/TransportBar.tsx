@@ -8,6 +8,7 @@ import { showTab } from "../core/tabs.ts";
 import { Preview } from "../tabs/index.ts";
 import { LVG, lvOk, lvSend } from "../tabs/live/state.ts";
 import { Ic } from "./kit.tsx";
+import { pri } from "./styles.ts";
 
 function DeviceTransport() {
   const { dev } = useApp();
@@ -15,7 +16,7 @@ function DeviceTransport() {
   const bpm = dev && dev.dump ? dev.dump.g[LVG().bpm] : null;
   return (
     <div className="flex items-center gap-3 py-2">
-      <button type="button" className="pri" disabled={!ok} title={ok ? t("lvxTip_play") : t("lvNeeds")} onClick={() => lvSend(LIVE.PLAY, 1)}>
+      <button type="button" className={pri} disabled={!ok} title={ok ? t("lvxTip_play") : t("lvNeeds")} onClick={() => lvSend(LIVE.PLAY, 1)}>
         {t("lvPlay")}</button>
       <button type="button" disabled={!ok} title={ok ? "" : t("lvNeeds")} onClick={() => lvSend(LIVE.PLAY, 0)}>{t("lvStop")}</button>
       {bpm != null ? <span className="text-fg2">{bpm} <span className="text-dim">{t("lvBpm")}</span></span> : null}

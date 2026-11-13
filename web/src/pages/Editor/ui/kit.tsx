@@ -103,7 +103,9 @@ export function More({ children, label }: MoreProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className={`${tog} ml-1 size-6 p-0 align-middle`} aria-pressed={open} aria-expanded={open} title={label || t("moreHelp")}
+      {/* data-more: for a parent that places it ([&>button[data-more]]:...); "tog" stays as a marker only while
+          pages/Sound.tsx selects it as button.tog */}
+      <button type="button" data-more="" className={`${tog} tog ml-1 size-6 p-0 align-middle`} aria-pressed={open} aria-expanded={open} title={label || t("moreHelp")}
         onClick={() => setOpen(!open)}>?</button>
       {open ? <div className={`${help} my-2 max-w-[80ch] border-l-2 border-acc bg-bg px-3 py-2 text-fg2 [&_p]:my-1`}>{children}</div> : null}
     </>

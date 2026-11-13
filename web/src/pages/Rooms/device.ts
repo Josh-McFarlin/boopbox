@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { CMD, LIVE, Link, PROJ7, bkReadObj, fm1Ports, parse, req } from "../Editor/lib/proto.ts";
-import type { DevInfo, LiveState, TrackParam } from "../Editor/lib/proto.ts";
+import type { DevInfo, LiveState, P7DrumStep, P7Pat, P7Step, TrackParam } from "../Editor/lib/proto.ts";
 import config from "../../../../shared/room-config.json" with { type: "json" };
 import { parseKeyboardMessage } from "./keyboardMidi.ts";
 export { parseKeyboardMessage } from "./keyboardMidi.ts";
@@ -20,7 +20,6 @@ interface VoiceDump {
 /* the live state read for a performance: the FM-1's LIVE reply, or the emulator's { tempo, playing } */
 type RoomLive = Partial<Pick<LiveState, "bpm" | "playing">> & { tempo?: unknown };
 type Project = NonNullable<ReturnType<typeof PROJ7.decode>>;
-type ProjectPattern = ReturnType<typeof PROJ7.emptyPat>;
 
 /* the emulator's performance snapshot (boopbox-room-snapshot, posted by the emulator page) */
 export interface EmulatorSnapshot {
@@ -70,25 +69,28 @@ function sparse(values: number[], min = -32, max = 31): [number, number][] {
     ? [[index, value] as [number, number]] : []);
 }
 
-function roomPattern(pattern: ProjectPattern, trackIndex: number, drum: boolean, info: Pick<DevInfo, "pe0">): RoomPattern {
+function roomPattern(pattern: P7Pat, trackIndex: number, drum: boolean, info: Pick<DevInfo, "pe0">): RoomPattern {
   const steps: RoomPattern["steps"] = [];
   pattern.steps.forEach((step, index) => {
     if (drum) {
-      const on = (step.on[0] | (step.on[1] << 8)) >>> 0;
-      const levels = Array.from({ length: 16 }, (_, lane) => (step.lvl[lane >> 2] >> ((lane & 3) * 2)) & 3);
-      const ratchets = Array.from({ length: 16 }, (_, lane) => (step.rat[lane >> 2] >> ((lane & 3) * 2)) & 3);
+      const drumStep = step as P7DrumStep;
+      const on = (drumStep.on[0] | (drumStep.on[1] << 8)) >>> 0;
+      const levels = Array.from({ length: 16 }, (_, lane) => (drumStep.lvl[lane >> 2] >> ((lane & 3) * 2)) & 3);
+      const ratchets = Array.from({ length: 16 }, (_, lane) => (drumStep.rat[lane >> 2] >> ((lane & 3) * 2)) & 3);
       if (on || levels.some(Boolean) || ratchets.some(Boolean)) steps.push([index, on, levels, ratchets]);
     } else if (!PROJ7.isBlank(step, false)) {
+      const synthStep = step as P7Step;
       steps.push([index, [
-        ...step.notes.slice(0, 4), step.n, step.time, step.flags, step.vel, step.lvl, step.rat,
+        ...synthStep.notes.slice(0, 4), synthStep.n, synthStep.time, synthStep.flags, synthStep.vel, synthStep.lvl,
+        synthStep.rat,
       ]]);
     }
   });
-  const locks = pattern.locks.flatMap((lock) => {
+  const locks = pattern.locks.flatMap((lock): RoomPattern["locks"] => {
     const param = PROJ7.idOf(lock.code, info.pe0);
     return param >= 0 ? [[lock.step, lock.slide, param, lock.val]] : [];
   });
-  const components = pattern.comps.flatMap((component) => {
+  const components = pattern.comps.flatMap((component): RoomPattern["components"] => {
     if (!PROJ7.compValid(component, info.pe0)) return [];
     const a = component.type === PROJ7.CP_PARAM ? PROJ7.idOf(component.a, info.pe0) : component.a;
     return a >= 0 ? [[component.step, component.type, a, component.b]] : [];
