@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The step sequencer in six cards: [title, text]. From GUIDE.md, section 10.
-export const SEQ_CARDS = [
+export const SEQ_CARDS: [title: string, text: string][] = [
   ["Set and clear", "Hold SEQ: the white keys are steps 1–16 of the page. An empty step is set with the last note or sound you played; a tap on a set step clears it. Hold several to edit them together."],
   ["Edit a step", "Hold SEQ, hold a step and turn: KNOB 1 its note (or sound), KNOB 2 level or velocity, KNOB 3 ratchet x1–x4, KNOB 4 nudge (−32…+31 in 1/64 of a step)."],
   ["Parameter locks", "Turn the parameter on its page first. Then hold SEQ + the step and turn PRESETS: that step alone gets its own value. ALGORITHM picks another locked parameter. 32 locks a track."],

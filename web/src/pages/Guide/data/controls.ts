@@ -2,7 +2,15 @@
 // Every control of the panel: what a tap (or a turn) and a hold do. From GUIDE.md, sections 2 and 5.
 
 /* id -> what it is, and what a tap (or a turn) and a hold do. `kind`: knob, button, keys */
-export const CONTROLS = {
+export interface Control {
+  name: string;
+  kind: "knob" | "button" | "keys";
+  layer?: string;
+  tap: string;
+  hold?: string;
+}
+
+export const CONTROLS: Record<string, Control> = {
   MASTER: { name: "MASTER", kind: "knob", tap: "The output volume (headphones and line out). The visualiser ignores it." },
   SELECT: { name: "SELECT", kind: "knob", tap: "On TRACKS, inside a layer and on the REC screen: the tempo. On a page: the previous / next page of its button. DRUMS kit / sound: kit ↔ sound. Visualiser: the style. Menu: the section." },
   PRESETS: { name: "PRESETS", kind: "knob", tap: "On TRACKS: opens the sound browser (the first click opens it, the sound stays), then the next / previous engine in it. On a drum track: the kit. With SEQ + a step held: a parameter lock on that step." },

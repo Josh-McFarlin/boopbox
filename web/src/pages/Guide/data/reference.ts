@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The power-on combinations and the "where is…?" list. From GUIDE.md, section 26.
 
-export const SPECIAL = [
+export const SPECIAL: [combination: string, what: string][] = [
   ["OCT− held at power-on", "USB rescue: install again from the browser"],
   ["OCT− + OCT+ held at power-on", "hardware calibration: teach every button and knob"],
   ["OCT− + OCT+ held 5 s, stopped", "update mode (your work is saved first)"],
@@ -11,7 +11,7 @@ export const SPECIAL = [
 ];
 
 /* "where is…?": [looking for, where] */
-export const WHERE = [
+export const WHERE: [lookingFor: string, where: string][] = [
   ["tempo", "SELECT on TRACKS · GLO + key 16 (tap) · GLO → GLOBAL → BPM"],
   ["swing", "TRACKS KNOB 1 (global) · SEQ + KNOB 3 (track) · GLO → GLOBAL"],
   ["metronome / click", "GLO → GLOBAL → CLICK"],

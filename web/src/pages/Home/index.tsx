@@ -3,7 +3,10 @@
 // the firmware's code: project/assets/screens/fm1/), then the way to the installer, the editor and the emulator.
 // Served at the site's root (make_site.py copies the page from webapp/home/ and sets its base to webapp/home/ so
 // relative assets resolve correctly).
+import type React from "react";
+import type { ReactNode } from "react";
 import SiteHeader from "../../components/SiteHeader.tsx";
+import { arcadeButton, arcadeButtonSize, pixelPanel, pixelScreen } from "../../components/styles.ts";
 import tracks from "../../../../project/assets/screens/fm1/tracks-1-4.png";
 import punch from "../../../../project/assets/screens/fm1/layer-fx.png";
 import sounds from "../../../../project/assets/screens/all/pages/save-presets.png";
@@ -17,17 +20,18 @@ import mix from "../../../../project/assets/screens/fm1/layer-mix-5-8.png";
 import editorShot from "../../../../project/assets/screens/editor-sound.png";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
-const C = { blue: "#3ee6ff", green: "#c6ff3d", yellow: "#ffd23f", orange: "#ff4fd8" };   /* site.css: cyan, lime, yellow, magenta */
-const TEXT = { blue: "text-blue", green: "text-green", yellow: "text-yellow", orange: "text-orange" };
+type Color = "blue" | "green" | "yellow" | "orange";
+const C: Record<Color, string> = { blue: "#3ee6ff", green: "#c6ff3d", yellow: "#ffd23f", orange: "#ff4fd8" };   /* site.css: cyan, lime, yellow, magenta */
+const TEXT: Record<Color, string> = { blue: "text-blue", green: "text-green", yellow: "text-yellow", orange: "text-orange" };
 
 /* the hero's four screens: the tracks, the sound browser, the drums, the visualiser */
-const HERO = [
+const HERO: [src: string, alt: string, color: Color][] = [
   [tracks, "The TRACKS screen: four tracks playing at 92 BPM, each with its steps and level", "orange"],
   [sounds, "The sound browser: the ANALOG engine's sounds, 808 BOOM, 808 DIRTY, 808 SLIDE, SUB BASS, by engine", "blue"],
   [drums, "The DRUMS screen: 16 sounds by 16 steps, each hit with its level", "green"],
   [drive, "The visualiser: a car driving into a neon city, moving with the music", "orange"],
 ];
-const STATS = [
+const STATS: [big: string, label: string, color: Color][] = [
   ["8", "tracks: six synths and two drum machines", "blue"],
   ["13", "synth engines, FM6 and physical models", "green"],
   ["223", "sounds, every one level-matched", "yellow"],
@@ -35,7 +39,7 @@ const STATS = [
   ["27", "punch-in effects on the keys", "blue"],
   ["64", "steps a track, with locks and fills", "green"],
 ];
-const LAYERS = [
+const LAYERS: [name: string, what: string, color: Color][] = [
   ["FX · punch", "27 effects on the whole mix", "orange"],
   ["GLO · mix", "mute, solo, fill, tap tempo", "blue"],
   ["SEQ · steps", "levels, ratchets, locks, nudges", "green"],
@@ -45,7 +49,7 @@ const LAYERS = [
   ["SAVE · song", "sections A–D, a quick chain", "green"],
 ];
 const ENGINES = ["ANALOG", "FM", "FM6 · DX7", "PHASE", "TRIO", "WHEEL", "VOICE", "GRAIN", "LOFI", "SAMPLE", "PHYS", "NOISE", "OBERVAVE"];
-const MORE = [
+const MORE: [title: string, text: string, color: Color][] = [
   ["Your own samples", "Four slots of about 7 s: up to 16 WAVs each, one per key, played by a synth track or as a drum kit.", "blue"],
   ["MIDI in, out and clock", "USB and the TRS jack; CCs from your controller, MIDI learn, the sequencer to MIDI out, clock in.", "green"],
   ["USB audio", "Record the FM-1 on a computer over the same cable, no driver.", "yellow"],
@@ -53,28 +57,42 @@ const MORE = [
   ["Nothing gets lost", "Autosave after 2.5 s, undo and redo, a full backup and restore from the editor.", "blue"],
   ["BoopBox Trainer", "A second firmware that teaches three songs, step by step, on the FM-1 itself.", "green"],
 ];
-const STEPS = [
+const STEPS: [n: string, title: string, text: string, color: Color][] = [
   ["1", "Connect", "Plug the FM-1 into the computer with a USB data cable, no hub.", "blue"],
   ["2", "Open the installer", "In Chrome or Edge, and allow MIDI when it asks.", "green"],
   ["3", "Press Install", "About a minute. Do not unplug the cable while it writes.", "yellow"],
 ];
 
-const PRIMARY = "arcade-btn bg-orange";
+const PRIMARY = `${arcadeButton} ${arcadeButtonSize} bg-orange`;
 const SECONDARY = "inline-flex min-h-[52px] items-center border-[3px] border-blue px-7 font-pixel text-[20px] font-bold leading-none text-blue "
   + "no-underline hover:bg-blue hover:text-ink";
 const KICKER = "m-0 mb-4 inline-block bg-tile px-2.5 py-1 font-pixel text-[16px] font-medium text-blue";
 const H2 = "m-0 font-pixel font-bold text-fg";
 
-function Screen({ src, alt, caption, color = "orange", className = "" }) {
+interface ScreenProps {
+  src: string;
+  alt: string;
+  caption?: string;
+  color?: Color;
+  className?: string;
+}
+
+function Screen({ src, alt, caption, color = "orange", className = "" }: ScreenProps) {
   return (
     <figure className={`m-0 w-full max-w-[440px] min-w-0 flex-[1_1_360px] ${className}`}>
       <img src={src} alt={alt} width="240" height="240"
-        className="pixel-screen" style={{ boxShadow: `10px 10px 0 ${C[color]}` }} />
+        className={pixelScreen} style={{ boxShadow: `10px 10px 0 ${C[color]}` }} />
       {caption ? <figcaption className="mt-5 text-[14px] text-dim">{caption}</figcaption> : null}
     </figure>
   );
 }
-function Feature({ reverse, children, media }) {
+interface FeatureProps {
+  reverse?: boolean;
+  children?: ReactNode;
+  media: ReactNode;
+}
+
+function Feature({ reverse, children, media }: FeatureProps) {
   return (
     <div className={`mb-24 flex flex-wrap items-center gap-x-14 gap-y-10 ${reverse ? "flex-wrap-reverse" : ""}`}>
       {reverse ? media : null}
@@ -83,13 +101,13 @@ function Feature({ reverse, children, media }) {
     </div>
   );
 }
-const H3 = ({ color, lead, children }) => (
+const H3 = ({ color, lead, children }: { color: Color; lead: string; children?: ReactNode }) => (
   <h3 className="m-0 mb-3 font-pixel text-[30px] leading-[1.1] font-bold"><span className={TEXT[color]}>{lead}</span> {children}</h3>
 );
-const P = ({ children }) => <p className="m-0 mb-4 text-body">{children}</p>;
-const B = ({ children }) => <b className="text-fg">{children}</b>;
+const P = ({ children }: { children?: ReactNode }) => <p className="m-0 mb-4 text-body">{children}</p>;
+const B = ({ children }: { children?: ReactNode }) => <b className="text-fg">{children}</b>;
 
-export default function Home() {
+const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-bg text-[16px] leading-[1.6] text-body">
       <SiteHeader current="home" />
@@ -111,7 +129,7 @@ export default function Home() {
           </div>
           <div className="grid max-w-[520px] min-w-0 flex-[1_1_420px] -rotate-2 grid-cols-2 gap-7 pr-2 pb-2">
             {HERO.map(([src, alt, c]) => (
-              <img key={alt} src={src} alt={alt} width="240" height="240" className="pixel-screen" style={{ boxShadow: `8px 8px 0 ${C[c]}` }} />
+              <img key={alt} src={src} alt={alt} width="240" height="240" className={pixelScreen} style={{ boxShadow: `8px 8px 0 ${C[c]}` }} />
             ))}
           </div>
         </section>
@@ -139,7 +157,7 @@ export default function Home() {
               the button to open its pages; hold it and tap HOME to lock it open, both hands free.</P>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-1.5">
               {LAYERS.map(([name, what, c]) => (
-                <div key={name} className="pixel-panel px-3.5 py-3">
+                <div key={name} className={`${pixelPanel} px-3.5 py-3`}>
                   <b className="mb-1.5 inline-block px-2 py-0.5 font-pixel text-[15px] font-bold text-ink" style={{ background: C[c] }}>{name}</b>
                   <span className="block text-sm text-dim">{what}</span>
                 </div>
@@ -166,7 +184,7 @@ export default function Home() {
             <P>Sliding 808s and acid 303s, a real Steinway, Rhodes, string machines, granular clouds, plucked guitars and sitar, supersaws.
               Every sound level-matched; 32 slots for your own.</P>
             <div className="mb-5 flex flex-wrap gap-1.5">
-              {ENGINES.map((e) => <span key={e} className="pixel-panel px-2.5 py-1.5 font-pixel text-[15px] text-fg">{e}</span>)}
+              {ENGINES.map((e) => <span key={e} className={`${pixelPanel} px-2.5 py-1.5 font-pixel text-[15px] text-fg`}>{e}</span>)}
             </div>
             <p className="m-0 text-body"><B>Six-operator FM with DX7 patches:</B> drop a .syx cartridge on the editor and keep 27 patches on
               the FM-1. <B>OberVave</B>'s analog polysynth comes with its 70 programs.</p>
@@ -191,7 +209,7 @@ export default function Home() {
               <img src={song} width="240" height="240" alt="The SONG screen: sections A and B of four bars, C and D empty, playing in loop mode" />
               <img src={patterns} width="240" height="240" alt="The PATTERNS screen: eight patterns for track 1 and the scenes" />
               <img src={mix} width="240" height="240" alt="The MIX screen: GLO held, four level bars with mute and solo, fill and tap tempo" />
-              <div className="pixel-panel flex flex-col justify-end p-4">
+              <div className={`${pixelPanel} flex flex-col justify-end p-4`}>
                 <b className="font-pixel text-[40px] leading-none text-orange">A–D</b>
                 <span className="text-sm text-dim">sections, chained live or played in order</span>
               </div>
@@ -208,7 +226,7 @@ export default function Home() {
         <section aria-label="More features" className="mx-auto max-w-[1200px] px-6 pt-0 pb-20">
           <div className="grid grid-cols-1 gap-2 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3">
             {MORE.map(([title, text, c]) => (
-              <div key={title} className="pixel-panel px-[22px] pt-5 pb-6">
+              <div key={title} className={`${pixelPanel} px-[22px] pt-5 pb-6`}>
                 <h3 className={`m-0 mb-2 font-pixel text-[22px] leading-snug font-bold ${TEXT[c]}`}>{title}</h3>
                 <p className="m-0 text-[15px] text-dim">{text}</p>
               </div>
@@ -249,7 +267,7 @@ export default function Home() {
               <p className="m-0 max-w-[40em]">The emulator runs BoopBox itself: the same screen, sequencer and sound engines. Click
                 the keys or use your computer's keyboard; your projects stay in the browser.</p>
             </div>
-            <a href="../emu/" className="arcade-btn bg-ink !text-green [--shadow:var(--color-orange)]">Open the emulator ▶</a>
+            <a href="../emu/" className={`${arcadeButton} ${arcadeButtonSize} bg-ink !text-green [--shadow:var(--color-orange)]`}>Open the emulator ▶</a>
           </div>
         </section>
 
@@ -259,7 +277,7 @@ export default function Home() {
             cable straight into the FM-1.</p>
           <ol className="m-0 mb-10 grid list-none grid-cols-1 gap-3 p-0 min-[700px]:grid-cols-3">
             {STEPS.map(([n, title, text, c]) => (
-              <li key={n} className="pixel-panel p-[22px]">
+              <li key={n} className={`${pixelPanel} p-[22px]`}>
                 <b className={`mb-3 block font-pixel text-[40px] leading-none ${TEXT[c]}`}>{n}</b>
                 <b className="mb-1 block font-pixel text-[22px] text-fg">{title}</b>
                 <span className="block text-[15px] text-dim">{text}</span>
@@ -289,4 +307,7 @@ export default function Home() {
       </footer>
     </div>
   );
-}
+};
+Home.displayName = "Home";
+
+export default Home;

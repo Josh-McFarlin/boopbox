@@ -3,20 +3,30 @@
 // the twelve buttons on the right, 11 black and 16 white keys below. Every control is a button: a click (or Enter)
 // selects it. A layer (FX, SEQ…) shows as its button held, its labels on the keys and knobs, and its screen.
 import { BLACK, BLACK_AFTER, WHITE } from "../data/keys.ts";
+import type { ReactNode } from "react";
 import { C } from "../data/theme.ts";
+import type { Layer } from "../data/layers.ts";
 
 const LINE = "var(--body)";
 const INK = "#160d2b";
-const KNOBS = [["MASTER", 167, 143], ["SELECT", 352, 143], ["PRESETS", 167, 303], ["ALGORITHM", 352, 303],
+const KNOBS: [id: string, x: number, y: number, label?: string][] = [["MASTER", 167, 143], ["SELECT", 352, 143], ["PRESETS", 167, 303], ["ALGORITHM", 352, 303],
   ["KNOB1", 985, 143, "KNOB1"], ["KNOB2", 1175, 143, "KNOB2"], ["KNOB3", 1367, 143, "KNOB3"], ["KNOB4", 1560, 143, "KNOB4"]];
 const ROW1 = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO"];
 const ROW2 = ["HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC"];
 const BX = [930, 1048, 1166, 1284, 1401, 1518];
 const SILK = ["OP1", "OP2", "OP3", "OP4", "OP5", "OP6", "PIT", "GLO", "MONO", "POLY", ""];   /* printed on the black keys */
-const WX = (i) => 84 + i * 98;   /* left edge of white key i */
-const BCX = (j) => WX(BLACK_AFTER[j]) + 44 + 49;   /* centre of black key j: between its two white keys */
+const WX = (i: number) => 84 + i * 98;   /* left edge of white key i */
+const BCX = (j: number) => WX(BLACK_AFTER[j]) + 44 + 49;   /* centre of black key j: between its two white keys */
 
-function Hit({ id, label, sel, onSel, children }) {
+interface HitProps {
+  id: string;
+  label: string;
+  sel: string;
+  onSel: (id: string) => void;
+  children?: ReactNode;
+}
+
+function Hit({ id, label, sel, onSel, children }: HitProps) {
   return (
     <g role="button" tabIndex={0} aria-label={label} aria-pressed={sel === id} className="cursor-pointer outline-none [&:focus-visible>*:first-child]:stroke-[var(--fg)]"
       onClick={() => onSel(id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSel(id); } }}>
@@ -27,7 +37,16 @@ function Hit({ id, label, sel, onSel, children }) {
 }
 
 /* a label on a key: short ones across, long ones along the key (two words: two lines) */
-function KeyLabel({ x, y, h, text, color, size = 21 }) {
+interface KeyLabelProps {
+  x: number;
+  y: number;
+  h: number;
+  text: string;
+  color: string;
+  size?: number;
+}
+
+function KeyLabel({ x, y, h, text, color, size = 21 }: KeyLabelProps) {
   if (!text) return null;
   if (text.length <= 3)
     return <text x={x} y={y + h - 22} textAnchor="middle" fontSize={size + 3} fill={color} className="font-pixel" pointerEvents="none">{text}</text>;
@@ -40,10 +59,17 @@ function KeyLabel({ x, y, h, text, color, size = 21 }) {
   );
 }
 
-export default function Panel({ layer, sel, onSel, screen }) {
+interface PanelProps {
+  layer: Layer;
+  sel: string;
+  onSel: (id: string) => void;
+  screen?: string;
+}
+
+export default function Panel({ layer, sel, onSel, screen }: PanelProps) {
   const lc = C[layer.color];
   const held = layer.button;
-  const selKey = (k) => sel === k;
+  const selKey = (k: string) => sel === k;
   return (
     <svg viewBox="0 0 1772 880" className="block h-auto w-full select-none" role="group" aria-label="The FM-1 panel: select a control">
       <rect x="20" y="22" width="1732" height="838" rx="64" fill="var(--tile)" stroke={LINE} strokeWidth="5" />
@@ -66,7 +92,7 @@ export default function Panel({ layer, sel, onSel, screen }) {
       })}
 
       {/* octave buttons */}
-      {[["OCTM", "OCT−", 104], ["OCTP", "OCT+", 264]].map(([id, name, x]) => (
+      {([["OCTM", "OCT−", 104], ["OCTP", "OCT+", 264]] as const).map(([id, name, x]) => (
         <Hit key={id} id={id} label={name} sel={sel} onSel={onSel}>
           <rect x={x} y="372" width="144" height="68" rx="16" fill={selKey(id) ? lc : "var(--deep)"} stroke={selKey(id) ? "var(--fg)" : LINE} strokeWidth="5" />
           <text x={x + 72} y="416" textAnchor="middle" fontSize="27" fontWeight="700" fill={selKey(id) ? INK : "var(--fg)"} className="font-pixel">{name}</text>

@@ -2,9 +2,10 @@
 // 13 · The visualiser's six styles.
 import { Screen } from "../components/ui.tsx";
 import { shot } from "../data/screens.ts";
+import type { Accent } from "../data/theme.ts";
 import { VISUALISER } from "../data/visualiser.ts";
 
-const SHADOWS = ["orange", "blue", "green", "yellow"];
+const SHADOWS: Accent[] = ["orange", "blue", "green", "yellow"];
 
 export default function Visualiser() {
   return (

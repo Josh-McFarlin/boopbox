@@ -5,6 +5,7 @@ import { B, H3, Screen } from "../components/ui.tsx";
 import { BEATS, DRUM_PAGES } from "../data/drums.ts";
 import { DRUMS } from "../data/keys.ts";
 import { shot } from "../data/screens.ts";
+import { pixelPanel } from "../../../components/styles.ts";
 
 export default function Drums() {
   return (
@@ -19,7 +20,7 @@ export default function Drums() {
           </div>
         ))}
       </div>
-      <div className="mt-12 pixel-panel p-6">
+      <div className={`mt-12 ${pixelPanel} p-6`}>
         <h3 className={`${H3} !text-green`}>Beats from the keys</h3>
         <p className="m-0 mb-4 text-[15px]">On a drum track's <B>SEQ → PLAY</B> page, hold one or more white keys and a whole pattern is written across the kit. The
           lowest key held picks the groove (keys 9–16: the same, busier); each other key adds detail; <B>KNOB 2 SEED</B> gives another set of variations. One hold is one undo.</p>

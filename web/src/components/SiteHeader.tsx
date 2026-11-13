@@ -2,12 +2,13 @@
 // The site's header, the same on every page (home, installer, editor, emulator): the logo, the main links and the
 // INSTALL button, in the site's "pocket arcade" look. Its colours and fonts are written out here (not the pages' theme
 // tokens) so it looks the same under the site's theme and under the editor's own one.
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { Logo } from "./Brand.tsx";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
 /* [key (the page it marks as current), label, the page it opens (relative to webapp/)]: always a page, never a section
    of the home page. The home key uses the site's root URL. */
-const LINKS = [
+const LINKS: [key: string, label: string, page: string][] = [
   ["home", "Features", "home/"],
   ["editor", "Web editor", "editor/"],
   ["guide", "Guide", "guide/"],
@@ -17,10 +18,21 @@ const LINKS = [
 
 /* current: the page shown ("home", "guide", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline
    editor) */
-export default function SiteHeader({ current, base = "../" }) {
+export interface SiteHeaderProps {
+  current: string;
+  base?: string;
+}
+
+interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+  k: string;
+  page: string;
+  children?: ReactNode;
+}
+
+export default function SiteHeader({ current, base = "../" }: SiteHeaderProps) {
   const homeHref = base.startsWith("http") ? new URL("../", base).href : "/";
-  const A = ({ k, page, children, ...p }) => {
-    const cur = k === current ? { "aria-current": "page", className: "!text-[#ffffff] underline decoration-[#ff4fd8] decoration-[3px] underline-offset-[6px]" } : {};
+  const A = ({ k, page, children, ...p }: LinkProps) => {
+    const cur: AnchorHTMLAttributes<HTMLAnchorElement> = k === current ? { "aria-current": "page", className: "!text-[#ffffff] underline decoration-[#ff4fd8] decoration-[3px] underline-offset-[6px]" } : {};
     return <a href={k === "home" ? homeHref : base + page} {...cur} {...p}>{children}</a>;
   };
   return (

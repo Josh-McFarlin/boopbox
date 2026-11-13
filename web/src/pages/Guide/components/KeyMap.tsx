@@ -3,8 +3,15 @@
 // is its own note name just plays that note.
 import { BLACK, WHITE } from "../data/keys.ts";
 import { C } from "../data/theme.ts";
+import type { Accent } from "../data/theme.ts";
 
-export default function KeyMap({ white, black, color }) {
+interface KeyMapProps {
+  white: string[];
+  black?: string[];
+  color: Accent;
+}
+
+export default function KeyMap({ white, black, color }: KeyMapProps) {
   return (
     <div>
       <div className="grid grid-cols-4 gap-1">

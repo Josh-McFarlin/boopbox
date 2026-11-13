@@ -3,11 +3,11 @@ const LOCK_NAME = "boopbox.room-browser-identity.v1";
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const STORAGE_ERROR = "Room access needs browser storage and tab coordination. Enable site storage and refresh this page.";
 
-function isUuid(value) {
+function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_V4.test(value);
 }
 
-function createUuid(crypto) {
+function createUuid(crypto: Partial<Crypto> | undefined) {
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID().toLowerCase();
   if (typeof crypto?.getRandomValues !== "function") throw new Error(STORAGE_ERROR);
 
@@ -18,10 +18,19 @@ function createUuid(crypto) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export async function getRoomBrowserIdentity(environment = globalThis) {
-  let storage;
-  let locks;
-  let crypto;
+/* where the identity is kept: the browser's window (globalThis), or a stand-in for it in tests */
+export interface RoomIdentityEnvironment {
+  localStorage?: Pick<Storage, "getItem" | "setItem"> | null;
+  navigator?: { locks?: Pick<LockManager, "request"> | null } | null;
+  crypto?: Partial<Crypto>;
+}
+
+export async function getRoomBrowserIdentity(
+  environment: RoomIdentityEnvironment = globalThis as RoomIdentityEnvironment,
+): Promise<string> {
+  let storage: RoomIdentityEnvironment["localStorage"];
+  let locks: Pick<LockManager, "request"> | null | undefined;
+  let crypto: Partial<Crypto> | undefined;
   try {
     storage = environment.localStorage;
     locks = environment.navigator?.locks;

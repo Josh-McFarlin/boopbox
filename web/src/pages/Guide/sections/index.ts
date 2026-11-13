@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Each section's body, by its id in data/sections.js.
+import type { ComponentType } from "react";
 import Basics from "./Basics.tsx";
 import Chords from "./Chords.tsx";
 import Drums from "./Drums.tsx";
@@ -16,7 +17,7 @@ import Special from "./Special.tsx";
 import Visualiser from "./Visualiser.tsx";
 import Where from "./Where.tsx";
 
-export const BODIES = {
+export const BODIES: Record<string, ComponentType> = {
   panel: PanelSection, basics: Basics, first: FirstBeat, record: Recording, drums: Drums, steps: Sequencer, pages: Pages,
   effects: Effects, chords: Chords, song: Song, sounds: Sounds, menu: Menu, visualiser: Visualiser, special: Special, where: Where,
 };

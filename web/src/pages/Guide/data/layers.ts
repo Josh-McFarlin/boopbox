@@ -1,10 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // What the keys and knobs do with nothing held, on a drum track, and while each layer button is held. From GUIDE.md, section 9.
 import { BLACK, BLACK_AFTER, DRUMS, WHITE } from "./keys.ts";
+import type { Accent } from "./theme.ts";
 
-const EMPTY = (n) => Array(n).fill("");
+const EMPTY = (n: number): string[] => Array(n).fill("");
 
-export const LAYERS = [
+/* a layer: its id, the button held (null: none), its names and accent, its screen, the labels of its keys (one a key, ""
+   for nothing) and knobs, and the other controls of the layer as [control, what it does] */
+export interface Layer {
+  id: string;
+  button: string | null;
+  name: string;
+  title: string;
+  color: Accent;
+  shot: string;
+  blurb: string;
+  white: string[];
+  black: string[];
+  knobs: string[];
+  more: [control: string, what: string][];
+}
+
+export const LAYERS: Layer[] = [
   { id: "PLAY", button: null, name: "Nothing held", title: "Play", color: "blue", shot: "home/tracks-1-4",
     blurb: "With no button held, the keys play the selected track and the knobs follow the screen. On TRACKS: KNOB 1 global swing, KNOB 2 the level of the track, KNOB 3 its steps, KNOB 4 its pan.",
     white: WHITE, black: BLACK, knobs: ["SWING", "LEVEL", "STEPS", "PAN"],

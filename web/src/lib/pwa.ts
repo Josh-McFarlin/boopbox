@@ -10,12 +10,18 @@ export function registerServiceWorker() {
     navigator.serviceWorker.register("../sw.js").catch(() => {});
 }
 
+/** the beforeinstallprompt event (not in TypeScript's DOM types) */
+export interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+}
+
 /* the browser's own "install the app" prompt (beforeinstallprompt): null until it offers one */
-export function useInstallPrompt() {
-  const [ask, setAsk] = useState(null);
+export function useInstallPrompt(): [boolean, () => Promise<void>] {
+  const [ask, setAsk] = useState<BeforeInstallPromptEvent | null>(null);
   useEffect(() => {
     if (__OFFLINE__) return undefined;
-    const offer = (e) => { e.preventDefault(); setAsk(e); };
+    const offer = (e: Event) => { e.preventDefault(); setAsk(e as BeforeInstallPromptEvent); };
     const done = () => setAsk(null);
     window.addEventListener("beforeinstallprompt", offer);
     window.addEventListener("appinstalled", done);

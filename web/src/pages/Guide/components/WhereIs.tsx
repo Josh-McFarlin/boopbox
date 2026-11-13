@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { GUIDE_URL } from "../data/links.ts";
 import { WHERE } from "../data/reference.ts";
+import { pixelPanel } from "../../../components/styles.ts";
 
 export default function WhereIs() {
   const [q, setQ] = useState("");
@@ -19,7 +20,7 @@ export default function WhereIs() {
       </label>
       <div className="grid grid-cols-1 gap-1.5 min-[800px]:grid-cols-2">
         {rows.map(([a, b]) => (
-          <div key={a} className="pixel-panel px-4 py-3">
+          <div key={a} className={`${pixelPanel} px-4 py-3`}>
             <b className="block font-pixel text-[16px] text-blue">{a}</b>
             <span className="block text-[15px] text-body">{b}</span>
           </div>

@@ -1,15 +1,38 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const PLAYER_COUNT = 8;
 
-function validSlot(slot) {
+function validSlot(slot: number) {
   return Number.isInteger(slot) && slot >= 0 && slot < PLAYER_COUNT;
 }
 
-export function createRoomMixController({ getAudio, onChange = () => {} }) {
-  const mutedSlots = new Set();
-  let soloSlot = null;
+export interface RoomMixState {
+  mutedSlots: number[];
+  soloSlot: number | null;
+}
 
-  const snapshot = () => ({
+/* the part of the room audio (RoomAudio) the mix drives */
+export interface RoomMixAudio {
+  setMix(mutedSlots: boolean[], soloSlot: number | null): void;
+}
+
+export interface RoomMixOptions {
+  getAudio: () => RoomMixAudio | null | undefined;
+  onChange?: (state: RoomMixState) => void;
+}
+
+export interface RoomMixController {
+  getState(): RoomMixState;
+  toggleMute(slot: number): RoomMixState;
+  toggleSolo(slot: number): RoomMixState;
+  retainSlots(slots: Iterable<number>): RoomMixState;
+  reset(): RoomMixState;
+}
+
+export function createRoomMixController({ getAudio, onChange = () => {} }: RoomMixOptions): RoomMixController {
+  const mutedSlots = new Set<number>();
+  let soloSlot: number | null = null;
+
+  const snapshot = (): RoomMixState => ({
     mutedSlots: [...mutedSlots].sort((a, b) => a - b),
     soloSlot,
   });

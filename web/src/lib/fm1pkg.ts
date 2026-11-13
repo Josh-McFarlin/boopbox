@@ -7,7 +7,7 @@
 const BLOCKS = 20, BLK = 0x30, KEEP = 0x2F;
 
 // the package identity ("FM-1_904"): one marker byte after each of the first 20 blocks
-export function productOf(fwsc) {
+export function productOf(fwsc: Uint8Array): string {
   if (fwsc.length < BLOCKS * BLK) throw new Error("not an FM-1 package (too short)");
   let s = "";
   for (let i = 0; i < BLOCKS; i++) {
@@ -18,7 +18,7 @@ export function productOf(fwsc) {
 }
 
 // the image the device addresses during an update: the .fwsc without the 20 marker bytes
-export function logicalImage(fwsc) {
+export function logicalImage(fwsc: Uint8Array): Uint8Array {
   const out = new Uint8Array(fwsc.length - BLOCKS);
   for (let i = 0; i < BLOCKS; i++) out.set(fwsc.subarray(i * BLK, i * BLK + KEEP), i * KEEP);
   out.set(fwsc.subarray(BLOCKS * BLK), BLOCKS * KEEP);
@@ -32,12 +32,12 @@ export const STOCK_V15_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644
 export const STOCK_V15_SIZE = 699956;
 export const STOCK_V15_PRODUCT = "FM-1_015";
 
-export async function sha256hex(bytes) {
+export async function sha256hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
-export async function validateStockPackage(bytes) {
+export async function validateStockPackage(bytes: Uint8Array<ArrayBuffer>): Promise<{ product: string; image: Uint8Array }> {
   if (bytes.length !== STOCK_V15_SIZE || await sha256hex(bytes) !== STOCK_V15_SHA256 || productOf(bytes) !== STOCK_V15_PRODUCT)
     throw new Error("select the unmodified official FM-1 V15 file (FM-1.fwsc)");
   return { product: STOCK_V15_PRODUCT, image: logicalImage(bytes) };

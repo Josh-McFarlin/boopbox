@@ -2,7 +2,7 @@
 // "On this page": the sections, numbered, in a column that stays in view (wide screens only).
 import { SECTIONS } from "../data/sections.ts";
 
-export const number = (i) => String(i + 1).padStart(2, "0");
+export const number = (i: number): string => String(i + 1).padStart(2, "0");
 
 export default function Toc() {
   return (

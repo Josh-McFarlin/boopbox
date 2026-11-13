@@ -1,8 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Every page of every button, knob by knob, with its screen. From GUIDE.md, section 16.
 
+import type { Accent } from "./theme.ts";
+
 /* button -> its pages: [name, shot, [KNOB 1..4], note] */
-export const PAGES = [
+export type Page = [name: string, shot: string, knobs: string[], note: string];
+export interface PageGroup {
+  button: string;
+  color: Accent;
+  via?: string;
+  pages: Page[];
+}
+
+export const PAGES: PageGroup[] = [
   { button: "ENV", color: "orange", pages: [
     ["ENV", "pages/env-env", ["ATK attack", "DEC decay", "SUS sustain", "REL release"], "The volume envelope of the track. FM6 ignores it: each operator has its own."],
     ["ENV DEST", "pages/env-env-dest", ["FLT: envelope → brightness", "PIT: envelope → pitch (the 808 punch)", "SHP: envelope → engine shape", "ESYNC: times as note values"], "With ESYNC ON, attack, decay and release follow the tempo (1/64T … 4BAR)."],

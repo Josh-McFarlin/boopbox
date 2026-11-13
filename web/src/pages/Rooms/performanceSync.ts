@@ -1,7 +1,38 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import type { RoomClock, RoomPerformance } from "./types.ts";
 
 const RETRY_DELAY_MS = 400;
 const MAX_RETRIES = 2;
+
+/* one player's shared performance, as last received, and how far applying it to the room audio got */
+export interface PerformanceState {
+  key: string;
+  performance: RoomPerformance;
+  clock: RoomClock | null;
+  applied: boolean;
+  attempts: number;
+  inFlight: boolean;
+  failed: boolean;
+  retryTimer: ReturnType<typeof setTimeout> | null;
+}
+
+/* the part of the room audio (RoomAudio) a performance is applied to */
+export interface PerformanceAudio {
+  setPerformance(slot: number, performance: RoomPerformance, clock?: RoomClock | null): Promise<unknown>;
+}
+
+export interface ApplyPerformanceOptions {
+  states: Map<string, PerformanceState>;
+  audio: PerformanceAudio | null | undefined;
+  playerId: string;
+  slot: number;
+  performance: RoomPerformance | null | undefined;
+  clock?: RoomClock | null;
+  onError: (error: Error) => void;
+  shouldApply?: boolean;
+  retryDelayMs?: number;
+  maxRetries?: number;
+}
 
 export function applyPerformanceWithRetry({
   states,
@@ -14,7 +45,7 @@ export function applyPerformanceWithRetry({
   shouldApply = true,
   retryDelayMs = RETRY_DELAY_MS,
   maxRetries = MAX_RETRIES,
-}) {
+}: ApplyPerformanceOptions): PerformanceState | null {
   if (!performance) return null;
   const key = JSON.stringify(performance);
   let state = states.get(playerId);

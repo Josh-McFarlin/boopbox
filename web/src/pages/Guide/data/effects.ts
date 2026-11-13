@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The master and per-track effects: [name, where, what it does]. From GUIDE.md, section 18. (The 27 punch-in effects are
 // the FX layer's keys, in layers.js.)
-export const EFFECTS = [
+export const EFFECTS: [name: string, where: string, what: string][] = [
   ["DUST", "FX + KNOB 2 · GLO → MASTER", "The mix through an old sampler and a record: drive, a lower sample rate, fewer bits, a closing low-pass."],
   ["DUCK", "FX + KNOB 3 · GLO → MASTER", "Every kick pumps the synth tracks down and back over a 1/8 note: sidechain, in time at any tempo."],
   ["FILTER / TRK FILT", "FX + KNOB 1 / KNOB 4", "One-knob DJ filters: left a low-pass closes, right a high-pass opens. KNOB 1 the mix, KNOB 4 the selected track."],

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The guide's sections, in page order: the anchor, the name in the "on this page" list, the kicker, the heading and the
 // lead paragraph. sections/index.js gives each id its component.
-export const SECTIONS = [
+export interface GuideSection {
+  id: string;
+  toc: string;
+  kicker: string;
+  title: string;
+  intro?: string;
+}
+
+export const SECTIONS: GuideSection[] = [
   { id: "panel", toc: "The panel", kicker: "The map", title: "The panel",
     intro: "Four knobs and the octave buttons on the left, the screen, KNOB 1–4 and twelve buttons on the right, 11 black and 16 white keys below. KNOB 1–4 always set the four dials at the bottom of the screen." },
   { id: "basics", toc: "Tap, hold, lock", kicker: "The big ideas", title: "Tracks, tap, hold and lock" },

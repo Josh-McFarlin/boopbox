@@ -2,6 +2,7 @@
 // The visual guide: how to reach everything in the firmware, on a drawing of the FM-1. The page is its sections, in the
 // order data/sections.js lists them (with their headings); sections/ holds each one's body, components/ the parts they
 // share, and data/ every word and screen they show (from GUIDE.md; the screens are the firmware's own).
+import type React from "react";
 import SiteHeader from "../../components/SiteHeader.tsx";
 import Footer from "./components/Footer.tsx";
 import Hero from "./components/Hero.tsx";
@@ -11,7 +12,7 @@ import { GITHUB, GUIDE_URL } from "./data/links.ts";
 import { SECTIONS } from "./data/sections.ts";
 import { BODIES } from "./sections/index.ts";
 
-export default function Guide() {
+const Guide: React.FC = () => {
   return (
     <div className="min-h-screen bg-bg text-[16px] leading-[1.6] text-body">
       <SiteHeader current="guide" />
@@ -35,4 +36,7 @@ export default function Guide() {
       <Footer />
     </div>
   );
-}
+};
+Guide.displayName = "Guide";
+
+export default Guide;

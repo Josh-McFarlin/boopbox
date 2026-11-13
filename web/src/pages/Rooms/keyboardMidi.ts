@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
-export function parseKeyboardMessage(data) {
+export interface KeyboardNote {
+  note: number;
+  on: boolean;
+  velocity: number;
+}
+
+export function parseKeyboardMessage(data: ArrayLike<number> | null | undefined): KeyboardNote | null {
   if (!data || data.length !== 3) return null;
   const status = data[0] & 0xf0;
   const note = data[1];

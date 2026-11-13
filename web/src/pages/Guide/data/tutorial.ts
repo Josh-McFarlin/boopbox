@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // "Your first beat in 60 seconds": [title, text, its screen]. From GUIDE.md, section 4.
-export const FIRST_BEAT = [
+export const FIRST_BEAT: [title: string, text: string, shot: string][] = [
   ["Pick the drums", "Turn ALGORITHM to track 4. The white keys play 16 drum sounds: F3 kick, A3 snare, C4 hat… Turn PRESETS for a kit: try 808 or BOOMBAP.", "drums/drums-kit"],
   ["Play freely", "Press REC (rec ready) and play a beat at your own tempo. No click, no count-in. Hold OCT− for ghost notes, OCT+ for hard hits.", "rec/rec-free"],
   ["Close the loop", "Press REC on the “1” after your last bar. Its length sets the tempo, the hits snap to the grid, and the loop plays at once.", "home/tracks-1-4"],

@@ -5,7 +5,7 @@ import { B, Card } from "../components/ui.tsx";
 import { EFFECTS } from "../data/effects.ts";
 import { LAYERS } from "../data/layers.ts";
 
-const PUNCH = LAYERS.find((l) => l.id === "FX");
+const PUNCH = LAYERS.find((l) => l.id === "FX")!;
 
 export default function Effects() {
   return (

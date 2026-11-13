@@ -3,13 +3,14 @@
 import { Card, B } from "../components/ui.tsx";
 import { IDEAS, TRACKS } from "../data/basics.ts";
 import { C } from "../data/theme.ts";
+import { pixelPanel } from "../../../components/styles.ts";
 
 export default function Basics() {
   return (
     <>
       <div className="mb-10 grid grid-cols-2 gap-1.5 min-[600px]:grid-cols-4 min-[900px]:grid-cols-8">
         {TRACKS.map(([n, kind, c]) => (
-          <div key={n} className="pixel-panel px-3 py-3" style={{ opacity: n > 4 ? 0.8 : 1 }}>
+          <div key={n} className={`${pixelPanel} px-3 py-3`} style={{ opacity: n > 4 ? 0.8 : 1 }}>
             <b className="block font-pixel text-[36px] leading-none" style={{ color: C[c] }}>{n}</b>
             <span className="block text-[14px] text-dim">{kind}</span>
           </div>
