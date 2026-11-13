@@ -3346,7 +3346,7 @@ export interface SmfReport { notes: number; steps: number; moved: number; chordC
 const SMF = {
   PPQ: 96,
   /* ticks of one step at DIV div (a quarter = ppq ticks) */
-  stepTicks: (div: number, ppq: number = SMF.PPQ): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
+  stepTicks: (div: number, ppq: number = (0 as any)): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
   vlq(n: number): number[] { const a: number[] = [n & 0x7F]; while ((n >>= 7)) a.unshift(0x80 | (n & 0x7F)); return a; },
   /* a format 0 file: notes [{t, dur, key, vel}] on channel ch (0..15), the tempo, a track name */
   write(notes: SmfNote[], { ppq = SMF.PPQ as number, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
@@ -3359,9 +3359,9 @@ const SMF = {
     const us = Math.round(60000000 / Math.max(1, bpm));
     const nm = Array.from(String(name), (c) => c.charCodeAt(0) & 0x7F);
     const tr = [0, 0xFF, 0x51, 3, (us >> 16) & 255, (us >> 8) & 255, us & 255, 0, 0xFF, 0x58, 4, 4, 2, 24, 8];
-    if (nm.length) tr.push(0, 0xFF, 0x03, ...(0 as any)(nm.length), ...nm);
+    if (nm.length) tr.push(0, 0xFF, 0x03, ...SMF.vlq(nm.length), ...nm);
     let last = 0;
-    for (const e of ev) { tr.push(...(0 as any)(e.t - last), ...e.b); last = e.t; }
+    for (const e of ev) { tr.push(...SMF.vlq(e.t - last), ...e.b); last = e.t; }
     tr.push(0, 0xFF, 0x2F, 0);
     const u32 = (n: number) => [(n >>> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255];
     return Uint8Array.from([0x4D, 0x54, 0x68, 0x64, ...u32(6), 0, 0, 0, 1, (ppq >> 8) & 255, ppq & 255,
@@ -3413,11 +3413,11 @@ const SMF = {
       tracks.push({ name, notes });
       o = end;
     }
-    return { format, ppq: div || (0 as any), bpm: Math.round(bpm || 120), tracks };
+    return { format, ppq: div || SMF.PPQ, bpm: Math.round(bpm || 120), tracks };
   },
   /* a synth track's steps -> notes (a chord's notes last its steps; the step's level as the device plays it) */
-  fromSteps(steps: RollStep[], len: number, div: number, ppq: number = (0 as any)): SmfNote[] {
-    const tk = (0 as any)(div, ppq), V = [0, 42, 72, 127], out: SmfNote[] = [];
+  fromSteps(steps: RollStep[], len: number, div: number, ppq: number = SMF.PPQ): SmfNote[] {
+    const tk = SMF.stepTicks(div, ppq), V = [0, 42, 72, 127], out: SmfNote[] = [];
     for (const c of ROLL.chords(steps, len)) {
       const s = steps[c.at]!, base = s.flags & 1 ? 127 : s.vel || 96;
       c.notes.forEach((key, i) => {
@@ -3428,8 +3428,8 @@ const SMF = {
     return out;
   },
   /* the drum track's steps -> GM notes on their lanes (a hit lasts a quarter of its step) */
-  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq: number = (0 as any)): SmfNote[] {
-    const tk = (0 as any)(div, ppq), V = [100, 42, 72, 127], out: SmfNote[] = [];
+  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq: number = SMF.PPQ): SmfNote[] {
+    const tk = SMF.stepTicks(div, ppq), V = [100, 42, 72, 127], out: SmfNote[] = [];
     for (let i = 0; i < len; i++) {
       const d = dsteps[i];
       if (!d) continue;
