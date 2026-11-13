@@ -20,6 +20,7 @@ import TransportBar from "./ui/TransportBar.jsx";
 const OFFLINE_NAME = typeof window !== "undefined" && window.BOOPBOX_VERSION
   ? `boopbox-editor-${String(window.BOOPBOX_VERSION).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
 const SITE = __OFFLINE__ ? `${PUBLIC_SITE_URL}/webapp/` : "../";
+const HOME = __OFFLINE__ ? new URL("../", SITE).href : "/";
 
 function Tabs() {
   useApp();
@@ -119,7 +120,7 @@ function DesktopOnly() {
         <h1 className="mb-3 text-big text-acc">{t("deskTitle")}</h1>
         <p className="mb-4 text-fg2">{t("deskText")}</p>
         <p className="m-0 flex justify-center gap-4 [&_a]:text-acc">
-          <a href={SITE + "home/"}>{t("deskGuide")}</a><a href={SITE + "emu/"}>{t("deskEmu")}</a>
+          <a href={HOME}>{t("deskGuide")}</a><a href={SITE + "emu/"}>{t("deskEmu")}</a>
         </p>
       </div>
     </div>

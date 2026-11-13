@@ -1,0 +1,1 @@
+import{j as o}from"./index-Cdm-SsuQ.js";import{H as n}from"./HeadlineFrame-CwfhVZtv.js";function s(){return o.jsx(n,{fontFamily:'"Pixelify Sans", ui-monospace, Menlo, Consolas, monospace'})}export{s as Current};

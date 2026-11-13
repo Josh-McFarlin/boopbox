@@ -78,6 +78,11 @@ const server = createServer((req, res) => {
     return;
   }
 
+  if (pathname === "/webapp/home" || pathname === "/webapp/home/") {
+    res.writeHead(308, { Location: "/" }).end();
+    return;
+  }
+
   const file = staticTarget(pathname);
   if (!file) {
     res.writeHead(404).end("Not found");

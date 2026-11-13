@@ -8,7 +8,7 @@ import { Logo } from "./Brand.jsx";
 
 const GITHUB = "https://github.com/josh-mcfarlin/boopbox";
 /* [key (the page it marks as current), label, the page it opens (relative to webapp/)]: always a page, never a section
-   of the home page */
+   of the home page. The home key uses the site's root URL. */
 const LINKS = [
   ["home", "Features", "home/"],
   ["editor", "Web editor", "editor/"],
@@ -20,14 +20,15 @@ const LINKS = [
 /* current: the page shown ("home", "guide", "editor", "emu", "installer"); base: the way to webapp/ (absolute in the offline
    editor) */
 export default function SiteHeader({ current, base = "../" }) {
+  const homeHref = base.startsWith("http") ? new URL("../", base).href : "/";
   const A = ({ k, page, children, ...p }) => {
     const cur = k === current ? { "aria-current": "page", className: "!text-[#ffffff] underline decoration-[#ff4fd8] decoration-[3px] underline-offset-[6px]" } : {};
-    return <a href={base + page} {...cur} {...p}>{children}</a>;
+    return <a href={k === "home" ? homeHref : base + page} {...cur} {...p}>{children}</a>;
   };
   return (
     <header className="border-b-[3px] border-[#3a2766] bg-[#160d2b] text-[16px] leading-[1.6] [font-family:'Pixelify_Sans',ui-monospace,Menlo,monospace] [font-variant-ligatures:none]">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-3 px-6 py-4">
-        <A page="home/" aria-label="BoopBox home" className="block no-underline"><Logo /></A>
+        <A k="home" page="home/" aria-label="BoopBox home" className="block no-underline"><Logo /></A>
         <nav aria-label="Main" className="flex flex-auto flex-wrap gap-x-[22px] gap-y-1 text-[18px] font-medium [&_a]:text-[#c9bdf0] [&_a]:no-underline [&_a:hover]:text-[#3ee6ff]">
           {LINKS.map(([k, label, page]) => <A key={k} k={k} page={page}>{label}</A>)}
           <a href={GITHUB}>GitHub</a>

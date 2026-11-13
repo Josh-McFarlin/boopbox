@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The home page: what BoopBox is and what it does, with the FM-1's own screens (project/tools/make_screens.py draws them with
 // the firmware's code: project/assets/screens/fm1/), then the way to the installer, the editor and the emulator.
-// Served at the site's root (make_site.py writes it with <base href="webapp/home/">) and at webapp/home/: every link
-// and image is relative to webapp/home/.
+// Served at the site's root (make_site.py copies the page from webapp/home/ and sets its base to webapp/home/ so
+// relative assets resolve correctly).
 import SiteHeader from "../shared/SiteHeader.jsx";
 import tracks from "../../../project/assets/screens/fm1/tracks-1-4.png";
 import punch from "../../../project/assets/screens/fm1/layer-fx.png";

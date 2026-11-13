@@ -27,6 +27,7 @@ Pages:
 - `/webapp/editor/?mock=1` — editor with a simulated FM-1
 - `/webapp/emu/` — browser emulator
 - `/webapp/installer/` — firmware installer
+- `/webapp/home/` redirects to `/`
 
 Jam rooms are temporarily hidden from navigation and public builds. Their source,
 server implementation, and tests remain in the project for later reactivation.
