@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The preview's instrument: a piano octave (C..C, the labeled computer keys A W S E D ...) or the 16 drum pads; also the
 // note dialog's piano (one octave to pick a step's note).
+import type { CSSProperties, DOMAttributes } from "react";
 import { DRUM_LANES, noteName } from "../../lib/proto.ts";
 
 export const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B", "C"];
 /* a black key: its place among the white ones */
-export const BLACK_AT = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
+export const BLACK_AT: Record<number, number | undefined> = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
 
 /* a key's look: white / black (main piano or the dialog's) / pad; pressed and disabled */
-export function keyClass(kind, pressed, disabled, dialog = false) {
+export type KeyKind = "white" | "black" | "pad";
+export function keyClass(kind: KeyKind, pressed: boolean, disabled: boolean, dialog = false): string {
   const base = "touch-none select-none normal-case [&_kbd]:[font:inherit]";
   const shape = {
     white: `p-2 flex flex-col items-center justify-end gap-1 border-b-[3px] ${dialog ? "h-[120px]" : "h-24"}`,
@@ -29,7 +31,10 @@ export function keyClass(kind, pressed, disabled, dialog = false) {
 }
 
 /* the panel's keys: handlers(offset) -> the pointer / key handlers of that key */
-export function KeyBoard({ drum, octave, pressed, disabled, handlers }) {
+/* a key's pointer / keyboard handlers */
+export type KeyHandlers = Pick<DOMAttributes<HTMLButtonElement>, "onPointerDown" | "onPointerUp" | "onPointerCancel" | "onLostPointerCapture" | "onKeyDown" | "onKeyUp" | "onBlur">;
+export interface KeyBoardProps { drum: boolean; octave: number; pressed: Set<number>; disabled: boolean; handlers: (offset: number) => KeyHandlers }
+export function KeyBoard({ drum, octave, pressed, disabled, handlers }: KeyBoardProps) {
   const n = drum ? 16 : 13;
   return (
     <div id="preview-keys" className={`preview-keys relative w-full ${drum
@@ -38,11 +43,11 @@ export function KeyBoard({ drum, octave, pressed, disabled, handlers }) {
         const oct = Math.floor((octave + i) / 12) - 1;
         const note = drum ? DRUM_LANES[i][1] : NAMES[i] + (i % 12 === 0 ? oct : "");
         const shortcut = "AWSEDFTGYHUJKOLP"[i];
-        const kind = drum ? "pad" : BLACK_AT[i] ? "black" : "white";
+        const kind: KeyKind = drum ? "pad" : BLACK_AT[i] ? "black" : "white";
         return (
           <button key={i} type="button" data-note={i} aria-pressed={pressed.has(i)} disabled={disabled}
             className={keyClass(kind, pressed.has(i), disabled) + (drum ? " drum-pad" : kind === "black" ? " black-key" : " white-key")}
-            style={!drum && BLACK_AT[i] ? { "--key": BLACK_AT[i] } : undefined}
+            style={!drum && BLACK_AT[i] ? { "--key": BLACK_AT[i] } as CSSProperties : undefined}
             aria-label={(drum ? note : NAMES[i] + oct) + ` (${shortcut})`} aria-keyshortcuts={shortcut} title={`${note} · ${shortcut}`}
             {...handlers(i)}>
             <span>{note}</span><kbd aria-hidden="true">{shortcut}</kbd>
@@ -54,7 +59,8 @@ export function KeyBoard({ drum, octave, pressed, disabled, handlers }) {
 }
 
 /* the note dialog's piano: C..B of `octave`; the note chosen pressed */
-export function NotePiano({ octave, value, onPick, label }) {
+export interface NotePianoProps { octave: number; value: number; onPick: (pitch: number) => void; label: string }
+export function NotePiano({ octave, value, onPick, label }: NotePianoProps) {
   return (
     <div id="preview-note-piano" role="group" aria-label={label}
       className="preview-keys preview-note-piano relative grid h-[120px] w-full grid-cols-7 gap-0.5">
@@ -63,7 +69,7 @@ export function NotePiano({ octave, value, onPick, label }) {
         return (
           <button key={offset} type="button" data-pitch={pitch} aria-label={noteName(pitch)} disabled={pitch > 127}
             aria-pressed={pitch === value} className={keyClass(black ? "black" : "white", pitch === value, pitch > 127, true)}
-            style={black ? { "--key": black } : undefined} onClick={() => onPick(pitch)}>
+            style={black ? { "--key": black } as CSSProperties : undefined} onClick={() => onPick(pitch)}>
             {black ? name : noteName(pitch)}
           </button>
         );

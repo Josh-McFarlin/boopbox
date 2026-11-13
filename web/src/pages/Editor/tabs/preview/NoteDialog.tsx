@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The note dialog: a step's notes (each member of a chord), picked on a piano, heard on click, applied to the step.
+import type { CSSProperties, FormEvent } from "react";
 import { previewSetStepNotes, noteName } from "../../lib/proto.ts";
 import { A, notify, t, tcol, useApp } from "../../core/app.ts";
 import { NotePiano } from "./Keys.tsx";
+import { dim, pri } from "../../ui/styles.ts";
 import { PV, auditionPreviewNote, closeDialog, noteDialogClosed, previewError, previewSequenceClick, setDialog, stopPreviewNoteAudition } from "./state.ts";
 
-async function apply(e) {
+async function apply(e: FormEvent): Promise<void> {
   e.preventDefault();
   const target = PV.noteTarget;
   if (!target || target.device !== A.dev || target.model !== A.mock) { closeDialog(); return; }
@@ -25,16 +27,16 @@ export default function NoteDialog() {
   useApp();
   const target = PV.noteTarget;
   const k = target ? target.track : 0;
-  const octave = (d) => { target.octave = Math.max(0, Math.min(120, target.octave + d)); notify(); };
-  const pick = (pitch) => {
-    if (target !== PV.noteTarget) return;
+  const octave = (d: number) => { if (!target) return; target.octave = Math.max(0, Math.min(120, target.octave + d)); notify(); };
+  const pick = (pitch: number) => {
+    if (!target || target !== PV.noteTarget) return;
     target.notes[target.member] = pitch;
     notify();
     auditionPreviewNote(pitch).catch(previewError);
   };
   return (
     <dialog id="preview-note-dialog" ref={setDialog} aria-labelledby="preview-note-title" onClose={noteDialogClosed}
-      style={{ "--c": tcol(k), "--trk": tcol(k) }}
+      style={{ "--c": tcol(k), "--trk": tcol(k) } as CSSProperties}
       className="m-auto w-[520px] max-w-[calc(100vw-32px)] border border-s3 bg-bg p-5 [font:inherit] text-fg backdrop:bg-bg backdrop:opacity-70">
       {target ? (
         <form id="preview-note-form" onSubmit={(e) => apply(e).catch(previewError)}>
@@ -62,10 +64,10 @@ export default function NoteDialog() {
             <input type="checkbox" id="preview-note-listen" checked={PV.listen}
               onChange={(e) => { PV.listen = e.target.checked; if (!PV.listen) stopPreviewNoteAudition(); notify(); }} />
             <span>{t("previewListen")}</span></label>
-          <p className="dim">{t("previewNoteDialogHint")}</p>
+          <p className={dim}>{t("previewNoteDialogHint")}</p>
           <div className="preview-note-actions mt-5 flex justify-end gap-2">
             <button type="button" id="preview-note-cancel" onClick={closeDialog}>{t("previewCancel")}</button>
-            <button type="submit" id="preview-note-apply" className="pri" disabled={PV.applying}>{t("previewApply")}</button>
+            <button type="submit" id="preview-note-apply" className={pri} disabled={PV.applying}>{t("previewApply")}</button>
           </div>
         </form>
       ) : null}

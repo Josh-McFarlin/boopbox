@@ -6,9 +6,11 @@
 // meter, the selected track's keys (or drum pads, played with the mouse or the labeled computer keys, Space: play /
 // stop), and the step sequence of every track to listen to and edit. The logic is in preview/state.js.
 import { useEffect } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { DRUM_LANES, noteName } from "../lib/proto.ts";
 import { A, notify, t, useApp } from "../core/app.ts";
 import { KeyBoard } from "./preview/Keys.tsx";
+import type { KeyHandlers } from "./preview/Keys.tsx";
 import NoteDialog from "./preview/NoteDialog.tsx";
 import Sequence from "./preview/Sequence.tsx";
 import {
@@ -18,13 +20,14 @@ import {
 
 export const init = initPreview;
 
-const SHAPES = {
+type Shape = "play" | "pause" | "stop" | "audio" | "muted";
+const SHAPES: Record<Shape, string> = {
   play: "M4 2v12l10-6z", pause: "M3 2h4v12H3zM9 2h4v12H9z", stop: "M3 3h10v10H3z",
   audio: "M1 6h3l4-4v12l-4-4H1zM10 5l1-1c3 2 3 6 0 8l-1-1c2-2 2-4 0-6z",
   muted: "M1 6h3l4-4v12l-4-4H1zM10 5l1-1 2 3 2-3 1 1-2 3 2 3-1 1-2-3-2 3-1-1 2-3z",
 };
 /* a transport button's face: a small drawing and its words */
-const Face = ({ shape, children }) => (
+const Face = ({ shape, children }: { shape: Shape; children?: ReactNode }) => (
   <>
     <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 flex-none fill-current"><path d={SHAPES[shape]} /></svg>
     <span>{children}</span>
@@ -32,13 +35,13 @@ const Face = ({ shape, children }) => (
 );
 
 /* the status line under the keys */
-function statusText(ready, active) {
+function statusText(ready: boolean, active: boolean): string {
   if (PV.starting) return t("previewLoading");
   if (PV.error) return PV.error;
   return t(!ready ? "previewConnect" : A.tab === "song" ? "previewSongHint" : PV.playing ? "previewPlaying" : active ? "previewReady" : "previewHint");
 }
 /* the collapsed panel's line: the selected track, its sound, the step playing */
-function summary(ready, active) {
+function summary(ready: boolean, active: boolean): string {
   if (PV.error || PV.starting) return statusText(ready, active);
   const mock = A.mock, dev = A.dev;
   if (!mock || !dev?.dump) return t("previewConnect");
@@ -48,8 +51,8 @@ function summary(ready, active) {
   const muted = !!track.p[40] || !!(mock.state.solo && !(mock.state.solo & (1 << k)));
   let state = t(PV.playing ? "previewRunning" : "previewStopped");
   if (position >= 0) {
-    const step = (drum ? track.dstep : track.step)[position];
-    const notes = drum ? DRUM_LANES.filter((_, lane) => step?.on & (1 << lane)).map(([, n]) => n) :
+    const dstep = drum ? track.dstep?.[position] : undefined, step = drum ? undefined : track.step[position];
+    const notes = drum ? DRUM_LANES.filter((_, lane) => (dstep?.on ?? 0) & (1 << lane)).map(([, n]) => n) :
       step?.time === 0 ? step.notes.slice(0, step.n).map(noteName) : [];
     const sound = muted ? t("previewMuted") : notes.length ? notes.join(" + ") : step?.time === 1 ? t("previewTie") : t("previewRest");
     state = `${t("previewStep")} ${position + 1}/${track.p[29]} · ${sound}`;
@@ -58,22 +61,22 @@ function summary(ready, active) {
 }
 
 /* a key's pointer and keyboard handlers: pressed while held (the pointer captured), Enter / Space on a focused key */
-const keyHandlers = (disabled) => (offset) => ({
-  onPointerDown: (e) => {
+const keyHandlers = (disabled: boolean) => (offset: number): KeyHandlers => ({
+  onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
     if (disabled) return;
     e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId);
     previewNoteOn(`pointer:${e.pointerId}`, offset).catch(previewError);
   },
-  onPointerUp: (e) => previewNoteOff(`pointer:${e.pointerId}`, offset),
-  onPointerCancel: (e) => previewNoteOff(`pointer:${e.pointerId}`, offset),
-  onLostPointerCapture: (e) => previewNoteOff(`pointer:${e.pointerId}`, offset),
+  onPointerUp: (e: ReactPointerEvent) => previewNoteOff(`pointer:${e.pointerId}`, offset),
+  onPointerCancel: (e: ReactPointerEvent) => previewNoteOff(`pointer:${e.pointerId}`, offset),
+  onLostPointerCapture: (e: ReactPointerEvent) => previewNoteOff(`pointer:${e.pointerId}`, offset),
   // Focused keys/pads also play with Enter or Space; these events must not toggle the sequencer.
-  onKeyDown: (e) => {
+  onKeyDown: (e: ReactKeyboardEvent) => {
     if (!["Enter", "Space"].includes(e.code)) return;
     e.preventDefault(); e.stopPropagation();
     if (!e.repeat && !disabled) previewNoteOn(`button:${offset}`, offset).catch(previewError);
   },
-  onKeyUp: (e) => {
+  onKeyUp: (e: ReactKeyboardEvent) => {
     if (!["Enter", "Space"].includes(e.code)) return;
     e.preventDefault(); e.stopPropagation();
     previewNoteOff(`button:${offset}`, offset);
@@ -89,7 +92,7 @@ export default function Preview() {
   const expanded = PV.expanded, active = !!PV.audio?.node, ready = !!dev?.dump;
   const drum = selDrum(), sel = mock?.state.sel || 0;
   const wide = drum && expanded;   /* drums, expanded: the pads and the controls side by side on a wide screen */
-  const W = (cls) => (wide ? cls : "");
+  const W = (cls: string): string => (wide ? cls : "");
   useEffect(() => {
     const stamp = `${sel}:${PV.octave}`;
     if (layout && layout !== stamp) releasePreviewKeys();
@@ -146,7 +149,7 @@ export default function Preview() {
             className={`preview-instrument mt-3 mb-2 flex flex-wrap items-center justify-between gap-3 ${W("min-[1100px]:col-start-1 min-[1100px]:row-start-1 min-[1100px]:mt-0")}`}>
             <div>
               <span id="preview-instrument" className="text-fg">{`${t("track")} ${sel + 1} · ${t(drum ? "previewDrums" : "previewKeys")}`}</span>
-              <span id="preview-sound" className="ml-2 text-dim">{ready && !drum ? (dev.names[dev.dump.engine] || [])[dev.dump.preset] || "" : ""}</span>
+              <span id="preview-sound" className="ml-2 text-dim">{ready && !drum ? (dev!.names[dev!.dump!.engine] || [])[dev!.dump!.preset] || "" : ""}</span>
             </div>
             <div className="preview-instrument-actions flex items-center gap-3">
               <div id="preview-octaves" className="preview-octaves flex items-center gap-2" hidden={drum || PV.keysHidden}>

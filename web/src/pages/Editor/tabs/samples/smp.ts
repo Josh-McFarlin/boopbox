@@ -96,7 +96,7 @@ export const slotText = (v: string): string => v.toUpperCase().replace(/[^\x20-\
 
 /* ---- the FM-1 */
 /* a list of sounds ({name, files}) into slot k; where: the page whose bar shows the progress */
-export async function smpUpload(k: number, where: UpWhere, ask: boolean, d: SmpDraft): Promise<boolean> {
+export async function smpUpload(k: number, where: UpWhere, ask: boolean, d: { name: string; files: (SlotZoneIn & { gain?: number | null })[] }): Promise<boolean> {
   let built: ReturnType<typeof buildSlot>, done = false;
   try { built = buildSlot(d.name, d.files.map((f) => ({ s: withGain(f.s, f.gain), root: f.root, lo: f.lo, hi: f.hi,
     loop: f.loop || 0, ls: f.ls, le: f.le }))); }

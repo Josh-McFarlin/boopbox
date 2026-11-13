@@ -4,14 +4,24 @@
 // sound onto a slot, or a slot onto the library, to do the same. Each row and tile has its actions in a "⋯" menu (and on
 // a right-click). Works without an FM-1; the slots show when one is connected. The logic: pages/library/lib.js.
 import { useCallback, useState } from "react";
+import type { ChangeEvent, MouseEvent as ReactMouseEvent } from "react";
+import clsx from "clsx";
+import type { UpSlot } from "../lib/proto.ts";
 import { A, notify, t, tf, useApp } from "../core/app.ts";
 import { slotName } from "../core/shared.ts";
 import { Card, Help, Ic, Icon } from "../ui/kit.tsx";
+import { bar, dim, pri } from "../ui/styles.ts";
+import type { StoredPatch } from "../core/shared.ts";
 import {
   LB, bankErase, bankExport, bankGet, bankLoad, bankRefresh, bankStore, libAudition, libDelete, libDuplicate, libEngines,
   libExportAll, libExportOne, libImport, libPut, libRename, libSave, libSetTags, libTags, libView, selPatch,
 } from "./library/lib.ts";
 import { Menu, menuAt } from "./library/Menu.tsx";
+import type { MenuItem, MenuProps } from "./library/Menu.tsx";
+
+/* an open menu: where, its title, its items */
+type MenuOpen = Omit<MenuProps, "onClose">;
+interface PaneProps { onMenu: (m: MenuOpen) => void }
 
 export { init } from "./library/lib.ts";
 
@@ -24,27 +34,27 @@ const DOTS = "size-7 p-0 leading-none";
 /* -------------------------------------------------------- what is possible, and why not --- */
 const hasBank = () => !!(A.dev && A.dev.bank);
 /* the slot a library sound goes to: the selected one, else the first empty one */
-function sendTarget() {
+function sendTarget(): number | null {
   if (!hasBank()) return null;
   if (LB.bankSel != null) return LB.bankSel;
-  const e = A.dev.bank.slots.find((x) => !x.used);
+  const e = A.dev!.bank!.slots.find((x) => !x.used);
   return e ? e.slot : null;
 }
-const whyBank = () => (!A.dev ? t("libWhyNoDev") : !A.dev.bank ? t("bankNone") : LB.busy ? t("whyBusy") : "");
-function whySend() {
+const whyBank = (): string => (!A.dev ? t("libWhyNoDev") : !A.dev.bank ? t("bankNone") : LB.busy ? t("whyBusy") : "");
+function whySend(): string {
   if (!selPatch()) return t("libWhyNoSound");
   return whyBank() || (sendTarget() == null ? t("libWhyFull") : "");
 }
-function whyKeep() {
+function whyKeep(): string {
   const w = whyBank();
   if (w) return w;
-  const s = LB.bankSel == null ? null : A.dev.bank.slots[LB.bankSel];
+  const s = LB.bankSel == null ? null : A.dev!.bank!.slots[LB.bankSel];
   return !s ? t("libWhyNoSlot") : !s.used ? t("libWhyEmptySlot") : "";
 }
 
 /* a library sound's actions */
-function libItems(p) {
-  const sel = (fn) => () => { LB.sel = p.id; notify(); fn(); };
+function libItems(p: StoredPatch): MenuItem[] {
+  const sel = (fn: () => void) => () => { LB.sel = p.id; notify(); fn(); };
   const tgt = sendTarget();
   const whyAud = !A.dev ? t("libWhyNoDev") : LB.busy ? t("whyBusy") : "";
   return [
@@ -59,8 +69,8 @@ function libItems(p) {
   ];
 }
 /* a device slot's actions */
-function slotItems(x) {
-  const sel = (fn) => () => { LB.bankSel = x.slot; notify(); fn(); };
+function slotItems(x: UpSlot): MenuItem[] {
+  const sel = (fn: () => void) => () => { LB.bankSel = x.slot; notify(); fn(); };
   const busy = LB.busy ? t("whyBusy") : "", empty = x.used ? "" : t("libWhyEmptySlot");
   return [
     { label: t("bankLoad"), ic: "symbol_folder_open", run: sel(() => bankLoad(x.slot)), why: empty || busy },
@@ -71,23 +81,23 @@ function slotItems(x) {
 }
 
 /* ------------------------------------------------------------------- the library --- */
-function LibPane({ onMenu }) {
+function LibPane({ onMenu }: PaneProps) {
   const { dev, lang } = useApp();
   const [over, setOver] = useState(false);
   const engs = libEngines(), tags = libTags();
   const v = libView();
-  const set = (k) => (e) => { LB[k] = e.target.value; notify(); };
-  const menu = (p) => (e) => { e.preventDefault(); e.stopPropagation(); LB.sel = p.id; notify(); onMenu({ ...menuAt(e), title: p.name, items: libItems(p) }); };
+  const set = (k: "q" | "eng" | "tag" | "sort") => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { LB[k] = e.target.value; notify(); };
+  const menu = (p: StoredPatch) => (e: ReactMouseEvent<HTMLElement>) => { e.preventDefault(); e.stopPropagation(); LB.sel = p.id; notify(); onMenu({ ...menuAt(e), title: p.name, items: libItems(p) }); };
   return (
     <Card title={t("library")} ic="symbol_books" className="mb-0!" id="libpane" sub={`${v.length} / ${LB.lib.length}`}>
-      <div className="bar">
+      <div className={bar}>
         <button type="button" id="libsave" disabled={!dev || LB.busy} title={!dev ? t("libWhyNoDev") : LB.busy ? t("whyBusy") : t("libSaveHint")}
           onClick={libSave}><Ic ic="port_disk">{t("saveToLib")}</Ic></button>
         <button type="button" id="libimport" title={t("libImportHint")} onClick={libImport}><Ic ic="symbol_upload">{t("import")}</Ic></button>
         <button type="button" id="libexport" disabled={!LB.lib.length} title={LB.lib.length ? t("libExportHint") : t("libWhyEmpty")}
           onClick={libExportAll}><Ic ic="symbol_download">{t("exportLib")}</Ic></button>
       </div>
-      <div className="bar">
+      <div className={bar}>
         <input type="search" id="libq" spellCheck="false" placeholder={t("libSearch")} className="flex-[1_1_140px]" value={LB.q} onChange={set("q")} />
         <select id="libeng" value={LB.eng} onChange={set("eng")} aria-label={t("engine")}>
           <option value="">{t("allEngines")}</option>
@@ -146,7 +156,7 @@ function LibPane({ onMenu }) {
           </>
         )}
       </div>
-      {LB.persistent ? null : <p className="dim mt-2 mb-0">{t("noLibDB")}</p>}
+      {LB.persistent ? null : <p className={clsx(dim, "mt-2 mb-0")}>{t("noLibDB")}</p>}
     </Card>
   );
 }
@@ -155,39 +165,39 @@ function LibPane({ onMenu }) {
 function Moves() {
   useApp();
   const ws = whySend(), wk = whyKeep(), tgt = sendTarget();
-  const s = LB.bankSel != null && hasBank() ? A.dev.bank.slots[LB.bankSel] : null;
+  const s = LB.bankSel != null && hasBank() ? A.dev!.bank!.slots[LB.bankSel] : null;
   return (
     <div className="flex w-[168px] flex-col gap-3 pt-[118px]" id="libmoves">
-      <button type="button" id="libsend" className="pri flex flex-col items-center gap-0.5 py-2.5" disabled={!!ws}
-        title={ws || tf("libSendHint", { name: selPatch().name, n: slotName(tgt) })}
+      <button type="button" id="libsend" className={clsx(pri, "flex flex-col items-center gap-0.5 py-2.5")} disabled={!!ws}
+        title={ws || tf("libSendHint", { name: selPatch()!.name, n: slotName(tgt!) })}
         onClick={() => libPut(LB.sel, sendTarget())}>
         <span className="text-big leading-6">→</span>
         <span>{t("libSend")}</span>
         <small className="text-[16px] leading-4 normal-case opacity-80">{!ws && tgt != null ? slotName(tgt) : " "}</small>
       </button>
       <button type="button" id="libkeep" className="flex flex-col items-center gap-0.5 py-2.5" disabled={!!wk}
-        title={wk || tf("libKeepHint", { n: slotName(LB.bankSel), name: s.name })}
+        title={wk || tf("libKeepHint", { n: slotName(LB.bankSel!), name: s!.name })}
         onClick={() => bankGet(LB.bankSel)}>
         <span className="text-big leading-6">←</span>
         <span>{t("libKeep")}</span>
-        <small className="text-[16px] leading-4 normal-case opacity-80">{!wk ? slotName(LB.bankSel) : " "}</small>
+        <small className="text-[16px] leading-4 normal-case opacity-80">{!wk ? slotName(LB.bankSel!) : " "}</small>
       </button>
-      <p className="dim m-0 text-center text-[13px] leading-[18px]">{ws && wk ? t("libMovesHint") : ""}</p>
+      <p className={clsx(dim, "m-0 text-center text-[13px] leading-[18px]")}>{ws && wk ? t("libMovesHint") : ""}</p>
     </div>
   );
 }
 
 /* ------------------------------------------------------------ the device's slots --- */
-function BankPane({ onMenu }) {
+function BankPane({ onMenu }: PaneProps) {
   const { dev } = useApp();
   const has = !!(dev && dev.bank);
-  const used = has ? dev.bank.slots.filter((x) => x.used).length : 0;
+  const used = has ? dev!.bank!.slots.filter((x) => x.used).length : 0;
   const idle = !LB.busy;
   return (
-    <Card title={t("bank")} ic="port_disk" className="mb-0!" sub={has ? `${used} / ${dev.bank.total} ${t("used")}` : null}>
+    <Card title={t("bank")} ic="port_disk" className="mb-0!" sub={has ? `${used} / ${dev!.bank!.total} ${t("used")}` : null}>
       {has ? (
         <div id="bankpane">
-          <div className="bar">
+          <div className={bar}>
             <button type="button" id="bkrefresh" disabled={!idle} title={idle ? t("libReloadHint") : t("whyBusy")} onClick={bankRefresh}>
               <Ic ic="control_arrow_loop">{t("reload")}</Ic></button>
             <button type="button" id="bkexport" disabled={!used || !idle} title={!used ? t("libWhyBankEmpty") : !idle ? t("whyBusy") : t("libExportBankHint")}
@@ -199,14 +209,14 @@ function BankPane({ onMenu }) {
     </Card>
   );
 }
-function SlotGrid({ onMenu }) {
-  const dev = A.dev, b = dev.bank;
-  const [over, setOver] = useState(null);
+function SlotGrid({ onMenu }: PaneProps) {
+  const dev = A.dev!, b = dev.bank!;
+  const [over, setOver] = useState<number | null>(null);
   return (
     <div id="banklist" role="listbox" aria-label={t("bank")} className="grid grid-cols-4 gap-1.5">
       {b.slots.map((x) => {
-        const on = x.slot === LB.bankSel, eng = x.used ? dev.info.engines[x.engine] || String(x.engine) : "";
-        const menu = (e) => { e.preventDefault(); e.stopPropagation(); LB.bankSel = x.slot; notify(); onMenu({ ...menuAt(e), title: `${slotName(x.slot)} ${x.used ? x.name : t("empty")}`, items: slotItems(x) }); };
+        const on = x.slot === LB.bankSel, eng = x.used ? dev.info!.engines[x.engine] || String(x.engine) : "";
+        const menu = (e: ReactMouseEvent<HTMLElement>) => { e.preventDefault(); e.stopPropagation(); LB.bankSel = x.slot; notify(); onMenu({ ...menuAt(e), title: `${slotName(x.slot)} ${x.used ? x.name : t("empty")}`, items: slotItems(x) }); };
         return (
           <div key={x.slot} data-slot={x.slot} role="option" aria-selected={on} tabIndex={0} draggable={x.used ? "true" : undefined}
             title={x.used ? tf("libSlotHint", { n: slotName(x.slot), name: x.name }) : tf("libSlotEmptyHint", { n: slotName(x.slot) })}
@@ -240,7 +250,7 @@ function SlotGrid({ onMenu }) {
 
 export default function Library() {
   useApp();
-  const [menu, setMenu] = useState(null);
+  const [menu, setMenu] = useState<MenuOpen | null>(null);
   const close = useCallback(() => setMenu(null), []);
   return (
     <div id="libsec">

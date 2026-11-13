@@ -2,22 +2,27 @@
 // The Drum kit page (2.4): 1 the 16 pads (files dropped on them, or a ZIP opened), 2 where the kit goes (one slot, or
 // USR3+4: the big kit), 3 send it and play it on the drum track. (Shows only when the FM-1 reported its sample flash.)
 import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
+import clsx from "clsx";
 import { DRUM_LANES, KIT, SMP, kitBytes, kitFit, kitLen } from "../lib/proto.ts";
+import type { SmpSlotInfo } from "../lib/proto.ts";
 import { hasTracks, notify, pickFile, t, tf, useApp } from "../core/app.ts";
 import { Card, Ic, barVars } from "../ui/kit.tsx";
+import { bar, dim, pri, warn } from "../ui/styles.ts";
 import { SB } from "./samples/smp.ts";
 import { Meter, NameInput, ShortHelp, Step, useDrop } from "./samples/ui.tsx";
 import { SlotTiles } from "./samples/SlotTiles.tsx";
 import {
   KEY_OF_LANE, KIT_PAIR, kitAddFiles, kitDest, kitDraft, kitHas4, kitIndexOf, kitMatch, kitOver, kitPlayPad, kitRoom, kitSend, kitSlots, kitUse, kitZip,
 } from "./kits/kit.ts";
+import type { KitDraftPad } from "./kits/kit.ts";
 
 const ACCEPT = ".wav,.zip,audio/*";
 const pick = async (lane = -1) => { const fs = await pickFile(ACCEPT, true); if (fs && fs.length) kitAddFiles(fs, lane); };
-const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const css = (v: string): string => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-function kitDrawWave(cv, p) {
-  const w = cv.width = Math.max(60, cv.clientWidth || 200), h = cv.height = 48, g = cv.getContext("2d");
+function kitDrawWave(cv: HTMLCanvasElement, p: KitDraftPad): void {
+  const w = cv.width = Math.max(60, cv.clientWidth || 200), h = cv.height = 48, g = cv.getContext("2d")!;
   g.clearRect(0, 0, w, h);
   const s = p.s, n = s.length, keep = kitLen(p) * (p.tune ? Math.pow(2, p.tune / 12) : 1);
   const col = getComputedStyle(cv).getPropertyValue("--c").trim() || css("--t4"), S3 = css("--s3");
@@ -32,7 +37,10 @@ function kitDrawWave(cv, p) {
 }
 
 /* a pad's control: a label, a slider, its value */
-function Row3({ label, min, max, step, value, onInput, onDone, text }) {
+interface Row3Props {
+  label: string; min: number; max: number; step: number; value: number; onInput: (v: number, max: number) => void; onDone: () => void; text: string;
+}
+function Row3({ label, min, max, step, value, onInput, onDone, text }: Row3Props) {
   return (
     <div className="row3 grid grid-cols-[auto_1fr_auto] items-center gap-1.5 text-dim">
       <span>{label}</span>
@@ -43,9 +51,9 @@ function Row3({ label, min, max, step, value, onInput, onDone, text }) {
   );
 }
 
-function Pad({ l }) {
+function Pad({ l }: { l: number }) {
   useApp();
-  const p = kitDraft.pads[l], cv = useRef(null);
+  const p = kitDraft.pads[l], cv = useRef<HTMLCanvasElement>(null);
   const [over, drop] = useDrop((fs) => kitAddFiles(fs, l), true);
   useEffect(() => { if (p && cv.current) kitDrawWave(cv.current, p); });
   useEffect(() => {
@@ -81,13 +89,13 @@ function Pad({ l }) {
         </div>
         <div className="acts flex gap-1">
           <button type="button" className="px-2 py-[3px]" onClick={play}>{"▶ " + t("kitPlay")}</button>
-          <button type="button" className="warn px-2 py-[3px]" onClick={() => { kitDraft.pads[l] = null; notify(); }}>×</button>
+          <button type="button" className={clsx(warn, "px-2 py-[3px]")} onClick={() => { kitDraft.pads[l] = null; notify(); }}>×</button>
         </div>
       </>
     );
   }
   return (
-    <div data-l={l} {...drop} style={{ "--c": "var(--t4)" }}
+    <div data-l={l} {...drop} style={{ "--c": "var(--t4)" } as CSSProperties}
       className={`pad relative flex ${p ? "min-h-[170px]" : "min-h-[85px]"} min-w-0 flex-col gap-1.5 border border-line bg-bg p-2.5
         ${over ? "over outline-2 -outline-offset-2 outline-c outline-dashed" : ""}`}>
       <div className="ph flex items-baseline gap-2">
@@ -114,12 +122,13 @@ function Meter2() {
 function Dest() {
   const { dev } = useApp();
   const ok = !!dev && !!dev.smp;
+  const smp = ok ? dev!.smp! : null;
   const tiles = [KIT_PAIR, 0, 1, 2, 3].map((d) => {
-    const ks = kitSlots(d), sl = ks.map((k) => ok && dev.smp.slots[k]);
-    const full = sl.filter((x) => x && x.zones);
+    const ks = kitSlots(d), sl = ks.map((k) => smp && smp.slots[k]);
+    const full = sl.filter((x): x is SmpSlotInfo => !!x && !!x.zones);
     return { id: d, title: kitDest(d), big: d === KIT_PAIR, full: !!full.length,
       now: full.map((x) => x.name || "—").filter((x, i, a) => a.indexOf(x) === i).join(" + "),
-      kib: sl.reduce((a, x) => a + ((x && x.kib) || 0), 0), max: (ok ? dev.smp.slotKiB : 0) * ks.length,
+      kib: sl.reduce((a, x) => a + ((x && x.kib) || 0), 0), max: (smp ? smp.slotKiB : 0) * ks.length,
       cap: t(d === KIT_PAIR ? "kitCapBig" : "kitCapOne"), why: ok && !kitHas4() && (d === KIT_PAIR || d === 3) ? t("kitNo4") : "" };
   });
   return <SlotTiles label={t("kitStep2")} tiles={tiles} sel={kitDraft.slot} onPick={(d) => { kitDraft.slot = d; notify(); }}
@@ -127,7 +136,7 @@ function Dest() {
 }
 
 /* why the kit cannot be sent yet ("" when it can) */
-function whySend(ok, any, over) {
+function whySend(ok: boolean, any: boolean, over: boolean): string {
   return !ok ? t("libWhyNoDev") : SB.busy ? t("whyBusy") : !any ? t("kitWhyNoPads") : over ? t("kitWhyOver")
     : !kitDraft.name ? t("kitWhyName") : !kitHas4() && kitDraft.slot >= 3 ? t("kitNo4") : "";
 }
@@ -137,13 +146,14 @@ export default function Kits() {
   const ok = !!dev && !!dev.smp;
   if (!kitHas4() && ok && kitDraft.slot >= 3) kitDraft.slot = 2;   /* (a firmware without USR4) */
   const any = kitDraft.pads.some(Boolean), over = kitOver();
-  const sl = kitSlots().map((k) => ok && dev.smp.slots[k]);
-  const used = sl.filter((x) => x && x.zones);
+  const smp = ok ? dev!.smp! : null;
+  const sl = kitSlots().map((k) => smp && smp.slots[k]);
+  const used = sl.filter((x): x is SmpSlotInfo => !!x && !!x.zones);
   const up = SB.up && SB.up.where === "kit" ? SB.up : null;
   const [, cardDrop] = useDrop((fs) => kitAddFiles(fs));
   const why = whySend(ok, any, over);
   const whyUse = !ok ? t("libWhyNoDev") : SB.busy ? t("whyBusy") : !used.length ? tf("smpWhyEmptyX", { x: kitDest() })
-    : !hasTracks() || (dev.kitNames && kitIndexOf(kitDraft.slot) < 0) ? t("kitNoKit") : "";
+    : !hasTracks() || (dev!.kitNames && kitIndexOf(kitDraft.slot) < 0) ? t("kitNoKit") : "";
   return (
     <div id="kit">
       <Card title={t("kitTitle")} ic="symbol_drum">
@@ -152,10 +162,10 @@ export default function Kits() {
           <Step n={1} title={t("kitStep1")}>
             <ShortHelp text={t("kitStep1Help")} />
             <div className="kithead grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-6 gap-y-3">
-              <div className="bar m-0">
+              <div className={clsx(bar, "mb-0!")}>
                 <button type="button" onClick={() => pick(-1)}><Ic ic="symbol_folder_open">{t("kitAdd")}</Ic></button>
                 <button type="button" disabled={!any} title={any ? "" : t("kitWhyNoPads1")} onClick={kitZip}><Ic ic="symbol_download">{t("kitZip")}</Ic></button>
-                <button type="button" className="warn" disabled={!any} title={any ? "" : t("kitWhyNoPads1")}
+                <button type="button" className={warn} disabled={!any} title={any ? "" : t("kitWhyNoPads1")}
                   onClick={() => { kitDraft.pads = Array(16).fill(null); kitDraft.sel = -1; notify(); }}>
                   <Ic ic="symbol_trash">{t("kitClear")}</Ic>
                 </button>
@@ -165,7 +175,7 @@ export default function Kits() {
             <div className="pads my-4 grid grid-cols-4 gap-2.5">
               {Array.from({ length: 16 }, (_, l) => <Pad key={l} l={l} />)}
             </div>
-            <div className="bar">
+            <div className={bar}>
               <button type="button" disabled={kitDraft.pads.filter(Boolean).length < 2}
                 title={kitDraft.pads.filter(Boolean).length < 2 ? t("kitWhyTwo") : t("matchHelp")} onClick={kitMatch}>
                 <Ic ic="symbol_audio">{t("matchLevels")}</Ic></button>
@@ -178,24 +188,24 @@ export default function Kits() {
             <p className="destnote mt-0 mb-2.5 text-fg2">
               {t(kitDraft.slot === KIT_PAIR ? "kitNotePair" : "kitNoteOne").replace("{x}", kitDest())}
               {used.length ? <>{" "}<span className="text-t3">{t("kitReplaces").replace("{x}", used.map((x) => x.name || "—").join(" + "))}</span></> : null}
-              {ok && !kitHas4() ? <>{" "}<span className="dim">{t("kitNo4")}</span></> : null}
+              {ok && !kitHas4() ? <>{" "}<span className={dim}>{t("kitNo4")}</span></> : null}
             </p>
-            <div className="bar">
-              <span className="dim">{t("kitName")}</span>
+            <div className={bar}>
+              <span className={dim}>{t("kitName")}</span>
               <NameInput value={kitDraft.name} onChange={(v) => { kitDraft.name = v; notify(); }} />
             </div>
           </Step>
           <Step n={3} title={t("kitStep3")} off={!any && !used.length} why={!any ? t("kitWhyNoPads") : ""}>
-            <div className="bar">
-              <button type="button" className="pri" onClick={kitSend} disabled={!!why} title={why}>
+            <div className={bar}>
+              <button type="button" className={pri} onClick={kitSend} disabled={!!why} title={why}>
                 <Ic ic="symbol_upload">{t("kitSend").replace("{x}", kitDest())}</Ic>
               </button>
-              <progress className="w-[180px]" max="1" value={up ? up.v : 0} hidden={!up} />
+              <progress className="w-[180px]" max={1} value={up ? up.v : 0} hidden={!up} />
               <button type="button" onClick={() => kitUse(kitDraft.slot)} disabled={!!whyUse} title={whyUse}>
                 <Ic ic="symbol_drum">{t("kitUse").replace("{x}", kitDest())}</Ic>
               </button>
             </div>
-            <p className="dim my-4">{t("kitWhereFM1").replace("{x}", kitDest())}</p>
+            <p className={clsx(dim, "my-4")}>{t("kitWhereFM1").replace("{x}", kitDest())}</p>
           </Step>
         </div>
       </Card>

@@ -3,20 +3,25 @@
 // click on an empty step adds a note, on a note opens the note dialog, a double click or Delete makes it a rest (as the
 // Sequencer page's grid); a drum track shows its hits on one row and,
 // opened, a row for each sound.
+import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { DRUM_LANES, noteName, previewSetStepNotes } from "../../lib/proto.ts";
+import type { DrumStep, MockStep } from "../../lib/proto.ts";
 import { A, notify, report, t, tcol } from "../../core/app.ts";
 import { selectTrack } from "../../core/device.ts";
 import { showTab } from "../../core/tabs.ts";
 import { PV, noteOf, posOf, previewCellClick, previewOpenNote, previewSequenceClick } from "./state.ts";
 
-const groups = new Map();   /* track -> its rows' element (hovered or focused: its page stays still) */
+/* a cell's step: a synth step, or a drum step on a drum track */
+type CellStep = MockStep | DrumStep | undefined;
+const groups = new Map<number, HTMLDivElement>();   /* track -> its rows' element (hovered or focused: its page stays still) */
 const ROW = "preview-seq-row grid grid-cols-[128px_minmax(0,1fr)] gap-2 mt-1 max-[680px]:grid-cols-[72px_minmax(0,1fr)] max-[680px]:gap-1";
 const STEPS = "preview-seq-steps grid grid-cols-[repeat(16,minmax(0,1fr))] gap-0.5";
 
-function TrackButton({ k, name, muted, len, position }) {
+interface TrackButtonProps { k: number; name: string; muted: boolean; len: number; position: number }
+function TrackButton({ k, name, muted, len, position }: TrackButtonProps) {
   const label = `${t("track")} ${k + 1}: ${name}${muted ? " · " + t("previewMuted") : ""}`;
   return (
-    <button type="button" aria-pressed={A.mock.state.sel === k} aria-label={label} title={label} onClick={() => selectTrack(k)}
+    <button type="button" aria-pressed={A.mock!.state.sel === k} aria-label={label} title={label} onClick={() => selectTrack(k)}
       className="preview-seq-track flex h-7 w-full min-w-0 items-center gap-1 bg-transparent p-0 text-left normal-case text-c aria-pressed:bg-s2
         max-[680px]:gap-0">
       <span className="seq-no w-6 flex-none text-center">{k + 1}</span>
@@ -26,13 +31,14 @@ function TrackButton({ k, name, muted, len, position }) {
   );
 }
 
-function PageTools({ k, len, page, children }) {
-  const move = (delta) => {
+interface PageToolsProps { k: number; len: number; page: number; children?: ReactNode }
+function PageTools({ k, len, page, children }: PageToolsProps) {
+  const move = (delta: number) => {
     PV.follow = false;
-    PV.pages[k] = Math.max(0, Math.min(Math.floor((A.mock.state.tracks[k].p[29] - 1) / 16) * 16, (PV.pages[k] || 0) + delta));
+    PV.pages[k] = Math.max(0, Math.min(Math.floor((A.mock!.state.tracks[k].p[29] - 1) / 16) * 16, (PV.pages[k] || 0) + delta));
     notify();
   };
-  const nav = (cls, key, text, delta, disabled) => {
+  const nav = (cls: string, key: string, text: string, delta: number, disabled: boolean) => {
     const label = `${t(key)} · ${t("track")} ${k + 1}`;
     return <button type="button" className={`${cls} h-6 w-6 p-0`} hidden={len <= 16} disabled={disabled} aria-label={label} title={label}
       onClick={() => move(delta)}>{text}</button>;
@@ -48,11 +54,12 @@ function PageTools({ k, len, page, children }) {
 }
 
 /* one cell: what it shows and says (the old renderPreviewSequence's cell pass) */
-function cellView(k, drum, lane, s, index, len) {
-  const notes = !drum && s && s.time === 0 ? s.notes.slice(0, s.n).map(noteName) : [];
-  const tie = !drum && s?.time === 1;
-  const hits = drum && lane === -2 && s ? DRUM_LANES.filter((_, l) => s.on & (1 << l)).map(([, name]) => name) : [];
-  const on = drum ? lane === -2 ? hits.length > 0 : !!(s?.on & (1 << lane)) : notes.length > 0 || tie;
+function cellView(k: number, drum: boolean, lane: number, cs: CellStep, index: number, len: number) {
+  const s = drum ? undefined : cs as MockStep | undefined, d = drum ? cs as DrumStep | undefined : undefined;
+  const notes = s && s.time === 0 ? s.notes.slice(0, s.n).map(noteName) : [];
+  const tie = s?.time === 1;
+  const hits = lane === -2 && d ? DRUM_LANES.filter((_, l) => d.on & (1 << l)).map(([, name]) => name) : [];
+  const on = drum ? lane === -2 ? hits.length > 0 : !!((d?.on ?? 0) & (1 << lane)) : notes.length > 0 || tie;
   const text = drum ? lane === -2 ? hits.length > 1 ? String(hits.length) : on ? "●" : "" : on ? "●" : ""
     : tie ? "→" : notes.length ? notes[0] + (notes.length > 1 ? "+" + (notes.length - 1) : "") : "+";
   const content = drum ? lane === -2 ? hits.join(", ") || t("previewRest") : DRUM_LANES[lane][1] : tie ? t("previewTie")
@@ -67,34 +74,37 @@ function cellView(k, drum, lane, s, index, len) {
 /* the clicks, as the Sequencer page's grid: an empty step gets a note (the one chosen beside the track), a note opens
    the note dialog (this grid's "selected step"), a double click or Delete makes it a rest; a drum cell: an empty one
    gets a hit, a double click or Delete takes the hit away */
-const pending = new Map();   /* cell key -> the timer of a click that may become a double click */
+const pending = new Map<string, ReturnType<typeof setTimeout>>();   /* cell key -> the timer of a click that may become a double click */
 let added = "";              /* the cell a click just filled: its double click keeps it */
-function filledOf(k, drum, lane, s) {
-  if (drum) return !!(s?.on & (1 << lane));
+function filledOf(k: number, drum: boolean, lane: number, cs: CellStep): boolean {
+  if (drum) return !!(((cs as DrumStep | undefined)?.on ?? 0) & (1 << lane));
+  const s = cs as MockStep | undefined;
   return !!s && (s.time === 1 || (s.time === 0 && s.n > 0));
 }
-function clearCell(k, drum, lane, index) {
-  const s = (drum ? A.mock.state.tracks[k].dstep : A.mock.state.tracks[k].step)[index];
+/* the step a cell edits */
+const stepAt = (k: number, drum: boolean, index: number): CellStep => { const tr = A.mock!.state.tracks[k]; return drum ? tr.dstep![index] : tr.step[index]; };
+function clearCell(k: number, drum: boolean, lane: number, index: number): void {
+  const s = stepAt(k, drum, index);
   if (!filledOf(k, drum, lane, s)) return;
   if (drum) previewSequenceClick(k, index, lane);
-  else previewSequenceClick(k, index, -1, { ...s, notes: s.notes.slice(), time: 2 });
+  else { const x = s as MockStep; previewSequenceClick(k, index, -1, { ...x, notes: x.notes.slice(), time: 2 }); }
 }
-function cellClick(e, key, k, drum, lane, index) {
+function cellClick(e: ReactMouseEvent, key: string, k: number, drum: boolean, lane: number, index: number): void {
   if (lane === -2) { previewCellClick(e, key, k, lane, index); return; }
-  const s = (drum ? A.mock.state.tracks[k].dstep : A.mock.state.tracks[k].step)[index];
+  const s = stepAt(k, drum, index);
   if (e.detail > 1) return;                            /* (the double click handles it) */
   if (!filledOf(k, drum, lane, s)) {
     added = key;
     setTimeout(() => { if (added === key) added = ""; }, 500);
     if (drum) previewSequenceClick(k, index, lane);
-    else previewSequenceClick(k, index, -1, previewSetStepNotes(s, [noteOf(k)]));
+    else previewSequenceClick(k, index, -1, previewSetStepNotes(s as MockStep, [noteOf(k)]));
     return;
   }
   if (drum) return;                                    /* a hit: focused (selected) */
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); previewOpenNote(key, k, index).catch(report); }, 250));
 }
-function cellDouble(key, k, drum, lane, index) {
+function cellDouble(key: string, k: number, drum: boolean, lane: number, index: number): void {
   if (lane === -2) return;
   clearTimeout(pending.get(key));
   pending.delete(key);
@@ -102,7 +112,8 @@ function cellDouble(key, k, drum, lane, index) {
   clearCell(k, drum, lane, index);
 }
 
-function Cells({ k, drum, lane = -1, source, page, len, position }) {
+interface CellsProps { k: number; drum: boolean; lane?: number; source: CellStep[]; page: number; len: number; position: number }
+function Cells({ k, drum, lane = -1, source, page, len, position }: CellsProps) {
   return (
     <div className={`${STEPS} self-center`}>
       {Array.from({ length: 16 }, (_, i) => {
@@ -130,8 +141,8 @@ function Cells({ k, drum, lane = -1, source, page, len, position }) {
   );
 }
 
-function TrackRows({ k }) {
-  const st = A.mock.state, track = st.tracks[k], dev = A.dev, drum = !!track.drum;
+function TrackRows({ k }: { k: number }) {
+  const st = A.mock!.state, track = st.tracks[k], dev = A.dev!, drum = !!track.drum;
   const len = Math.max(1, Math.min(64, track.p[29] || 16));
   const position = posOf(k);
   // Keep the page still under the pointer or keyboard focus while editing.
@@ -140,14 +151,14 @@ function TrackRows({ k }) {
   const page = PV.pages[k] = Math.min(PV.pages[k] || 0, Math.floor((len - 1) / 16) * 16);
   const name = drum ? t("drum") : (dev.names[track.engine] || [])[track.preset] || t("track");
   const muted = !!track.p[40] || !!(st.solo && !(st.solo & (1 << k)));
-  const source = (drum ? track.dstep : track.step).slice(page, page + 16);
-  const setRef = (e) => { if (e) groups.set(k, e); else groups.delete(k); };
-  const cells = (lane) => <Cells k={k} drum={drum} lane={lane} source={source} page={page} len={len} position={position} />;
+  const source: CellStep[] = (drum ? track.dstep! : track.step).slice(page, page + 16);
+  const setRef = (e: HTMLDivElement | null) => { if (e) groups.set(k, e); else groups.delete(k); };
+  const cells = (lane: number) => <Cells k={k} drum={drum} lane={lane} source={source} page={page} len={len} position={position} />;
   const mutedCls = muted ? "is-muted [&_.preview-seq-steps]:opacity-40" : "";
   if (!drum) {
     const label = `${t("previewNewNote")} · ${t("track")} ${k + 1}`;
     return (
-      <div ref={setRef} className={`${ROW} ${mutedCls}`} data-seq-track={k} style={{ "--c": tcol(k) }}>
+      <div ref={setRef} className={`${ROW} ${mutedCls}`} data-seq-track={k} style={{ "--c": tcol(k) } as CSSProperties}>
         <div className="preview-seq-label min-w-0">
           <TrackButton k={k} name={name} muted={muted} len={len} position={position} />
           <PageTools k={k} len={len} page={page}>
@@ -162,10 +173,10 @@ function TrackRows({ k }) {
     );
   }
   const open = PV.drumOpen.has(k), all = PV.allDrums.has(k);
-  const active = track.dstep.slice(0, len).reduce((mask, d) => mask | d.on, 0);
-  const toggle = (set, on) => { if (on) set.delete(k); else set.add(k); notify(); };
+  const active = track.dstep!.slice(0, len).reduce((mask, d) => mask | d.on, 0);
+  const toggle = (set: Set<number>, on: boolean) => { if (on) set.delete(k); else set.add(k); notify(); };
   return (
-    <div ref={setRef} className={`preview-seq-drums mt-2 border-t border-line pt-1 ${mutedCls}`} data-seq-track={k} style={{ "--c": tcol(k) }}>
+    <div ref={setRef} className={`preview-seq-drums mt-2 border-t border-line pt-1 ${mutedCls}`} data-seq-track={k} style={{ "--c": tcol(k) } as CSSProperties}>
       <div className={ROW}>
         <div className="preview-seq-label min-w-0">
           <TrackButton k={k} name={name} muted={muted} len={len} position={position} />
@@ -196,7 +207,7 @@ function TrackRows({ k }) {
 }
 
 export default function Sequence() {
-  const st = A.mock.state;
+  const st = A.mock!.state;
   return (
     <div id="preview-sequence" className="preview-sequence col-span-2 mt-3 border-t border-line pt-2">
       <div className="preview-seq-head mb-2 flex flex-wrap items-center gap-x-4 gap-y-2">
