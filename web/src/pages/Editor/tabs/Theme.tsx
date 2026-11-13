@@ -8,7 +8,7 @@ import { THEME } from "../lib/proto.ts";
 import type { Rgb } from "../lib/proto.ts";
 import { sayK, t, useApp } from "../core/app.ts";
 import { Card, Help, Ic } from "../ui/kit.tsx";
-import { bad, bar, dim, pri, warn } from "../ui/styles.ts";
+import { bad, bar, dim, pri, title, warn } from "../ui/styles.ts";
 import { ShortHelp } from "./samples/ui.tsx";
 import {
   TH, TH_SCREEN, thApply, thBlack, thColor, thDraw, thFix, thFrom, thHl, thInvert, thName, thOk, thRamp, thRead, thRemove, thSend, thState,
@@ -98,7 +98,7 @@ export default function Theme() {
       </Card>
       <dialog ref={dlg} id="thdialog" aria-labelledby="thsharetitle" onClose={() => setPaste("")}
         className="m-auto w-[min(720px,90vw)] border border-s3 bg-s1 p-5 text-fg2 backdrop:bg-black/60">
-        <h2 id="thsharetitle" className="mb-2 text-big text-fg">{t("thShare")}</h2>
+        <h2 id="thsharetitle" className={clsx("mb-2 text-fg", title)}>{t("thShare")}</h2>
         <Help>{t("thShareHelp")}</Help>
         <p className={bar}>
           <input id="thcode" ref={code} type="text" readOnly spellCheck="false" value={THEME.code(th)} aria-label={t("thShareLine")}

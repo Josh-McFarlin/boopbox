@@ -10,7 +10,7 @@ import { GLYPH, HEAD_IC, PAGE_IC, WAVE_IC } from "../lib/glyphs.ts";
 import { A, key, readyDev, t, useApp } from "../core/app.ts";
 import { labelOf } from "../lib/labels.ts";
 import { touched, userSet } from "../core/device.ts";
-import { dim, help, icon, pri, tog, waveSelect } from "./styles.ts";
+import { dim, help, icon, pri, title, tog, waveSelect } from "./styles.ts";
 
 /* <selectedcontent> (customizable <select>: the chosen option's content, drawn in the select's button) */
 declare module "react" {
@@ -65,7 +65,7 @@ export function Card({ title, ic, sub, id, className = "", children, hidden }: C
 export interface CardTitleProps { ic?: string | null; sub?: ReactNode; children?: ReactNode }
 export function CardTitle({ ic, sub, children }: CardTitleProps) {
   return (
-    <h2 className="mb-3 flex items-center gap-2 text-big text-fg [&_[data-ic]]:text-[20px]">
+    <h2 className={`mb-3 flex items-center gap-2 text-fg [&_[data-ic]]:text-[20px] ${title}`}>
       <Ic ic={ic}>{children}</Ic>
       {sub != null ? <span className="ml-auto text-[16px] leading-4 lowercase text-dim">{sub}</span> : null}
     </h2>

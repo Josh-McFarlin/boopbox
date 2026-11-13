@@ -17,7 +17,7 @@ import { PUBLIC_SITE_URL } from "../../lib/siteConfig.ts";
 import { Ic } from "./ui/kit.tsx";
 import { PAGES } from "./tabs/index.ts";
 import TransportBar from "./ui/TransportBar.tsx";
-import { dim, pri } from "./ui/styles.ts";
+import { dim, pri, title } from "./ui/styles.ts";
 
 declare global {
   /* the site's version (make_site.py) */
@@ -126,7 +126,7 @@ function DesktopOnly() {
   return (
     <div className="hidden min-h-[70vh] items-center justify-center p-6 max-[999px]:flex">
       <div className="max-w-[480px] border border-line bg-s1 p-6 text-center">
-        <h1 className="mb-3 text-big text-acc">{t("deskTitle")}</h1>
+        <h1 className={`mb-3 text-acc ${title}`}>{t("deskTitle")}</h1>
         <p className="mb-4 text-fg2">{t("deskText")}</p>
         <p className="m-0 flex justify-center gap-4 [&_a]:text-acc">
           <a href={HOME}>{t("deskGuide")}</a><a href={SITE + "emu/"}>{t("deskEmu")}</a>
@@ -159,16 +159,16 @@ const Editor: React.FC = () => {
     <>
     <SiteHeader current="editor" base={SITE} />
     <DesktopOnly />
-    <div className="grid min-h-[calc(100vh-var(--hdr,88px))] grid-cols-[200px_minmax(0,1fr)] max-[999px]:hidden">
-      <aside className="sticky top-0 flex h-[calc(100vh-var(--hdr,88px))] flex-col gap-4 overflow-y-auto border-r border-line px-3 py-5">
+    <div className="grid min-h-[calc(100vh-var(--hdr,88px))] grid-cols-[200px_minmax(0,1fr)] max-[999px]:hidden in-[html.lvfocus]:grid-cols-[minmax(0,1fr)]">
+      <aside className="sticky top-0 flex in-[html.lvfocus]:hidden h-[calc(100vh-var(--hdr,88px))] flex-col gap-4 overflow-y-auto border-r border-line px-3 py-5">
         <Tabs />
         <SideLinks />
       </aside>
 
-      <main className={`min-w-0 px-8 ${want === "live" ? "pb-14" : "pb-28"}`}>
-        <header className="sticky top-0 z-5 border-b border-line bg-bg pt-4 pb-3">
+      <main className={`min-w-0 px-8 ${want === "live" ? "pb-14" : "pb-28"} in-[html.lvfocus]:px-4 in-[html.lvfocus]:pt-3 in-[html.lvfocus]:pb-[52px]`}>
+        <header className="sticky top-0 z-5 in-[html.lvfocus]:hidden border-b border-line bg-bg pt-4 pb-3">
           <div className="flex min-h-9 items-center gap-4">
-            <h1 className="flex-none text-big whitespace-nowrap text-acc">{t(TAB_NAME[want])}</h1>
+            <h1 className={`flex-none whitespace-nowrap text-acc ${title}`}>{t(TAB_NAME[want])}</h1>
             <div id="status" role="status" aria-live="polite"
               className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${app.status.err ? "text-red" : "text-dim"}`} title={status}>
               {status}</div>

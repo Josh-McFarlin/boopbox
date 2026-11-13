@@ -54,11 +54,12 @@ export async function connect(): Promise<void> {
       }
     }
     if (!link) { sayK(pairs.length ? "noreply" : "nodevice"); return; }
-    A.dev = { link, input, output, info: null, pdesc: [], gdesc: [], names: [], dump: null, steps: [], slotUsed: [null, null, null, null],
+    const dev: Dev = { link, input: input!, output: output!, info: null, pdesc: [], gdesc: [], names: [], dump: null, steps: [], slotUsed: [null, null, null, null],
       keys: null, watch: false, bank: null };
+    A.dev = dev;
     sets.clear();                                    /* (another FM-1, maybe) */
     notify();
-    await load(A.dev);
+    await load(dev);
   } catch (e) {
     console.error(e);
     if (A.dev) {                                     /* not unplugged meanwhile (that says "lost") */

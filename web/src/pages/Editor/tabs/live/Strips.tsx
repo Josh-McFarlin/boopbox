@@ -97,7 +97,7 @@ function Strip({ i, n }: StripProps) {
           : <><SoundOptions />{dev.names.map((names, e) => <optgroup key={e} label={dev.info.engines[e]}>
             {(names || []).map((x, p) => <option key={p} value={`${e}:${p}`}>{x}</option>)}</optgroup>)}</>}
       </SyncSelect>
-      <div className="grid grid-cols-3 gap-0.5 [&>button]:h-6 [&>button]:p-0">
+      <div className="grid grid-cols-[1fr_1fr_1fr] gap-0.5 [&>button]:h-6 [&>button]:p-0">
         <button type="button" aria-label="previous" data-lvm={`s${i}:prev`} onClick={() => lvStep(i, -1)}>‹</button>
         <button type="button" className="aria-expanded:bg-acc aria-expanded:text-black" data-lsmore="" aria-expanded={more} title={t("lvxMoreTip")} aria-label={`${t("lvxMore")} ${i + 1}`}
           onClick={() => { LV.ui.more = more ? -1 : i; notify(); }}>⋯</button>
@@ -114,7 +114,7 @@ function Strip({ i, n }: StripProps) {
           o={{ min: 0, max: 127, def: lvD.def ?? 100, get: () => tr().level ?? 0, set: (v) => lvLevel(i, v), mid: `s${i}:lvl` }} />
         <span className="leading-4 text-fg2">{o.level ?? ""}</span>
       </div>
-      <div className="grid grid-cols-2 gap-0.5">
+      <div className="grid grid-cols-[1fr_1fr] gap-0.5">
         <button type="button" className={clsx(sBtn, "aria-pressed:bg-red")} data-lvm={`s${i}:mute`} aria-pressed={muted} onClick={() => lvMute(i, !tr().mute)}>{t("lvMute")}</button>
         {/* (solo: the GLO keys, 2.7) */}
         <button type="button" className={clsx(sBtn, "aria-pressed:bg-fg")} data-lvm={`s${i}:solo`} aria-pressed={solo} disabled={!lvOk()} title={lvOk() ? undefined : t("lvNeeds")}

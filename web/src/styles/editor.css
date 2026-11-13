@@ -9,7 +9,8 @@
 
    Tailwind: the palette is the theme (bg-s1, text-dim, border-line, text-trk, bg-t3 ...), the pages use utilities.
    Native controls (buttons, selects, fields, sliders, checkboxes) get the device's look once, below in @layer base,
-   so a plain <button> or <select> in a page already looks right; .pri / .warn / .tog / .seg are the variants. */
+   so a plain <button> or <select> in a page already looks right; the variants (pri, warn, tog, seg ...) are Tailwind class
+   strings in pages/Editor/ui/styles.ts. No class selectors here: components and pages are styled with utilities. */
 @import "tailwindcss";
 @source "..";
 
@@ -32,6 +33,7 @@
   --font-mono: var(--font);
   --font-sans: var(--font);
   --font-text: var(--text-face);
+  --font-title: "Jersey 10", var(--font);
   --color-bg: var(--bg);
   --color-s1: var(--s1);
   --color-s2: var(--s2);
@@ -59,11 +61,8 @@
          font-smooth: never; text-rendering: optimizeSpeed; font-variant-numeric: tabular-nums; }
   a { color: inherit; }
   h1, h2, h3 { font-weight: 400; margin: 0; font-size: 16px; line-height: 20px; }
-  /* the page's and the cards' titles: Jersey 10, bundled by the editor entry */
-  h1.text-big, h2.text-big { font-family: "Jersey 10", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
-                             font-variant-ligatures: none; }
   /* help text: sentences in DM Sans (the values, labels and buttons stay in the device's pixel font) */
-  p, .help { font-family: var(--text-face); font-size: 15px; line-height: 22px; -webkit-font-smoothing: antialiased; text-rendering: auto; }
+  p { font-family: var(--text-face); font-size: 15px; line-height: 22px; -webkit-font-smoothing: antialiased; text-rendering: auto; }
   ::selection { background: var(--acc); color: #000; }
   [hidden] { display: none !important; }
   label { white-space: nowrap; }
@@ -78,12 +77,6 @@
   button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
   /* disabled: still readable (its title says why it is off), never the colour of the background */
   button:disabled { color: var(--dim); background: var(--s1); opacity: .6; cursor: not-allowed; }
-  /* TO REMOVE once the tabs use ui/styles.ts: button.pri, button.warn, button:disabled .ic (and ".help" above) */
-  button.pri { background: var(--acc); color: #000; }
-  button.pri:hover:not(:disabled) { background: var(--fg); }
-  button.pri:disabled { background: var(--s2); color: var(--dim); }
-  button.warn:hover:not(:disabled) { background: var(--red); color: #000; }
-  button:disabled .ic { opacity: .5; }
   select, input[type=text], input[type=number], input[type=search] {
     font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--s3); padding: 3px 6px; border-radius: 0; min-width: 0; }
   select { appearance: none; padding-right: 22px; cursor: pointer;
@@ -118,33 +111,10 @@
   progress::-moz-progress-bar { background: var(--acc); }
 }
 
-/* TO REMOVE once the tabs use ui/styles.ts */
-@layer components {
-  /* a row of controls */
-  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }
-  .bar .grow { flex: 1; }
-  /* toggles: a segmented group, or one button that stays pressed (aria-pressed) */
-  .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; }
-  .seg button, button.tog { background: var(--s2); color: var(--dim); }
-  .seg button[aria-pressed="true"], button.tog[aria-pressed="true"] { background: var(--acc); color: #000; }
-  .seg.ids button { text-transform: none; }
-  .dim { color: var(--dim); }
-  .bad { color: var(--red); }
-  /* the icon font (html.fk: loaded) */
-  /* a fixed-width box, its glyph centred and lowered onto the text's middle (Fukiai draws above the pixel font's), so
-     the words after icons of different widths start in one column */
-  .ic { font-family: "Fukiai"; font-style: normal; font-weight: 400; font-synthesis: none; line-height: 1; margin-right: .45em;
-        -webkit-font-smoothing: antialiased; display: inline-block; width: 1.15em; text-align: center; vertical-align: -0.2em; }
-  html:not(.fk) .ic { display: none; }
-  /* wave choices: a page-drawn picker so the options carry an icon (Chrome 135+); native menus get words only */
-  @supports (appearance: base-select) {
-    select.wave, select.wave::picker(select) { appearance: base-select; }
-    select.wave { background-image: none !important; }   /* (it draws its own arrow) */
-    select.wave > button { font: inherit; background: none; color: inherit; padding: 0; text-align: start; text-transform: none; }
-    select.wave::picker(select) { border: 1px solid var(--s3); background: var(--bg); color: var(--fg); padding: 0; }
-    select.wave option { padding: 2px 8px; min-block-size: 0; }
-    select.wave option:checked { color: var(--acc); }
-    select.wave option:hover, select.wave option:focus-visible { background: var(--acc); color: #000; }
-    select.wave option::checkmark { display: none; }
-  }
+/* the LIVE page (tabs/live): the blink of what waits for the bar (the section next, REC armed, the song loading) and of
+   the set being recorded */
+@theme {
+  --animate-lvblink: lvblink 1s steps(1) infinite;
+  --animate-lvblink-fast: lvblink .5s steps(1) infinite;
+  @keyframes lvblink { 50% { opacity: .35; } }
 }

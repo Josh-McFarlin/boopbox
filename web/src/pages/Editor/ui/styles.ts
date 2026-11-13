@@ -21,6 +21,9 @@ export const pri = "bg-acc text-black hover:enabled:bg-fg disabled:bg-s2 disable
 /* an action that destroys something: red under the pointer */
 export const warn = "hover:enabled:bg-red hover:enabled:text-black";
 
+/* the page's and the cards' titles (an <h1> / <h2>): Jersey 10, bundled by the editor entry */
+export const title = "font-title text-big font-bold [-webkit-font-smoothing:antialiased] [font-variant-ligatures:none]";
+
 /* quieter words; an error */
 export const dim = "text-dim";
 export const bad = "text-red";

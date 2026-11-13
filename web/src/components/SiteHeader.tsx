@@ -36,7 +36,7 @@ export default function SiteHeader({ current, base = "../" }: SiteHeaderProps) {
     return <a href={k === "home" ? homeHref : base + page} {...cur} {...p}>{children}</a>;
   };
   return (
-    <header className="border-b-[3px] border-[#3a2766] bg-[#160d2b] text-[16px] leading-[1.6] [font-family:'Jersey_10',ui-monospace,Menlo,monospace] [font-variant-ligatures:none]">
+    <header className="in-[html.lvfocus]:hidden border-b-[3px] border-[#3a2766] bg-[#160d2b] text-[16px] leading-[1.6] [font-family:'Jersey_10',ui-monospace,Menlo,monospace] [font-variant-ligatures:none]">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-3 px-6 py-4">
         <A k="home" page="home/" aria-label="BoopBox home" className="block no-underline"><Logo /></A>
         <nav aria-label="Main" className="flex flex-auto flex-wrap gap-x-[22px] gap-y-1 text-[18px] font-medium [&_a]:text-[#c9bdf0] [&_a]:no-underline [&_a:hover]:text-[#3ee6ff]">

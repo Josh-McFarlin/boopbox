@@ -7,7 +7,9 @@
 // the scenes, the mixer with the effects beside it; the keys in a drawer at the bottom; the first steps and the
 // keyboard shortcuts as overlays.
 import { useEffect, useRef } from "react";
+import { clsx } from "clsx";
 import { CMD, LIVE, bank, parse } from "../lib/proto.ts";
+import type { Frame } from "../lib/proto.ts";
 import { A, drumLvGlobal, gDrLvl, notify, nTrk, op, rqf, t, useApp } from "../core/app.ts";
 import { maybeReload } from "../core/device.ts";
 import { H } from "../core/hooks.ts";
@@ -23,7 +25,14 @@ import Mixer from "./live/Strips.tsx";
 import Keys from "./live/Keys.tsx";
 import { Effects, Master } from "./live/Effects.tsx";
 import Playlist, { lvSongNext, plRestore } from "./live/Playlist.tsx";
-import "./live/live.css";
+import { needs } from "./live/styles.ts";
+
+declare global {
+  interface Window {
+    /* (?mock=1: the tests play a MIDI controller, read LIVE pro's state and the mock's) */
+    __lvxMidi?: (d: number[]) => void; __lvs?: typeof LVS; __mockState?: () => unknown;
+  }
+}
 
 /* the page shows / goes (renderPanels) */
 let lvShown = false;
@@ -58,8 +67,8 @@ function lvHide() {
   notify();
 }
 /* pushes while the page shows: a track's level, pan, mute or a parameter turned on the FM-1 */
-function livePush(f) {
-  const dev = A.dev;
+function livePush(f: Frame): void {
+  const dev = A.dev!;
   if (!LV.built) return;
   if (f.cmd === CMD.TRACK_CHANGED) {
     const c = parse[CMD.TRACK_CHANGED](f.a), o = LV.tr[c.track];
@@ -69,14 +78,14 @@ function livePush(f) {
     else if (!lvTouched(`p:${c.track}:${c.id}`)) o.p[c.id] = c.value;
     notify();
   } else if (f.cmd === CMD.CHANGED) {
-    const c = parse[CMD.CHANGED](f.a), o = LV.tr[dev.sel];
+    const c = parse[CMD.CHANGED](f.a), o = LV.tr[dev.sel!];
     if (c.scope) {
-      if (c.id === gDrLvl() && drumLvGlobal()) { const ds = (dev.info.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; }
+      if (c.id === gDrLvl() && drumLvGlobal()) { const ds = (dev.info!.ntrk || 4) - 1; if (LV.tr[ds] && !lvTouched("lv:" + ds)) LV.tr[ds].level = c.value; }
       notify();
       return;
     }
     if (!o) return;
-    if (c.id === 0 && !lvDrumLv(dev.sel)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
+    if (c.id === 0 && !lvDrumLv(dev.sel!)) { if (!lvTouched("lv:" + dev.sel)) o.level = c.value; }
     else if (c.id === LVP().mute) { if (!lvTouched("lv:" + dev.sel)) o.mute = c.value ? 1 : 0; }
     else if (!lvTouched(`p:${dev.sel}:${c.id}`)) o.p[c.id] = c.value;
     notify();
@@ -86,16 +95,16 @@ function livePush(f) {
 }
 
 /* the computer keyboard on the page (not in a field): see lvxShortcutList (the ? key shows it) */
-const lvEditing = (e) => e.target.closest && e.target.closest("input:not([type=range]), select, textarea, [contenteditable='true']");
-const lvDown = new Map();                  /* e.code -> what its keyup ends */
-function lvKeyDown(e) {
+const lvEditing = (e: KeyboardEvent) => (e.target as Element).closest && (e.target as Element).closest("input:not([type=range]), select, textarea, [contenteditable='true']");
+const lvDown = new Map<string, () => void>();                  /* e.code -> what its keyup ends */
+function lvKeyDown(e: KeyboardEvent): void {
   const dev = A.dev;
   if (A.tab !== "live" || !dev || !dev.dump || e.ctrlKey || e.metaKey || e.altKey || lvEditing(e)) return;
   if (e.repeat) { if (lvDown.has(e.code) || e.code === "Space") e.preventDefault(); return; }
   if (e.key === "?") { e.preventDefault(); lvOverlay("keys"); return; }
   if (LV.ui.over) { if (e.key === "Escape") { e.preventDefault(); LV.ui.over = null; notify(); } return; }   /* (an overlay: the page waits) */
   const k = e.key.toLowerCase(), digit = /^Digit(\d)$/.exec(e.code), li = LV_KEYS.indexOf(k);
-  let up = null;
+  let up: (() => void) | null = null;
   const fk = /^F([1-8])$/.exec(e.key);
   if (fk) { const k = +fk[1] - 1; if (e.shiftKey) lvxStore(k); else lvxRecall(k); }   /* LIVE pro: scenes (Shift: store) */
   else if (e.code === "Space") lvSend(LIVE.PLAY, LV.s && LV.s.playing ? 0 : 1);   /* (always: a focused button takes Enter) */
@@ -113,8 +122,8 @@ function lvKeyDown(e) {
   else if (k === "n") lvSongNext();
   else if (k === "z" || k === "x") { LV.oct = Math.max(1, Math.min(7, LV.oct + (k === "z" ? -1 : 1))); notify(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-    if (e.target.closest && e.target.closest("[role=slider]")) return;
-    const n = dev.info.ntrk || 4; lvTarget((LV.target + (e.key === "ArrowLeft" ? n - 1 : 1)) % n);
+    if ((e.target as Element).closest && (e.target as Element).closest("[role=slider]")) return;
+    const n = dev.info!.ntrk || 4; lvTarget((LV.target + (e.key === "ArrowLeft" ? n - 1 : 1)) % n);
   } else if (e.key === "Escape") { lvAllOff(); if (LV.s && LV.s.fx >= 0) lvSend(LIVE.FX, LV.s.fx, 0); }
   else if (li >= 0 && e.shiftKey) {
     lvFx(li, LV.latch ? LV.fxHeld !== li : true);
@@ -132,11 +141,11 @@ function lvKeyDown(e) {
   e.preventDefault();
   if (up) lvDown.set(e.code, up);
 }
-function lvKeyUp(e) { const up = lvDown.get(e.code); if (up) { lvDown.delete(e.code); up(); } }
-function lvLetGo() { for (const up of lvDown.values()) up(); lvDown.clear(); if (A.dev) lvAllOff(); }
+function lvKeyUp(e: KeyboardEvent): void { const up = lvDown.get(e.code); if (up) { lvDown.delete(e.code); up(); } }
+function lvLetGo(): void { for (const up of lvDown.values()) up(); lvDown.clear(); if (A.dev) lvAllOff(); }
 
 let inited = false;
-export function init() {
+export function init(): void {
   if (inited) return;
   inited = true;
   Object.assign(H, { livePush });
@@ -149,17 +158,18 @@ export function init() {
   });
   /* MIDI learn: in learn mode a tap on a control picks it (its own action does not happen) */
   for (const ev of ["pointerdown", "mousedown", "click", "contextmenu", "change"]) document.addEventListener(ev, (e) => {
-    if (!LVS.learn || A.tab !== "live" || !e.target.closest || !e.target.closest("#lv")) return;
-    if (ev === "click" || ev === "change" || ev === "mousedown") { if (e.target.closest("[data-lvm]") && !e.target.closest(".lvlearnbtn, .lvlearnbar")) { e.preventDefault(); e.stopPropagation(); } return; }
+    const el = e.target as Element;
+    if (!LVS.learn || A.tab !== "live" || !el.closest || !el.closest("#lv")) return;
+    if (ev === "click" || ev === "change" || ev === "mousedown") { if (el.closest("[data-lvm]") && !el.closest("[data-lvlearn]")) { e.preventDefault(); e.stopPropagation(); } return; }
     lvxLearnPick(e);
   }, true);
-  if (A.MOCK) { window.__lvxMidi = (d) => lvxMidi(Uint8Array.from(d)); window.__lvs = LVS; window.__mockState = () => A.mock && A.mock.state; }   /* (the mock has no controller: the tests play one) */
+  if (A.MOCK) { window.__lvxMidi = (d: number[]) => lvxMidi(Uint8Array.from(d)); window.__lvs = LVS; window.__mockState = () => A.mock && A.mock.state; }   /* (the mock has no controller: the tests play one) */
 }
 
 /* in learn mode: every control that can be learned, the mapped ones, the one waiting for a message */
 function LearnStyle() {
   if (!LVS.learn) return null;
-  const q = (id) => `#lv.learn [data-lvm="${CSS.escape(id)}"]`;
+  const q = (id: string) => `#lv[data-learn] [data-lvm="${CSS.escape(id)}"]`;
   const mapped = [...new Set(Object.values(LVS.map))];
   return (
     <style>{(mapped.length ? `${mapped.map(q).join(",")} { outline: 2px solid var(--t2); }\n` : "")
@@ -167,10 +177,10 @@ function LearnStyle() {
   );
 }
 
-export default function Live() {
+const Live: React.FC = () => {
   const app = useApp();
   const dev = app.dev;
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {                                   /* (2.7) the LIVE page reads the FM-1 while it shows */
     if (dev && dev.dump) lvShow();
     return lvHide;
@@ -178,20 +188,25 @@ export default function Live() {
   useEffect(() => { lvxTips(ref.current); });
   if (dev && dev.dump) lvGuideFirst();                /* the first steps: once, over the page */         /* a tip on every control (a hover on a computer) */
   const all = lvxViewAll();
-  const cls = ["", LVS.learn ? "learn" : "", LVS.lock ? "locked" : "", all ? "" : "simple", lvPro() ? "" : "nopro"].join(" ");
+  /* the modes (data-learn, data-locked, data-simple, data-nopro): the parts' group-data-[...]/lv classes */
+  const on = (x: boolean) => (x ? "" : undefined);
   return (
-    <div id="lv" ref={ref} className={cls}>
+    <div id="lv" ref={ref} data-learn={on(LVS.learn)} data-locked={on(LVS.lock)} data-simple={on(!all)} data-nopro={on(!lvPro())}
+      className={clsx("group/lv flex flex-col gap-2 [--c:var(--acc)] [&_button]:touch-manipulation",
+        "data-learn:[&_[data-lvm]]:outline-1 data-learn:[&_[data-lvm]]:outline-offset-1 data-learn:[&_[data-lvm]]:outline-t3 data-learn:[&_[data-lvm]]:outline-dashed")}>
       <LearnStyle />
-      {lvOk() ? null : <p className="lvneeds">{t("lvNeeds")}</p>}
+      {lvOk() ? null : <p className={clsx(needs, "m-0 py-1")}>{t("lvNeeds")}</p>}
       <Transport />
-      <div className="lvrow2"><Sections /><Scenes /></div>
-      <div className="lvcols">
+      <div className="grid grid-cols-2 gap-2"><Sections /><Scenes /></div>
+      <div className="grid grid-cols-[minmax(0,1fr)_500px] items-stretch gap-2">
         <Mixer />
-        <div className="lvside"><Effects /><Master /></div>
+        <div className="flex min-w-0 flex-col gap-2"><Effects /><Master /></div>
       </div>
       <Playlist />
       <Keys />
       <Overlays />
     </div>
   );
-}
+};
+Live.displayName = "Live";
+export default Live;

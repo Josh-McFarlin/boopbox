@@ -21,10 +21,10 @@ export const dis = "disabled:bg-s1 disabled:text-dim";
 /* a button in a card's head (and the stage tools) */
 export const headBtn = "px-2.5 py-0.5";
 /* the "?" of a card */
-export const qBtn = "min-w-6 flex-none border border-s3 bg-bg text-fg hover:enabled:bg-s3 aria-expanded:border-acc aria-expanded:bg-acc aria-expanded:text-black";
+export const qBtn = "min-w-6 flex-none border border-s3 bg-bg text-fg hover:bg-s3 aria-expanded:border-acc aria-expanded:bg-acc aria-expanded:text-black";
 
 /* the blink of what waits for the bar (the section next, REC armed, the song loading) */
 export const blink = "animate-lvblink-fast";
 
-/* a pad that shows pressed (Hold's data-on, or data-act: the FM-1 says it is on) */
+/* a key name (<kbd>) in the words around it */
 export const kbd = "[font:inherit]";
