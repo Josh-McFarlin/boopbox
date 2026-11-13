@@ -2,15 +2,20 @@
 // The step components of one step (BoopBox): the components of that step of the selected track's pattern playing, in
 // the Patterns page's working copy (pages/patterns/state.js), with add / remove and their own Send. Made for the
 // Sequencer's step inspector: <StepComponents step={k} /> (k: 0..63; optional trk, pat to show another).
+import type { ReactNode } from "react";
+import clsx from "clsx";
 import { PROJ7, lockable } from "../../lib/proto.ts";
+import type { P7Comp } from "../../lib/proto.ts";
 import { A, notify, op, t, tf, useApp } from "../../core/app.ts";
 import { Num } from "../song/Num.tsx";
 import { PT, ptCtx, ptDirty, ptDrum, ptEdit, ptOk, ptOwn, ptParamName, ptTidy, readPatterns, sendComps } from "./state.ts";
 import { Sel } from "./ui.tsx";
+import { pri } from "../../ui/styles.ts";
 
-const newComp = (ty, pe0) => { const r = PROJ7.CP[ty]; return { type: ty, a: ty === PROJ7.CP_PARAM ? PROJ7.codeOf(r[5], pe0) : r[5], b: r[6] }; };
+const newComp = (ty: number, pe0: number): Omit<P7Comp, "step"> => { const r = PROJ7.CP[ty]!; return { type: ty, a: ty === PROJ7.CP_PARAM ? PROJ7.codeOf(r[5], pe0) : r[5], b: r[6] }; };
 
-export function StepComponents({ step, trk: trkIn, pat: patIn }) {
+export interface StepComponentsProps { step: number; trk?: number | null; pat?: number | null }
+export function StepComponents({ step, trk: trkIn, pat: patIn }: StepComponentsProps) {
   const { dev, busy } = useApp();
   if (!dev || !dev.info || !ptOk()) return null;
   if (!PT.P) {
@@ -23,14 +28,14 @@ export function StepComponents({ step, trk: trkIn, pat: patIn }) {
     );
   }
   const P = PT.P, ctx = ptCtx(), pe0 = dev.info.pe0;
-  const trk = trkIn != null ? trkIn : PROJ7.track(P, dev.sel) ? dev.sel : PT.trk;
+  const trk = trkIn != null ? trkIn : PROJ7.track(P, dev.sel!) ? dev.sel! : PT.trk;
   const tr = PROJ7.track(P, trk);
   if (!tr) return null;
   const pat = patIn != null ? patIn : tr.cur;
   const pv = PROJ7.patOf(P, trk, pat) || PROJ7.emptyPat(ptDrum(trk));
   const params = [...Array(pe0 + 8).keys()].filter((id) => lockable(id, pe0));
   const types = PROJ7.CP.map((r, i) => (r ? <option key={i} value={i}>{r[0]}</option> : null)).filter(Boolean);
-  const seen = new Set(), rows = [];
+  const seen = new Set<string>(), rows: [P7Comp, number, boolean][] = [];
   pv.comps.forEach((c, k) => { const dup = seen.has(c.step + ":" + c.type); seen.add(c.step + ":" + c.type); if (c.step === step) rows.push([c, k, dup]); });
   const addType = PT.addType || 10, full = pv.comps.length >= PROJ7.NCOMP, has = rows.some(([c]) => c.type === addType);
   const dirty = ptDirty();
@@ -44,8 +49,8 @@ export function StepComponents({ step, trk: trkIn, pat: patIn }) {
           <tbody>
             {rows.map(([c, k, dup]) => {
               const R = PROJ7.CP[c.type] || ["?", 0, 0, 0, 0];
-              const set = (f) => ptEdit(() => { f(own().comps[k]); });
-              const num = (v, lo, hi, f) => (
+              const set = (f: (c: P7Comp) => void) => ptEdit(() => { f(own().comps[k]); });
+              const num = (v: number, lo: number, hi: number, f: (c: P7Comp, v: number) => void): ReactNode => (
                 <Num v={v} min={lo} max={hi} disabled={lo === hi} title={lo === hi ? t("cpNoValue") : ""}
                   onCommit={(x) => set((y) => f(y, Math.max(lo, Math.min(hi, Math.round(x) || 0))))} />
               );
@@ -72,7 +77,7 @@ export function StepComponents({ step, trk: trkIn, pat: patIn }) {
         <button type="button" disabled={full || has} title={full ? tf("cpFull", { max: PROJ7.NCOMP }) : has ? t("cpHas") : t("cpH" + addType)}
           onClick={() => ptEdit(() => { own().comps.push({ step, ...newComp(addType, pe0) }); })}>{t("cpAddOne")}</button>
         <span className="text-dim">{tf("cpCount", { n: pv.comps.length, max: PROJ7.NCOMP })}</span>
-        <button type="button" id="cpsend" className="pri ml-auto" disabled={!dirty || !!busy}
+        <button type="button" id="cpsend" className={clsx(pri, "ml-auto")} disabled={!dirty || !!busy}
           title={busy ? t("whyBusy") : !dirty ? t("whyNothing") : t("cpSendHint")}
           onClick={() => op(() => sendComps(trk, pat, () => confirm(t("cpOtherUnsent"))))}>{t("cpSend")}</button>
       </div>

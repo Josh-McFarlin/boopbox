@@ -2584,7 +2584,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         const t = st.tracks[a[0]];
         if (t.drum) {
           if (a.length >= 10) dFromOld(t.dstep![a[1]], a[2], a.slice(3, 7), a[7], a[8]);
-          b(a[0]); b(a[1]); stepOut(b, dOld(t.dstep[a[1]]));
+          b(a[0]); b(a[1]); stepOut(b, dOld(t.dstep![a[1]]));
           break;
         }
         const x = t.step[a[1]];
@@ -2742,13 +2742,13 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         if (opt.noBackup) return null;
         const enc = (o: unknown) => Uint8Array.from(Array.from(JSON.stringify(o), (c) => c.charCodeAt(0) & 0x7F));
         const bankOf = (h: number) => { const x = st.bank.slice(h * 16, h * 16 + 16); return x.some(Boolean) ? enc(x) : new Uint8Array(0); };
-        st.bkSnap = new Map<number, Uint8Array>([[0, EIGHT ? p7Bytes() : enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k): [number, Uint8Array] => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
+        st.bkSnap = new Map<number, Uint8Array>(([[0, EIGHT ? p7Bytes() : enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k): [number, Uint8Array] => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
           [6, bankOf(0)], [7, bankOf(1)], ...(v9 ? [[8, st.fm6bank.some(Boolean) ? FM6.bankObj(st.fm6bank) : new Uint8Array(0)]] : []),
           ...(v10 ? [[9, DSYN.bankEncode(dsynKits())]] : []),
           ...(EIGHT ? [[10, ml48()]] : v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* (BoopBox: always, 48 bytes) */   /* MIDI LEARN (2.6): only when not the
                                                                                     * default (editor.c, project.c midi_part_default) */
           ...(v11 && st.theme ? [[11, st.theme.slice()]] : []),   /* your theme (2.7): only when there is one */
-          ...st.smp.map((_, k) => [32 + k, st.smp[k].zones ? st.smp[k].flash.slice(0, SMP.DATA_OFF + st.smp[k].len) : new Uint8Array(0)])]);
+          ...st.smp.map((_, k) => [32 + k, st.smp[k].zones ? st.smp[k].flash.slice(0, SMP.DATA_OFF + st.smp[k].len) : new Uint8Array(0)])] as [number, Uint8Array][]));
         st.bkPut = null;
         b(0); b(st.bkSnap.size);
         for (const [id, d] of st.bkSnap) { b(id); out.push(...u35enc(d.length), ...u35enc(crc32(d))); }
@@ -2760,7 +2760,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         const d = st.bkSnap && st.bkSnap.get(id);
         const rc = !d || !n || n > 256 || off + n > d.length ? 1 : st.bkPut && id === 0 ? 5 : 0;
         b(id); b(rc); out.push(...u35enc(off)); b(rc ? 0 : n); b(rc ? 0 : n >> 7);
-        if (!rc) out.push(...pack7(d.subarray(off, off + n)));
+        if (!rc) out.push(...pack7(d!.subarray(off, off + n)));
         break;
       }
       case CMD.BK_PUT: {
@@ -2796,7 +2796,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
               const th = P.len ? THEME.decode(P.buf) : null;
               if (P.len && (!th || !THEME.readable(th))) throw 0;
               if (st.playing) rc = 3;
-              else st.theme = P.len ? THEME.encode(th) : null;   /* (kept as gfx.c keeps it: a THM1 as THM2) */
+              else st.theme = P.len ? THEME.encode(th!) : null;   /* (kept as gfx.c keeps it: a THM1 as THM2) */
             }
             else if (id === 10) {                           /* the MIDI part (2.6; editor.c: stopped only): the LEARN
                                                                map (16 x 2 bytes), then MIDI's channels (4 bytes) */

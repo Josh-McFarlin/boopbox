@@ -2,9 +2,11 @@
 // The CHOP block (the Samples page's step 2 when CHOP is chosen): the wave with its markers, the ways to place them,
 // the chops kept or left out, the selected chop's length. Sending is step 3 of the page.
 import { useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { CHOP, SMP, chopEqual, chopGrid, chopHits, chopSnap, noteName } from "../../lib/proto.ts";
 import { notify, pickFile, t, useApp } from "../../core/app.ts";
 import { Ic } from "../../ui/kit.tsx";
+import { bad, dim } from "../../ui/styles.ts";
 import {
   CH, chSecs, chopAdd, chopAudition, chopChops, chopDraw, chopFitAll, chopKeep, chopKeepAll, chopKeyName, chopLoad, chopOpt, chopOver,
   chopPlay, chopPlaying, chopRegion, chopSetLen, chopSetMarks, chopStop, chopTap, chopTransport, chopUsed, chopZip,
@@ -12,22 +14,22 @@ import {
 
 const ACCEPT = "audio/*,.wav,.mp3,.aif,.aiff,.flac,.ogg,.m4a";
 const openFile = async () => { const f = await pickFile(ACCEPT); if (f) chopLoad(f); };
-const DIVS = [["1 bar", 4], ["1/2", 2], ["1/4", 1], ["1/8", 0.5], ["1/16", 0.25]];
+const DIVS: [string, number][] = [["1 bar", 4], ["1/2", 2], ["1/4", 1], ["1/8", 0.5], ["1/16", 0.25]];
 const NS = [2, 3, 4, 6, 8, 12, 16];
-const MAXES = [["—", 0], ["0.25 s", 0.25], ["0.5 s", 0.5], ["1 s", 1], ["2 s", 2]];
+const MAXES: [string, number][] = [["—", 0], ["0.25 s", 0.25], ["0.5 s", 0.5], ["1 s", 1], ["2 s", 2]];
 const KEYS = Array.from({ length: 49 }, (_, i) => 36 + i);
 
 /* a row of the block */
-const Head = ({ children, className = "" }) => <div className={`mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`}>{children}</div>;
+const Head = ({ children, className = "" }: { children?: ReactNode; className?: string }) => <div className={`mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`}>{children}</div>;
 const Sep = () => <span className="w-3" />;
 
 /* the wave: click = select + listen, double-click = a marker, drag a marker, wheel = zoom */
 function Wave() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const cv = ref.current;
+    const cv = ref.current!;
     CH.cv = cv;
-    const wheel = (e) => {
+    const wheel = (e: WheelEvent) => {
       if (!CH.x) return;
       e.preventDefault();
       const n = CH.x.length, span = CH.v1 - CH.v0;
@@ -47,21 +49,23 @@ function Wave() {
     return () => { cv.removeEventListener("wheel", wheel); window.removeEventListener("resize", resize); if (CH.cv === cv) CH.cv = null; };
   }, []);
   useEffect(() => chopDraw());                      /* (after every render: the block changed) */
-  const posAt = (e) => { const r = ref.current.getBoundingClientRect(); return CH.v0 + (e.clientX - r.left) / r.width * (CH.v1 - CH.v0); };
-  const markAt = (e) => {
-    const r = ref.current.getBoundingClientRect(), per = (CH.v1 - CH.v0) / r.width;
+  /* (a pointer or wheel event: where it is) */
+  type At = Pick<MouseEvent, "clientX" | "clientY">;
+  const posAt = (e: At) => { const r = ref.current!.getBoundingClientRect(); return CH.v0 + (e.clientX - r.left) / r.width * (CH.v1 - CH.v0); };
+  const markAt = (e: At) => {
+    const r = ref.current!.getBoundingClientRect(), per = (CH.v1 - CH.v0) / r.width;
     return CH.marks.findIndex((m) => Math.abs(m - posAt(e)) < 5 * per);
   };
-  const endAt = (e) => {                            /* on the selected chop's end handle (the bottom of the wave)? */
+  const endAt = (e: At) => {                            /* on the selected chop's end handle (the bottom of the wave)? */
     const c = chopChops()[CH.sel];
     if (!c) return false;
-    const r = ref.current.getBoundingClientRect(), per = (CH.v1 - CH.v0) / r.width;
+    const r = ref.current!.getBoundingClientRect(), per = (CH.v1 - CH.v0) / r.width;
     return e.clientY - r.top > r.height - 40 && Math.abs(c.end - posAt(e)) < 7 * per;
   };
-  const cv = () => ref.current;
+  const cv = () => ref.current!;
   return (
-    <canvas ref={ref} className="my-2 block h-[150px] w-full cursor-default touch-none border border-line bg-bg" tabIndex="0" title={t("chopHint")}
-      onPointerDown={(e) => {
+    <canvas ref={ref} className="my-2 block h-[150px] w-full cursor-default touch-none border border-line bg-bg" tabIndex={0} title={t("chopHint")}
+      onPointerDown={(e: ReactPointerEvent<HTMLCanvasElement>) => {
         if (!CH.x) { openFile(); return; }
         cv().focus();
         if (endAt(e)) { CH.dragEnd = true; cv().setPointerCapture(e.pointerId); return; }
@@ -80,7 +84,7 @@ function Wave() {
           return;
         }
         if (CH.drag < 0) { cv().style.cursor = CH.x && (markAt(e) >= 0 || endAt(e)) ? "ew-resize" : "default"; return; }
-        const m = CH.marks, k = CH.drag, lo = k ? m[k - 1] + 1 : 0, hi = k + 1 < m.length ? m[k + 1] - 1 : CH.x.length - 1;
+        const m = CH.marks, k = CH.drag, lo = k ? m[k - 1] + 1 : 0, hi = k + 1 < m.length ? m[k + 1] - 1 : CH.x!.length - 1;
         m[k] = Math.round(Math.max(lo, Math.min(hi, posAt(e))));
         chopDraw();
       }}
@@ -88,7 +92,7 @@ function Wave() {
         if (CH.dragEnd) { CH.dragEnd = false; notify(); }
         if (CH.drag >= 0) { CH.drag = -1; notify(); }
       }}
-      onDoubleClick={(e) => { if (CH.x) chopAdd(CH.snap ? chopSnap(CH.x, CH.nov, posAt(e), 0.02) : Math.round(posAt(e))); }}
+      onDoubleClick={(e: ReactMouseEvent<HTMLCanvasElement>) => { if (CH.x) chopAdd(CH.snap ? chopSnap(CH.x, CH.nov!, posAt(e), 0.02) : Math.round(posAt(e))); }}
       onKeyDown={(e) => {
         if (!CH.x) return;
         const k = e.key;
@@ -127,7 +131,7 @@ export default function Chop() {
       <Head>
         <b className="min-w-12 text-big font-normal text-acc">CHOP</b>
         <button type="button" onClick={openFile}><Ic ic="symbol_folder_open">{t("chopOpen")}</Ic></button>
-        <span className="dim">{CH.x ? `${CH.name} · ${chSecs(CH.x.length)} · ${all.length} ${t("chopChops")}` +
+        <span className={dim}>{CH.x ? `${CH.name} · ${chSecs(CH.x.length)} · ${all.length} ${t("chopChops")}` +
           (kept < all.length ? ` (${kept} ${t("chopKept")})` : "") : t("chopHelp")}</span>
       </Head>
       <Wave />
@@ -136,10 +140,10 @@ export default function Chop() {
         <button type="button" className="min-w-20" onPointerDown={(e) => { e.preventDefault(); chopTap(e.nativeEvent); }}>{t("chopTap")}</button>
         <label><input type="checkbox" checked={CH.snap} onChange={(e) => { CH.snap = e.target.checked; notify(); }} /> {t("chopSnap")}</label>
         <button type="button" onClick={() => { if (CH.x) chopSetMarks([]); }}>{t("chopClear")}</button>
-        <span className="dim">{t("chopHint")}</span>
+        <span className={dim}>{t("chopHint")}</span>
       </Head>
       <Head>
-        <button type="button" onClick={() => { if (CH.x) chopSetMarks(chopHits(CH.x, CH.nov, CH.sens)); }}>{t("chopHits")}</button>
+        <button type="button" onClick={() => { if (CH.x) chopSetMarks(chopHits(CH.x, CH.nov!, CH.sens)); }}>{t("chopHits")}</button>
         <input type="range" className="w-[110px]" min="1" max="10" value={CH.sens} title={t("chopSens")}
           onChange={(e) => { CH.sens = +e.target.value; notify(); }} />
         <Sep />
@@ -168,14 +172,14 @@ export default function Chop() {
           {MAXES.map(([nm, v]) => <option key={v} value={v}>{nm}</option>)}
         </select>
         <progress className="w-[180px]" max={room} value={Math.min(room, n)} />
-        <span className={tooLong ? "bad" : "dim"}>{`${chSecs(n)} / ${chSecs(room)}` + (tooLong ? " " + t("chopTooLong") + " " + t("chopOverHint") : "") +
+        <span className={tooLong ? bad : dim}>{`${chSecs(n)} / ${chSecs(room)}` + (tooLong ? " " + t("chopTooLong") + " " + t("chopOverHint") : "") +
           (CH.mode === 0 && kept > CHOP.MAX ? " " + t("chopTooMany") : "")}</span>
       </Head>
       <Head>
         <button type="button" onClick={() => chopKeepAll(true)}>{t("chopAll")}</button>
         <button type="button" onClick={() => chopKeepAll(false)}>{t("chopNone")}</button>
         <button type="button" disabled={!tooLong} title={tooLong ? "" : t("chopWhyFit")} onClick={chopFitAll}>{t("chopFit")}</button>
-        <span className="dim">{t("chopKeepHint")}</span>
+        <span className={dim}>{t("chopKeepHint")}</span>
       </Head>
       <div className="my-2 flex flex-wrap gap-[3px]">
         {all.map((q, i) => {                         /* a chip per chop: the box keeps it, the rest listens */
@@ -198,14 +202,14 @@ export default function Chop() {
           <span>{t("chopLen")}</span>
           <input type="range" className="len w-[180px]" min="10" max={lenMax} step="1" title={t("chopLen")} value={lenV}
             onChange={(e) => { const ms = +e.target.value; chopSetLen(CH.sel, ms >= Math.floor(full / SMP.RATE * 1000) ? 0 : ms * SMP.RATE / 1000); }} />
-          <span className="dim">{`${chSecs(c.end - c.start)} / ${chSecs(full)}`}</span>
+          <span className={dim}>{`${chSecs(c.end - c.start)} / ${chSecs(full)}`}</span>
           <button type="button" onClick={() => chopAudition(CH.sel)}>▶</button>
           <button type="button" disabled={c.end >= c.full} title={c.end >= c.full ? t("chopWhyFull") : ""} onClick={() => chopSetLen(CH.sel, 0)}>{t("chopFull")}</button>
         </Head>
       ) : null}
       <Head>
         <button type="button" onClick={chopZip}><Ic ic="symbol_download">{t("chopZip")}</Ic></button>
-        <span className="dim">{t("chopSendBelow")}</span>{/* (sending: step 3 of the page) */}
+        <span className={dim}>{t("chopSendBelow")}</span>{/* (sending: step 3 of the page) */}
       </Head>
     </div>
   );

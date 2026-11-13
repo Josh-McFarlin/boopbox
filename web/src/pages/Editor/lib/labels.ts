@@ -7,7 +7,10 @@
 // context, CTX[context][short]: the context is the card (ENV DEST, LFO, ARP, FX, MIDI, TEXTURE ...) or the engine
 // (ANALOG, DIGITAL ...) whose EDIT page it is on.
 
-export const LABELS = {
+/** [the whole name, what it does] */
+export type Label = [name: string, what: string];
+
+export const LABELS: Record<string, Label> = {
   /* voice */
   LVL: ["Level", "The track's volume."],
   LEVEL: ["Level", "The volume."],
@@ -112,7 +115,7 @@ export const LABELS = {
   WHEN: ["Plays when", "PLAY: only while the FM-1 plays; ALWAYS: all the time."],
 };
 
-export const CTX = {
+export const CTX: Record<string, Record<string, Label>> = {
   "ENV DEST": { FLT: ["Envelope → filter", "How much the envelope opens the filter."], PIT: ["Envelope → pitch", "How much the envelope bends the pitch."],
     SHP: ["Envelope → shape", "How much the envelope changes the tone shape."], FX: ["Envelope → effects", "How much the envelope opens the effects."] },
   "LFO DEST": { PIT: ["LFO → pitch", "Vibrato: how much the LFO moves the pitch."], FLT: ["LFO → filter", "How much the LFO moves the filter."],
@@ -180,7 +183,7 @@ export const CTX = {
 };
 
 /* the whole name and its sentence for a short name in a context (or the short name itself, when it is not known) */
-export function labelOf(short, ctx) {
+export function labelOf(short: unknown, ctx?: string | null): Label {
   const s = String(short || "");
   const c = ctx && CTX[ctx];
   return (c && c[s]) || LABELS[s] || [s.charAt(0) + s.slice(1).toLowerCase(), ""];

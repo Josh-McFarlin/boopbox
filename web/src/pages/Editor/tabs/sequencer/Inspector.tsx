@@ -27,13 +27,13 @@ const BLACK = [1, 3, 6, 8, 10];
 
 /* --------------------------------------------------- the two-octave piano --- */
 /* the piano's lowest C, kept while the same step stays selected (it follows a newly selected step's notes) */
-const KB = { base: 48, step: -1, trk: -1 };
+const KB: { base: number; step: number; trk: number | undefined } = { base: 48, step: -1, trk: -1 };
 interface PianoProps { i: number; notes: number[]; onKey: (p: number) => void }
 function Piano({ i, notes, onKey }: PianoProps) {
   useApp();
   const dev = readyDev();
   if (KB.step !== i || KB.trk !== dev.sel) {
-    KB.step = i; KB.trk = dev.sel ?? -1;
+    KB.step = i; KB.trk = dev.sel;
     const ref = notes.length ? notes : [SQ.last ?? 60];
     if (ref.some((n) => n < KB.base || n >= KB.base + 24)) KB.base = Math.max(0, Math.min(96, Math.floor(Math.min(...ref) / 12) * 12));
   }

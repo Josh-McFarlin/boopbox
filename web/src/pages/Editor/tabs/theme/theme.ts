@@ -18,7 +18,7 @@ export interface ThemeState { t: Theme; from: string; sent: string | null; base:
 export const TH: ThemeState = { t: Object.assign(THEME.builtin(4), { name: "MY THEME" }), from: "4", sent: null, base: [0x38, 0xc8, 0x5c], hl: null };
 /* the colour pointed at (the preview shows where it is used), or null */
 export const thHl = (w: ThWhich | null, k = 0): void => { const n = w ? { w, k } : null; if (JSON.stringify(n) !== JSON.stringify(TH.hl)) { TH.hl = n; notify(); } };
-export const thOk = (): boolean => !!A.dev && !!A.dev.info && A.dev.info.proto >= 11;
+export const thOk = () => !!A.dev && !!A.dev.info && A.dev.info.proto >= 11;
 export const TH_SCREEN = ["thC1", "thC2", "thC3", "thC4", "thC5"];
 /* sent: what the FM-1 shows, as far as this page knows */
 export const thState = (): string => (!thOk() || TH.sent === null ? "" : TH.sent === THEME.code(TH.t) ? "thStSent" : "thStNew");

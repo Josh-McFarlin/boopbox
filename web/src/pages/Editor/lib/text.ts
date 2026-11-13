@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The editor's strings (every key the source uses must be here: web/test_web.mjs checks it).
+/** a language of TEXT, and a key of its strings */
+export type Lang = keyof typeof TEXT;
+export type TextKey = keyof (typeof TEXT)["en"];
 export const TEXT = {
   en: {
     /* 2.7: the LIVE page */

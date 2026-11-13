@@ -12,13 +12,15 @@ export const GLYPH = {
   waveform_pulse_quarter: 0xEA7F, waveform_pulse_eighth: 0xEA7B, waveform_noise_step: 0xEA79,
   waveform_noise_white: 0xEA7A, waveform_harmonic: 0xEAC5,
 };
+/** a glyph's name (a key of GLYPH) */
+export type GlyphName = keyof typeof GLYPH;
 /* section headings (LAYOUT titles) and page titles */
-export const HEAD_IC = { ENV: "function_env_adsr_exp", LFO: "waveform_sine", EDIT: "ui_knob", VOICE: "symbol_keyboard",
+export const HEAD_IC: Record<string, GlyphName> = { ENV: "function_env_adsr_exp", LFO: "waveform_sine", EDIT: "ui_knob", VOICE: "symbol_keyboard",
   FX: "symbol_effector", SEL: "symbol_tuning", ARP: "control_arrow_up_down", "SEQ TIMING": "symbol_grid",
   GLOBAL: "symbol_cog", MASTER: "ui_slider_vertical", DRUMS: "symbol_drum", INSTRUMENT: "symbol_keyboard" };
-export const PAGE_IC = { FLT: "function_filter_lpf_peak", FILT: "function_filter_lpf_peak", DLY: "symbol_echo", "REV/CHO": "symbol_spring", SLICER: "symbol_grid" };
+export const PAGE_IC: Record<string, GlyphName> = { FLT: "function_filter_lpf_peak", FILT: "function_filter_lpf_peak", DLY: "symbol_echo", "REV/CHO": "symbol_spring", SLICER: "symbol_grid" };
 /* WAVE / WAVE2 choices; phase-distortion shapes without a close glyph (SPLS, RSAW, RTRI, RTRP) get none */
-export const WAVE_IC = { SIN: "waveform_sine", TRI: "waveform_triangle_ac", SAW: "waveform_sawtooth_ac", SQR: "waveform_square",
+export const WAVE_IC: Record<string, GlyphName> = { SIN: "waveform_sine", TRI: "waveform_triangle_ac", SAW: "waveform_sawtooth_ac", SQR: "waveform_square",
   PLS: "waveform_pulse_quarter", PWM: "waveform_pulse_eighth", "S&H": "waveform_noise_step", NOIS: "waveform_noise_white",
   DSIN: "waveform_harmonic" };
 /* options can hold an icon only where the browser draws the picker itself; a native menu would show a box */

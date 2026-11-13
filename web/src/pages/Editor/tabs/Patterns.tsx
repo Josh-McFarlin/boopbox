@@ -3,26 +3,32 @@
 // progression, as three sub-pages, edited here and sent back whole. (A step's components: pages/patterns/StepComponents.jsx,
 // in the Sequencer's step inspector.)
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import clsx from "clsx";
 import { PROJ7 } from "../lib/proto.ts";
+import type { P7Harm, P7LenCtx, P7Scenes, P7Track, Proj7 } from "../lib/proto.ts";
 import { A, notify, op, t, tcol, tf, useApp } from "../core/app.ts";
 import { Card, Help, SendBar } from "../ui/kit.tsx";
 import { Num } from "./song/Num.tsx";
 import { PT, clampIn, ptCtx, ptDirty, ptEdit, ptHits, ptOwn, ptPatUsed, ptTidy, readPatterns, sendPatterns } from "./patterns/state.ts";
 import { HelpMore, MemBar, Sel, SubTabs } from "./patterns/ui.tsx";
+import { bad, bar, dim, seg, tog, warn } from "../ui/styles.ts";
 
 export { PT };
 const SUB_KEY = "boopbox-patterns-sub";
-const SUBS = [["pat", "patSubPat"], ["scn", "patSubScn"], ["ch", "patSubCh"]];
-const loadSub = () => { try { const v = localStorage.getItem(SUB_KEY); return SUBS.some(([k]) => k === v) ? v : "pat"; } catch (e) { return "pat"; } };
-const P_N = (n) => "P" + (n + 1);
+type Sub = "pat" | "scn" | "ch";
+const SUBS: [Sub, string][] = [["pat", "patSubPat"], ["scn", "patSubScn"], ["ch", "patSubCh"]];
+const loadSub = (): Sub => { try { const v = localStorage.getItem(SUB_KEY); return SUBS.some(([k]) => k === v) ? v as Sub : "pat"; } catch (e) { return "pat"; } };
+const P_N = (n: number): string => "P" + (n + 1);
 
 /* a chain slot: its pattern, its repeats (click: one more, wheel / − +: up and down), × removes it; dragged to move */
-function Slot({ x, k, cur, onRep, onDel, onDrop }) {
-  const ref = useRef(null), pat = PROJ7.slotPat(x), rep = PROJ7.slotRep(x);
-  const st = useRef(); st.current = { rep, onRep };
+interface SlotProps { x: number; k: number; cur: number; onRep: (r: number) => void; onDel: () => void; onDrop: (data: string, at: number) => void }
+function Slot({ x, k, cur, onRep, onDel, onDrop }: SlotProps) {
+  const ref = useRef<HTMLButtonElement>(null), pat = PROJ7.slotPat(x), rep = PROJ7.slotRep(x);
+  const st = useRef({ rep, onRep }); st.current = { rep, onRep };
   useEffect(() => {
-    const el = ref.current;
-    const f = (e) => { e.preventDefault(); const s = st.current; s.onRep(Math.max(1, Math.min(16, s.rep + (e.deltaY < 0 ? 1 : -1)))); };
+    const el = ref.current!;
+    const f = (e: WheelEvent) => { e.preventDefault(); const s = st.current; s.onRep(Math.max(1, Math.min(16, s.rep + (e.deltaY < 0 ? 1 : -1)))); };
     el.addEventListener("wheel", f, { passive: false });
     return () => el.removeEventListener("wheel", f);
   }, []);
@@ -45,14 +51,15 @@ function Slot({ x, k, cur, onRep, onDel, onDrop }) {
 }
 
 /* the tracks, the selected one's eight patterns, what to do with the pattern picked, its chain */
-function PatternsTab({ P, tr, drum, ctx }) {
-  const [to, setTo] = useState(null);
+interface PatternsTabProps { P: Proj7; tr: P7Track; drum: boolean; ctx: P7LenCtx }
+function PatternsTab({ P, tr, drum, ctx }: PatternsTabProps) {
+  const [to, setTo] = useState<number | null>(null);
   const [overEnd, setOverEnd] = useState(false);
-  const sel = PT.pat, selUsed = ptPatUsed(PT.trk, sel);
-  const chainSet = (c) => ptEdit(() => PROJ7.setChain(P, PT.trk, c));
+  const sel = PT.pat!, selUsed = ptPatUsed(PT.trk, sel);
+  const chainSet = (c: number[]) => ptEdit(() => PROJ7.setChain(P, PT.trk, c));
   const full = tr.chain.length >= PROJ7.NCHAIN;
   /* a drop on the chain: a pattern tile ("pat:n") is put in, a slot ("slot:k") moved; before slot `at` (or at the end) */
-  const drop = (data, at) => {
+  const drop = (data: string, at: number) => {
     const c = tr.chain.slice(), m = /^(pat|slot):(\d+)$/.exec(data || "");
     if (!m) return;
     if (m[1] === "pat") { if (full) return; c.splice(at, 0, PROJ7.slot(+m[2])); }
@@ -66,9 +73,9 @@ function PatternsTab({ P, tr, drum, ctx }) {
       <Card title={t("patPatterns")} ic="symbol_grid">
         <div id="pattrk" className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label={t("patTracks")}>
           {P.tracks.map((x) => {
-            const name = x.kind === PROJ7.DRUM ? "DRUMS" : A.dev.info.engines[x.eng] || "";
+            const name = x.kind === PROJ7.DRUM ? "DRUMS" : A.dev!.info!.engines[x.eng] || "";
             return (
-              <button key={x.i} type="button" style={{ "--c": tcol(x.i) }} aria-pressed={x.i === PT.trk}
+              <button key={x.i} type="button" style={{ "--c": tcol(x.i) } as CSSProperties} aria-pressed={x.i === PT.trk}
                 className="min-w-[110px] border-l-4 border-c text-left aria-pressed:bg-c! aria-pressed:text-black"
                 onClick={() => { PT.trk = x.i; PT.pat = x.cur; notify(); }}>{`${x.i + 1} ${name} · ${P_N(x.cur)}`}</button>
             );
@@ -85,8 +92,8 @@ function PatternsTab({ P, tr, drum, ctx }) {
                 className={`grid cursor-grab gap-0.5 normal-case border px-2 py-1.5 text-left aria-pressed:bg-s3! aria-pressed:outline-2 aria-pressed:outline-acc ${!used ? "text-dim" : ""}
                   ${play ? "border-trk shadow-[inset_0_0_0_1px_var(--trk)]" : "border-line"}`}>
                 <span className="flex items-center justify-between text-[18px]">{P_N(n)}{play ? <span className="text-[14px] text-trk">{"▶"}</span> : null}</span>
-                <span className="dim">{play ? t("patPlaying") : used ? tf("patSteps", { n: hits }) : t("empty")}</span>
-                <span className="dim">{tf("patLen", { n: PROJ7.lenOf(P, PT.trk, n, ctx) })}</span>
+                <span className={dim}>{play ? t("patPlaying") : used ? tf("patSteps", { n: hits }) : t("empty")}</span>
+                <span className={dim}>{tf("patLen", { n: PROJ7.lenOf(P, PT.trk, n, ctx) })}</span>
               </button>
             );
           })}
@@ -106,15 +113,15 @@ function PatternsTab({ P, tr, drum, ctx }) {
                 .map((n) => <option key={n} value={n}>{P_N(n) + (ptPatUsed(PT.trk, n) ? " ●" : "")}</option>)}
             </Sel>
           </span>
-          <button type="button" className="warn" disabled={!selUsed} title={!selUsed ? tf("patEmptyWhy", { n: sel + 1 }) : t("patClearHint")} onClick={() => {
+          <button type="button" className={warn} disabled={!selUsed} title={!selUsed ? tf("patEmptyWhy", { n: sel + 1 }) : t("patClearHint")} onClick={() => {
             if (!confirm(tf("patClearAsk", { n: sel + 1 }))) return;
             ptEdit(() => PROJ7.setPat(P, PT.trk, sel, null, 0, ctx));
           }}>{t("patClear")}</button>
           <span className="inline-flex items-center gap-1.5" id="patdir" title={t("cpDirHint")}>
             <span>{t("cpDir")}</span>
-            <span className="seg">
+            <span className={seg}>
               {PROJ7.DIRS.map((d, k) => (
-                <button key={k} type="button" aria-pressed={(pv.dir | 0) === k}
+                <button key={k} type="button" className={tog} aria-pressed={(pv.dir | 0) === k}
                   onClick={() => ptEdit(() => { ptOwn(P, PT.trk, sel, ctx).dir = k; ptTidy(P, PT.trk, sel, ctx); })}>{d}</button>
               ))}
             </span>
@@ -152,7 +159,7 @@ function PatternsTab({ P, tr, drum, ctx }) {
             <button key={n} type="button" className="normal-case" disabled={full} title={full ? t("patChainFull") : tf("patAddSlot", { n: n + 1 })}
               onClick={() => chainSet([...tr.chain, PROJ7.slot(n)])}>{"+" + P_N(n)}</button>
           ))}
-          <button type="button" className="warn ml-2" disabled={!tr.chain.length} title={!tr.chain.length ? t("patNoChainWhy") : ""}
+          <button type="button" className={clsx(warn, "ml-2")} disabled={!tr.chain.length} title={!tr.chain.length ? t("patNoChainWhy") : ""}
             onClick={() => chainSet([])}>{t("patChainClear")}</button>
           <label className="ml-2 inline-flex items-center gap-1.5" title={t("patChainPlayHint")}><input type="checkbox" checked={!tr.coff}
             onChange={(e) => ptEdit(() => { tr.coff = e.target.checked ? 0 : 1; if (tr.tail < 1) tr.tail = 1; })} />{t("patChainPlay")}</label>
@@ -164,9 +171,9 @@ function PatternsTab({ P, tr, drum, ctx }) {
 }
 
 /* the scenes: a row each, its name and each track's pattern in it (keep); a cell off the default (scene N = pattern N) shows */
-function ScenesTab({ P }) {
+function ScenesTab({ P }: { P: Proj7 }) {
   const S = P.scenes || PROJ7.scenesDefault();
-  const edit = (f) => ptEdit(() => { if (!P.scenes) P.scenes = PROJ7.scenesDefault(); f(P.scenes); });
+  const edit = (f: (s: P7Scenes) => void) => ptEdit(() => { if (!P.scenes) P.scenes = PROJ7.scenesDefault(); f(P.scenes); });
   const isDef = !P.scenes || PROJ7.scenesIsDefault(P.scenes);
   return (
     <Card title={t("scnTitle")} ic="symbol_grid">
@@ -196,8 +203,8 @@ function ScenesTab({ P }) {
           ))}
         </tbody>
       </table>
-      <p className="bar mt-3">
-        <button type="button" id="scnreset" className="warn" disabled={isDef} title={isDef ? t("scnResetWhy") : ""}
+      <p className={clsx(bar, "mt-3")}>
+        <button type="button" id="scnreset" className={warn} disabled={isDef} title={isDef ? t("scnResetWhy") : ""}
           onClick={() => { if (confirm(t("scnResetAsk"))) ptEdit(() => { P.scenes = null; }); }}>{t("scnReset")}</button>
         <span className="text-dim">{t("scnLegend")}</span>
       </p>
@@ -206,9 +213,9 @@ function ScenesTab({ P }) {
 }
 
 /* the song's chord progression: up to 8 chords, a degree of the key's scale (I..VII) for 1..16 bars */
-function ChordsTab({ P }) {
+function ChordsTab({ P }: { P: Proj7 }) {
   const h = P.harm || [{ deg: 0, bars: 4 }];
-  const edit = (f) => ptEdit(() => { const x = (P.harm || [{ deg: 0, bars: 4 }]).map((c) => ({ ...c })); f(x); P.harm = x; });
+  const edit = (f: (h: P7Harm[]) => void) => ptEdit(() => { const x = (P.harm || [{ deg: 0, bars: 4 }]).map((c) => ({ ...c })); f(x); P.harm = x; });
   const total = h.reduce((a, c) => a + c.bars, 0), isDef = PROJ7.harmDefault(P.harm);
   return (
     <Card title={t("chTitle")} ic="symbol_tuning" sub={tf("chSum", { n: h.length, max: PROJ7.NHPROG, bars: total })}>
@@ -238,10 +245,10 @@ function ChordsTab({ P }) {
           </li>
         ))}
       </ol>
-      <p className="bar">
+      <p className={bar}>
         <button type="button" id="chadd" disabled={h.length >= PROJ7.NHPROG} title={h.length >= PROJ7.NHPROG ? tf("chFull", { max: PROJ7.NHPROG }) : ""}
           onClick={() => edit((x) => { const l = x[x.length - 1]; x.push({ deg: (l.deg + 3) % 7, bars: l.bars }); })}>{t("chAdd")}</button>
-        <button type="button" id="chreset" className="warn" disabled={isDef} title={isDef ? t("chResetWhy") : ""}
+        <button type="button" id="chreset" className={warn} disabled={isDef} title={isDef ? t("chResetWhy") : ""}
           onClick={() => ptEdit(() => { P.harm = null; })}>{t("chReset")}</button>
       </p>
     </Card>
@@ -257,11 +264,11 @@ export default function Patterns() {
     op(readPatterns);
   });
   if (!dev || !dev.dump) return null;
-  const pick = (k) => { setSub(k); try { localStorage.setItem(SUB_KEY, k); } catch (e) { /* no storage */ } };
-  let note = null, fits = true, body = null;
+  const pick = (k: Sub) => { setSub(k); try { localStorage.setItem(SUB_KEY, k); } catch (e) { /* no storage */ } };
+  let note: ReactNode = null, fits = true, body: ReactNode = null;
   const dirty = ptDirty();
   if (PT.P) {
-    const P = PT.P, ctx = ptCtx(), tr = PROJ7.track(P, PT.trk), drum = tr.kind === PROJ7.DRUM;
+    const P = PT.P, ctx = ptCtx(), tr = PROJ7.track(P, PT.trk)!, drum = tr.kind === PROJ7.DRUM;
     const bank = PROJ7.bankBytes(P), size = PROJ7.HDR + PROJ7.encodeBody(P).length;
     fits = bank <= PROJ7.PB_SIZE && size <= PROJ7.MAX;
     note = (
@@ -275,7 +282,7 @@ export default function Patterns() {
   }
   /* the accent: the track picked here */
   return (
-    <div style={PT.P ? { "--trk": tcol(PT.trk) } : undefined} id="patbody">
+    <div style={PT.P ? { "--trk": tcol(PT.trk) } as CSSProperties : undefined} id="patbody">
       <SendBar dirty={dirty} busy={!!busy} note={note} sendDisabled={!PT.P || !fits} why={!PT.P ? t("patNotRead") : t("patFull")}
         onSend={() => op(sendPatterns)}
         onRead={() => { if (dirty && !confirm(t("patDiscard"))) return; op(readPatterns); }} />
@@ -283,7 +290,7 @@ export default function Patterns() {
         <SubTabs tabs={SUBS} value={sub} onPick={pick} id="patsub" />
         <HelpMore className="m-0 flex-1" line={t("patHelp1")}>{t("patHelp")}</HelpMore>
       </div>
-      {PT.err ? <p className="bad" id="paterr">{t(PT.err)}</p> : null}
+      {PT.err ? <p className={bad} id="paterr">{t(PT.err)}</p> : null}
       {body}
     </div>
   );

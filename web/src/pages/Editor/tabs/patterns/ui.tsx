@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Small controls of the Patterns page and the step components.
+import type { ReactNode, SelectHTMLAttributes } from "react";
+import clsx from "clsx";
 import { t } from "../../core/app.ts";
 import { More } from "../../ui/kit.tsx";
+import { help, seg, tog } from "../../ui/styles.ts";
 
 /* a one-line help and its "?" with the longer text (the "?" opens it below the line) */
-export function HelpMore({ line, children, className = "mb-3" }) {
+export interface HelpMoreProps { line: ReactNode; children?: ReactNode; className?: string }
+export function HelpMore({ line, children, className = "mb-3" }: HelpMoreProps) {
   return (
-    <div className={`help max-w-[80ch] text-dim ${className}`}>
+    <div className={clsx(help, "max-w-[80ch] text-dim", className)}>
       <span>{line}</span>
       {children ? <More>{children}</More> : null}
     </div>
@@ -14,12 +18,14 @@ export function HelpMore({ line, children, className = "mb-3" }) {
 }
 
 /* a select of numbers */
-export const Sel = ({ v, onPick, children, ...rest }) => (
+export interface SelProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange"> { v: number; onPick: (v: number) => void }
+export const Sel = ({ v, onPick, children, ...rest }: SelProps) => (
   <select value={String(v)} onChange={(e) => onPick(+e.target.value)} {...rest}>{children}</select>
 );
 
 /* memory used: a short bar and "used / max B" (red when over) */
-export function MemBar({ label, used, max, id }) {
+export interface MemBarProps { label: string; used: number; max: number; id?: string }
+export function MemBar({ label, used, max, id }: MemBarProps) {
   const over = used > max, pc = Math.min(100, Math.round((100 * used) / max));
   return (
     <span id={id} className={`inline-flex items-center gap-1.5 ${over ? "text-red" : "text-dim"}`} title={`${label}: ${used} / ${max} B`}>
@@ -33,11 +39,12 @@ export function MemBar({ label, used, max, id }) {
 }
 
 /* a segmented row of sub-pages */
-export function SubTabs({ tabs, value, onPick, id }) {
+export interface SubTabsProps<K extends string> { tabs: readonly (readonly [K, string])[]; value: K; onPick: (k: K) => void; id?: string }
+export function SubTabs<K extends string>({ tabs, value, onPick, id }: SubTabsProps<K>) {
   return (
-    <div className="seg" role="tablist" id={id}>
+    <div className={seg} role="tablist" id={id}>
       {tabs.map(([k, label]) => (
-        <button key={k} type="button" role="tab" aria-selected={value === k} aria-pressed={value === k} onClick={() => onPick(k)}>{t(label)}</button>
+        <button key={k} type="button" className={tog} role="tab" aria-selected={value === k} aria-pressed={value === k} onClick={() => onPick(k)}>{t(label)}</button>
       ))}
     </div>
   );
