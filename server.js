@@ -77,17 +77,6 @@ const server = createServer((req, res) => {
     return;
   }
 
-  // the home page is the root; the old /webapp/... links (before the pages moved to the root) go to their page
-  if (pathname === "/home" || pathname === "/home/" || pathname === "/webapp/home" || pathname === "/webapp/home/") {
-    res.writeHead(308, { Location: "/" }).end();
-    return;
-  }
-  if (pathname === "/webapp" || pathname.startsWith("/webapp/")) {
-    const url = new URL(req.url, "http://localhost");
-    res.writeHead(308, { Location: (pathname.slice("/webapp".length) || "/") + url.search }).end();
-    return;
-  }
-
   const file = staticTarget(pathname);
   if (!file) {
     res.writeHead(404).end("Not found");
