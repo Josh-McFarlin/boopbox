@@ -6,14 +6,16 @@
 import {
   CMD, FM1_PORT, Link, bank, fm1Ports, makeMockDevice, paramKeys, parse, req, startWatch,
 } from "../lib/proto.ts";
+import type { Frame, Req, RequestOpt } from "../lib/proto.ts";
 import {
   A, drumAsStep, drumGrid, getDescOrNull, getDrumStep, getDump, getStep, gEng, hasFill, hasLocks, hasTracks, isDrumTrk, key, notify, op,
-  pMute, pPan, P, pSlen, report, rq, sayK, selfLoad, selfReload, sets, stepEdit,
+  pMute, pPan, P, pSlen, readyDev, report, rq, sayK, selfLoad, selfReload, sets, stepEdit,
 } from "./app.ts";
+import type { Dev } from "./app.ts";
 import { H } from "./hooks.ts";
 
 /* ---------------------------------------------------------------- connecting --- */
-export async function connect() {
+export async function connect(): Promise<void> {
   A.wantConnected = true;
   if (!A.MOCK && !navigator.requestMIDIAccess) { sayK("nomidi"); return; }
   A.connecting = true;
@@ -21,13 +23,13 @@ export async function connect() {
   try {
     if (!A.access) {
       if (A.MOCK) {
-        A.mock = makeMockDevice({ auto: false, legacy: A.LEGACY, onChange: (...a) => H.previewChanged(...a) });
-        A.access = A.mock.access;
+        A.mock = makeMockDevice({ auto: false, legacy: A.LEGACY, onChange: (...a: unknown[]) => H.previewChanged(...a) });
+        A.access = A.mock.access as unknown as MIDIAccess;   /* (the mock's: the parts the editor uses) */
       } else {
         try { A.access = await navigator.requestMIDIAccess({ sysex: true }); }
         catch (e) { sayK("denied"); return; }
       }
-      A.access.onstatechange = onState;
+      A.access!.onstatechange = onState;
     }
     const pairs = fm1Ports(A.access);
     if (!pairs.length) { sayK("nodevice"); return; }
@@ -40,7 +42,7 @@ export async function connect() {
         onPush: (f) => onPush(f),
         onGap: () => { A.rewatch = true; },
       });
-      pr.input.onmidimessage = (e) => l.receive(e.data);
+      pr.input.onmidimessage = (e: MIDIMessageEvent) => l.receive(e.data!);
       if (pr.input.open) await pr.input.open().catch(() => {});
       try {
         await l.request(req.info(), { timeout: 500, retries: 3, quiet: true });   /* (the first frame can be lost) */
@@ -60,9 +62,9 @@ export async function connect() {
   } catch (e) {
     console.error(e);
     if (A.dev) {                                     /* not unplugged meanwhile (that says "lost") */
-      const timeout = /^timeout/.test(e.message);
+      const timeout = /^timeout/.test((e as Error).message);
       disconnect();
-      sayK(timeout ? "noreply" : "error", timeout ? "" : e.message);
+      sayK(timeout ? "noreply" : "error", timeout ? "" : (e as Error).message);
     }
   } finally {
     A.connecting = false;
@@ -70,7 +72,7 @@ export async function connect() {
   }
 }
 
-export function disconnect(reasonKey = "disconnected") {
+export function disconnect(reasonKey = "disconnected"): void {
   H.stopPreview();
   const dev = A.dev;
   if (dev) {
@@ -82,12 +84,12 @@ export function disconnect(reasonKey = "disconnected") {
   A.needReload = false;
   sayK(reasonKey);
 }
-export function toggleConnect() {
+export function toggleConnect(): void {
   if (A.dev) { A.wantConnected = false; disconnect(); } else connect();
 }
 
-let stateTimer = 0;
-function onState(e) {
+let stateTimer: ReturnType<typeof setTimeout> | number = 0;
+function onState(e: MIDIConnectionEvent) {
   const p = e.port, dev = A.dev;
   if (!p || !FM1_PORT.test(p.name || "")) return;
   if (dev && p.state === "disconnected" && (p.id === dev.input.id || p.id === dev.output.id)) {
@@ -99,7 +101,7 @@ function onState(e) {
 }
 
 /* the whole connect sequence */
-async function load(d) {
+async function load(d: Dev) {
   A.busy++;
   try {
     /* the first frame after opening the port can be lost: a few tries */
@@ -118,15 +120,15 @@ async function load(d) {
     }
     for (let k = 0; k < 4; k++) {                    /* PROJECT op 2: is the slot used */
       try { d.slotUsed[k] = parse[CMD.PROJECT](await d.link.request(req.project(2, k))).used; }
-      catch (e) { if (e.message === "closed") throw e; }
+      catch (e) { if ((e as Error).message === "closed") throw e; }
     }
     try { d.smp = parse[CMD.SMP_INFO](await d.link.request(req.smpInfo())); }
-    catch (e) { if (e.message === "closed") throw e; d.smp = null; }   /* older firmware, or no flash */
+    catch (e) { if ((e as Error).message === "closed") throw e; d.smp = null; }   /* older firmware, or no flash */
     d.keys = paramKeys(d.pdesc, d.info.pe0, d.info.pcount);
     d.fm6 = null;                                     /* v9: the FM6 patch slots (FM6_LIST), else null */
     if (d.info.proto >= 9) {
       try { d.fm6 = parse[CMD.FM6_LIST](await d.link.request(req.fm6List())); }
-      catch (e) { if (e.message === "closed") throw e; }
+      catch (e) { if ((e as Error).message === "closed") throw e; }
     }
     H.fm6Names(d);
     await H.libAdopt(d);
@@ -138,21 +140,21 @@ async function load(d) {
     await loadSteps();
     if (d.info.ntrk) await H.readMixer();
     /* protocol v2: live pushes and the user bank; older firmware: DUMP polling, no bank */
-    const rqd = (r, o) => d.link.request(r, o);
+    const rqd = (r: Req, o?: RequestOpt) => d.link.request(r, o);
     d.watch = await startWatch(rqd);
     d.v4 = d.watch === 3;                           /* TRACK_PARAM / TRACK_CHANGED */
     if (d.watch) {
       sayK("readingBank");
       try { d.bank = await bank.list((r, o) => d.link.request(r, { ...o, quiet: true })); }
-      catch (e) { if (e.message === "closed") throw e; d.bank = null; }
+      catch (e) { if ((e as Error).message === "closed") throw e; d.bank = null; }
     }
     sayK("ready");
   } finally { A.busy--; notify(); }
 }
 
 /* the engine's parameters again (another engine under the controls) */
-export async function rereadEngineDesc() {
-  const dev = A.dev, pe0 = dev.info.pe0;
+export async function rereadEngineDesc(): Promise<void> {
+  const dev = readyDev(), pe0 = dev.info.pe0;
   for (let i = 0; i < 8 && pe0 + i < dev.info.pcount; i++) dev.pdesc[pe0 + i] = await getDescOrNull(0, pe0 + i);
   const kd = dev.pdesc[pe0];
   if (kd && kd.label === "KIT" && kd.names.length) dev.kitNames = kd.names;   /* the drum track's kits, for the mixer */
@@ -161,8 +163,8 @@ export async function rereadEngineDesc() {
   notify();
 }
 
-export async function loadSteps() {
-  const dev = A.dev, n = dev.info.nstep, drum = drumGrid();
+export async function loadSteps(): Promise<void> {
+  const dev = readyDev(), n = dev.info.nstep, drum = drumGrid();
   if (!dev.dsteps) dev.dsteps = [];
   for (let i = 0; i < n; i++) {
     if (i % 8 === 0) sayK("steploading", `${i}/${n}`);
@@ -174,12 +176,12 @@ export async function loadSteps() {
   notify();
 }
 /* v7: the selected track's nudges and locks (none on older firmware); v8: its fill conditions too */
-export async function loadLocks() {
-  const d = A.dev;
+export async function loadLocks(): Promise<void> {
+  const d = A.dev!;
   if (!hasLocks()) { d.micro = null; d.locks = null; d.fill = null; return; }
-  const m = parse[CMD.MICRO_GET](await rq(req.microGet(d.sel), { key: "micro" }));
-  const l = parse[CMD.LOCK_GET](await rq(req.lockGet(d.sel), { key: "locks" }));
-  const f = hasFill() ? parse[CMD.FILL_GET](await rq(req.fillGet(d.sel), { key: "fill" })) : null;
+  const m = parse[CMD.MICRO_GET](await rq(req.microGet(d.sel!), { key: "micro" }));
+  const l = parse[CMD.LOCK_GET](await rq(req.lockGet(d.sel!), { key: "locks" }));
+  const f = hasFill() ? parse[CMD.FILL_GET](await rq(req.fillGet(d.sel!), { key: "fill" })) : null;
   if (d !== A.dev) return;
   d.micro = m.micro;
   d.locks = l.locks;
@@ -189,25 +191,26 @@ export async function loadLocks() {
 
 /* ------------------------------------------------------------ SET a value --- */
 /* a SET of this control queued or in flight */
-export function pendingSet(k) { const dev = A.dev; return !!dev && (dev.link.hasQueued(k) || (!!dev.link.cur && dev.link.cur.key === k)); }
+export function pendingSet(k: string): boolean { const dev = A.dev; return !!dev && (dev.link.hasQueued(k) || (!!dev.link.cur && dev.link.cur.key === k)); }
 /* the user is working on this control: polling and pushes must not move it */
-export function touched(k) {
+export function touched(k: string): boolean {
   const st = sets.get(k);
   if (A.dragging === k || A.focused === k) return true;
   if (st && performance.now() - st.last < 600) return true;
   return pendingSet(k);
 }
 /* listeners for a value the user set (the sequencer follows LEN at once, ...): fn(s, id, v) */
-const setListeners = new Set();
-export const onUserSet = (fn) => { setListeners.add(fn); return () => setListeners.delete(fn); };
+type SetListener = (s: number, id: number, v: number) => void;
+const setListeners = new Set<SetListener>();
+export const onUserSet = (fn: SetListener): (() => boolean) => { setListeners.add(fn); return () => setListeners.delete(fn); };
 
 /* SET as fast as the device answers: one SET per control in flight and at most one queued, which always carries the
    latest value (Link coalesces by key), so a drag never builds a backlog */
-export function userSet(s, id, v, final) {
+export function userSet(s: number, id: number, v: number, final: boolean): void {
   const dev = A.dev;
   if (!dev) return;
   const k = key(s, id);
-  (s ? dev.dump.g : dev.dump.p)[id] = v;
+  (s ? dev.dump!.g : dev.dump!.p)[id] = v;
   H.mixFromDump();
   for (const fn of setListeners) fn(s, id, v);
   notify();
@@ -215,21 +218,21 @@ export function userSet(s, id, v, final) {
   void final;
   sendSet(s, id, k);
 }
-async function sendSet(s, id, k) {
+async function sendSet(s: number, id: number, k: string) {
   const dev = A.dev;
   if (!dev) return;
-  const st = sets.get(k);
-  const v = (s ? dev.dump.g : dev.dump.p)[id];
+  const st = sets.get(k)!;
+  const v = (s ? dev.dump!.g : dev.dump!.p)[id];
   st.sent = v;
   try {
     const r = parse[CMD.SET](await rq(req.set(s, id, v), { key: k }));
     if (A.dev && A.dragging !== k && st.sent === v && !dev.link.hasQueued(k)) {   /* the device's value after clamping */
-      (s ? dev.dump.g : dev.dump.p)[id] = r.value;
+      (s ? dev.dump!.g : dev.dump!.p)[id] = r.value;
       H.mixFromDump();
-      if (!s && id === dev.info.pe0 + 7 && H.fm6On()) H.fm6Later();   /* PTCH: the device loaded that patch */
+      if (!s && id === dev.info!.pe0 + 7 && H.fm6On()) H.fm6Later();   /* PTCH: the device loaded that patch */
       notify();
     }
-  } catch (e) { if (e.message !== "closed") console.warn(e); }
+  } catch (e) { if ((e as Error).message !== "closed") console.warn(e); }
 }
 /* a drag ended anywhere on the page: its last value is final */
 if (typeof window !== "undefined") {
@@ -243,7 +246,7 @@ if (typeof window !== "undefined") {
 }
 
 /* ------------------------------------------------- the sound under the controls --- */
-export async function choosePreset(e, p) {
+export async function choosePreset(e: number, p: number): Promise<void> {
   if (!A.dev) return;
   A.busy++;
   try {
@@ -252,8 +255,8 @@ export async function choosePreset(e, p) {
     await afterSoundChange();
   } catch (err) { report(err); } finally { A.busy--; notify(); }
 }
-export async function afterSoundChange(msg = "ready") {
-  const dev = A.dev;
+export async function afterSoundChange(msg = "ready"): Promise<void> {
+  const dev = A.dev!;
   A.needReload = false;                             /* this re-reads everything a RELOAD asks for */
   sets.clear();                                     /* another track / sound under the controls: a value equal to the one
                                                        sent before is sent again, and they show the device's at once */
@@ -265,14 +268,14 @@ export async function afterSoundChange(msg = "ready") {
   await H.fm6Follow();                              /* FM6: the track's patch (a PTCH value may have loaded one) */
   sayK(msg);
 }
-export async function initSound(confirmText) {
+export async function initSound(confirmText: string): Promise<void> {
   const dev = A.dev;
   if (!dev || !confirm(confirmText)) return;
   A.busy++;
-  try { selfLoad(); await rq(req.set(1, gEng(), dev.dump.engine)); await afterSoundChange(); }
+  try { selfLoad(); await rq(req.set(1, gEng(), dev.dump!.engine)); await afterSoundChange(); }
   catch (err) { report(err); } finally { A.busy--; notify(); }
 }
-export function selectTrack(i) {
+export function selectTrack(i: number): void {
   const dev = A.dev;
   if (!dev || !hasTracks() || i === dev.sel) return;
   op(async () => {
@@ -285,11 +288,12 @@ export function selectTrack(i) {
 /* With WATCH (protocol v2) the device pushes CHANGED / RELOAD / STEP_CHANGED; the editor PINGs about once a second so
    the watch stays on (it ends 3 s after the last request), and DUMPs every 5 s as a safety net. Older firmware: DUMP
    every 400 ms and two steps per round. */
-const pushListeners = new Set();
+type PushListener = (f: Frame) => void;
+const pushListeners = new Set<PushListener>();
 /* a page that follows the pushes itself (LIVE, the sequencer ...): fn(frame) */
-export const onPushed = (fn) => { pushListeners.add(fn); return () => pushListeners.delete(fn); };
+export const onPushed = (fn: PushListener): (() => boolean) => { pushListeners.add(fn); return () => pushListeners.delete(fn); };
 
-function onPush(f) {
+function onPush(f: Frame) {
   const d = A.dev;
   if (!d || !d.dump || !d.info) return;
   if (A.tab === "live") H.livePush(f);               /* (2.7) the LIVE page follows the FM-1 too */
@@ -327,18 +331,18 @@ function onPush(f) {
     }
   } catch (e) { console.warn("bad push", f, e); }
 }
-function blink(k) {
+function blink(k: string) {
   A.blink.set(k, performance.now());
   setTimeout(() => { if (performance.now() - (A.blink.get(k) || 0) >= 390) { A.blink.delete(k); notify(); } }, 400);
 }
-export async function refreshStep(i) {
-  const d = A.dev;
+export async function refreshStep(i: number): Promise<void> {
+  const d = A.dev!;
   if (hasLocks()) H.refreshLocks();
   try {
     if (drumGrid() && d.dstepsOk) {
       const r = parse[CMD.DRUM_STEP](await rq(req.drumStep(i), { key: "dstep:" + i }));
       if (d !== A.dev || r.index !== i || !drumGrid()) return;
-      d.dsteps[i] = r;
+      d.dsteps![i] = r;
       d.steps[i] = drumAsStep(r);
       notify();
       return;
@@ -349,7 +353,7 @@ export async function refreshStep(i) {
     notify();
   } catch (err) { report(err); }
 }
-export function maybeReload() {
+export function maybeReload(): void {
   const dev = A.dev;
   if (!dev || A.busy || !A.needReload || !dev.dump || A.tab === "live") return;   /* (LIVE: when another page shows) */
   op(() => afterSoundChange("reloaded"));
@@ -388,7 +392,7 @@ async function poll() {
     if (d !== A.dev) return;
     const soundChanged = dump.engine !== d.dump.engine || dump.preset !== d.dump.preset;
     const engineChanged = dump.engine !== d.dump.engine;
-    for (const [s, arr] of [[0, dump.p], [1, dump.g]])           /* the user's controls keep their value */
+    for (const [s, arr] of [[0, dump.p], [1, dump.g]] as [number, number[]][])           /* the user's controls keep their value */
       for (let id = 0; id < arr.length; id++) if (touched(key(s, id))) arr[id] = (s ? d.dump.g : d.dump.p)[id];
     d.dump = dump;
     notify();
@@ -397,13 +401,13 @@ async function poll() {
     if (soundChanged) { await loadSteps(); sayK("ready"); return; }
     if (d.watch) return;                            /* steps come as STEP_CHANGED */
     /* steps are not in DUMP: follow them two at a time */
-    const len = Math.max(1, Math.min(d.info.nstep, dump.p[pSlen()] || 16));
+    const len = Math.max(1, Math.min(d.info!.nstep, dump.p[pSlen()] || 16));
     for (let n = 0; n < 2; n++) {
       stepRR = (stepRR + 1) % len;
       if (performance.now() - (stepEdit.get(stepRR) || 0) < 1500) continue;
       if (drumGrid() && d.dstepsOk) {
         const r = await getDrumStep(stepRR);
-        d.dsteps[stepRR] = r;
+        d.dsteps![stepRR] = r;
         d.steps[stepRR] = drumAsStep(r);
         continue;
       }
@@ -415,7 +419,7 @@ async function poll() {
 
 let loops = false;
 /* the timers (once, when the editor starts) */
-export function startDeviceLoops() {
+export function startDeviceLoops(): void {
   if (loops) return;
   loops = true;
   setInterval(keepAlive, 1000);

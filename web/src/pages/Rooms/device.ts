@@ -1,10 +1,53 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { CMD, LIVE, Link, PROJ7, bkReadObj, fm1Ports, parse, req } from "../Editor/lib/proto.ts";
+import type { DevInfo, LiveState, TrackParam } from "../Editor/lib/proto.ts";
 import config from "../../../../shared/room-config.json" with { type: "json" };
 import { parseKeyboardMessage } from "./keyboardMidi.ts";
 export { parseKeyboardMessage } from "./keyboardMidi.ts";
+import type {
+  RoomOutgoing, RoomPattern, RoomPerformance, RoomSend, RoomTrack, RoomTransport, RoomVoice,
+} from "./types.ts";
 
-function cleanVoice(dump) {
+/* the room config's allowlist of shareable sound controls: per engine, per parameter, [min, max] */
+const SHAREABLE: Record<string, Record<string, number[]> | undefined> = config.shareableParameters;
+
+/* a track's sound as the FM-1 (TRACK_DUMP) or the emulator reports it */
+interface VoiceDump {
+  engine: number;
+  preset: number;
+  p: number[];
+}
+/* the live state read for a performance: the FM-1's LIVE reply, or the emulator's { tempo, playing } */
+type RoomLive = Partial<Pick<LiveState, "bpm" | "playing">> & { tempo?: unknown };
+type Project = NonNullable<ReturnType<typeof PROJ7.decode>>;
+type ProjectPattern = ReturnType<typeof PROJ7.emptyPat>;
+
+/* the emulator's performance snapshot (boopbox-room-snapshot, posted by the emulator page) */
+export interface EmulatorSnapshot {
+  project: ArrayBuffer | ArrayBufferView;
+  tracks: VoiceDump[];
+  tempo: number;
+  playing: boolean;
+}
+
+/* what was last sent for the emulator: the performance's JSON, the transport ("tempo:playing") */
+export interface EmulatorSyncState {
+  performanceKey: string;
+  transportKey: string | null;
+  hasPerformance: boolean;
+}
+
+/* a connected FM-1 (connectFm1) */
+export interface Fm1Connection {
+  input: MIDIInput;
+  link: Link;
+  close(): void;
+  getSelectedVoice(): Promise<RoomVoice>;
+  setSoundEditsPaused(paused: boolean): void;
+  getPerformanceSnapshot(): Promise<RoomPerformance | null>;
+}
+
+function cleanVoice(dump: VoiceDump): RoomVoice | null {
   if (dump.engine === config.engineNames.length) {
     const kit = dump.p[63];
     return config.shareableDrumKits.includes(kit) ? { engine: dump.engine, kit } : null;
@@ -12,9 +55,9 @@ function cleanVoice(dump) {
   if (dump.engine < 0 || dump.engine >= config.presetCounts.length || dump.engine === 4) return null;
   if (dump.preset < 0 || dump.preset >= config.presetCounts[dump.engine]) return null;
   if (dump.engine === 9 && (dump.p[70] < 0 || dump.p[70] >= config.presetCounts[9])) return null;
-  const allowlist = config.shareableParameters[dump.engine];
+  const allowlist = SHAREABLE[dump.engine];
   if (!allowlist) return null;
-  const params = {};
+  const params: Record<string, number> = {};
   for (const [id, [min, max]] of Object.entries(allowlist)) {
     const value = dump.p[Number(id)];
     if (Number.isSafeInteger(value) && value >= min && value <= max) params[id] = value;
@@ -22,13 +65,13 @@ function cleanVoice(dump) {
   return { engine: dump.engine, preset: dump.preset, params };
 }
 
-function sparse(values, min = -32, max = 31) {
+function sparse(values: number[], min = -32, max = 31): [number, number][] {
   return values.flatMap((value, index) => Number.isSafeInteger(value) && value >= min && value <= max && value
-    ? [[index, value]] : []);
+    ? [[index, value] as [number, number]] : []);
 }
 
-function roomPattern(pattern, trackIndex, drum, info) {
-  const steps = [];
+function roomPattern(pattern: ProjectPattern, trackIndex: number, drum: boolean, info: Pick<DevInfo, "pe0">): RoomPattern {
+  const steps: RoomPattern["steps"] = [];
   pattern.steps.forEach((step, index) => {
     if (drum) {
       const on = (step.on[0] | (step.on[1] << 8)) >>> 0;
@@ -63,10 +106,13 @@ function roomPattern(pattern, trackIndex, drum, info) {
   };
 }
 
-function buildRoomPerformance(project, dumps, live, info) {
+function buildRoomPerformance(
+  project: Project | null, dumps: VoiceDump[], live: RoomLive | null | undefined,
+  info: Pick<DevInfo, "pe0">,
+): RoomPerformance {
   if (!project || project.tracks.length !== 8) throw new Error("The FM-1 project could not be read.");
   const scenes = project.scenes || PROJ7.scenesDefault();
-  const tracks = project.tracks.map((track) => {
+  const tracks = project.tracks.map((track): RoomTrack => {
     const dump = dumps[track.i];
     const voice = cleanVoice(dump);
     const patterns = Array.from({ length: PROJ7.NPAT }, (_, id) => {
@@ -92,7 +138,7 @@ function buildRoomPerformance(project, dumps, live, info) {
   const matchedScene = scenes.pats.findIndex((scene) => scene.every((pattern, track) =>
     pattern === PROJ7.SCN_KEEP || pattern === currentPatterns[track]));
   return {
-    tempo: Math.max(40, Math.min(240, Number.isSafeInteger(live?.bpm) ? live.bpm : config.defaultTempo)),
+    tempo: Math.max(40, Math.min(240, Number.isSafeInteger(live?.bpm) ? live!.bpm! : config.defaultTempo)),
     playing: !!live?.playing,
     currentScene: matchedScene < 0 ? null : matchedScene,
     tracks,
@@ -100,30 +146,35 @@ function buildRoomPerformance(project, dumps, live, info) {
   };
 }
 
-export function buildEmulatorPerformance(projectBytes, tracks, live) {
+export function buildEmulatorPerformance(
+  projectBytes: unknown, tracks: unknown, live: { tempo?: unknown; playing?: unknown } | null | undefined,
+): RoomPerformance {
   if (!(projectBytes instanceof ArrayBuffer) && !ArrayBuffer.isView(projectBytes)) {
     throw new Error("The emulator performance snapshot is invalid.");
   }
-  if (!Array.isArray(tracks) || tracks.length !== 8 || !Number.isSafeInteger(live?.tempo)
-    || live.tempo < 40 || live.tempo > 240 || typeof live.playing !== "boolean") {
+  if (!Array.isArray(tracks) || tracks.length !== 8 || !live || !Number.isSafeInteger(live.tempo)
+    || (live.tempo as number) < 40 || (live.tempo as number) > 240 || typeof live.playing !== "boolean") {
     throw new Error("The emulator performance snapshot is invalid.");
   }
   const bytes = projectBytes instanceof ArrayBuffer ? new Uint8Array(projectBytes) : new Uint8Array(
     projectBytes.buffer, projectBytes.byteOffset, projectBytes.byteLength,
   );
   const project = PROJ7.decode(bytes);
-  const dumps = tracks.map((track) => {
+  const dumps = (tracks as (Partial<VoiceDump> | null)[]).map((track): VoiceDump => {
     if (!track || !Number.isSafeInteger(track.engine) || !Number.isSafeInteger(track.preset)
       || !Array.isArray(track.p) || track.p.length !== 71
-      || track.p.some((value) => !Number.isSafeInteger(value))) {
+      || track.p.some((value: unknown) => !Number.isSafeInteger(value))) {
       throw new Error("The emulator track contains unsupported data.");
     }
-    return { engine: track.engine, preset: track.preset, p: track.p };
+    return { engine: track.engine as number, preset: track.preset as number, p: track.p };
   });
-  return buildRoomPerformance(project, dumps, live, { pe0: 63 });
+  /* the emulator reports its tempo as "tempo", not the FM-1's "bpm" */
+  return buildRoomPerformance(project, dumps, live as RoomLive, { pe0: 63 });
 }
 
-export function syncEmulatorSnapshot(message, state, send) {
+export function syncEmulatorSnapshot(
+  message: EmulatorSnapshot, state: EmulatorSyncState, send: RoomSend,
+): EmulatorSyncState | null {
   const performance = buildEmulatorPerformance(message.project, message.tracks, {
     tempo: message.tempo,
     playing: message.playing,
@@ -142,10 +193,15 @@ export function syncEmulatorSnapshot(message, state, send) {
 }
 
 export async function connectFm1(
-  onNote, onState, onParameter = () => {}, onPerformance = () => {}, onTransport = () => {}, onPerformanceError = () => {},
-) {
+  onNote: (note: number, on: boolean, velocity: number, track: number) => void,
+  onState: (state: "connected" | "disconnected") => void,
+  onParameter: (track: number, param: number, value: number) => void = () => {},
+  onPerformance: (performance: RoomPerformance) => void = () => {},
+  onTransport: (transport: RoomTransport) => void = () => {},
+  onPerformanceError: (error: unknown) => void = () => {},
+): Promise<Fm1Connection> {
   if (!navigator.requestMIDIAccess) throw new Error("This browser does not support USB MIDI access.");
-  let access;
+  let access: MIDIAccess;
   try {
     access = await navigator.requestMIDIAccess({ sysex: true });
   } catch {
@@ -156,19 +212,19 @@ export async function connectFm1(
 
   for (const pair of pairs) {
     const link = new Link((data) => pair.output.send(data), { timeout: 400 });
-    let sharedVoices = new Map();
+    let sharedVoices = new Map<number, { engine: number; preset?: number; params: Record<string, number> }>();
     let selectedTrack = 0;
     let soundEditsPaused = false;
-    const heldTrackByNote = new Map();
-    let keepalive = null;
-    let performanceTimer = null;
-    let transportTimer = null;
-    let refreshTimer = null;
+    const heldTrackByNote = new Map<number, number>();
+    let keepalive: ReturnType<typeof setInterval> | null = null;
+    let performanceTimer: ReturnType<typeof setInterval> | null = null;
+    let transportTimer: ReturnType<typeof setInterval> | null = null;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     let refreshing = false;
-    let refreshTask = null;
-    let refreshPerformance = () => {};
+    let refreshTask: Promise<RoomPerformance | null> | null = null;
+    let refreshPerformance: () => Promise<RoomPerformance | null> | void = () => {};
     let performanceErrorReported = false;
-    let lastTransport = null;
+    let lastTransport: RoomTransport | null = null;
     link.onPush = (frame) => {
       if (frame.cmd === CMD.RELOAD) {
         const reload = parse[CMD.RELOAD](frame.a);
@@ -182,11 +238,11 @@ export async function connectFm1(
         refreshTimer = globalThis.setTimeout(() => refreshPerformance(), 200);
         return;
       }
-      let change;
+      let change: TrackParam;
       if (frame.cmd === CMD.CHANGED) {
-        change = parse[CMD.CHANGED](frame.a);
-        if (change.scope !== 0) return;
-        change.track = selectedTrack;
+        const changed = parse[CMD.CHANGED](frame.a);
+        if (changed.scope !== 0) return;
+        change = { ...changed, track: selectedTrack };
       } else if (frame.cmd === CMD.TRACK_CHANGED) {
         change = parse[CMD.TRACK_CHANGED](frame.a);
       } else {
@@ -194,14 +250,14 @@ export async function connectFm1(
       }
       const sharedVoice = sharedVoices.get(change.track);
       if (!sharedVoice) return;
-      const range = config.shareableParameters[sharedVoice.engine]?.[change.id];
+      const range = SHAREABLE[sharedVoice.engine]?.[change.id];
       if (!range || !Number.isSafeInteger(change.value) || change.value < range[0] || change.value > range[1]) return;
       if (soundEditsPaused) return;
       sharedVoice.params[change.id] = change.value;
       onParameter(change.track, change.id, change.value);
     };
     let disconnected = false;
-    const inputHandler = (event) => {
+    const inputHandler = (event: MIDIMessageEvent) => {
       const data = event.data;
       if (!data?.length) return;
       if (data[0] === 0xf0) {
@@ -243,7 +299,7 @@ export async function connectFm1(
             }
             const project = PROJ7.decode(await bkReadObj((command, options) => link.request(command, options), item));
             if (!project || project.tracks.length !== 8) throw new Error("The FM-1 project could not be decoded.");
-            const dumps = [];
+            const dumps: VoiceDump[] = [];
             for (let track = 0; track < 8; track += 1) {
               dumps.push(parse[CMD.TRACK_DUMP](await link.request(req.trackDump(track)), info));
             }
@@ -292,8 +348,8 @@ export async function connectFm1(
           // A short live-state poll is retried on the next tick.
         }
       };
-      const stateHandler = (event) => {
-        if (event.port?.id === pair.input.id && event.port.state === "disconnected") disconnect();
+      const stateHandler = (event: MIDIConnectionEvent) => {
+        if (event.port?.id === pair.input.id && event.port!.state === "disconnected") disconnect();
       };
       const disconnect = () => {
         if (disconnected) return;
@@ -337,13 +393,13 @@ export async function connectFm1(
         setSoundEditsPaused(paused) {
           soundEditsPaused = !!paused;
         },
-        getPerformanceSnapshot: refreshPerformance,
+        getPerformanceSnapshot: refreshPerformance as () => Promise<RoomPerformance | null>,
       };
     } catch (error) {
       if (keepalive !== null) globalThis.clearInterval(keepalive);
       pair.input.onmidimessage = null;
       link.close();
-      if (error.message.includes("current BoopBox")) throw error;
+      if ((error as Error).message.includes("current BoopBox")) throw error;
     }
   }
   throw new Error("No connected MIDI device answered as an FM-1. Check the cable and try again.");

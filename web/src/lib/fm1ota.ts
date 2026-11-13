@@ -20,7 +20,7 @@ export type OtaErrorCode = "notfound" | "model" | "stopped" | "noloader" | "lost
 export interface OtaError extends Error { code: OtaErrorCode; detail: string }
 /** progress steps: start (identity), verify (requests), loader, write (requests), reboot, done (identity) */
 export type StepFn = (step: string, arg?: string | number) => void;
-export type LogFn = (...args: unknown[]) => void;
+export type LogFn = (line: string) => void;
 type IdFilter = (id: Identity) => boolean;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

@@ -3,41 +3,70 @@
 //
 // The installer: BoopBox (or BoopBox Trainer) onto the FM-1 over USB MIDI, in the browser (fm1ota.js). The package is
 // fetched, checked against its identity and SHA-256 (meta, written by make_site.py), and written; the bar follows.
+import type React from "react";
+import type { AnchorHTMLAttributes } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logicalImage, productOf } from "../../lib/fm1pkg.ts";
 import { Updater } from "../../lib/fm1ota.ts";
+import type { OtaError } from "../../lib/fm1ota.ts";
 import { useInstallPrompt } from "../../lib/pwa.ts";
 import SiteHeader from "../../components/SiteHeader.tsx";
+import { arcadeButton, pixelPanel } from "../../components/styles.ts";
 import { TEXT } from "./text.ts";
 
-const NAMES = { boopbox: "BoopBox", trainer: "BoopBox Trainer" };
+/* a package the page installs (web/make_site.py writes it into the page) */
+export interface InstallerPackage {
+  version: string;
+  product: string;
+  pkg: string;
+  sha256: string;
+}
+/* the installer's meta: BoopBox's package, BoopBox Trainer's (when the site has it), the beta banner (HTML) */
+export interface InstallerMeta extends InstallerPackage {
+  trainer?: InstallerPackage;
+  banner?: string;
+}
+type Choice = "boopbox" | "trainer";
+type Lang = keyof typeof TEXT;
+type TextKey = keyof (typeof TEXT)["en"];
+interface Status {
+  key: TextKey | null;
+  arg: string;
+  text: string;
+}
+
+const NAMES: Record<Choice, string> = { boopbox: "BoopBox", trainer: "BoopBox Trainer" };
 const TOTAL = 74 + 1179;                               /* reads: step 1, step 2 (head + app area, SLOOP 2.0 loader) */
-const sha = async (pkg) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", pkg))]
+const sha = async (pkg: Uint8Array<ArrayBuffer>) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", pkg))]
   .map((b) => b.toString(16).padStart(2, "0")).join("");
 
-const A = (props) => <a target="_blank" rel="noopener" className="underline" {...props} />;
+const A = (props: AnchorHTMLAttributes<HTMLAnchorElement>) => <a target="_blank" rel="noopener" className="underline" {...props} />;
 
-export default function Installer({ meta }) {
-  const lang = "en";
-  const t = useCallback((k) => TEXT[lang][k], [lang]);
+interface InstallerProps {
+  meta?: InstallerMeta | null;
+}
+
+const Installer: React.FC<InstallerProps> = ({ meta }) => {
+  const lang: Lang = "en";
+  const t = useCallback((k: TextKey) => TEXT[lang][k], [lang]);
   /* the status line: a string key (+ an argument) shown in the language chosen, or a plain text */
-  const [status, setStatus] = useState({ key: null, arg: "", text: "" });
-  const sayK = useCallback((key, arg = "") => setStatus({ key, arg, text: "" }), []);
-  const say = useCallback((text) => setStatus({ key: null, arg: "", text }), []);
+  const [status, setStatus] = useState<Status>({ key: null, arg: "", text: "" });
+  const sayK = useCallback((key: TextKey, arg = "") => setStatus({ key, arg, text: "" }), []);
+  const say = useCallback((text: string) => setStatus({ key: null, arg: "", text }), []);
   const [log, setLog] = useState("");
-  const addLog = useCallback((s) => setLog((l) => l + s + "\n"), []);
+  const addLog = useCallback((s: string) => setLog((l) => l + s + "\n"), []);
   const [bar, setBar] = useState(0);
   const [writing, setWriting] = useState(false);
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState<Uint8Array | null>(null);
   const [canInstallApp, installApp] = useInstallPrompt();
   /* the choice (meta.trainer: the site has BoopBox Trainer's package too): BoopBox, or the trainer (#trainer picks it) */
-  const [choice, setChoice] = useState(() => (meta && meta.trainer && location.hash === "#trainer" ? "trainer" : "boopbox"));
+  const [choice, setChoice] = useState<Choice>(() => (meta && meta.trainer && location.hash === "#trainer" ? "trainer" : "boopbox"));
   const loading = useRef(0);
   const writingRef = useRef(false);
   writingRef.current = writing;
 
   useEffect(() => {
-    const leave = (e) => { if (writingRef.current) { e.preventDefault(); e.returnValue = TEXT[lang].leave; } };
+    const leave = (e: BeforeUnloadEvent) => { if (writingRef.current) { e.preventDefault(); e.returnValue = TEXT[lang].leave; } };
     window.addEventListener("beforeunload", leave);
     return () => window.removeEventListener("beforeunload", leave);
   }, [lang]);
@@ -53,7 +82,7 @@ export default function Installer({ meta }) {
     if (!navigator.requestMIDIAccess) { sayK("nomidi"); return; }
     (async () => {
       try {
-        const get = async (cache) => {
+        const get = async (cache: RequestCache) => {
           const r = await fetch(m.pkg, { cache });
           if (!r.ok) throw new Error(`${m.pkg}: HTTP ${r.status}`);
           return new Uint8Array(await r.arrayBuffer());
@@ -70,45 +99,46 @@ export default function Installer({ meta }) {
         if (me !== loading.current) return;
         setImage(logicalImage(pkg));
         say(`${NAMES[choice]} ${m.version}`);
-      } catch (e) { if (me === loading.current) sayK("loadfail", e.message); }
+      } catch (e) { if (me === loading.current) sayK("loadfail", (e as Error).message); }
     })();
   }, [choice]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pick = (value) => {
+  const pick = (value: Choice) => {
     if (writing) return;
     setChoice(value);
     history.replaceState(null, "", value === "trainer" ? "#trainer" : location.pathname + location.search);
   };
 
-  const step = (k, a) => {
+  const step = (k: string, a?: string | number) => {
     addLog(`${k} ${a ?? ""}`);
     if (k === "start") sayK("start");
-    if (k === "verify") { sayK("verify"); setBar(Math.min(100, (a / TOTAL) * 100)); }
+    if (k === "verify") { sayK("verify"); setBar(Math.min(100, ((a as number) / TOTAL) * 100)); }
     if (k === "loader") sayK("loader");
-    if (k === "write") { sayK("write"); setBar(Math.min(100, ((74 + a) / TOTAL) * 100)); }
+    if (k === "write") { sayK("write"); setBar(Math.min(100, ((74 + (a as number)) / TOTAL) * 100)); }
     if (k === "reboot") sayK("reboot");
     if (k === "done") { setBar(100); sayK("done"); }
   };
-  const failed = (e) => {
-    if (e && e.code && TEXT[lang][e.code]) sayK(e.code, e.detail || "");
-    else sayK("error", e && e.message);
+  const failed = (err: unknown) => {
+    const e = err as Partial<OtaError> | null;
+    if (e && e.code && (TEXT[lang] as Record<string, string>)[e.code]) sayK(e.code as TextKey, e.detail || "");
+    else sayK("error", (e && e.message) as string);
     addLog(String((e && e.stack) || e));
   };
 
   const install = async () => {
     if (writing) return;
     setWriting(true);
-    let midi;
+    let midi: MIDIAccess;
     try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
-    catch (e) { sayK("denied"); setWriting(false); return; }
+    catch { sayK("denied"); setWriting(false); return; }
     try {
       const up = new Updater(midi, addLog);
       const ota = await up.find((id) => /^ota-/i.test(id.model), true);
       if (ota) {
         ota.link.close();
-        sayK((await up.resume(image, step)) ? "done" : "stopped");
+        sayK((await up.resume(image!, step)) ? "done" : "stopped");
       } else {
-        await up.install(image, cur.product, step);
+        await up.install(image!, cur!.product, step);
       }
     } catch (e) { failed(e); }
     setWriting(false);
@@ -117,7 +147,7 @@ export default function Installer({ meta }) {
   const statusText = status.key ? t(status.key) + status.arg : status.text;
   const dl = meta ? `boopbox-editor-${String(meta.version).replace(/[^A-Za-z0-9.-]/g, "-")}.html` : "boopbox-editor.html";
   const small = "text-[13px] text-dim mb-3.5";
-  const tileBtn = "pixel-panel inline-flex min-h-11 items-center mt-2 px-4 py-2 font-pixel text-[17px] text-fg no-underline cursor-pointer hover:text-blue";
+  const tileBtn = `${pixelPanel} inline-flex min-h-11 items-center mt-2 px-4 py-2 font-pixel text-[17px] text-fg no-underline cursor-pointer hover:text-blue`;
   const bad = status.key && /fail|error|denied|nomidi|notfound|lost|bad/.test(status.key);
 
   return (
@@ -131,9 +161,9 @@ export default function Installer({ meta }) {
       <p className="mb-3.5">{t("warn")}</p>
       {meta && meta.trainer ? (
         <div id="pick" role="radiogroup" className="mt-6 mb-6 grid grid-cols-1 gap-3 min-[421px]:grid-cols-2">
-          {[["boopbox", "BoopBox", "pickBoop"], ["trainer", "BoopBox Trainer", "pickTrainer"]].map(([v, name, k]) => (
-            <label key={v} className="group pixel-panel relative block cursor-pointer px-4 pt-3 pb-3.5 has-checked:bg-green has-checked:text-ink
-              has-checked:shadow-[5px_5px_0_var(--color-orange)] has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-fg">
+          {([["boopbox", "BoopBox", "pickBoop"], ["trainer", "BoopBox Trainer", "pickTrainer"]] as const).map(([v, name, k]) => (
+            <label key={v} className={`group ${pixelPanel} relative block cursor-pointer px-4 pt-3 pb-3.5 has-checked:bg-green has-checked:text-ink
+              has-checked:shadow-[5px_5px_0_var(--color-orange)] has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-fg`}>
               <input type="radio" name="fw" value={v} className="pointer-events-none absolute opacity-0" checked={choice === v}
                 disabled={writing} onChange={() => pick(v)} />
               <b className="block font-pixel text-[20px] text-fg group-has-checked:text-ink">{name}</b><span className="block text-[13.5px] leading-[1.4] text-dim group-has-checked:text-ink">{t(k)}</span>
@@ -143,7 +173,7 @@ export default function Installer({ meta }) {
       ) : null}
       <p className="mb-3.5">
         <button id="go" type="button" disabled={writing || !image} onClick={install}
-          className="arcade-btn min-h-[64px] w-full bg-orange text-[26px]">{t("install")}</button>
+          className={`${arcadeButton} min-h-[64px] w-full bg-orange px-7 text-[26px]`}>{t("install")}</button>
       </p>
       {/* the bar in pixel blocks: magenta segments over the dark well */}
       <progress max="100" value={bar} aria-label="Installed" className="mt-6 h-7 w-full appearance-none border-0 bg-deep p-1 shadow-[inset_0_0_0_3px_var(--line)]
@@ -169,4 +199,7 @@ export default function Installer({ meta }) {
     </main>
     </>
   );
-}
+};
+Installer.displayName = "Installer";
+
+export default Installer;

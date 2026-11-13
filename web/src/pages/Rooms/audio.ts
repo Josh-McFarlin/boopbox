@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { Link, makeMockDevice, previewSnapshot, PROJ7, req } from "../Editor/lib/proto.ts";
 import config from "../../../../shared/room-config.json" with { type: "json" };
+import type {
+  RoomClock, RoomDrumStep, RoomPattern, RoomPerformance, RoomSynthStep, RoomVoice,
+} from "./types.ts";
+
+/* the room config's allowlist of shareable sound controls: per engine, per parameter, [min, max] */
+const SHAREABLE: Record<string, Record<string, number[]> | undefined> = config.shareableParameters;
 
 const PLAYERS = 8;
 const WASM_URL = new URL("../editor/boopbox-preview.wasm", document.baseURI);
 const WORKLET_URL = new URL("../editor/preview-worklet.js", document.baseURI);
 
-function isShareableParameter(engine, param, value) {
-  const range = config.shareableParameters[engine]?.[param];
+function isShareableParameter(engine: number, param: number, value: number) {
+  const range = SHAREABLE[engine]?.[param];
   return !!range && Number.isSafeInteger(value) && value >= range[0] && value <= range[1];
 }
 
@@ -17,27 +23,31 @@ function makePlayer() {
   const output = [...mock.access.outputs.values()][0];
   if (!input || !output) throw new Error("The local firmware audio engine could not start.");
   const link = new Link((data) => output.send(data), { timeout: 500 });
-  input.onmidimessage = (event) => link.receive(event.data);
+  input.onmidimessage = (event: { data: Uint8Array }) => link.receive(event.data);
   return { mock, input, link, ready: link.request(req.info()) };
 }
 
-function makePatternBytes(pattern, drum) {
+type RoomPlayerEngine = ReturnType<typeof makePlayer>;
+type RoomMock = RoomPlayerEngine["mock"];
+
+function makePatternBytes(pattern: RoomPattern | null | undefined, drum: boolean) {
   const value = PROJ7.emptyPat(drum);
   if (pattern) {
     for (const step of pattern.steps) {
       if (drum) {
-        const [, on, levels, ratchets] = step;
-        value.steps[step[0]] = {
+        const [, on, levels, ratchets] = step as RoomDrumStep;
+        const drumStep = {
           on: [on & 255, (on >> 8) & 255],
           lvl: [0, 0, 0, 0],
           rat: [0, 0, 0, 0],
         };
+        value.steps[step[0]] = drumStep;
         for (let lane = 0; lane < 16; lane += 1) {
-          value.steps[step[0]].lvl[lane >> 2] |= (levels[lane] & 3) << ((lane & 3) * 2);
-          value.steps[step[0]].rat[lane >> 2] |= (ratchets[lane] & 3) << ((lane & 3) * 2);
+          drumStep.lvl[lane >> 2] |= (levels[lane] & 3) << ((lane & 3) * 2);
+          drumStep.rat[lane >> 2] |= (ratchets[lane] & 3) << ((lane & 3) * 2);
         }
       } else {
-        const fields = step[1];
+        const fields = (step as RoomSynthStep)[1];
         value.steps[step[0]] = {
           notes: fields.slice(0, 4), n: fields[4], time: fields[5], flags: fields[6],
           vel: fields[7], lvl: fields[8], rat: fields[9],
@@ -58,14 +68,14 @@ function makePatternBytes(pattern, drum) {
   return PROJ7.patBytes(value, drum);
 }
 
-function performanceGroupSnapshot(mock, performance, group, clock) {
+function performanceGroupSnapshot(mock: RoomMock, performance: RoomPerformance, group: number, clock: RoomClock | null) {
   mock.state.g[0] = performance.tempo;
   const snapshot = previewSnapshot(mock.state, false);
   snapshot.playing = performance.playing;
   snapshot.currentScene = performance.currentScene;
   snapshot.hasVoice = performance.tracks.slice(group * 4, group * 4 + 4).some((track) => !!track.voice);
-  snapshot.roomBeat = Number.isFinite(clock?.beat)
-    ? clock.beat + Math.max(0, Date.now() - (clock.serverAt || Date.now())) * performance.tempo / 60_000
+  snapshot.roomBeat = clock && Number.isFinite(clock.beat)
+    ? clock.beat! + Math.max(0, Date.now() - (clock.serverAt || Date.now())) * performance.tempo / 60_000
     : 0;
   snapshot.tracks = snapshot.tracks.slice(0, 4).map((track, local) => {
     const source = performance.tracks[group * 4 + local];
@@ -88,9 +98,24 @@ function performanceGroupSnapshot(mock, performance, group, clock) {
   return snapshot;
 }
 
+type ErrorHandler = (error: Error) => void;
+
 export class RoomAudio {
-  constructor(onError) {
-    this.players = Array.from({ length: PLAYERS }, () => [makePlayer(), makePlayer()]);
+  players: [RoomPlayerEngine, RoomPlayerEngine][];
+  voices: (RoomVoice | null)[];
+  performances: (RoomPerformance | null)[];
+  roomClocks: (RoomClock | null)[];
+  mutedSlots: boolean[];
+  soloSlot: number | null;
+  queue: Promise<unknown>;
+  context: AudioContext | null;
+  node: AudioWorkletNode | null;
+  gain: GainNode | null;
+  loading: Promise<void> | null;
+  onError: ErrorHandler;
+
+  constructor(onError: ErrorHandler) {
+    this.players = Array.from({ length: PLAYERS }, (): [RoomPlayerEngine, RoomPlayerEngine] => [makePlayer(), makePlayer()]);
     this.voices = new Array(PLAYERS).fill(null);
     this.performances = new Array(PLAYERS).fill(null);
     this.roomClocks = new Array(PLAYERS).fill(null);
@@ -104,9 +129,9 @@ export class RoomAudio {
     this.onError = onError;
   }
 
-  async start() {
+  async start(): Promise<void> {
     if (this.node) {
-      await this.context.resume();
+      await this.context?.resume();
       return;
     }
     if (this.loading) return this.loading;
@@ -115,33 +140,37 @@ export class RoomAudio {
   }
 
   async initialize() {
-    const Audio = window.AudioContext || window.webkitAudioContext;
+    const Audio = window.AudioContext
+      || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Audio || !window.AudioWorkletNode) throw new Error("AudioWorklet is not supported in this browser.");
-    this.context = new Audio({ sampleRate: 44100, latencyHint: "interactive" });
-    if (this.context.sampleRate !== 44100) {
-      await this.context.close();
+    const context = new Audio({ sampleRate: 44100, latencyHint: "interactive" });
+    this.context = context;
+    if (context.sampleRate !== 44100) {
+      await context.close();
       this.context = null;
       throw new Error("BoopBox preview requires audio at 44.1 kHz.");
     }
-    await this.context.resume();
+    await context.resume();
     try {
       const response = await fetch(WASM_URL);
       if (!response.ok) throw new Error("The firmware audio preview could not be loaded.");
       const module = await WebAssembly.compile(await response.arrayBuffer());
-      await this.context.audioWorklet.addModule(WORKLET_URL);
-      this.node = new AudioWorkletNode(this.context, "boopbox-room-preview", {
+      await context.audioWorklet.addModule(WORKLET_URL);
+      const node = new AudioWorkletNode(context, "boopbox-room-preview", {
         numberOfInputs: 0,
         numberOfOutputs: 1,
         outputChannelCount: [2],
         processorOptions: { module },
       });
-      this.node.port.onmessage = ({ data }) => {
+      this.node = node;
+      node.port.onmessage = ({ data }: MessageEvent<{ error?: string }>) => {
         if (data.error) this.onError(new Error(data.error));
       };
-      this.node.onprocessorerror = () => this.onError(new Error("The room audio engine stopped. Disable audio and try again."));
-      this.gain = this.context.createGain();
-      this.gain.gain.value = 0.75;
-      this.node.connect(this.gain).connect(this.context.destination);
+      node.onprocessorerror = () => this.onError(new Error("The room audio engine stopped. Disable audio and try again."));
+      const gain = context.createGain();
+      this.gain = gain;
+      gain.gain.value = 0.75;
+      node.connect(gain).connect(context.destination);
       this.syncMixSettings();
       await this.queue;
       for (let slot = 0; slot < this.performances.length; slot += 1) {
@@ -150,14 +179,14 @@ export class RoomAudio {
     } catch (error) {
       this.node?.disconnect();
       this.node = null;
-      await this.context.close();
+      await context.close();
       this.context = null;
       throw error;
     }
   }
 
-  setVoice(slot, voice) {
-    const performance = this.performances[slot] || {
+  setVoice(slot: number, voice: RoomVoice) {
+    const performance: RoomPerformance = this.performances[slot] || {
       tempo: config.defaultTempo, playing: false,
       tracks: Array.from({ length: 8 }, (_, index) => ({
         index, kind: index === 3 || index === 7 ? PROJ7.DRUM : PROJ7.SYNTH, voice: null,
@@ -166,12 +195,12 @@ export class RoomAudio {
       })),
       scenes: { names: Array(8).fill(0), patterns: Array.from({ length: 8 }, (_, scene) => Array(8).fill(scene)) },
     };
-    const track = performance.tracks.find((item) => item.index === (voice.engine === 13 ? 3 : 0));
+    const track = performance.tracks.find((item) => item.index === (voice.engine === 13 ? 3 : 0))!;
     track.voice = { ...voice, params: voice.params ? { ...voice.params } : undefined };
     return this.setPerformance(slot, performance);
   }
 
-  setPerformance(slot, performance, clock = null) {
+  setPerformance(slot: number, performance: RoomPerformance, clock: RoomClock | null = null): Promise<void> {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return Promise.reject(new Error("Invalid player slot."));
     const next = this.queue.then(async () => {
       if (!performance?.tracks || performance.tracks.length !== 8) throw new Error("The shared performance is invalid.");
@@ -188,13 +217,13 @@ export class RoomAudio {
               track.drum = true;
               track.engine = 13;
               track.preset = 0;
-              track.p[63] = voice.kit;
+              track.p[63] = voice.kit!;
             } else {
-              if (!config.shareableParameters[voice.engine]) throw new Error("That sound isn't available to share.");
+              if (!SHAREABLE[voice.engine]) throw new Error("That sound isn't available to share.");
               await player.link.request(req.track(localTrack));
-              await player.link.request(req.preset(voice.engine, voice.preset));
+              await player.link.request(req.preset(voice.engine, voice.preset!));
               track.engine = voice.engine;
-              track.preset = voice.preset;
+              track.preset = voice.preset!;
               track.drum = false;
               for (const [param, value] of Object.entries(voice.params || {})) {
                 const id = Number(param);
@@ -224,7 +253,7 @@ export class RoomAudio {
     return next;
   }
 
-  setSoundParameter(slot, trackIndex, param, value) {
+  setSoundParameter(slot: number, trackIndex: number, param: number, value?: number): Promise<void> {
     if (arguments.length === 3) {
       value = param;
       param = trackIndex;
@@ -235,7 +264,7 @@ export class RoomAudio {
       if (!Number.isInteger(trackIndex) || trackIndex < 0 || trackIndex >= 8) throw new Error("Invalid shared track.");
       const performance = this.performances[slot];
       const voice = performance?.tracks[trackIndex]?.voice;
-      if (!voice || voice.engine === 13 || !isShareableParameter(voice.engine, param, value)) {
+      if (!voice || voice.engine === 13 || value === undefined || !isShareableParameter(voice.engine, param, value)) {
         throw new Error("That sound control isn't available to share.");
       }
       const player = this.players[slot][Math.floor(trackIndex / 4)];
@@ -250,21 +279,22 @@ export class RoomAudio {
     return next;
   }
 
-  syncPerformance(slot) {
-    if (!this.node || !this.performances[slot]) return;
+  syncPerformance(slot: number) {
+    const performance = this.performances[slot];
+    if (!this.node || !performance) return;
     for (let group = 0; group < 2; group += 1) {
       this.node.port.postMessage({
         type: "state",
         slot,
         group,
         state: performanceGroupSnapshot(
-          this.players[slot][group].mock, this.performances[slot], group, this.roomClocks[slot],
+          this.players[slot][group].mock, performance, group, this.roomClocks[slot],
         ),
       });
     }
   }
 
-  setTempo(tempo) {
+  setTempo(tempo: number) {
     if (!Number.isInteger(tempo) || tempo < 40 || tempo > 240) return;
     for (let slot = 0; slot < PLAYERS; slot += 1) {
       const performance = this.performances[slot];
@@ -275,7 +305,7 @@ export class RoomAudio {
     }
   }
 
-  setTransport(slot, playing, tempo, clock = null) {
+  setTransport(slot: number, playing: boolean, tempo: number, clock: RoomClock | null = null) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS || typeof playing !== "boolean") return;
     if (!Number.isInteger(tempo) || tempo < 40 || tempo > 240) return;
     const performance = this.performances[slot];
@@ -283,25 +313,25 @@ export class RoomAudio {
     performance.playing = playing;
     if (clock) this.roomClocks[slot] = clock;
     this.setTempo(tempo);
-    const beat = Number.isFinite(clock?.beat)
-      ? clock.beat + Math.max(0, Date.now() - (clock.serverAt || Date.now())) * tempo / 60_000
+    const beat = clock && Number.isFinite(clock.beat)
+      ? clock.beat! + Math.max(0, Date.now() - (clock.serverAt || Date.now())) * tempo / 60_000
       : null;
     this.node?.port.postMessage({ type: "transport", slot, tempo, playing, beat });
   }
 
-  setPlayerMuted(slot, muted) {
+  setPlayerMuted(slot: number, muted: boolean) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
     this.mutedSlots[slot] = !!muted;
     this.syncMixSettings();
   }
 
-  setSoloPlayer(slot) {
+  setSoloPlayer(slot: number | null) {
     if (slot !== null && (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS)) return;
     this.soloSlot = slot;
     this.syncMixSettings();
   }
 
-  setMix(mutedSlots, soloSlot) {
+  setMix(mutedSlots: boolean[], soloSlot: number | null) {
     if (!Array.isArray(mutedSlots) || mutedSlots.length !== PLAYERS
       || !mutedSlots.every((muted) => typeof muted === "boolean")
       || !(soloSlot === null || (Number.isInteger(soloSlot) && soloSlot >= 0 && soloSlot < PLAYERS))) return;
@@ -318,7 +348,7 @@ export class RoomAudio {
     });
   }
 
-  removeVoice(slot) {
+  removeVoice(slot: number) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS) return;
     this.voices[slot] = null;
     this.performances[slot] = null;
@@ -330,10 +360,11 @@ export class RoomAudio {
     return this.queue;
   }
 
-  note(slot, track, note, on) {
+  note(slot: number, track: number, note: number, on: boolean) {
     const next = this.queue.then(() => {
-      if (!this.performances[slot]?.tracks[track]?.voice || !this.node) return;
-      this.node.port.postMessage({
+      const node = this.node;
+      if (!this.performances[slot]?.tracks[track]?.voice || !node) return;
+      node.port.postMessage({
         type: "note",
         slot,
         track,

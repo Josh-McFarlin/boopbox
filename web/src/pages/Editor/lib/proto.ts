@@ -1256,7 +1256,7 @@ function paramKeys(pdesc: (Pick<ParamDesc, "label"> | null | undefined)[], pe0: 
   const seen: Record<string, number> = {}, out: string[] = [];
   for (let i = 0; i < pcount; i++) {
     if (i >= pe0) { out.push("E" + (i - pe0)); continue; }
-    const l = (pdesc[i] && pdesc[i].label) || "P" + i;
+    const l = pdesc[i]?.label || "P" + i;
     seen[l] = (seen[l] || 0) + 1;
     out.push(seen[l] > 1 ? `${l}#${seen[l]}` : l);
   }
@@ -1403,7 +1403,7 @@ function b64enc(b: ArrayLike<number>) {
   }
   return s;
 }
-function b64dec(s: unknown) {
+function b64dec(s: string) {
   s = String(s).replace(/[^A-Za-z0-9+/]/g, "");
   const out = new Uint8Array((s.length * 3) >> 2);
   let o = 0, acc = 0, bits = 0;
@@ -1499,7 +1499,7 @@ async function backupRestore(rq: Rq, file: any, progress: Progress = () => {}) {
   let done = 0;
   for (const id of BK.RESTORE) {
     if (!m.has(id)) continue;
-    const d = m.get(id);
+    const d = m.get(id)!;
     let r = parse[CMD.BK_PUT](await rq(req.bkBegin(id, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
     if ((r.rc === 1 || r.rc === 5) && (id === 8 || id === 9 || id === 10 || id === 11)) continue;   /* a device without the FM6 bank (v8) /
                                                        * the SYN kits (v9) / MIDI LEARN (2.6): skipped (its BK_PUT answers
@@ -1517,7 +1517,7 @@ async function backupRestore(rq: Rq, file: any, progress: Progress = () => {}) {
   }
   for (const id of BK.SAMPLES) {
     if (!m.has(id)) continue;
-    const d = m.get(id), k = id - 32;
+    const d = m.get(id)!, k = id - 32;
     if (!d.length) {
       const e = parse[CMD.SMP_ERASE](await rq(req.smpErase(k), { timeout: 2500, retries: 0 }));
       if (e.rc) throw new BackupError("bkWrite", `erase USR${k + 1} rc ${e.rc}`);
@@ -1541,7 +1541,7 @@ async function backupRestore(rq: Rq, file: any, progress: Progress = () => {}) {
 /* 2.5 Store cartridge: packed patches into B1..Bn in one write. The bank (backup object 8) is read whole, slots
    0..n-1 replaced, the others kept, and written back whole (BK_PUT, as a restore: one flash write, stopped only).
    -> 0 written, 3 the song plays (nothing changed), "old" a device without object 8 (before v9) */
-async function fm6CartWrite(rq, packs) {
+async function fm6CartWrite(rq: Rq, packs: ArrayLike<number>[]): Promise<0 | 3 | "old"> {
   if (!packs.length || packs.length > FM6.BANK_N) throw new Error(`bank: ${packs.length} voices`);
   const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));
   if (L.rc) throw new Error(`bank: LIST rc ${L.rc}`);
@@ -1572,13 +1572,13 @@ async function fm6CartWrite(rq, packs) {
 /* 2.5: a user preset that plays bank slot k (B(k+1)): engine FM6, the voice's name, every value at its default
    (base: P_COUNT values; the macros neutral, so the patch plays as it is), PTCH (P_E7) = F count + k. A user preset
    keeps PTCH, not the patch (a record has no room for 128 bytes): loading it loads B(k+1) */
-function fm6CartPreset(info, base, nf, k, name) {
+function fm6CartPreset(info: Pick<DevInfo, "pcount" | "pe0" | "engines">, base: (number | null | undefined)[], nf: number, k: number, name?: string | null) {
   const p = Array.from({ length: info.pcount }, (_, i) => base[i] ?? 0);
   p[info.pe0 + 7] = nf + k;
   return { engine: info.engines.indexOf("FM6"), name: upName(name || `FM6 B${k + 1}`), p, pattern: [] };
 }
 /* the preset slots for n voices: from "free" = the first n free ones, from a slot s = s..s+n-1; null: no room */
-function fm6CartSlots(list, n, from) {
+function fm6CartSlots(list: { total: number; slots: Pick<UpSlot, "used" | "slot">[] }, n: number, from: "free" | number) {
   if (from === "free") {
     const f = list.slots.filter((x) => !x.used).map((x) => x.slot);
     return f.length >= n ? f.slice(0, n) : null;
@@ -1587,7 +1587,7 @@ function fm6CartSlots(list, n, from) {
   return s >= 0 && s + n <= list.total ? Array.from({ length: n }, (_, i) => s + i) : null;
 }
 /* the presets after the bank (fm6CartWrite): one UP_PUT each -> 0, or the first rc (3: the song plays) */
-async function fm6CartPresets(rq, puts) {
+async function fm6CartPresets(rq: Rq, puts: { slot: number; pt: PatchIn }[]) {
   for (const { slot, pt } of puts) {
     const rc = await bank.put(rq, slot, pt);
     if (rc) return rc;
@@ -1595,20 +1595,21 @@ async function fm6CartPresets(rq, puts) {
   return 0;
 }
 
-async function capturePatch(rq, info, name) {
+async function capturePatch(rq: Rq, info: DevInfo, name: string) {
   const dump = parse[CMD.DUMP](await rq(req.dump()), info);
-  const steps = [];
+  const steps: StepReply[] = [];
   for (let i = 0; i < UP.PAT && i < info.nstep; i++) steps.push(parse[CMD.STEP_GET](await rq(req.stepGet(i))));
   return { patch: cleanPatch({ name, engine: dump.engine, engineName: info.engines[dump.engine], p: dump.p, pattern: patternFromSteps(steps) }), dump, steps };
 }
 
 /* what loading a sound leaves alone (firmware ui.c param_kept): the mix (LEVEL, PAN, MUTE), the pattern
    parameters (LEN, DIV, SWG, GATE) and the key the part plays in (ROOT, SCL, QNT; CHORD from SLOOP 2.0); the track FILTER (2.4) */
-const keptIds = (info) => new Set([0, 25, 26, 27, 29, 30, 31, 32, 39, 40, ...(info.pe0 > 49 ? [49] : []), ...(info.pe0 > 50 ? [50] : []), ...(info.pe0 > 52 ? [51, 52] : [])]);
+const keptIds = (info: Pick<DevInfo, "pe0">) => new Set([0, 25, 26, 27, 29, 30, 31, 32, 39, 40, ...(info.pe0 > 49 ? [49] : []), ...(info.pe0 > 50 ? [50] : []), ...(info.pe0 > 52 ? [51, 52] : [])]);
 /* play a patch without writing flash, as UP_LOAD would load it: SET the engine (G_ENGSEL, engine defaults),
    then every parameter of the sound that differs. Never the pattern (LIVE: a sound never changes the
    sequence), the mix or the key. opt: {gEng: G_ENGSEL id, progress(i, n)} -> {wrote: false} */
-async function auditionPatch(rq, info, pt, opt = {}) {
+async function auditionPatch(rq: Rq, info: Pick<DevInfo, "pcount" | "gcount" | "pe0">, pt: Pick<PatchIn, "engine" | "p">,
+  opt: { gEng?: number; progress?: (i: number, n: number) => void } = {}) {
   await rq(req.set(1, opt.gEng ?? 20, pt.engine));
   const dump = parse[CMD.DUMP](await rq(req.dump()), info);
   const n = Math.min(info.pcount, pt.p.length), kept = keptIds(info);
@@ -1623,9 +1624,9 @@ async function auditionPatch(rq, info, pt, opt = {}) {
 
 /* WATCH on (asking for TRACK_CHANGED too): false when the firmware does not know it (older than protocol v2),
    else 1, or 3 when it also has TRACK_PARAM / TRACK_CHANGED (protocol v4) */
-async function startWatch(rq) {
+async function startWatch(rq: Rq): Promise<number | false> {
   try { const on = parse[CMD.WATCH](await rq(req.watch(3), { timeout: 300, retries: 1, quiet: true })).on; return on & 1 ? on & 3 : false; }
-  catch (e) { if (e.message === "closed") throw e; return false; }
+  catch (e) { if ((e as Error).message === "closed") throw e; return false; }
 }
 
 /* ------------------------------------------------------------ mixer (v3) --- */
@@ -1635,7 +1636,7 @@ async function startWatch(rq) {
    selected track: another track is selected for it and the selection is put back (TRACK pushes no
    RELOAD). ids: {pan: P_PAN id} */
 const mixer = {
-  async read(rq, info, ids) {
+  async read(rq: Rq, info: Pick<DevInfo, "pcount" | "pe0">, ids: { pan?: number | null }) {
     const tr = parse[CMD.TRACK](await rq(req.track()));
     for (let i = 0; i < tr.ntrk; i++) {
       const d = parse[CMD.TRACK_DUMP](await rq(req.trackDump(i)), info);
@@ -1645,9 +1646,9 @@ const mixer = {
     return tr;
   },
   /* -> {track, level, mute} as the device has them now */
-  async setMix(rq, track, level, mute, opt) { return parse[CMD.TRACK_MIX](await rq(req.trackMix(track, level, mute), opt)); },
+  async setMix(rq: Rq, track: number, level?: number | null, mute?: boolean | number, opt?: RequestOpt) { return parse[CMD.TRACK_MIX](await rq(req.trackMix(track, level, mute), opt)); },
   /* -> the pan value after clamping. v4: TRACK_PARAM, the selection stays */
-  async setPan(rq, track, sel, panId, v, v4) {
+  async setPan(rq: Rq, track: number, sel: number, panId: number, v: number, v4?: boolean | number) {
     if (v4) return parse[CMD.TRACK_PARAM](await rq(req.trackParam(track, panId, v), { key: "pan:" + track })).value;
     if (track === sel) return parse[CMD.SET](await rq(req.set(0, panId, v))).value;
     await rq(req.track(track));
@@ -1662,9 +1663,9 @@ const mixer = {
    the loop, then the order into the device's own settings (its colours, calibration... kept). The LIVE page's
    playlist is a list of these files */
 const SONGF = { FORMAT: "sloop-song", VERSION: 1, SECS: [2, 3, 4, 5], ORDER_OFF: 48, ORDER_LEN: 36, PER3: 0x50455233 };
-const songOrderOk = (b) => !!b && b.length >= SONGF.ORDER_OFF + SONGF.ORDER_LEN && ((b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0) === SONGF.PER3;
+const songOrderOk = (b: ArrayLike<number> | null | undefined) => !!b && b.length >= SONGF.ORDER_OFF + SONGF.ORDER_LEN && ((b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0) === SONGF.PER3;
 /* one object, read whole after a LIST (the LIST's item: {id, len, crc}) */
-async function bkReadObj(rq, it) {
+async function bkReadObj(rq: Rq, it: BkItem) {
   const data = new Uint8Array(it.len);
   for (let off = 0; off < it.len; off += 256) {
     const n = Math.min(256, it.len - off);
@@ -1677,7 +1678,7 @@ async function bkReadObj(rq, it) {
   return data;
 }
 /* one object written (0 bytes: an empty section) -> rc 0, or throws (bkStop: the song plays) */
-async function bkWriteObj(rq, id, d, progress = () => {}) {
+async function bkWriteObj(rq: Rq, id: number, d: Uint8Array, progress: (n: number) => void = () => {}) {
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(id, d.length, crc32(d)), { timeout: 1500, retries: 1 }));
   if (r.rc) throw new BackupError("bkWrite", `begin ${id} rc ${r.rc}`);
   for (let off = 0; off < d.length; off += 256) {
@@ -1689,12 +1690,12 @@ async function bkWriteObj(rq, id, d, progress = () => {}) {
   if (r.rc === 3) throw new BackupError("bkStop", "stop the song first");
   if (r.rc) throw new BackupError("bkWrite", `commit ${id} rc ${r.rc}`);
 }
-async function songCapture(rq, info, name, progress = () => {}) {
+async function songCapture(rq: Rq, info: Pick<DevInfo, "version">, name: string, progress: Progress = () => {}): Promise<SongFile> {
   const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));
   if (L.rc) throw new BackupError("bkRc" + L.rc, `LIST rc ${L.rc}`);
   const items = L.items.filter((it) => it.id === 0 || it.id === 1 || (SONGF.SECS.includes(it.id) && it.len));
-  const total = items.reduce((s, it) => s + it.len, 0) || 1, objects = [];
-  let done = 0, order = null;
+  const total = items.reduce((s, it) => s + it.len, 0) || 1, objects: BackupObject[] = [];
+  let done = 0, order: Uint8Array | null = null;
   for (const it of items) {
     const d = await bkReadObj(rq, it);
     done += it.len;
@@ -1706,9 +1707,9 @@ async function songCapture(rq, info, name, progress = () => {}) {
     date: new Date().toISOString(), order: order ? b64enc(order) : null, objects };
 }
 /* a song file -> {objects: Map id -> bytes, order: bytes or null}; every object checked against its length and CRC */
-function songObjects(file) {
+function songObjects(file: any): { objects: Map<number, Uint8Array>; order: Uint8Array | null } {
   if (!file || file.format !== SONGF.FORMAT || !(file.version >= 1) || !Array.isArray(file.objects)) throw new BackupError("songBadFile", "not a BoopBox song");
-  const m = new Map();
+  const m = new Map<number, Uint8Array>();
   for (const o of file.objects) {
     const d = b64dec(o.data || "");
     if (!(o.id === 0 || SONGF.SECS.includes(o.id)) || d.length !== o.len || crc32(d) !== (o.crc >>> 0))
@@ -1721,7 +1722,7 @@ function songObjects(file) {
   return { objects: m, order };
 }
 /* onto the FM-1 (stopped); progress(done, total bytes) */
-async function songLoad(rq, file, progress = () => {}) {
+async function songLoad(rq: Rq, file: any, progress: Progress = () => {}) {
   const { objects: m, order } = songObjects(file);
   const info = parse[CMD.INFO](await rq(req.info(), { timeout: 1000, retries: 2 }));
   const newest = Math.max(0, ...[...m.values()].map(bkProjFormat));
@@ -1729,9 +1730,9 @@ async function songLoad(rq, file, progress = () => {}) {
   if (bkSloopInto(m, [...m.keys()], info)) throw new BackupError("bkSloop", `${file.firmware || "?"} -> ${info.version}`);
   const total = [...m.values()].reduce((s, d) => s + d.length, 0) || 1;
   let done = 0;
-  const step = (n) => { done += n; progress(done, total); };
+  const step = (n: number) => { done += n; progress(done, total); };
   for (const id of SONGF.SECS) await bkWriteObj(rq, id, m.get(id) || new Uint8Array(0), step);
-  await bkWriteObj(rq, 0, m.get(0), step);
+  await bkWriteObj(rq, 0, m.get(0)!, step);
   if (order) {                                      /* the order, into the settings as the FM-1 has them */
     const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));
     const it = L.rc ? null : L.items.find((x) => x.id === 1);
@@ -1755,25 +1756,27 @@ async function songLoad(rq, file, progress = () => {}) {
    single voice (F0 43 0n 00 01 1B, 155 bytes, checksum, F7: 163 bytes) or 32 packed voices (F0 43 0n 09 20 00,
    4096 bytes, checksum, F7: 4104 bytes); raw 155 / 128 / 4096-byte files are read too, and damaged ones as far
    as they go (parseSysex). */
+/** FM6.parseSysex: the voices of a file */
+export interface Fm6Sysex { voices: { v: Uint8Array; name: string }[]; badSum: number; short: number; skipped: number; kinds: string[]; sysex: boolean }
 const FM6 = (() => {
   /* per operator byte: name, highest value; then the voice bytes */
-  const OP = [["R1", 99], ["R2", 99], ["R3", 99], ["R4", 99], ["L1", 99], ["L2", 99], ["L3", 99], ["L4", 99],
+  const OP: [name: string, max: number][] = [["R1", 99], ["R2", 99], ["R3", 99], ["R4", 99], ["L1", 99], ["L2", 99], ["L3", 99], ["L4", 99],
     ["BP", 99], ["LD", 99], ["RD", 99], ["LC", 3], ["RC", 3], ["RS", 7], ["AMS", 3], ["KVS", 7], ["OL", 99],
     ["MODE", 1], ["FC", 31], ["FF", 99], ["DET", 14]];
-  const VOICE = [["PR1", 99], ["PR2", 99], ["PR3", 99], ["PR4", 99], ["PL1", 99], ["PL2", 99], ["PL3", 99], ["PL4", 99],
+  const VOICE: [name: string, max: number][] = [["PR1", 99], ["PR2", 99], ["PR3", 99], ["PR4", 99], ["PL1", 99], ["PL2", 99], ["PL3", 99], ["PL4", 99],
     ["ALG", 31], ["FB", 7], ["OKS", 1], ["LFS", 99], ["LFD", 99], ["LPMD", 99], ["LAMD", 99], ["LKS", 1], ["LFW", 5],
     ["LPMS", 7], ["TRNSP", 48]];
   const OPI = Object.fromEntries(OP.map(([n], i) => [n, i])), VI = Object.fromEntries(VOICE.map(([n], i) => [n, 126 + i]));
   const NAME = 145, SIZE = 155, PACKED = 128;
-  const max = (i) => (i < 126 ? OP[i % 21][1] : i < NAME ? VOICE[i - 126][1] : 126);
+  const max = (i: number) => (i < 126 ? OP[i % 21][1] : i < NAME ? VOICE[i - 126][1] : 126);
   /* byte i of operator n (1..6) */
-  const at = (n, field) => (6 - n) * 21 + OPI[field];
-  function sanitize(v) {
+  const at = (n: number, field: string) => (6 - n) * 21 + OPI[field];
+  function sanitize(v: Bytes) {
     const o = Uint8Array.from(v.slice(0, SIZE));
     for (let i = 0; i < SIZE; i++) o[i] = i >= NAME ? (o[i] < 32 || o[i] > 126 ? 32 : o[i]) : Math.min(o[i], max(i));
     return o;
   }
-  function unpack(b) {                            /* eng_fm6.c fm6_unpack */
+  function unpack(b: ArrayLike<number>) {                            /* eng_fm6.c fm6_unpack */
     const v = new Uint8Array(SIZE);
     for (let k = 0; k < 6; k++) {
       const o = k * 17, d = k * 21;
@@ -1789,8 +1792,8 @@ const FM6 = (() => {
     for (let i = 0; i < 10; i++) v[NAME + i] = b[118 + i] & 127;
     return sanitize(v);
   }
-  function pack(v) {                              /* eng_fm6.c fm6_pack */
-    const b = new Array(PACKED).fill(0);
+  function pack(v: ArrayLike<number>): number[] {  /* eng_fm6.c fm6_pack */
+    const b: number[] = new Array(PACKED).fill(0);
     for (let k = 0; k < 6; k++) {
       const o = k * 17, d = k * 21;
       for (let i = 0; i < 11; i++) b[o + i] = v[d + i] & 127;
@@ -1805,22 +1808,22 @@ const FM6 = (() => {
     for (let i = 0; i < 10; i++) b[118 + i] = v[NAME + i] & 127;
     return b;
   }
-  const name = (v) => String.fromCharCode(...v.slice(NAME, NAME + 10)).replace(/\s+$/, "");
-  function setName(v, s) {
+  const name = (v: Bytes) => String.fromCharCode(...v.slice(NAME, NAME + 10)).replace(/\s+$/, "");
+  function setName<T extends Bytes>(v: T, s: unknown) {
     const t = String(s).toUpperCase().replace(/[^\x20-\x7E]/g, " ").slice(0, 10).padEnd(10, " ");
     for (let i = 0; i < 10; i++) v[NAME + i] = t.charCodeAt(i);
     return v;
   }
-  const checksum = (a) => (128 - (a.reduce((s, x) => s + x, 0) & 127)) & 127;
+  const checksum = (a: { reduce(cb: (s: number, x: number) => number, init: number): number }) => (128 - (a.reduce((s, x) => s + x, 0) & 127)) & 127;
   /* every voice in a file's bytes: [{name, v}] (after Felucca 1.0.3's editor: files cut short, banks with a bad
      checksum, several banks or voices in one file, raw 4096-byte banks one after another are read); badSum: messages
      whose checksum did not match (still read), short: messages cut short (their whole voices read), skipped / kinds:
      the SysEx that were not 6-operator voices (4-op, another maker, universal...), sysex: the file held any */
-  function parseSysex(bytes) {
-    const d = Uint8Array.from(bytes), voices = [], kinds = [];
+  function parseSysex(bytes: ArrayLike<number>): Fm6Sysex {
+    const d = Uint8Array.from(bytes), voices: { v: Uint8Array; name: string }[] = [], kinds: string[] = [];
     let badSum = 0, short = 0, skipped = 0;
-    const add = (v) => voices.push({ v, name: name(v) });
-    const kind = (k) => { skipped++; if (!kinds.includes(k)) kinds.push(k); };
+    const add = (v: Uint8Array) => voices.push({ v, name: name(v) });
+    const kind = (k: string) => { skipped++; if (!kinds.includes(k)) kinds.push(k); };
     const sysex = d.includes(0xF0);
     if (d[0] !== 0xF0 && !sysex) {                  /* raw data: banks of 4096, one voice of 155 or packed 128 */
       if (d.length && d.length % 4096 === 0) {
@@ -1856,13 +1859,13 @@ const FM6 = (() => {
     }
     return { voices, badSum, short, skipped, kinds, sysex };
   }
-  function singleSysex(v, ch = 0) {
+  function singleSysex(v: Bytes, ch = 0) {
     const data = Array.from(sanitize(v));
     return Uint8Array.from([0xF0, 0x43, ch & 15, 0, 0x01, 0x1B, ...data, checksum(data), 0xF7]);
   }
-  function bankSysex(voices, ch = 0) {            /* up to 32 voices (155 bytes each), the rest the init voice */
-    const data = [];
-    for (let k = 0; k < 32; k++) data.push(...(voices[k] ? pack(voices[k]) : INIT_PK));
+  function bankSysex(voices: (ArrayLike<number> | null | undefined)[], ch = 0) {   /* up to 32 voices (155 bytes each), the rest the init voice */
+    const data: number[] = [];
+    for (let k = 0; k < 32; k++) data.push(...(voices[k] ? pack(voices[k]!) : INIT_PK));
     return Uint8Array.from([0xF0, 0x43, ch & 15, 9, 0x20, 0, ...data, checksum(data), 0xF7]);
   }
   /* the 32 algorithms (msfa's tables; fm6_core.c FM6_ALG): per operator, the sixth first */
@@ -1878,10 +1881,10 @@ const FM6 = (() => {
     [0x04, 0xc1, 0x11, 0x14, 0x01, 0x14], [0xc1, 0x14, 0x01, 0x14, 0x04, 0x04], [0x04, 0xc1, 0x11, 0x14, 0x04, 0x04],
     [0xc1, 0x14, 0x04, 0x04, 0x04, 0x04], [0xc4, 0x04, 0x04, 0x04, 0x04, 0x04]];
   /* operators 1..6 that are carriers (on the output bus), and the one with the feedback, of algorithm a (0..31) */
-  const carriers = (a) => [1, 2, 3, 4, 5, 6].filter((n) => !(ALG[a & 31][6 - n] & 3));
-  const feedbackOp = (a) => [1, 2, 3, 4, 5, 6].find((n) => (ALG[a & 31][6 - n] & 0xc0) === 0xc0);
+  const carriers = (a: number) => [1, 2, 3, 4, 5, 6].filter((n) => !(ALG[a & 31][6 - n] & 3));
+  const feedbackOp = (a: number) => [1, 2, 3, 4, 5, 6].find((n) => (ALG[a & 31][6 - n] & 0xc0) === 0xc0);
   /* an operator's frequency as text: x ratio, or Hz for a fixed one (msfa note osc_freq) */
-  function freqText(v, n) {
+  function freqText(v: ArrayLike<number>, n: number) {
     const fc = v[at(n, "FC")], ff = v[at(n, "FF")];
     if (v[at(n, "MODE")]) return (10 ** ((fc & 3) + ff / 100)).toPrecision(4) + " Hz";
     return "x" + ((fc ? fc : 0.5) * (1 + ff / 100)).toFixed(2);
@@ -1899,16 +1902,16 @@ const FM6 = (() => {
   ];
   /* backup object 8, the PTCH bank as the firmware stores it (fm6_bank.c fm6_bank_t, 3472 bytes): "FM6B", version 1,
      27 slots, the used bits, 4 reserved, then 27 packed records (an empty slot: zeros). slots: [packed 128 | null] */
-  function bankObj(slots) {
+  function bankObj(slots: (ArrayLike<number> | null | undefined)[]) {
     const o = new Uint8Array(16 + 27 * PACKED);
     let used = 0;
     o.set([0x46, 0x4D, 0x36, 0x42, 1, 0, 27, 0]);
-    for (let k = 0; k < 27; k++) if (slots[k]) { o.set(Array.from(slots[k], (x) => x & 0x7F), 16 + k * PACKED); used |= 1 << k; }
+    for (let k = 0; k < 27; k++) if (slots[k]) { o.set(Array.from(slots[k]!, (x) => x & 0x7F), 16 + k * PACKED); used |= 1 << k; }
     o.set([used & 255, (used >> 8) & 255, (used >> 16) & 255, (used >>> 24) & 255], 8);
     return o;
   }
   /* bytes -> [packed | null] x 27; an empty object (length 0): all empty; anything else: null (not a bank) */
-  function bankUnobj(b) {
+  function bankUnobj(b: Uint8Array | null | undefined): (Uint8Array | number[] | null)[] | null {
     if (!b || !b.length) return new Array(27).fill(null);
     if (b.length !== 16 + 27 * PACKED || b[0] !== 0x46 || b[1] !== 0x4D || b[2] !== 0x36 || b[3] !== 0x42 || b[4] !== 1 || b[6] !== 27) return null;
     const used = (b[8] | (b[9] << 8) | (b[10] << 16) | (b[11] << 24)) >>> 0;
@@ -1916,7 +1919,7 @@ const FM6 = (() => {
     return Array.from({ length: 27 }, (_, k) => ((used >> k) & 1 ? b.slice(16 + k * PACKED, 16 + (k + 1) * PACKED) : null));
   }
   const init = () => unpack(INIT_PK);
-  const factory = (k) => unpack(FACTORY_PK[k]);
+  const factory = (k: number) => unpack(FACTORY_PK[k]);
   return { OP, VOICE, OPI, VI, NAME, SIZE, PACKED, max, at, sanitize, unpack, pack, name, setName, checksum, parseSysex,
     singleSysex, bankSysex, ALG, carriers, feedbackOp, freqText, INIT_PK, FACTORY_PK, init, factory, bankObj, bankUnobj,
     TARGET: { TRACK: 0, BANK: 1, FACTORY: 2 }, BANK_N: 27 };
@@ -1930,12 +1933,57 @@ function mockSettings() {
 }
 /* backup object 10 at its default: nothing learned, CH1-3 = 1 2 3, drums 10, OTHER SEL, BEND 2 (a 32 / 36-byte one: the
    map, the map and the channels) */
-const mlDefault = (b) => b.every((x, i) => i < 32 ? !x : i === 32 ? x === 1 : i === 33 ? x === 2 : i === 34 ? x === 3 : i === 35 ? x === 10 : i === 36 ? x === 2 : !x);
-function makeMockDevice(opt = {}) {
+const mlDefault = (b: Uint8Array | number[]) => b.every((x, i) => i < 32 ? !x : i === 32 ? x === 1 : i === 33 ? x === 2 : i === 34 ? x === 3 : i === 35 ? x === 10 : i === 36 ? x === 2 : !x);
+/** makeMockDevice's options */
+export interface MockOpt {
+  legacy?: boolean; v3?: boolean; noBackup?: boolean; v7?: boolean; v8?: boolean; v9?: boolean; v10?: boolean; v11?: boolean; v12?: boolean;
+  auto?: boolean; watchMs?: number; slots?: number;
+  onChange?: (cmd: number, a: number[]) => void; onNote?: (data: number[]) => void;
+}
+/** a parameter of the mock (as DESC sends it) */
+export interface MockDesc { label: string; fmt: number; min: number; max: number; def: number; names: string[] | null; unit: string }
+/** a step as the mock keeps it (lvl / rat always there) */
+export interface MockStep extends Step { lvl: number; rat: number }
+export interface MockTrack {
+  engine: number; preset: number; drum: boolean; fm6: number[]; p: number[]; step: MockStep[]; dstep: DrumStep[] | null;
+  micro: number[]; locks: Lock[]; fill: number[];
+}
+/** a project slot / the snapshot of the mock's tracks (a JSON copy) */
+export interface MockProject { tracks: MockTrack[]; sel: number; g: number[] }
+export interface MockSmpSlot { flash: Uint8Array; zones: number; name: string; len: number; next: number }
+export interface MockLive {
+  t0: number; sec: number; next: number; nextAt: number; songMode: boolean; srec: number; fillHeld: boolean; fillBar: boolean;
+  fillAt: number; fillTo: number; fx: number; recWait: boolean; undo: number; armed: number; armedAt: number; taps: number[];
+  rolls: Set<number>; erase: Set<number>; pattern: number[]; chain: number[]; thr: number; master: number; dtw: number[];
+  ft?: boolean; c?: number;
+}
+/** the mock device's state (engine, preset, p, step: the selected track's) */
+export interface MockState {
+  tracks: MockTrack[]; sel: number; rec: number; solo: number; g: number[]; slots: (MockProject | null)[]; smp: MockSmpSlot[];
+  bank: (PatchIn & { name: string; pattern: PatStep[] } | null)[]; fm6bank: (number[] | Uint8Array | null)[]; settings: Uint8Array;
+  dsyn: DsynKit[] | null; dsynStored: Uint8Array | null; dsynPlayed: { k: number; lane: number; vel: number; sound: Uint8Array }[];
+  ml: Uint8Array | null; bkSnap: Map<number, Uint8Array> | null; bkPut: { id: number; len: number; crc: number; pos: number; buf: Uint8Array } | null;
+  watch: boolean; v4: boolean; lastReq: number; playing: boolean; live: MockLive; midiIn: number[][];
+  theme?: Uint8Array | null; p7?: Proj7 | null;
+  engine: number; preset: number; p: number[]; step: MockStep[];
+}
+/** a fake MIDI port of the mock */
+export interface MockPort {
+  id: string; name: string; type: string; state: string;
+  onmidimessage?: ((e: { data: Uint8Array }) => void) | null;
+  send?: (data: number[] | Uint8Array) => void;
+}
+export interface MockDevice {
+  state: MockState;
+  sim: Record<string, (...args: any[]) => unknown>;
+  stop: () => void;
+  access: { sysexEnabled: boolean; inputs: Map<string, MockPort>; outputs: Map<string, MockPort>; onstatechange: null };
+}
+function makeMockDevice(opt: MockOpt = {}): MockDevice {
   const NONOFF = ["OFF", "ON"], NDIV = ["1/4", "1/8", "1/16", "1/32", "8T", "16T"], NGO = ["--", "GO"], NDASH = ["--"];
   const NSDIV = [...NDIV, "1/2", "1BAR", "2BAR"], NDLY = [...NDIV, "1/8D", "1/16D", "1/4D"];   /* SLOOP 2.4: long steps, dotted delays */
-  const D = (label, fmt, min, max, def, names = null, unit = "") => ({ label, fmt, min, max, def, names, unit });
-  const E = (label, names, def) => D(label, F.ENUM, 0, names.length - 1, def, names);
+  const D = (label: string, fmt: number, min: number, max: number, def: number, names: string[] | null = null, unit = ""): MockDesc => ({ label, fmt, min, max, def, names, unit });
+  const E = (label: string, names: string[], def: number) => D(label, F.ENUM, 0, names.length - 1, def, names);
   const TP = [
     D("LVL", F.INT, 0, 127, 104),
     D("ATK", F.TIME, 0, 127, 10), D("DEC", F.TIME, 0, 127, 70), D("SUS", F.PCT, 0, 127, 90), D("REL", F.TIME, 0, 127, 60),
@@ -1989,38 +2037,38 @@ function makeMockDevice(opt = {}) {
   /* a GM note -> its drum lane (drums.c LANE_OF_GM: 35..81) */
   const LANE_OF_GM = [1, 0, 7, 2, 3, 8, 9, 4, 9, 6, 9, 5, 10, 10, 11, 10, 12, 11, 12, 13, 11, 15, 11, 13, 12, 14, 14, 14, 14, 14,
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15];
-  const laneOf = (n) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
+  const laneOf = (n: number) => (n < 35 ? 0 : n > 81 ? 13 : LANE_OF_GM[n - 35]);
   const v5 = !opt.legacy && !opt.v3;              /* SLOOP 2.0: steps with level / ratchet, DRUM_STEP, TRACK solo */
   const mockProto = opt.noBackup ? 5 : opt.v7 ? 7 : opt.v8 ? 8 : opt.v9 ? 9 : opt.v10 ? 10 : opt.v11 ? 11 : opt.v12 ? 12 : 13;   /* INFO's protocol */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
-  const dOld = (d) => {
-    const notes = [];
+  const dOld = (d: DrumStep): MockStep => {
+    const notes: number[] = [];
     let hard = 0;
-    for (let l = 0; l < 16 && notes.length < 4; l++) if ((d.on >> l) & 1) { notes.push(DRUM_LANES[l][0]); hard |= d.lvl[l] === 3; }
+    for (let l = 0; l < 16 && notes.length < 4; l++) if ((d.on >> l) & 1) { notes.push(DRUM_LANES[l][0]); hard |= +(d.lvl[l] === 3); }
     const n = notes.length;
     return { n, notes: [...notes, 0, 0, 0, 0].slice(0, 4), time: n ? 0 : 2, flags: hard ? 1 : 0, vel: n ? 100 : 0, lvl: 0, rat: 0 };
   };
   /* an old step written into the drum track: its notes onto their lanes (ed_dstep_from_old) */
-  const dFromOld = (d, n, notes, time, flags) => {
+  const dFromOld = (d: DrumStep, n: number, notes: number[], time: number, flags: number) => {
     Object.assign(d, emptyDrum());
     if (time !== 0) return;
     for (let i = 0; i < Math.min(4, n); i++) { const l = laneOf(notes[i] & 0x7F); d.on |= 1 << l; d.lvl[l] = flags & 1 ? 3 : 0; }
   };
   /* a step's bytes as STEP_GET sends them (v5: + lvl, hi, rat) */
-  const stepOut = (b, x) => {
+  const stepOut = (b: (x: number) => void, x: Step) => {
     b(x.n); x.notes.forEach(b); b(x.time); b(x.flags); b(x.vel);
     if (v5) { b(x.lvl | 0); b((((x.lvl | 0) >> 7) & 1) | ((((x.rat | 0) >> 7) & 1) << 1)); b(x.rat | 0); }
   };
   /* a step written (n, 4 notes, time, flags, vel [, lvl, hi, rat]) */
-  const stepIn = (x, a) => {
+  const stepIn = (x: Step, a: number[]) => {
     x.n = Math.min(4, a[0]); x.notes = a.slice(1, 5); x.time = Math.min(2, a[5]); x.flags = a[6] & 3; x.vel = a[7];
     x.lvl = a.length >= 11 ? (a[8] & 0x7F) | ((a[9] & 1) << 7) : 0;
     x.rat = a.length >= 11 ? (a[10] & 0x7F) | (((a[9] >> 1) & 1) << 7) : 0;
   };
   const NONE = D("-", F.INT, 0, 0, 0);
   const RATIO = [".5", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "16"];
-  const P = (name, e, env = [10, 70, 90, 60], mono = 0, pat = 0) => ({ name, e, env, mono, pat });
-  const ENG = [
+  const P = (name: string, e: number[], env = [10, 70, 90, 60], mono = 0, pat = 0) => ({ name, e, env, mono, pat });
+  const ENG: { name: string; titles: string[]; edit: MockDesc[]; presets: ReturnType<typeof P>[] }[] = [
     { name: "ANALOG", titles: ["OSC", "FLT"], edit: [E("WAVE", ["SAW", "SQR", "TRI", "SIN", "PWM"], 0), D("DTN", F.INT, 0, 127, 10, null, "ct"), D("MIX", F.PCT, 0, 127, 64),
         D("NOIS", F.PCT, 0, 127, 0), D("CUT", F.CUTOFF, 0, 127, 90), D("RES", F.PCT, 0, 127, 30), D("DRV", F.PCT, 0, 127, 0), D("KTR", F.PCT, 0, 127, 64)],
       presets: [P("808 BOOM", [3, 0, 0, 0, 127, 0, 48, 0], [0, 112, 0, 52], 1), P("808 DIRTY", [3, 0, 0, 0, 96, 12, 118, 30], [0, 108, 0, 46], 1),
@@ -2226,12 +2274,12 @@ function makeMockDevice(opt = {}) {
     [[60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75], [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]],
   ];
   const P_E0 = TP.length, P_COUNT = P_E0 + 8, G_COUNT = GP.length, NSTEP = 64, G_ENGSEL = 20, P_SLCR = 45, P_CHORD = 49;
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
   /* v13 (BoopBox): eight tracks, drums on 4 and 8 (each drum track's level its own P_LEVEL); before (SLOOP, firmware v3..v12):
      four, the drum track last (its level G_DRLVL). engine / preset / p / step below are the selected track's */
   const NTRK = mockProto >= 13 ? 8 : 4, TRK_DRUM = 3, EIGHT = NTRK >= 8;
-  const isDrumIdx = (i) => (EIGHT ? i % 4 === 3 : i === TRK_DRUM);
-  const newTrack = (i) => ({ engine: 0, preset: 0, drum: isDrumIdx(i), fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
+  const isDrumIdx = (i: number) => (EIGHT ? i % 4 === 3 : i === TRK_DRUM);
+  const newTrack = (i: number): MockTrack => ({ engine: 0, preset: 0, drum: isDrumIdx(i), fm6: FM6.INIT_PK.slice(),   /* fm6: the FM6 patch (eng_fm6.c fm6_patch) */
     p: TP.map((d) => d.def).concat(isDrumIdx(i) ? [5, 0, 0, 0, 0, 0, 0, 0] : new Array(8).fill(0)),
     step: Array.from({ length: NSTEP }, () => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 })),
     dstep: isDrumIdx(i) ? Array.from({ length: NSTEP }, emptyDrum) : null,
@@ -2257,9 +2305,10 @@ function makeMockDevice(opt = {}) {
       fx: -1, recWait: false, undo: 0, armed: -1, armedAt: 0, taps: [],
       rolls: new Set(), erase: new Set(), pattern: [], chain: [], thr: 0, master: 0, dtw: new Array(16).fill(8 | 4 << 4) },
     midiIn: [],
-  };
+  } as MockState;
   for (const k of ["engine", "preset", "p", "step"]) {
-    Object.defineProperty(st, k, { enumerable: false, get: () => st.tracks[st.sel][k], set: (v) => { st.tracks[st.sel][k] = v; } });
+    Object.defineProperty(st, k, { enumerable: false, get: () => (st.tracks[st.sel] as unknown as Record<string, unknown>)[k],
+      set: (v) => { (st.tracks[st.sel] as unknown as Record<string, unknown>)[k] = v; } });
   }
   const drumSel = () => st.tracks[st.sel].drum;
   const ml48 = () => { const d = new Uint8Array(48); if (st.ml) d.set(st.ml.slice(0, 48)); else d.set([1, 2, 3, 10, 2], 32); return d; };
@@ -3099,10 +3148,12 @@ function previewSnapshot(st, includeSamples = false) {
    tune: semitones -12..12, gain: dB -24..0, len: samples kept (0 = all)}; pads[l] for lane l, or null. */
 const KIT = { TUNE: 12, GAIN_MIN: -24, FADE: Math.round(SMP.RATE * 0.004) };
 /* a pad as it goes to the slot: tuned (played faster or slower, as a sampler does), cut, faded out, its gain */
-function kitPad(p) {
+/** a pad of the DRUM KIT page */
+export interface KitPad { s: Int16Array; fname?: string; tune?: number; gain?: number; len?: number }
+function kitPad(p: KitPad) {
   let x = Array.from(p.s);
   if (p.tune) x = resample(x, SMP.RATE * Math.pow(2, p.tune / 12), SMP.RATE);
-  const n = Math.max(1, Math.min(x.length, p.len > 0 ? Math.round(p.len) : x.length));
+  const n = Math.max(1, Math.min(x.length, p.len! > 0 ? Math.round(p.len!) : x.length));
   const g = Math.pow(10, Math.max(KIT.GAIN_MIN, Math.min(0, p.gain || 0)) / 20), out = new Int16Array(n);
   const fade = n < x.length ? Math.min(KIT.FADE, n) : 0;   /* a cut sound ends in 4 ms, not with a click */
   for (let i = 0; i < n; i++) {
@@ -3112,36 +3163,36 @@ function kitPad(p) {
   return out;
 }
 /* the slot's zones: one per pad, lo = hi = root = its lane's note */
-function kitZones(pads) {
-  const zs = [];
+function kitZones(pads: (KitPad | null | undefined)[]) {
+  const zs: (SlotZoneIn & { lane: number })[] = [];
   pads.forEach((p, l) => { if (p) zs.push({ s: kitPad(p), root: DRUM_LANES[l][0], lo: DRUM_LANES[l][0], hi: DRUM_LANES[l][0], lane: l, fname: p.fname }); });
   return zs;
 }
 /* the samples a pad keeps after tune and cut (no encode: for the meter while the knobs move) */
-const kitLen = (p) => { const full = p.tune ? Math.floor((p.s.length - 1) / Math.pow(2, p.tune / 12)) : p.s.length; return Math.max(1, Math.min(full, p.len > 0 ? Math.round(p.len) : full)); };
-const kitBytes = (pads) => pads.reduce((a, p) => a + (p ? (kitLen(p) + 1) >> 1 : 0), 0);
+const kitLen = (p: KitPad) => { const full = p.tune ? Math.floor((p.s.length - 1) / Math.pow(2, p.tune / 12)) : p.s.length; return Math.max(1, Math.min(full, p.len! > 0 ? Math.round(p.len!) : full)); };
+const kitBytes = (pads: (KitPad | null | undefined)[]) => pads.reduce((a, p) => a + (p ? (kitLen(p) + 1) >> 1 : 0), 0);
 /* shorten the longest pads to fit `room` bytes (as CHOP's fit): their len, in samples. bins 2 (KIT USR3+4): the
    room of two slots, no pad longer than one slot holds, and the pads must also share out (kitSplit) */
-function kitFit(pads, room = SMP.MAX_DATA, bins = 1) {
+function kitFit(pads: (KitPad | null | undefined)[], room = SMP.MAX_DATA, bins = 1): boolean {
   if (bins > 1) {
     let changed = false;
     for (const p of pads) if (p && ((kitLen(p) + 1) >> 1) > room) { p.len = room * 2 - 1; changed = true; }
     for (let r = room * 2; !kitSplit(pads, room) && r > 64; r = Math.floor(r * 0.98)) { kitFit(pads, r); changed = true; }
     return changed;
   }
-  const use = pads.map((p, l) => (p ? { l, n: kitLen(p) } : null)).filter(Boolean);
-  const sum = (L) => use.reduce((a, u) => a + ((Math.min(u.n, L) + 1) >> 1), 0);
+  const use = pads.map((p, l) => (p ? { l, n: kitLen(p) } : null)).filter((u): u is { l: number; n: number } => !!u);
+  const sum = (L: number) => use.reduce((a, u) => a + ((Math.min(u.n, L) + 1) >> 1), 0);
   if (sum(Infinity) <= room) return false;
   let lo = 1, hi = Math.max(...use.map((u) => u.n));
   while (lo < hi) { const L = (lo + hi + 1) >> 1; if (sum(L) <= room) lo = L; else hi = L - 1; }
-  for (const u of use) if (u.n > lo) pads[u.l].len = lo;   /* (len counts the samples after the tune) */
+  for (const u of use) if (u.n > lo) pads[u.l]!.len = lo;   /* (len counts the samples after the tune) */
   return true;
 }
 /* KIT USR3+4: the pads shared out over two slots of `room` bytes each, every pad whole in one (the biggest first,
    each into the emptier slot that takes it): [lanes of USR3, lanes of USR4], or null when they do not fit */
-function kitSplit(pads, room = SMP.MAX_DATA) {
-  const items = pads.map((p, l) => (p ? { l, b: (kitLen(p) + 1) >> 1 } : null)).filter(Boolean).sort((a, b) => b.b - a.b || a.l - b.l);
-  const bins = [[], []], used = [0, 0];
+function kitSplit(pads: (KitPad | null | undefined)[], room = SMP.MAX_DATA): number[][] | null {
+  const items = pads.map((p, l) => (p ? { l, b: (kitLen(p) + 1) >> 1 } : null)).filter((x): x is { l: number; b: number } => !!x).sort((a, b) => b.b - a.b || a.l - b.l);
+  const bins: number[][] = [[], []], used = [0, 0];
   for (const it of items) {
     const order = used[0] <= used[1] ? [0, 1] : [1, 0];
     const k = order.find((j) => used[j] + it.b <= room);
@@ -3152,7 +3203,7 @@ function kitSplit(pads, room = SMP.MAX_DATA) {
   return bins.map((x) => x.sort((a, b) => a - b));
 }
 /* a file name -> the lane it most likely is (-1: none): "BD 808.wav" kick, "OH_01" open hat, "Low Tom" ... */
-const KIT_WORDS = [
+const KIT_WORDS: [number, RegExp][] = [
   [5, /open|\boh\b|ophat|o ?hat/], [6, /pedal|\bph\b|foot/], [4, /clos|\bch\b|\bhh\b|hi ?hat|hihat|\bhat/],
   [7, /\brim|\brs\b|side ?stick|stick/], [3, /clap|\bcp\b|\bclp\b|snap/], [1, /kick ?2|\bbd ?2|sub ?kick/],
   [0, /kick|\bbd\b|bass ?drum|\bkik\b|\bkck\b/], [8, /snare ?2|\bsd ?2|snr ?2/], [2, /snare|\bsd\b|\bsnr\b/],
@@ -3160,14 +3211,14 @@ const KIT_WORDS = [
   [11, /crash|\bcr\b|\bcy\b|cymbal|splash|china/], [12, /ride|\brd\b/], [13, /shak|\bsh\b|maraca|cabasa|tamb|\bshk\b/],
   [14, /conga|bongo|\bcg\b|\bperc|timbal|djembe/], [15, /cow ?bell|\bcb\b|bell|block|clave|agogo/]];
 /* the lane to try next when a sound's lane is taken */
-const KIT_ALT = { 0: 1, 1: 0, 2: 8, 8: 2, 3: 8, 4: 6, 6: 4, 5: 4, 7: 3, 9: 10, 10: 9, 11: 12, 12: 11, 13: 14, 14: 13, 15: 14 };
-function kitLaneOf(name) {
+const KIT_ALT: Record<number, number> = { 0: 1, 1: 0, 2: 8, 8: 2, 3: 8, 4: 6, 6: 4, 5: 4, 7: 3, 9: 10, 10: 9, 11: 12, 12: 11, 13: 14, 14: 13, 15: 14 };
+function kitLaneOf(name: string) {
   const n = String(name).toLowerCase().replace(/\.[a-z0-9]{2,4}$/, "").replace(/[_\-.()\[\]]+/g, " ");
   for (const [l, re] of KIT_WORDS) if (re.test(n)) return l;
   return -1;
 }
 /* where a new sound goes: its lane, else that lane's alternative, else (or by name nothing) the first free lane */
-function kitPlace(pads, name, want = -1) {
+function kitPlace(pads: (KitPad | null | undefined)[], name: string, want = -1) {
   const l = want >= 0 ? want : kitLaneOf(name);
   if (l >= 0 && !pads[l]) return l;
   if (want >= 0) return want;                            /* (dropped on a pad: that pad) */
@@ -3176,12 +3227,12 @@ function kitPlace(pads, name, want = -1) {
   return f >= 0 ? f : -1;
 }
 /* a ZIP's files [{name, data}] (stored or deflated: DecompressionStream) */
-async function zipRead(bytes) {
-  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+async function zipRead(bytes: Uint8Array | ArrayBuffer | ArrayLike<number>): Promise<{ name: string; data: Uint8Array }[]> {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes as ArrayBuffer), v = new DataView(b.buffer, b.byteOffset, b.byteLength);
   let e = b.length - 22;
   while (e >= 0 && v.getUint32(e, true) !== 0x06054B50) e--;
   if (e < 0) throw new Error("not a zip");
-  const n = v.getUint16(e + 10, true), out = [];
+  const n = v.getUint16(e + 10, true), out: { name: string; data: Uint8Array }[] = [];
   let c = v.getUint32(e + 16, true);
   for (let k = 0; k < n; k++) {
     if (v.getUint32(c, true) !== 0x02014B50) throw new Error("bad zip directory");
@@ -3192,7 +3243,7 @@ async function zipRead(bytes) {
     if (!name.endsWith("/")) {
       if (method === 0) out.push({ name, data: raw.slice() });
       else if (method === 8 && typeof DecompressionStream !== "undefined") {
-        const st = new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        const st = new Blob([raw as Uint8Array<ArrayBuffer>]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
         out.push({ name, data: new Uint8Array(await new Response(st).arrayBuffer()) });
       } else throw new Error(`zip method ${method}`);
     }
@@ -3205,43 +3256,47 @@ async function zipRead(bytes) {
 /* A synth track's steps as a piano roll. A NOTE step starts a chord (up to 4 notes, one length for all of
    them: the device ties every note of a step), the TIE steps after it hold it, a REST is silence. These
    functions never change their input: they return the steps to write, as a Map index -> new step. */
+/** a chord of the piano roll (ROLL.chords) */
+export interface RollChord { at: number; dur: number; notes: number[]; vel: number; flags: number }
+/** what ROLL / SMF read of a step */
+export type RollStep = Step | null | undefined;
 const ROLL = {
   DIV_PER_BAR: [4, 8, 16, 32, 12, 24, 2, 1, 0.5],     /* steps in a 4/4 bar for DIV (params.c N_SDIV) */
-  LENGTHS: [["whole", 1], ["half", 1 / 2], ["quarter", 1 / 4], ["eighth", 1 / 8], ["sixteenth", 1 / 16]],
+  LENGTHS: [["whole", 1], ["half", 1 / 2], ["quarter", 1 / 4], ["eighth", 1 / 8], ["sixteenth", 1 / 16]] as [string, number][],
   /* a length (a fraction of a bar) in steps at DIV div: at least one step */
-  steps: (frac, div) => Math.max(1, Math.round((ROLL.DIV_PER_BAR[div] ?? 16) * frac)),
-  rest: () => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 }),
-  tie: () => ({ n: 0, notes: [0, 0, 0, 0], time: 1, flags: 0, vel: 0, lvl: 0, rat: 0 }),
-  isNote: (s) => !!s && s.time === 0 && s.n > 0,
+  steps: (frac: number, div: number): number => Math.max(1, Math.round((ROLL.DIV_PER_BAR[div] ?? 16) * frac)),
+  rest: (): MockStep => ({ n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 }),
+  tie: (): MockStep => ({ n: 0, notes: [0, 0, 0, 0], time: 1, flags: 0, vel: 0, lvl: 0, rat: 0 }),
+  isNote: (s: RollStep): s is Step => !!s && s.time === 0 && s.n > 0,
   /* the chords: {at, dur, notes[], vel} for every NOTE step, dur = 1 + the TIE steps after it (within len) */
-  chords(steps, len) {
-    const out = [];
+  chords(steps: RollStep[], len: number): RollChord[] {
+    const out: RollChord[] = [];
     for (let i = 0; i < len; i++) {
       const s = steps[i];
       if (!ROLL.isNote(s)) continue;
       let d = 1;
-      while (i + d < len && steps[i + d] && steps[i + d].time === 1) d++;
+      while (i + d < len && steps[i + d] && steps[i + d]!.time === 1) d++;
       out.push({ at: i, dur: d, notes: s.notes.slice(0, s.n), vel: s.vel, flags: s.flags });
     }
     return out;
   },
   /* the chord sounding at step i (its NOTE step), or -1 */
-  owner(steps, i) {
+  owner(steps: RollStep[], i: number): number {
     for (let k = i; k >= 0; k--) {
       const s = steps[k];
       if (ROLL.isNote(s)) return k;
-      if (!s || s.time !== 1) return -1;
+      if (!s || (s as Step).time !== 1) return -1;
     }
     return -1;
   },
   /* the steps after a chord that ends at `end` and were holding it (TIE) become rests */
-  _cutTies(steps, len, end, out) {
-    for (let k = end; k < len && steps[k] && steps[k].time === 1 && !out.has(k); k++) out.set(k, ROLL.rest());
+  _cutTies(steps: RollStep[], len: number, end: number, out: Map<number, Step>) {
+    for (let k = end; k < len && steps[k] && steps[k]!.time === 1 && !out.has(k); k++) out.set(k, ROLL.rest());
   },
   /* put note `pitch` at step `at` for `dur` steps. On a chord's first step: added to it (it keeps its length,
      at most 4 notes). Inside a held chord: that chord ends there and a new one starts. Elsewhere: a new chord. */
-  place(steps, len, at, pitch, dur) {
-    const out = new Map(), s = steps[at];
+  place(steps: RollStep[], len: number, at: number, pitch: number, dur: number): Map<number, Step> {
+    const out = new Map<number, Step>(), s = steps[at];
     if (at < 0 || at >= len) return out;
     if (ROLL.isNote(s)) {
       if (s.notes.slice(0, s.n).includes(pitch) || s.n >= 4) return out;
@@ -3260,8 +3315,8 @@ const ROLL = {
     return out;
   },
   /* take note `pitch` off the chord starting at `at`; the last one leaves rests where the chord was */
-  remove(steps, len, at, pitch) {
-    const out = new Map(), s = steps[at];
+  remove(steps: RollStep[], len: number, at: number, pitch: number): Map<number, Step> {
+    const out = new Map<number, Step>(), s = steps[at];
     if (!ROLL.isNote(s)) return out;
     const notes = s.notes.slice(0, s.n).filter((n) => n !== pitch);
     if (notes.length === s.n) return out;
@@ -3272,11 +3327,11 @@ const ROLL = {
   },
   /* the chord at `at` lasts `dur` steps: shorter, the steps it leaves become rests; longer, it ties over
      the rests after it, up to the next chord */
-  resize(steps, len, at, dur) {
-    const out = new Map();
+  resize(steps: RollStep[], len: number, at: number, dur: number): Map<number, Step> {
+    const out = new Map<number, Step>();
     if (!ROLL.isNote(steps[at])) return out;
     let cur = 1;
-    while (at + cur < len && steps[at + cur] && steps[at + cur].time === 1) cur++;
+    while (at + cur < len && steps[at + cur] && steps[at + cur]!.time === 1) cur++;
     dur = Math.max(1, Math.min(dur, len - at));
     if (dur < cur) for (let k = dur; k < cur; k++) out.set(at + k, ROLL.rest());
     else for (let k = cur; k < dur; k++) { if (ROLL.isNote(steps[at + k])) break; out.set(at + k, ROLL.tie()); }
@@ -3285,14 +3340,17 @@ const ROLL = {
 };
 
 /* ------------------------------------------ SLOOP 2.5: Standard MIDI Files --- */
+/** a note of a MIDI file: at tick t, dur ticks */
+export interface SmfNote { t: number; dur: number; key: number; vel: number; ch?: number }
+export interface SmfReport { notes: number; steps: number; moved: number; chordCut: number; overlap: number; dropped: number; merged: number }
 const SMF = {
   PPQ: 96,
   /* ticks of one step at DIV div (a quarter = ppq ticks) */
-  stepTicks: (div, ppq = SMF.PPQ) => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
-  vlq(n) { const a = [n & 0x7F]; while ((n >>= 7)) a.unshift(0x80 | (n & 0x7F)); return a; },
+  stepTicks: (div: number, ppq: number = SMF.PPQ): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
+  vlq(n: number): number[] { const a = [n & 0x7F]; while ((n >>= 7)) a.unshift(0x80 | (n & 0x7F)); return a; },
   /* a format 0 file: notes [{t, dur, key, vel}] on channel ch (0..15), the tempo, a track name */
-  write(notes, { ppq = SMF.PPQ, bpm = 120, ch = 0, name = "" } = {}) {
-    const ev = [];
+  write(notes: SmfNote[], { ppq = SMF.PPQ as number, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
+    const ev: { t: number; o: number; b: number[] }[] = [];
     for (const n of notes) {
       ev.push({ t: n.t, o: 1, b: [0x90 | ch, n.key & 0x7F, Math.max(1, Math.min(127, n.vel | 0))] });
       ev.push({ t: n.t + Math.max(1, n.dur), o: 0, b: [0x80 | ch, n.key & 0x7F, 0] });
@@ -3305,29 +3363,29 @@ const SMF = {
     let last = 0;
     for (const e of ev) { tr.push(...SMF.vlq(e.t - last), ...e.b); last = e.t; }
     tr.push(0, 0xFF, 0x2F, 0);
-    const u32 = (n) => [(n >>> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255];
+    const u32 = (n: number) => [(n >>> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255];
     return Uint8Array.from([0x4D, 0x54, 0x68, 0x64, ...u32(6), 0, 0, 0, 1, (ppq >> 8) & 255, ppq & 255,
       0x4D, 0x54, 0x72, 0x6B, ...u32(tr.length), ...tr]);
   },
   /* -> {format, ppq, bpm, tracks: [{name, notes: [{t, dur, key, vel, ch}]}]}; throws on a non-MIDI file */
-  read(bytes) {
+  read(bytes: Uint8Array | ArrayLike<number>): { format: number; ppq: number; bpm: number; tracks: { name: string; notes: SmfNote[] }[] } {
     const d = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
-    const str = (o) => String.fromCharCode(d[o], d[o + 1], d[o + 2], d[o + 3]);
-    const u32 = (o) => ((d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3]) >>> 0;
+    const str = (o: number) => String.fromCharCode(d[o], d[o + 1], d[o + 2], d[o + 3]);
+    const u32 = (o: number) => ((d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3]) >>> 0;
     if (d.length < 14 || str(0) !== "MThd") throw new Error("not a MIDI file");
     const format = (d[8] << 8) | d[9], ntrk = (d[10] << 8) | d[11], div = (d[12] << 8) | d[13];
     if (div & 0x8000) throw new Error("SMPTE time is not supported");
     let o = 8 + u32(4), bpm = 0;
-    const tracks = [];
+    const tracks: { name: string; notes: SmfNote[] }[] = [];
     for (let k = 0; k < ntrk && o + 8 <= d.length; k++) {
       if (str(o) !== "MTrk") { o += 8 + u32(o + 4); k--; if (o >= d.length) break; continue; }
       const end = Math.min(d.length, o + 8 + u32(o + 4));
       let p = o + 8, t = 0, run = 0, name = "";
-      const on = new Map(), notes = [];
-      const vlq = () => { let n = 0, c; do { c = d[p++]; n = (n << 7) | (c & 0x7F); } while (c & 0x80 && p < end); return n; };
-      const off = (ch, key) => {
+      const on = new Map<number, SmfNote[]>(), notes: SmfNote[] = [];
+      const vlq = () => { let n = 0, c: number; do { c = d[p++]; n = (n << 7) | (c & 0x7F); } while (c & 0x80 && p < end); return n; };
+      const off = (ch: number, key: number) => {
         const q = on.get(ch * 128 + key);
-        if (q && q.length) { const n = q.shift(); n.dur = Math.max(1, t - n.t); notes.push(n); }
+        if (q && q.length) { const n = q.shift()!; n.dur = Math.max(1, t - n.t); notes.push(n); }
       };
       while (p < end) {
         t += vlq();
@@ -3358,20 +3416,20 @@ const SMF = {
     return { format, ppq: div || SMF.PPQ, bpm: Math.round(bpm || 120), tracks };
   },
   /* a synth track's steps -> notes (a chord's notes last its steps; the step's level as the device plays it) */
-  fromSteps(steps, len, div, ppq = SMF.PPQ) {
-    const tk = SMF.stepTicks(div, ppq), V = [0, 42, 72, 127], out = [];
+  fromSteps(steps: RollStep[], len: number, div: number, ppq: number = SMF.PPQ): SmfNote[] {
+    const tk = SMF.stepTicks(div, ppq), V = [0, 42, 72, 127], out: SmfNote[] = [];
     for (const c of ROLL.chords(steps, len)) {
-      const s = steps[c.at], base = s.flags & 1 ? 127 : s.vel || 96;
+      const s = steps[c.at]!, base = s.flags & 1 ? 127 : s.vel || 96;
       c.notes.forEach((key, i) => {
-        const lv = (s.lvl >> (2 * i)) & 3;
+        const lv = (s.lvl! >> (2 * i)) & 3;
         out.push({ t: c.at * tk, dur: c.dur * tk - Math.max(1, tk >> 4), key, vel: lv ? V[lv] : base });
       });
     }
     return out;
   },
   /* the drum track's steps -> GM notes on their lanes (a hit lasts a quarter of its step) */
-  fromDrums(dsteps, len, div, ppq = SMF.PPQ) {
-    const tk = SMF.stepTicks(div, ppq), V = [100, 42, 72, 127], out = [];
+  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq: number = SMF.PPQ): SmfNote[] {
+    const tk = SMF.stepTicks(div, ppq), V = [100, 42, 72, 127], out: SmfNote[] = [];
     for (let i = 0; i < len; i++) {
       const d = dsteps[i];
       if (!d) continue;
@@ -3382,21 +3440,22 @@ const SMF = {
   /* the GM drum note -> its lane (firmware drums.c LANE_OF_GM) */
   LANE_OF_GM: [1, 0, 7, 2, 3, 8, 9, 4, 9, 6, 9, 5, 10, 10, 11, 10, 12, 11, 12, 13, 11, 15, 11, 13, 12, 14, 14, 14, 14, 14,
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15],
-  laneOf: (key) => (key < 35 ? 0 : key > 81 ? 13 : SMF.LANE_OF_GM[key - 35]),
-  levelOf: (vel) => (vel < 56 ? 1 : vel < 88 ? 2 : vel < 116 ? 0 : 3),   /* (drums.c vel_lvl: GHOST, SOFT, NORM, HARD) */
+  laneOf: (key: number): number => (key < 35 ? 0 : key > 81 ? 13 : SMF.LANE_OF_GM[key - 35]),
+  levelOf: (vel: number) => (vel < 56 ? 1 : vel < 88 ? 2 : vel < 116 ? 0 : 3),   /* (drums.c vel_lvl: GHOST, SOFT, NORM, HARD) */
   /* notes -> the steps of a track at DIV div, at most nstep. The report says what changed on the way:
      {notes, steps, moved (off the grid by more than a quarter step), chordCut (notes over 4 on a step),
       overlap (a chord cut short by the next one), dropped (past the last step), merged (on the same step)} */
-  toSteps(notes, ppq, div, nstep, drum = false) {
+  toSteps(notes: SmfNote[], ppq: number, div: number, nstep: number, drum = false):
+    { dsteps: DrumStep[]; len: number; report: SmfReport; steps?: undefined } | { steps: MockStep[]; len: number; report: SmfReport; dsteps?: undefined } {
     const tk = ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16);
     const rep = { notes: notes.length, steps: 0, moved: 0, chordCut: 0, overlap: 0, dropped: 0, merged: 0 };
-    const at = new Map();
+    const at = new Map<number, (SmfNote & { end: number })[]>();
     for (const n of notes) {
       const pos = n.t / tk, i = Math.round(pos);
       if (Math.abs(pos - i) > 0.25) rep.moved++;
       if (i >= nstep) { rep.dropped++; continue; }
       if (!at.has(i)) at.set(i, []);
-      at.get(i).push({ ...n, end: Math.max(i + 1, Math.round((n.t + n.dur) / tk)) });
+      at.get(i)!.push({ ...n, end: Math.max(i + 1, Math.round((n.t + n.dur) / tk)) });
     }
     if (drum) {
       const ds = Array.from({ length: nstep }, emptyDrum);
@@ -3417,9 +3476,9 @@ const SMF = {
     const starts = [...at.keys()].sort((a, b) => a - b);
     let last = -1;
     starts.forEach((i, k) => {
-      let list = at.get(i);
-      const keys = new Set();
-      list = list.filter((n) => (keys.has(n.key) ? (rep.merged++, false) : keys.add(n.key)));
+      let list = at.get(i)!;
+      const keys = new Set<number>();
+      list = list.filter((n) => (keys.has(n.key) ? (rep.merged++, false) : !!keys.add(n.key)));
       if (list.length > 4) { rep.chordCut += list.length - 4; list = list.slice().sort((a, b) => b.vel - a.vel).slice(0, 4); }
       list.sort((a, b) => a.key - b.key);
       const vel = Math.max(...list.map((n) => n.vel));
@@ -3438,20 +3497,25 @@ const SMF = {
 /* ------------------------------------------- SLOOP 2.5: the song order --- */
 /* The song order lives in the settings object (backup object 1, firmware project.c persist_t): bytes 48..83
    are arranger.h arr_config_t: count, loop, 2 reserved, then 16 x {scene 0..3 = A..D, bars 1..64}. */
+/** the song order (ARR): entries {scene 0..3, bars}, the loop region {first, end} */
+export interface ArrEntry { scene: number; bars: number }
+export interface ArrRegion { first: number; end: number }
+export interface ArrSong { loop: boolean; entries: ArrEntry[]; region?: ArrRegion | null }
+export interface ArrRow extends ArrEntry { times: number }
 const ARR = {
   OFF: 48, STEPS: 16, SIZE: 36, MAX_BARS: 64, MAGIC: 0x50455233,
-  ok: (b) => !!b && b.length >= ARR.OFF + ARR.SIZE && ((b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0) === ARR.MAGIC,
-  decode(b) {
-    const count = b[ARR.OFF], loop = b[ARR.OFF + 1], entries = [];
+  ok: (b: ArrayLike<number> | null | undefined): boolean => !!b && b.length >= ARR.OFF + ARR.SIZE && ((b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0) === ARR.MAGIC,
+  decode(b: ArrayLike<number>): ArrSong & { region: ArrRegion | null } {
+    const count = b[ARR.OFF], loop = b[ARR.OFF + 1], entries: ArrEntry[] = [];
     for (let i = 0; i < Math.min(count, ARR.STEPS); i++) entries.push({ scene: b[ARR.OFF + 4 + 2 * i], bars: b[ARR.OFF + 5 + 2 * i] });
     const region = { first: b[ARR.OFF + 2], end: b[ARR.OFF + 3] };
     return { loop: loop === 1, entries, region: ARR.regionOk(region, entries.length) ? region : null };
   },
   /* (BoopBox) the loop region: the song loops from entry `first` to entry `end` - 1 (arranger.h arr_loop_first / end:
      the two reserved bytes; 0, 0 = the whole song). Kept only while it fits the entries */
-  regionOk: (r, count) => !!r && r.end > 0 && r.first < r.end && r.end <= count,
+  regionOk: (r: ArrRegion | null | undefined, count: number): r is ArrRegion => !!r && r.end > 0 && r.first < r.end && r.end <= count,
   /* the settings bytes with this song order (the rest kept as it was) */
-  encode(b, song) {
+  encode(b: ArrayLike<number>, song: ArrSong): Uint8Array {
     const o = Uint8Array.from(b), e = song.entries, r = ARR.regionOk(song.region, e.length) ? song.region : null;
     o[ARR.OFF] = e.length; o[ARR.OFF + 1] = song.loop ? 1 : 0; o[ARR.OFF + 2] = r ? r.first : 0; o[ARR.OFF + 3] = r ? r.end : 0;
     for (let i = 0; i < ARR.STEPS; i++) {
@@ -3461,11 +3525,11 @@ const ARR = {
     return o;
   },
   /* arranger.h arr_valid: 1..16 entries, sections A..D, 1..64 bars */
-  valid: (song) => song.entries.length >= 1 && song.entries.length <= ARR.STEPS
+  valid: (song: Pick<ArrSong, "entries">): boolean => song.entries.length >= 1 && song.entries.length <= ARR.STEPS
     && song.entries.every((e) => e.scene >= 0 && e.scene < 4 && e.bars >= 1 && e.bars <= ARR.MAX_BARS),
   /* entries -> rows {scene, bars, times}: the same section with the same bars in a row is one row played `times` */
-  group(entries) {
-    const rows = [];
+  group(entries: ArrEntry[]): ArrRow[] {
+    const rows: ArrRow[] = [];
     for (const e of entries) {
       const r = rows[rows.length - 1];
       if (r && r.scene === e.scene && r.bars === e.bars) r.times++;
@@ -3473,7 +3537,7 @@ const ARR = {
     }
     return rows;
   },
-  expand: (rows) => rows.flatMap((r) => Array.from({ length: Math.max(1, r.times | 0) }, () => ({ scene: r.scene, bars: r.bars }))),
+  expand: (rows: ArrRow[]): ArrEntry[] => rows.flatMap((r) => Array.from({ length: Math.max(1, r.times | 0) }, () => ({ scene: r.scene, bars: r.bars }))),
 };
 
 
@@ -3487,56 +3551,84 @@ const ARR = {
    encodes it the way the firmware does: decode then encode gives the same bytes, and the firmware captures a project
    the editor wrote as the same bytes again (tests/proj7_tool.c, web/test_web.mjs). A value is one byte (-127..127) or
    0x80 and two (pw_v). Every value is put in range by the firmware when it loads. */
+/** PROJ7: a synth step / a drum step (10 bytes) */
+export interface P7Step { notes: number[]; n: number; time: number; flags: number; vel: number; lvl: number; rat: number }
+export interface P7DrumStep { on: number[]; lvl: number[]; rat: number[] }
+export type P7AnyStep = P7Step | P7DrumStep;
+export interface P7Lock { step: number; slide: boolean; code: number; val: number }
+/** a step component (comp.c): its type (PROJ7.CP), a and b */
+export interface P7Comp { step: number; type: number; a: number; b: number }
+export interface P7Pat { steps: P7AnyStep[]; micro: number[]; fill: number[]; locks: P7Lock[]; dir: number; seed: number; comps: P7Comp[] }
+/** a track ('T'): its common parameters [id, value] (only those not at their default), its engine's [k, value] */
+export interface P7Track {
+  i: number; kind: number; eng: number; pre: number; nc: number; p: [number, number][]; e: [number, number][]; dtw: number[] | null;
+  pat: P7Pat; cur: number; chain: number[]; coff: number; hfol: number; tail: number;
+}
+export interface P7Harm { deg: number; bars: number }
+export interface P7BankEntry { trk: number; pat: number; len: number; p: P7Pat }
+export interface P7Scenes { names: number[]; pats: number[][] }
+/** a decoded project (PROJ7.decode / encode) */
+export interface Proj7 {
+  g: number[] | null; sel: number; tracks: P7Track[]; harm: P7Harm[] | null; bank: P7BankEntry[]; scenes: P7Scenes | null;
+  other: [number | string, number[]][];
+}
+/** a pattern's LEN: ctx.len its id, ctx.def(id) its default */
+export interface P7LenCtx { len: number; def: (id: number) => number }
+export interface P7Reader { b: ArrayLike<number>; i: number; n: number; bad: boolean; u8(): number; v(): number }
+export interface P7Writer { o: number[]; u8(x: number): void; v(x: number): void }
 const PROJ7 = {
   MAGIC: 0x46554E37, HDR: 12, MAX: 3840, NSTEP: 64, NPAT: 8, NCOMP: 16, NLOCK: 32, NHPROG: 8, PB_SIZE: 3072, NCHAIN: 16, NSCENE: 8,
   SCN_KEEP: 8, SCN_NAMES: ["-", "INTRO", "VERSE", "PRE", "CHORUS", "BRIDGE", "BREAK", "BUILD", "DROP", "OUTRO", "FILL", "HOOK", "SOLO",
     "ALT", "A", "B", "C", "D", "END"],                 /* (patbank.c N_SCN) */
   SYNTH: 0, DRUM: 1, ST_REST: 2, CP_PARAM: 12,
   /* comp.c CP_NAME / CP_RANGE: a's range, b's range, a new one's a and b (PARAM's a: a lockable parameter) */
-  CP: [null, ["PULSE", 1, 8, 0, 0, 1, 0], ["HOLD", 1, 16, 0, 0, 1, 0], ["MULT", 2, 8, 0, 0, 2, 0], ["VEL", 1, 127, 0, 64, 100, 0],
+  CP: ([null, ["PULSE", 1, 8, 0, 0, 1, 0], ["HOLD", 1, 16, 0, 0, 1, 0], ["MULT", 2, 8, 0, 0, 2, 0], ["VEL", 1, 127, 0, 64, 100, 0],
     ["RAMP+", 1, 16, 1, 7, 3, 1], ["RAMP-", 1, 16, 1, 7, 3, 1], ["RAND", 1, 12, 0, 0, 2, 0], ["PORTA", 1, 127, 0, 0, 40, 0],
     ["BEND", -12, 12, 0, 1, 2, 0], ["TONE", -24, 24, 0, 0, 12, 0], ["JUMP", 1, 64, 1, 16, 1, 1], ["PARAM", 0, 70, 1, 100, 5, 25],
-    ["COND", -8, 8, 1, 8, 1, 2], ["TRIG", 1, 99, 0, 0, 50, 0]],
+    ["COND", -8, 8, 1, 8, 1, 2], ["TRIG", 1, 99, 0, 0, 50, 0]] as ([name: string, aMin: number, aMax: number, bMin: number, bMax: number, aNew: number, bNew: number] | null)[]),
   DIRS: ["FWD", "REV", "PEND", "RAND"],
   HFOL: ["OFF", "TRANS", "SCALE"],
   ROMAN: ["I", "II", "III", "IV", "V", "VI", "VII"],
-  u32: (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0,
-  sum(b, size) {                                  /* project.c proj7_sum */
+  u32: (b: ArrayLike<number>, o: number) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0,
+  sum(b: ArrayLike<number>, size: number) {                                  /* project.c proj7_sum */
     let s = 0x811C9DC5;
     for (let i = 0; i < 4; i++) s = Math.imul(s ^ ((size >>> (8 * i)) & 0xFF), 16777619) >>> 0;
     for (let i = PROJ7.HDR; i < size; i++) s = Math.imul(s ^ b[i], 16777619) >>> 0;
     return s >>> 0;
   },
   /* a reader never past its end (patcodec.c pr_t): bad once it tried */
-  reader: (b, i = 0, n = b.length) => ({
+  reader: (b: ArrayLike<number>, i = 0, n = b.length): P7Reader => ({
     b, i, n, bad: false,
     u8() { if (this.i >= this.n) { this.bad = true; return 0; } return this.b[this.i++]; },
     v() { const x = this.u8(); if (x !== 0x80) return (x << 24) >> 24; const lo = this.u8(), hi = this.u8(); return ((lo | (hi << 8)) << 16) >> 16; },
   }),
-  writer: () => ({ o: [], u8(x) { this.o.push(x & 0xFF); }, v(x) { if (x >= -127 && x <= 127) this.u8(x); else { this.u8(0x80); this.u8(x); this.u8(x >> 8); } } }),
+  writer: (): P7Writer => ({ o: [], u8(x) { this.o.push(x & 0xFF); }, v(x) { if (x >= -127 && x <= 127) this.u8(x); else { this.u8(0x80); this.u8(x); this.u8(x >> 8); } } }),
   /* ---- a step (10 bytes, core.h step_t / dstep_t) */
-  blank: (drum) => (drum ? { on: [0, 0], lvl: [0, 0, 0, 0], rat: [0, 0, 0, 0] } : { notes: [0, 0, 0, 0], n: 0, time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 }),
-  stepBytes: (s, drum) => (drum ? [...s.on, ...s.lvl, ...s.rat] : [...s.notes, s.n, s.time, s.flags, s.vel, s.lvl, s.rat]),
-  fromBytes(b, drum) {
+  blank: (drum: boolean | number): P7AnyStep => (drum ? { on: [0, 0], lvl: [0, 0, 0, 0], rat: [0, 0, 0, 0] } : { notes: [0, 0, 0, 0], n: 0, time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 }),
+  stepBytes: (s: P7AnyStep, drum: boolean | number): number[] => (drum ? [...(s as P7DrumStep).on, ...(s as P7DrumStep).lvl, ...(s as P7DrumStep).rat]
+    : [...(s as P7Step).notes, (s as P7Step).n, (s as P7Step).time, (s as P7Step).flags, (s as P7Step).vel, (s as P7Step).lvl, (s as P7Step).rat]),
+  fromBytes(b: ArrayLike<number>, drum: boolean | number): P7AnyStep {
     if (drum) return { on: [b[0], b[1]], lvl: [b[2], b[3], b[4], b[5]], rat: [b[6], b[7], b[8], b[9]] };
     return { notes: [b[0] & 127, b[1] & 127, b[2] & 127, b[3] & 127], n: Math.min(b[4], 4), time: Math.min(b[5], 2), flags: b[6], vel: b[7], lvl: b[8], rat: b[9] };
   },
-  isBlank: (s, drum) => PROJ7.stepBytes(s, drum).every((x, i) => x === (!drum && i === 5 ? PROJ7.ST_REST : 0)),   /* patcodec.c step_blank */
-  stepSize(s, drum) {                             /* patcodec.c step_size */
-    if (drum) return 3 + (s.lvl.some(Boolean) ? 4 : 0) + (s.rat.some(Boolean) ? 4 : 0);
+  isBlank: (s: P7AnyStep, drum: boolean | number): boolean => PROJ7.stepBytes(s, drum).every((x, i) => x === (!drum && i === 5 ? PROJ7.ST_REST : 0)),   /* patcodec.c step_blank */
+  stepSize(st: P7AnyStep, drum: boolean | number): number {   /* patcodec.c step_size */
+    if (drum) { const d = st as P7DrumStep; return 3 + (d.lvl.some(Boolean) ? 4 : 0) + (d.rat.some(Boolean) ? 4 : 0); }
+    const s = st as P7Step;
     const n = Math.min(s.n, 4);
     let all4 = s.n > 4;
     for (let j = n; j < 4; j++) all4 = all4 || s.notes[j] !== 0;
-    return 1 + (all4 || s.lvl || s.rat ? 1 : 0) + (all4 ? 4 : n) + !!s.flags + !!s.vel + !!s.lvl + !!s.rat;
+    return 1 + (all4 || s.lvl || s.rat ? 1 : 0) + (all4 ? 4 : n) + +!!s.flags + +!!s.vel + +!!s.lvl + +!!s.rat;
   },
-  stepPut(w, s, drum) {                           /* patcodec.c step_put */
+  stepPut(w: P7Writer, st: P7AnyStep, drum: boolean | number) {   /* patcodec.c step_put */
     if (drum) {
-      const l = s.lvl.some(Boolean), r = s.rat.some(Boolean);
-      w.u8(s.on[0]); w.u8(s.on[1]); w.u8((l ? 1 : 0) | (r ? 2 : 0));
-      if (l) s.lvl.forEach((x) => w.u8(x));
-      if (r) s.rat.forEach((x) => w.u8(x));
+      const d = st as P7DrumStep, l = d.lvl.some(Boolean), r = d.rat.some(Boolean);
+      w.u8(d.on[0]); w.u8(d.on[1]); w.u8((l ? 1 : 0) | (r ? 2 : 0));
+      if (l) d.lvl.forEach((x) => w.u8(x));
+      if (r) d.rat.forEach((x) => w.u8(x));
       return;
     }
+    const s = st as P7Step;
     const n = Math.min(s.n, 4);
     let all4 = s.n > 4;
     for (let j = n; j < 4; j++) all4 = all4 || s.notes[j] !== 0;
@@ -3549,16 +3641,16 @@ const PROJ7 = {
     if (s.lvl) w.u8(s.lvl);
     if (s.rat) w.u8(s.rat);
   },
-  stepGet(r, drum) {                              /* patcodec.c step_get */
+  stepGet(r: P7Reader, drum: boolean | number): P7AnyStep {   /* patcodec.c step_get */
     if (drum) {
-      const s = PROJ7.blank(true);
+      const s = PROJ7.blank(true) as P7DrumStep;
       s.on = [r.u8(), r.u8()];
       const m = r.u8();
       if (m & 1) s.lvl = [r.u8(), r.u8(), r.u8(), r.u8()];
       if (m & 2) s.rat = [r.u8(), r.u8(), r.u8(), r.u8()];
       return s;
     }
-    const b = r.u8(), x = b >> 7 ? r.u8() : 0, n = b & 7, s = { notes: [0, 0, 0, 0], n: Math.min(n, 4), time: Math.min((b >> 3) & 3, 2), flags: 0, vel: 0, lvl: 0, rat: 0 };
+    const b = r.u8(), x = b >> 7 ? r.u8() : 0, n = b & 7, s: P7Step = { notes: [0, 0, 0, 0], n: Math.min(n, 4), time: Math.min((b >> 3) & 3, 2), flags: 0, vel: 0, lvl: 0, rat: 0 };
     for (let j = 0; j < (x & 4 ? 4 : Math.min(n, 4)); j++) s.notes[j] = r.u8() & 127;
     if (b & 0x20) s.flags = r.u8();
     if (b & 0x40) s.vel = r.u8();
@@ -3567,23 +3659,23 @@ const PROJ7 = {
     return s;
   },
   /* ---- a pattern: its steps, each step's nudge and fill condition, its locks, its components, direction and seed */
-  emptyPat: (drum) => ({ steps: Array.from({ length: 64 }, () => PROJ7.blank(drum)), micro: new Array(64).fill(0), fill: new Array(64).fill(0),
+  emptyPat: (drum: boolean | number): P7Pat => ({ steps: Array.from({ length: 64 }, () => PROJ7.blank(drum)), micro: new Array(64).fill(0), fill: new Array(64).fill(0),
     locks: [], dir: 0, seed: 0, comps: [] }),
-  patIsEmpty: (p, drum) => !p.comps.length && !p.dir && !p.seed && !p.locks.length && p.micro.every((x) => !x) && p.fill.every((x) => !x)
+  patIsEmpty: (p: P7Pat, drum: boolean | number): boolean => !p.comps.length && !p.dir && !p.seed && !p.locks.length && p.micro.every((x) => !x) && p.fill.every((x) => !x)
     && p.steps.every((s) => PROJ7.isBlank(s, drum)),
-  patClone: (p) => JSON.parse(JSON.stringify(p)),
-  patGet(r, drum) {                               /* patcodec.c pat_get (the values as written: the firmware clamps them) */
+  patClone: (p: P7Pat): P7Pat => JSON.parse(JSON.stringify(p)),
+  patGet(r: P7Reader, drum: boolean | number): P7Pat {                               /* patcodec.c pat_get (the values as written: the firmware clamps them) */
     const p = PROJ7.emptyPat(drum);
     let m = r.u8();
     if (m === 1) {
-      for (let k = 0; k < 64; k++) { const b = []; for (let j = 0; j < 10; j++) b.push(r.u8()); p.steps[k] = PROJ7.fromBytes(b, drum); }
+      for (let k = 0; k < 64; k++) { const b: number[] = []; for (let j = 0; j < 10; j++) b.push(r.u8()); p.steps[k] = PROJ7.fromBytes(b, drum); }
     } else {
-      const map = []; for (let k = 0; k < 8; k++) map.push(r.u8());
+      const map: number[] = []; for (let k = 0; k < 8; k++) map.push(r.u8());
       for (let k = 0; k < 64 && !r.bad; k++) if ((map[k >> 3] >> (k & 7)) & 1) p.steps[k] = PROJ7.stepGet(r, drum);
     }
     m = r.u8();
     if (m) {
-      let map = new Array(8).fill(0xFF);
+      let map: number[] = new Array(8).fill(0xFF);
       if (m === 1) map = map.map(() => r.u8());
       for (let k = 0; k < 64 && !r.bad; k++) if ((map[k >> 3] >> (k & 7)) & 1) {
         const v = r.u8(), mi = v & 63, c = v >> 6;
@@ -3602,8 +3694,8 @@ const PROJ7 = {
     }
     return p;
   },
-  patPut(w, p, drum) {                            /* patcodec.c pat_put */
-    const map = new Array(8).fill(0);
+  patPut(w: P7Writer, p: P7Pat, drum: boolean | number) {   /* patcodec.c pat_put */
+    const map: number[] = new Array(8).fill(0);
     let sz = 8;
     p.steps.forEach((s, k) => { if (!PROJ7.isBlank(s, drum)) { map[k >> 3] |= 1 << (k & 7); sz += PROJ7.stepSize(s, drum); } });
     if (sz < 640) {
@@ -3612,7 +3704,7 @@ const PROJ7 = {
     } else {
       w.u8(1); p.steps.forEach((s) => PROJ7.stepBytes(s, drum).forEach((x) => w.u8(x)));
     }
-    const mf = p.micro.map((m, k) => (m & 63) | (p.fill[k] & 3) << 6), mm = new Array(8).fill(0);
+    const mf = p.micro.map((m, k) => (m & 63) | (p.fill[k] & 3) << 6), mm: number[] = new Array(8).fill(0);
     let n = 0;
     mf.forEach((v, k) => { if (v) { mm[k >> 3] |= 1 << (k & 7); n++; } });
     if (!n) w.u8(0);
@@ -3625,12 +3717,12 @@ const PROJ7 = {
       w.u8(c.step); w.u8(c.type === PROJ7.CP_PARAM ? PROJ7.CP_PARAM | 0x80 : c.type); w.u8(c.a); w.u8(c.b);
     }
   },
-  patBytes(p, drum) { const w = PROJ7.writer(); PROJ7.patPut(w, p, drum); return w.o; },
+  patBytes(p: P7Pat, drum: boolean | number): number[] { const w = PROJ7.writer(); PROJ7.patPut(w, p, drum); return w.o; },
   /* a lock's or PARAM's parameter code (patcodec.c lock_code: the engine's eight as 0xF0 + k, P_E0 moves) <-> its id */
-  codeOf: (id, pe0) => (id < pe0 ? id : 0xF0 + id - pe0),
-  idOf: (code, pe0) => (code >= 0xF0 ? (code - 0xF0 < 8 ? pe0 + code - 0xF0 : -1) : code < pe0 ? code : -1),
+  codeOf: (id: number, pe0: number) => (id < pe0 ? id : 0xF0 + id - pe0),
+  idOf: (code: number, pe0: number) => (code >= 0xF0 ? (code - 0xF0 < 8 ? pe0 + code - 0xF0 : -1) : code < pe0 ? code : -1),
   /* a component that the firmware keeps (comp.c comp_valid; PARAM's a: a lockable parameter's code) */
-  compValid(c, pe0) {
+  compValid(c: P7Comp, pe0: number): boolean {
     const r = PROJ7.CP[c.type];
     if (!r || c.step >= 64) return false;
     const a = c.type === PROJ7.CP_PARAM ? PROJ7.idOf(c.a, pe0) : c.a;
@@ -3639,9 +3731,9 @@ const PROJ7 = {
     return c.type !== PROJ7.CP_PARAM || lockable(a, pe0);
   },
   /* ---- a track ('T') */
-  trkGet(r) {
-    const t = { i: r.u8(), kind: r.u8(), eng: r.u8(), pre: r.u8(), nc: r.u8(), p: [], e: [], dtw: null, pat: null, cur: 0, chain: [], coff: 0, hfol: 0, tail: 0 };
-    const map = []; for (let k = 0; k < (t.nc + 7) >> 3; k++) map.push(r.u8());
+  trkGet(r: P7Reader): P7Track {
+    const t: Omit<P7Track, "pat"> & { pat: P7Pat | null } = { i: r.u8(), kind: r.u8(), eng: r.u8(), pre: r.u8(), nc: r.u8(), p: [], e: [], dtw: null, pat: null, cur: 0, chain: [], coff: 0, hfol: 0, tail: 0 };
+    const map: number[] = []; for (let k = 0; k < (t.nc + 7) >> 3; k++) map.push(r.u8());
     for (let k = 0; k < t.nc; k++) if ((map[k >> 3] >> (k & 7)) & 1) t.p.push([k, r.v()]);
     const em = r.u8();
     for (let k = 0; k < 8; k++) if ((em >> k) & 1) t.e.push([k, r.v()]);
@@ -3655,11 +3747,11 @@ const PROJ7 = {
       for (let k = 0; k < (n & 0x7F); k++) { const x = r.u8(); if (k < PROJ7.NCHAIN) t.chain.push(x & 0xF7); }
       if (r.i < r.n) { t.tail = 2; t.hfol = r.u8(); }
     }
-    return t;
+    return t as P7Track;
   },
-  trkPut(w, t) {
+  trkPut(w: P7Writer, t: P7Track) {
     w.u8(t.i); w.u8(t.kind); w.u8(t.eng); w.u8(t.pre); w.u8(t.nc);
-    const map = new Array((t.nc + 7) >> 3).fill(0);
+    const map: number[] = new Array((t.nc + 7) >> 3).fill(0);
     t.p.forEach(([k]) => { map[k >> 3] |= 1 << (k & 7); });
     map.forEach((x) => w.u8(x));
     [...t.p].sort((x, y) => x[0] - y[0]).forEach(([, v]) => w.v(v));
@@ -3673,18 +3765,18 @@ const PROJ7 = {
     if (t.tail >= 2) w.u8(t.hfol);
   },
   /* a common parameter of the track (id < its count): stored only when not its default (def(id) from DESC) */
-  param(t, id, def) { const x = t.p.find(([k]) => k === id); return x ? x[1] : def; },
-  setParam(t, id, v, def) {
+  param(t: Pick<P7Track, "p">, id: number, def: number) { const x = t.p.find(([k]) => k === id); return x ? x[1] : def; },
+  setParam(t: Pick<P7Track, "p">, id: number, v: number, def: number) {
     t.p = t.p.filter(([k]) => k !== id);
     if (v !== def) t.p.push([id, v]);
   },
   /* ---- the whole project */
-  decode(b) {
-    b = Uint8Array.from(b);
+  decode(bytes: ArrayLike<number>): Proj7 | null {
+    const b = Uint8Array.from(bytes);
     if (b.length < PROJ7.HDR || PROJ7.u32(b, 0) !== PROJ7.MAGIC) return null;
     const size = PROJ7.u32(b, 4);
     if (size < PROJ7.HDR || size > PROJ7.MAX || size > b.length || PROJ7.u32(b, 8) !== PROJ7.sum(b, size)) return null;
-    const P = { g: null, sel: 0, tracks: [], harm: null, bank: [], scenes: null, other: [] }, pend = [];
+    const P: Proj7 = { g: null, sel: 0, tracks: [], harm: null, bank: [], scenes: null, other: [] }, pend: Uint8Array[] = [];
     const r = PROJ7.reader(b, PROJ7.HDR, size);
     while (r.i + 3 <= r.n && !r.bad) {
       const tag = r.u8(), len = r.u8() | (r.u8() << 8);
@@ -3720,40 +3812,40 @@ const PROJ7 = {
     return P;
   },
   /* the chunks in the firmware's order (G, S, the tracks, H when not the default, the bank): the same bytes as it writes */
-  encodeBody(P) {
-    const w = PROJ7.writer(), chunk = (tag, f) => {
-      w.u8(tag.charCodeAt ? tag.charCodeAt(0) : tag); const at = w.o.length; w.u8(0); w.u8(0);
+  encodeBody(P: Proj7): number[] {
+    const w = PROJ7.writer(), chunk = (tag: string | number, f: () => void) => {
+      w.u8(typeof tag === "string" ? tag.charCodeAt(0) : tag); const at = w.o.length; w.u8(0); w.u8(0);
       f(); const len = w.o.length - at - 2; w.o[at] = len & 0xFF; w.o[at + 1] = len >> 8;
     };
-    if (P.g) chunk("G", () => P.g.forEach((x) => w.u8(x)));
+    if (P.g) chunk("G", () => P.g!.forEach((x) => w.u8(x)));
     chunk("S", () => w.u8(P.sel));
     for (const t of P.tracks) chunk("T", () => PROJ7.trkPut(w, t));
-    if (P.harm && !PROJ7.harmDefault(P.harm)) chunk("H", () => { w.u8(P.harm.length); P.harm.forEach((c) => { w.u8(c.deg); w.u8(c.bars); }); });
+    if (P.harm && !PROJ7.harmDefault(P.harm)) chunk("H", () => { w.u8(P.harm!.length); P.harm!.forEach((c) => { w.u8(c.deg); w.u8(c.bars); }); });
     for (const e of P.bank) {
       const t = P.tracks.find((x) => x.i === e.trk);
       chunk("P", () => { w.u8(e.trk << 4 | e.pat); w.u8(e.len); PROJ7.patPut(w, e.p, !!t && t.kind === PROJ7.DRUM); });
     }
     if (P.scenes && !PROJ7.scenesIsDefault(P.scenes)) chunk("C", () => {
       w.u8(PROJ7.NSCENE);
-      for (let k = 0; k < PROJ7.NSCENE; k++) { w.u8(P.scenes.names[k]); for (let j = 0; j < 8; j += 2) w.u8(P.scenes.pats[k][j] | P.scenes.pats[k][j + 1] << 4); }
+      for (let k = 0; k < PROJ7.NSCENE; k++) { w.u8(P.scenes!.names[k]); for (let j = 0; j < 8; j += 2) w.u8(P.scenes!.pats[k][j] | P.scenes!.pats[k][j + 1] << 4); }
     });
     for (const [tag, body] of P.other) chunk(tag, () => body.forEach((x) => w.u8(x)));
     return w.o;
   },
-  encode(P) {
+  encode(P: Proj7): Uint8Array {
     const body = PROJ7.encodeBody(P), size = PROJ7.HDR + body.length, b = new Uint8Array(size);
     b.set(body, PROJ7.HDR);
-    const le = (o, v) => { b[o] = v & 0xFF; b[o + 1] = (v >>> 8) & 0xFF; b[o + 2] = (v >>> 16) & 0xFF; b[o + 3] = (v >>> 24) & 0xFF; };
+    const le = (o: number, v: number) => { b[o] = v & 0xFF; b[o + 1] = (v >>> 8) & 0xFF; b[o + 2] = (v >>> 16) & 0xFF; b[o + 3] = (v >>> 24) & 0xFF; };
     le(0, PROJ7.MAGIC); le(4, size); le(8, PROJ7.sum(b, size));
     return b;
   },
   /* the bytes the bank holds (patbank.c: 4 + a pattern's bytes an entry, PB_SIZE at most) and the project's size */
-  bankBytes: (P) => P.bank.reduce((s, e) => s + 4 + PROJ7.patBytes(e.p, (P.tracks.find((x) => x.i === e.trk) || {}).kind === PROJ7.DRUM).length, 0),
-  fits: (P) => PROJ7.bankBytes(P) <= PROJ7.PB_SIZE && PROJ7.HDR + PROJ7.encodeBody(P).length <= PROJ7.MAX,
-  harmDefault: (h) => !h || (h.length === 1 && h[0].deg === 0 && h[0].bars === 4),
+  bankBytes: (P: Proj7): number => P.bank.reduce((s, e) => s + 4 + PROJ7.patBytes(e.p, (P.tracks.find((x) => x.i === e.trk) || ({} as Partial<P7Track>)).kind === PROJ7.DRUM).length, 0),
+  fits: (P: Proj7): boolean => PROJ7.bankBytes(P) <= PROJ7.PB_SIZE && PROJ7.HDR + PROJ7.encodeBody(P).length <= PROJ7.MAX,
+  harmDefault: (h: P7Harm[] | null | undefined) => !h || (h.length === 1 && h[0].deg === 0 && h[0].bars === 4),
   /* ---- the patterns of a track: n 0..7 -> its pattern (the one playing is the track's own), null: empty */
-  track: (P, i) => P.tracks.find((x) => x.i === i) || null,
-  patOf(P, i, n) {
+  track: (P: Proj7, i: number): P7Track | null => P.tracks.find((x) => x.i === i) || null,
+  patOf(P: Proj7, i: number, n: number): P7Pat | null {
     const t = PROJ7.track(P, i);
     if (!t) return null;
     if (n === t.cur) return t.pat;
@@ -3761,21 +3853,21 @@ const PROJ7 = {
     return e ? e.p : null;
   },
   /* the LEN a pattern has (the one playing: the track's P_SLEN, ctx.len its id, ctx.def(id) its default) */
-  lenOf(P, i, n, ctx) {
-    const t = PROJ7.track(P, i);
+  lenOf(P: Proj7, i: number, n: number, ctx: P7LenCtx): number {
+    const t = PROJ7.track(P, i)!;
     if (n === t.cur) return PROJ7.param(t, ctx.len, ctx.def(ctx.len));
     const e = P.bank.find((x) => x.trk === i && x.pat === n);
     return e ? e.len : PROJ7.param(t, ctx.len, ctx.def(ctx.len));
   },
   /* pattern n of track i becomes p (null or empty: none) with that LEN; the one playing stays the track's own */
-  setPat(P, i, n, p, len, ctx) {
-    const t = PROJ7.track(P, i), drum = t.kind === PROJ7.DRUM;
+  setPat(P: Proj7, i: number, n: number, p: P7Pat | null | undefined, len: number, ctx: P7LenCtx) {
+    const t = PROJ7.track(P, i)!, drum = t.kind === PROJ7.DRUM;
     if (n === t.cur) { t.pat = p ? PROJ7.patClone(p) : PROJ7.emptyPat(drum); if (len) PROJ7.setParam(t, ctx.len, len, ctx.def(ctx.len)); return; }
     P.bank = P.bank.filter((x) => !(x.trk === i && x.pat === n));
     if (p && !PROJ7.patIsEmpty(p, drum)) P.bank.push({ trk: i, pat: n, len: Math.max(1, Math.min(64, len | 0)), p: PROJ7.patClone(p) });
   },
   /* track i plays pattern n now (stopped, as patbank.c pat_swap: the one playing into the bank, n out of it, with its LEN) */
-  play(P, i, n, ctx) {
+  play(P: Proj7, i: number, n: number, ctx: P7LenCtx) {
     const t = PROJ7.track(P, i);
     if (!t || n === t.cur) return;
     const was = t.cur, wp = t.pat, wl = PROJ7.lenOf(P, i, was, ctx), np = PROJ7.patOf(P, i, n), nl = PROJ7.lenOf(P, i, n, ctx);
@@ -3787,12 +3879,12 @@ const PROJ7 = {
     if (t.tail < 1) t.tail = 1;
   },
   /* a chain: up to 16 slots, each a pattern and its repeats (slot(p, r): p | r - 1 << 4); it plays with 2 or more, PLAY on */
-  slot: (p, r = 1) => (p & 7) | ((Math.max(1, Math.min(16, r)) - 1) << 4),
-  slotPat: (x) => x & 7, slotRep: (x) => (x >> 4) + 1,
-  setChain(P, i, list) { const t = PROJ7.track(P, i); t.chain = list.slice(0, PROJ7.NCHAIN).map((x) => x & 0xF7); if (t.tail < 1) t.tail = 1; },
+  slot: (p: number, r = 1) => (p & 7) | ((Math.max(1, Math.min(16, r)) - 1) << 4),
+  slotPat: (x: number) => x & 7, slotRep: (x: number) => (x >> 4) + 1,
+  setChain(P: Proj7, i: number, list: number[]) { const t = PROJ7.track(P, i)!; t.chain = list.slice(0, PROJ7.NCHAIN).map((x) => x & 0xF7); if (t.tail < 1) t.tail = 1; },
   /* scenes: names (SCN_NAMES index), each track's pattern (0..7, SCN_KEEP: unchanged); by default scene k is pattern k */
-  scenesDefault: () => ({ names: new Array(8).fill(0), pats: Array.from({ length: 8 }, (_, k) => new Array(8).fill(k)) }),
-  scenesIsDefault: (S) => S.names.every((x) => !x) && S.pats.every((r, k) => r.every((x) => x === k)),
+  scenesDefault: (): P7Scenes => ({ names: new Array(8).fill(0), pats: Array.from({ length: 8 }, (_, k) => new Array(8).fill(k)) }),
+  scenesIsDefault: (S: P7Scenes) => S.names.every((x) => !x) && S.pats.every((r, k) => r.every((x) => x === k)),
 };
 
 /* ------------------------------------- v10 (SLOOP 2.5): the SYN drum kits --- */
