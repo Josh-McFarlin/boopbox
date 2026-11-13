@@ -12,6 +12,7 @@ import { initTabs } from "./core/tabs.ts";
 import { loadIconFont } from "./ui/kit.tsx";
 import { registerServiceWorker } from "../../lib/pwa.ts";
 import { initPages } from "./tabs/index.ts";
+import ErrorBoundary from "../../components/ErrorBoundary.tsx";
 import Editor from "./index.tsx";
 
 document.documentElement.lang = A.lang;
@@ -21,4 +22,4 @@ startDeviceLoops();
 loadIconFont();
 registerServiceWorker();
 if (!A.MOCK && !navigator.requestMIDIAccess) sayK("nomidi");
-createRoot(document.getElementById("root")!).render(<Editor />);
+createRoot(document.getElementById("root")!).render(<ErrorBoundary><Editor /></ErrorBoundary>);
