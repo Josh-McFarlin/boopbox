@@ -3346,10 +3346,10 @@ export interface SmfReport { notes: number; steps: number; moved: number; chordC
 const SMF = {
   PPQ: 96,
   /* ticks of one step at DIV div (a quarter = ppq ticks) */
-  stepTicks: (div: number, ppq: number = (0 as any)): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
+  stepTicks: (div: number, ppq: number = SMF.PPQ): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
   vlq(n: number): number[] { const a: number[] = [n & 0x7F]; while ((n >>= 7)) a.unshift(0x80 | (n & 0x7F)); return a; },
   /* a format 0 file: notes [{t, dur, key, vel}] on channel ch (0..15), the tempo, a track name */
-  write(notes: SmfNote[], { ppq = (0 as any) as number, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
+  write(notes: SmfNote[], { ppq = SMF.PPQ as number, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
     const ev: { t: number; o: number; b: number[] }[] = [];
     for (const n of notes) {
       ev.push({ t: n.t, o: 1, b: [0x90 | ch, n.key & 0x7F, Math.max(1, Math.min(127, n.vel | 0))] });
@@ -3428,8 +3428,8 @@ const SMF = {
     return out;
   },
   /* the drum track's steps -> GM notes on their lanes (a hit lasts a quarter of its step) */
-  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq: number = SMF.PPQ): SmfNote[] {
-    const tk = SMF.stepTicks(div, ppq), V = [100, 42, 72, 127], out: SmfNote[] = [];
+  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq: number = (0 as any)): SmfNote[] {
+    const tk = (0 as any)(div, ppq), V = [100, 42, 72, 127], out: SmfNote[] = [];
     for (let i = 0; i < len; i++) {
       const d = dsteps[i];
       if (!d) continue;
@@ -3440,7 +3440,7 @@ const SMF = {
   /* the GM drum note -> its lane (firmware drums.c LANE_OF_GM) */
   LANE_OF_GM: [1, 0, 7, 2, 3, 8, 9, 4, 9, 6, 9, 5, 10, 10, 11, 10, 12, 11, 12, 13, 11, 15, 11, 13, 12, 14, 14, 14, 14, 14,
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15],
-  laneOf: (key: number): number => (key < 35 ? 0 : key > 81 ? 13 : SMF.LANE_OF_GM[key - 35]),
+  laneOf: (key: number): number => (key < 35 ? 0 : key > 81 ? 13 : (0 as any)[key - 35]),
   levelOf: (vel: number): number => (vel < 56 ? 1 : vel < 88 ? 2 : vel < 116 ? 0 : 3),   /* (drums.c vel_lvl: GHOST, SOFT, NORM, HARD) */
   /* notes -> the steps of a track at DIV div, at most nstep. The report says what changed on the way:
      {notes, steps, moved (off the grid by more than a quarter step), chordCut (notes over 4 on a step),
