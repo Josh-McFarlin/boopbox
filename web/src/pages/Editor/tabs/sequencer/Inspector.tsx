@@ -5,9 +5,13 @@
 // type them), its type (note, hold previous, rest), velocity, accent and slide; on the drum grid its 16 sounds; then its
 // nudge, when it plays (fills) and its parameter locks (v7, v8). The logic is in seq.js.
 import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import clsx from "clsx";
+import type { Lock, Step } from "../../lib/proto.ts";
 import { DRUM_LANES, F, FC, LV_NAMES, LV_ORDER, MICRO, drumName, fmtValue, noteName, parseNotes } from "../../lib/proto.ts";
-import { hasFill, hasLocks, isDrum, t, tf, useApp } from "../../core/app.ts";
+import { hasFill, hasLocks, isDrum, readyDev, t, tf, useApp } from "../../core/app.ts";
 import { More } from "../../ui/kit.tsx";
+import { bar, seg, tog } from "../../ui/styles.ts";
 import Field from "./Field.tsx";
 import { StepComponents } from "../patterns/StepComponents.tsx";
 import {
@@ -15,7 +19,8 @@ import {
   setNotes, setTime, setVel, stepFill, stepLen, toggleNote, writeFill, writeLock, writeMicro,
 } from "./seq.ts";
 
-const Head = ({ children, extra }) => (
+interface HeadProps { children?: ReactNode; extra?: ReactNode }
+const Head = ({ children, extra }: HeadProps) => (
   <h3 className="mt-4 mb-1.5 flex items-center gap-2 text-dim first:mt-0">{children}{extra ? <span className="ml-auto text-[14px]">{extra}</span> : null}</h3>
 );
 const BLACK = [1, 3, 6, 8, 10];
@@ -23,16 +28,18 @@ const BLACK = [1, 3, 6, 8, 10];
 /* --------------------------------------------------- the two-octave piano --- */
 /* the piano's lowest C, kept while the same step stays selected (it follows a newly selected step's notes) */
 const KB = { base: 48, step: -1, trk: -1 };
-function Piano({ i, notes, onKey }) {
-  const { dev } = useApp();
+interface PianoProps { i: number; notes: number[]; onKey: (p: number) => void }
+function Piano({ i, notes, onKey }: PianoProps) {
+  useApp();
+  const dev = readyDev();
   if (KB.step !== i || KB.trk !== dev.sel) {
-    KB.step = i; KB.trk = dev.sel;
+    KB.step = i; KB.trk = dev.sel ?? -1;
     const ref = notes.length ? notes : [SQ.last ?? 60];
     if (ref.some((n) => n < KB.base || n >= KB.base + 24)) KB.base = Math.max(0, Math.min(96, Math.floor(Math.min(...ref) / 12) * 12));
   }
   const [, redraw] = useState(0);
-  const shift = (d) => { KB.base = Math.max(0, Math.min(96, KB.base + d)); redraw((x) => x + 1); };
-  const whites = [], blacks = [];
+  const shift = (d: number) => { KB.base = Math.max(0, Math.min(96, KB.base + d)); redraw((x) => x + 1); };
+  const whites: ReactNode[] = [], blacks: ReactNode[] = [];
   let w = 0;
   for (let p = KB.base; p < KB.base + 24 && p < 128; p++) {
     const on = notes.includes(p), black = BLACK.includes(p % 12);
@@ -63,9 +70,10 @@ function Piano({ i, notes, onKey }) {
 }
 
 /* --------------------------------------------------- a synth step's notes --- */
-function NotesField({ i, s, drum }) {
+interface NotesFieldProps { i: number; s: Step; drum: boolean }
+function NotesField({ i, s, drum }: NotesFieldProps) {
   const text = s.n ? s.notes.slice(0, s.n).map(drum ? drumName : noteName).join(" ") : "";
-  const [draft, setDraft] = useState(null);            /* what is being typed (null: the step's notes) */
+  const [draft, setDraft] = useState<string | null>(null);   /* what is being typed (null: the step's notes) */
   const [sel, setSel] = useState(i);
   if (sel !== i) { setSel(i); setDraft(null); }
   const v = draft ?? (s.time === 0 ? text : "");
@@ -84,48 +92,48 @@ function NotesField({ i, s, drum }) {
         aria-invalid={bad} aria-describedby="sqnotesmsg" className={`w-full ${bad ? "border-red text-red" : ""}`}
         onChange={(e) => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setDraft(null); }} />
-      <p id="sqnotesmsg" className={`help mt-1 mb-0 text-[14px] leading-5 ${bad ? "text-red" : "text-dim"}`} role={bad ? "alert" : undefined}>
+      <p id="sqnotesmsg" className={`mt-1 mb-0 text-[14px] leading-5 ${bad ? "text-red" : "text-dim"}`} role={bad ? "alert" : undefined}>
         {bad ? t(drum ? "sqBadDrums" : "sqBadNotes") : t("sqTypeTip")}</p>
     </div>
   );
 }
 
 const TYPES = [["sqTNote", "sqTNoteTip"], ["sqTTie", "sqTTieTip"], ["sqTRest", "sqTRestTip"]];
-function NoteStep({ i, s }) {
+function NoteStep({ i, s }: { i: number; s: Step }) {
   const drum = isDrum();
   const notes = notesOf(s), name = drum ? drumName : noteName;
   const [full, setFull] = useState(false);
-  const key = (p) => setFull(!toggleNote(i, p));
+  const key = (p: number) => setFull(!toggleNote(i, p));
   const silent = s.time !== 0 || !s.n;
   return (
     <>
       <Head>{t("sqType")}</Head>
-      <div className="seg grid! grid-cols-[1fr_1.5fr_1fr]" id="sqtype" role="group" aria-label={t("sqType")}>
+      <div className={clsx(seg, "grid! grid-cols-[1fr_1.5fr_1fr]")} id="sqtype" role="group" aria-label={t("sqType")}>
         {TYPES.map(([k, tip], v) => (
           <button key={k} type="button" data-v={v} aria-pressed={s.time === v} title={t(tip)} onClick={() => setTime(i, v)}
-            className="px-1 whitespace-nowrap">{t(k)}</button>
+            className={clsx(tog, "px-1 whitespace-nowrap")}>{t(k)}</button>
         ))}
       </div>
       <Head extra={tf("sqNotesOf", { n: notes.length })}>{t("sqNotes")}</Head>
       <div id="sqchips" className="mb-2 flex min-h-8 flex-wrap gap-1">
         {notes.length ? notes.map((p) => (
-          <button key={p} type="button" className="tog flex items-center gap-1.5 px-2 py-0.5 normal-case" aria-pressed="true"
+          <button key={p} type="button" className={clsx(tog, "flex items-center gap-1.5 px-2 py-0.5 normal-case")} aria-pressed="true"
             title={tf("sqRemove", { n: name(p) })} aria-label={tf("sqRemove", { n: name(p) })} onClick={() => setNotes(i, notes.filter((x) => x !== p))}>
             {name(p)}<span aria-hidden="true">×</span></button>
         )) : <span className="self-center text-dim">{s.time === 1 ? t("sqTTieTip") : t("sqNoNotes")}</span>}
       </div>
       {drum ? null : <Piano i={i} notes={notes} onKey={key} />}
-      {full && notes.length >= 4 ? <p className="help mt-1 mb-0 text-[14px] text-t3" role="status">{t("sqFull")}</p> : null}
+      {full && notes.length >= 4 ? <p className="mt-1 mb-0 text-[14px] text-t3" role="status">{t("sqFull")}</p> : null}
       <NotesField i={i} s={s} drum={drum} />
       <Head extra={silent ? "" : String(s.vel)}>{t("sqVel")}</Head>
       <input type="range" id="sqvel" min="0" max="127" step="1" value={silent ? 0 : s.vel} disabled={silent}
         title={silent ? t("sqVelWhy") : t("sqVelTip")} aria-label={t("sqVel")} className="w-full"
-        style={{ "--a": "0%", "--p": `${((silent ? 0 : s.vel) / 127) * 100}%`, "--c": "var(--acc)" }}
+        style={{ "--a": "0%", "--p": `${((silent ? 0 : s.vel) / 127) * 100}%`, "--c": "var(--acc)" } as CSSProperties}
         onChange={(e) => setVel(i, +e.target.value)} />
       <div className="mt-3 grid grid-cols-2 gap-1">
-        <button type="button" id="sqacc" className="tog" aria-pressed={!!(s.flags & 1)} disabled={silent} title={silent ? t("sqVelWhy") : t("sqAccTip")}
+        <button type="button" id="sqacc" className={tog} aria-pressed={!!(s.flags & 1)} disabled={silent} title={silent ? t("sqVelWhy") : t("sqAccTip")}
           onClick={() => setFlag(i, 1, !(s.flags & 1))}>{"> " + t("acc")}</button>
-        <button type="button" id="sqslide" className="tog" aria-pressed={!!(s.flags & 2)} disabled={silent} title={silent ? t("sqVelWhy") : t("sqSlideTip")}
+        <button type="button" id="sqslide" className={tog} aria-pressed={!!(s.flags & 2)} disabled={silent} title={silent ? t("sqVelWhy") : t("sqSlideTip")}
           onClick={() => setFlag(i, 2, !(s.flags & 2))}>{"~ " + t("slide")}</button>
       </div>
     </>
@@ -133,46 +141,46 @@ function NoteStep({ i, s }) {
 }
 
 /* --------------------------------------------------- a drum step's sounds --- */
-function DrumStep({ i }) {
-  const { dev } = useApp();
-  const d = dev.dsteps[i];
+function DrumStep({ i }: { i: number }) {
+  useApp();
+  const d = readyDev().dsteps![i];
   if (!d) return null;
-  const l = SQ.lane, on = (k) => ((d.on >> k) & 1) === 1;
+  const l = SQ.lane, on = (k: number) => ((d.on >> k) & 1) === 1;
   return (
     <>
       <Head>{t("sqSounds")}</Head>
       <div id="sqlanes" className="grid grid-cols-4 gap-1">
         {DRUM_LANES.map(([, nm], k) => (
           <button key={k} type="button" data-l={k} aria-pressed={on(k)} title={tf("sqSoundTip", { n: nm })}
-            className={`tog truncate px-1 text-[14px] lowercase ${k === l ? "outline-2 outline-offset-1 outline-fg" : ""}`}
+            className={clsx(tog, "truncate px-1 text-[14px] lowercase", k === l && "outline-2 outline-offset-1 outline-fg")}
             onClick={() => { SQ.lane = k; drumSet(i, k, on(k) ? { on: false } : { on: true, lvl: paint.lvl, rat: paint.rat }); }}>{nm}</button>
         ))}
       </div>
       {l >= 0 && on(l) ? (
         <>
           <Head>{tf("sqHit", { n: DRUM_LANES[l][1].toLowerCase() })}</Head>
-          <p className="bar">
+          <p className={bar}>
             <span className="text-dim">{t("hitLevel")}</span>
-            <span className="seg" id="sqlevel">{LV_ORDER.map((v) => (
-              <button key={v} type="button" aria-pressed={d.lvl[l] === v} onClick={() => drumSet(i, l, { lvl: v })}>{LV_NAMES[v]}</button>
+            <span className={seg} id="sqlevel">{LV_ORDER.map((v) => (
+              <button key={v} type="button" className={tog} aria-pressed={d.lvl[l] === v} onClick={() => drumSet(i, l, { lvl: v })}>{LV_NAMES[v]}</button>
             ))}</span>
           </p>
-          <p className="bar">
+          <p className={bar}>
             <span className="text-dim">{t("ratchet")}</span>
-            <span className="seg" id="sqrat">{[0, 1, 2, 3].map((v) => (
-              <button key={v} type="button" aria-pressed={d.rat[l] === v} onClick={() => drumSet(i, l, { rat: v })}>{"x" + (v + 1)}</button>
+            <span className={seg} id="sqrat">{[0, 1, 2, 3].map((v) => (
+              <button key={v} type="button" className={tog} aria-pressed={d.rat[l] === v} onClick={() => drumSet(i, l, { rat: v })}>{"x" + (v + 1)}</button>
             ))}</span>
           </p>
         </>
-      ) : <p className="help mt-2 mb-0 text-[14px] text-dim">{t("sqNoHit")}</p>}
+      ) : <p className="mt-2 mb-0 text-[14px] text-dim">{t("sqNoHit")}</p>}
     </>
   );
 }
 
 /* ------------------------------------- nudge, fills and parameter locks (v7, v8) --- */
-function LockRow({ i, l }) {
-  const { dev } = useApp();
-  const d = dev.pdesc[l.param] || { min: -8192, max: 8191, fmt: 0, names: [] };
+function LockRow({ i, l }: { i: number; l: Lock }) {
+  useApp();
+  const d = readyDev().pdesc[l.param] || { min: -8192, max: 8191, fmt: 0, names: [] as string[], unit: "" };
   const ids = lockableIds();
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_64px_52px_28px] items-center gap-1">
@@ -195,10 +203,11 @@ function LockRow({ i, l }) {
   );
 }
 const PLAYS = [["sqPAlways", "sqPAlwaysTip"], ["sqPFill", "sqPFillTip"], ["sqPNoFill", "sqPNoFillTip"]];
-function StepExtras({ i }) {
-  const { dev } = useApp();
-  const m = dev.micro[i] || 0;
-  const locks = dev.locks.filter((l) => l.step === i);
+function StepExtras({ i }: { i: number }) {
+  useApp();
+  const dev = readyDev();
+  const m = dev.micro![i] || 0;
+  const locks = dev.locks!.filter((l) => l.step === i);
   const fc = stepFill(i);
   return (
     <>
@@ -211,16 +220,16 @@ function StepExtras({ i }) {
       {hasFill() && dev.fill ? (
         <>
           <Head>{t("sqPlays")}</Head>
-          <div className="seg grid! grid-cols-3" id="sqfill" role="group" aria-label={t("sqPlays")}>
+          <div className={clsx(seg, "grid! grid-cols-3")} id="sqfill" role="group" aria-label={t("sqPlays")}>
             {PLAYS.map(([k, tip], c) => (
               <button key={k} type="button" data-v={c} aria-pressed={fc === c} title={`${t(tip)} (${FC.NAMES[c]})`} onClick={() => writeFill(i, c)}
-                className="px-1 text-[14px] whitespace-nowrap">{t(k)}</button>
+                className={clsx(tog, "px-1 text-[14px] whitespace-nowrap")}>{t(k)}</button>
             ))}
           </div>
         </>
       ) : null}
       <Head>{t("locks")}<More>{t("lockHelp")}</More></Head>
-      <p className="help mt-0 mb-1.5 text-[14px] text-dim">{t("sqLocksShort")}</p>
+      <p className="mt-0 mb-1.5 text-[14px] text-dim">{t("sqLocksShort")}</p>
       <div id="sdlocks" className="flex flex-col gap-1">
         {locks.map((l) => <LockRow key={l.param} i={i} l={l} />)}
       </div>
@@ -232,7 +241,8 @@ function StepExtras({ i }) {
 
 /* ------------------------------------------------------------ the panel --- */
 export default function Inspector() {
-  const { dev } = useApp();
+  useApp();
+  const dev = readyDev();
   const len = stepLen();
   if (SQ.sel >= len) SQ.sel = len - 1;
   const i = SQ.sel, s = dev.steps[i];

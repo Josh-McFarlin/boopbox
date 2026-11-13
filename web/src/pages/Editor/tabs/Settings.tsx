@@ -4,9 +4,11 @@
 // reported (firmware, engines ...).
 import { useState } from "react";
 import { A, t, tf, useApp } from "../core/app.ts";
+import clsx from "clsx";
 import { Card, ParamGroups, ParamRow, gid, layoutKnown } from "../ui/kit.tsx";
+import { seg, tog } from "../ui/styles.ts";
 
-const TABS = [["midi", "setTabMidi"], ["master", "setTabMaster"], ["about", "setTabAbout"]];
+const TABS: [id: string, name: string][] = [["midi", "setTabMidi"], ["master", "setTabMaster"], ["about", "setTabAbout"]];
 const TAB_KEY = "felucca-editor-settings-tab";
 const MASTER = ["GLOBAL", "MASTER", "DRUMS", "TEXTURE"];
 /* the MIDI settings after the channels, in the order a musician sets them up */
@@ -28,8 +30,9 @@ function SysInfo() {
 /* the channels: a line a track (the drum track's channel is CH4 on the device) */
 function Midi() {
   useApp();
-  const ch = [["CH1", tf("midiTrackN", { n: 1 }), 1], ["CH2", tf("midiTrackN", { n: 2 }), 2], ["CH3", tf("midiTrackN", { n: 3 }), 3],
-    ["CH4", t("midiDrums"), 4]].map(([l, name, n]) => [gid(l), name, n]).filter(([id]) => id >= 0);
+  const chs: [label: string, name: string, n: number][] = [["CH1", tf("midiTrackN", { n: 1 }), 1], ["CH2", tf("midiTrackN", { n: 2 }), 2],
+    ["CH3", tf("midiTrackN", { n: 3 }), 3], ["CH4", t("midiDrums"), 4]];
+  const ch = chs.map(([l, name, n]): [id: number, name: string, n: number] => [gid(l), name, n]).filter(([id]) => id >= 0);
   const more = MIDI_MORE.map(gid).filter((id) => id >= 0);
   if (!ch.length && !more.length) return <p className="text-dim">{t("layout")}</p>;
   return (
@@ -55,16 +58,16 @@ function Midi() {
 export default function Settings() {
   const { dev } = useApp();
   const [tab, setTab] = useState(() => {
-    try { const s = localStorage.getItem(TAB_KEY); if (TABS.some((x) => x[0] === s)) return s; } catch (e) { /* no storage */ }
+    try { const s = localStorage.getItem(TAB_KEY); if (s !== null && TABS.some((x) => x[0] === s)) return s; } catch (e) { /* no storage */ }
     return "midi";
   });
-  if (!A.dev) return null;
+  if (!A.dev || !dev || !dev.info) return null;
   const known = layoutKnown(dev.info);
   return (
     <>
-      <div role="tablist" aria-label={t("setTabsLabel")} className="seg mb-4" id="settabs">
+      <div role="tablist" aria-label={t("setTabsLabel")} className={clsx(seg, "mb-4")} id="settabs">
         {TABS.map(([id, k]) => (
-          <button key={id} type="button" role="tab" data-tab={id} aria-selected={id === tab} aria-pressed={id === tab}
+          <button key={id} type="button" role="tab" data-tab={id} aria-selected={id === tab} aria-pressed={id === tab} className={tog}
             onClick={() => { setTab(id); try { localStorage.setItem(TAB_KEY, id); } catch (e) { /* no storage */ } }}>{t(k)}</button>
         ))}
       </div>

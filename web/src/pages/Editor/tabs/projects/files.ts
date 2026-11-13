@@ -6,7 +6,7 @@ import { afterSoundChange } from "../../core/device.ts";
 import { bkDone, bkProgress, bkReport, smpInfo, songLoadUI } from "../../core/shared.ts";
 
 /* projects: the protocol cannot ask whether a slot is used without loading or saving it */
-export async function project(o, slot) {
+export async function project(o: number, slot: number): Promise<void> {
   const dev = A.dev;
   if (!dev) return;
   /* loading replaces the loop: always asked; saving only over a section that is (or may be) used */
@@ -26,21 +26,21 @@ export async function project(o, slot) {
 }
 
 /* v6: backup / restore (the work: backupCapture / backupRestore in lib/proto.js) */
-export const backupSave = () => op(async () => {
+export const backupSave = (): Promise<void> => op(async () => {
   try {
-    const arc = await backupCapture(rq, A.dev.info, bkProgress("bkSaving"));
+    const arc = await backupCapture(rq, A.dev!.info!, bkProgress("bkSaving"));
     download(`BoopBox-backup-${today()}.json`, arc);
     sayK("bkSaved");
   } catch (e) { bkReport(e); } finally { bkDone(); }
 });
-export async function backupLoad() {
+export async function backupLoad(): Promise<void> {
   if (!A.dev) return;
   const f = await pickFile(".json,application/json");
   const dev = A.dev;
   if (!f || !dev) return;
-  let file;
+  let file: unknown;
   try { file = JSON.parse(await f.text()); backupObjects(file); }
-  catch (e) { sayK("bkBad", e.message); return; }
+  catch (e) { sayK("bkBad", (e as Error).message); return; }
   if (!confirm(t("bkConfirm"))) return;
   await op(async () => {
     try {
@@ -55,11 +55,11 @@ export async function backupLoad() {
 }
 
 /* (2.7) a song as one file: load one (the export is songExport in core/shared.js) */
-export async function songFileLoad() {
+export async function songFileLoad(): Promise<void> {
   if (!A.dev) return;
   const f = await pickFile(".sloopsong,.json,application/json");
   if (!f || !A.dev) return;
-  let file;
+  let file: { name?: string };
   try { file = JSON.parse(await f.text()); songObjects(file); }
   catch (e) { sayK("songBadFile", ""); return; }
   if (!confirm(t("sfConfirm").replace("{name}", file.name || f.name))) return;

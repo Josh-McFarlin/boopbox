@@ -5,28 +5,35 @@
    theme to the FM-1 (with its settings, the song stopped) and shows it; Read takes the FM-1's back; the code line
    shares it (THEME.code / THEME.fromCode). */
 import { CMD, THEME, crc32, parse, req } from "../../lib/proto.ts";
+import type { Rgb, Theme } from "../../lib/proto.ts";
 import { A, notify, op, rq, sayK, t } from "../../core/app.ts";
 
+/* which colour: the screen's five (c), the tracks' (trk), the background, the accent (hi), the ramp's start (base) */
+export type ThWhich = "c" | "trk" | "bg" | "hi" | "base";
+/* a colour pointed at: which, and its index in c / trk */
+export interface ThHl { w: ThWhich; k: number }
+/* the page's state: the theme, the palette it started from ("": none), the code the FM-1 shows (null: unknown) */
+export interface ThemeState { t: Theme; from: string; sent: string | null; base: Rgb; hl: ThHl | null }
 /* base: the ramp's starting colour (the old page's #thbase field) */
-export const TH = { t: Object.assign(THEME.builtin(4), { name: "MY THEME" }), from: "4", sent: null, base: [0x38, 0xc8, 0x5c], hl: null };
+export const TH: ThemeState = { t: Object.assign(THEME.builtin(4), { name: "MY THEME" }), from: "4", sent: null, base: [0x38, 0xc8, 0x5c], hl: null };
 /* the colour pointed at (the preview shows where it is used), or null */
-export const thHl = (w, k = 0) => { const n = w ? { w, k } : null; if (JSON.stringify(n) !== JSON.stringify(TH.hl)) { TH.hl = n; notify(); } };
-export const thOk = () => !!A.dev && !!A.dev.info && A.dev.info.proto >= 11;
+export const thHl = (w: ThWhich | null, k = 0): void => { const n = w ? { w, k } : null; if (JSON.stringify(n) !== JSON.stringify(TH.hl)) { TH.hl = n; notify(); } };
+export const thOk = (): boolean => !!A.dev && !!A.dev.info && A.dev.info.proto >= 11;
 export const TH_SCREEN = ["thC1", "thC2", "thC3", "thC4", "thC5"];
 /* sent: what the FM-1 shows, as far as this page knows */
-export const thState = () => (!thOk() || TH.sent === null ? "" : TH.sent === THEME.code(TH.t) ? "thStSent" : "thStNew");
+export const thState = (): string => (!thOk() || TH.sent === null ? "" : TH.sent === THEME.code(TH.t) ? "thStSent" : "thStNew");
 
 /* hl: the colour being pointed at ({ w: "c" | "trk" | "bg" | "hi", k }): what is drawn with it stays, the rest fades
    towards the background, so the preview shows where that colour is used */
-export function thDraw(cv, hl = TH.hl) {
+export function thDraw(cv: HTMLCanvasElement, hl: ThHl | null = TH.hl): void {
   const g = cv.getContext("2d"), th = TH.t;
   if (!g) return;
   const bg = THEME.shown(th.bg || [0, 0, 0]), BG = THEME.hex(bg);
-  const fade = (rgb, w, k) => THEME.hex(!hl || (hl.w === w && (hl.k === k || w === "bg" || w === "hi")) ? rgb
+  const fade = (rgb: Rgb, w: ThWhich, k: number) => THEME.hex(!hl || (hl.w === w && (hl.k === k || w === "bg" || w === "hi")) ? rgb
     : rgb.map((x, i) => Math.round(bg[i] + (x - bg[i]) * 0.18)));
   const P = th.c.map((x, k) => fade(THEME.shown(x), "c", k)), T = th.trk.map((x) => THEME.shown(x));
   const HI = fade(THEME.shown(THEME.hiOf(th)), "hi", 0);
-  const col = (k) => fade(T[k], "trk", k), part = (k, f) => fade(T[k].map((x) => Math.round(x * f)), "trk", k);
+  const col = (k: number) => fade(T[k], "trk", k), part = (k: number, f: number) => fade(T[k].map((x) => Math.round(x * f)), "trk", k);
   const sel = 0;
   g.fillStyle = BG; g.fillRect(0, 0, 240, 240);
   if (hl && hl.w === "bg") { g.strokeStyle = THEME.hex(bg.map((x) => (x > 127 ? x - 90 : x + 90))); g.lineWidth = 2; g.setLineDash([6, 4]); g.strokeRect(1, 1, 238, 238); g.setLineDash([]); }
@@ -66,7 +73,7 @@ export function thDraw(cv, hl = TH.hl) {
 }
 
 /* ---- edits ---- */
-export function thFrom(v) {
+export function thFrom(v: string): void {
   if (v === "") return;
   const name = TH.t.name, bg = TH.t.bg, hi = THEME.hiOf(TH.t);
   TH.t = THEME.builtin(+v);
@@ -78,7 +85,7 @@ export function thFrom(v) {
   TH.from = v;
   notify();
 }
-export function thColor(which, k, hex) {
+export function thColor(which: ThWhich, k: number, hex: string): void {
   const v = THEME.unhex(hex);
   if (!v) return;
   if (which === "c") { TH.t.c[k] = v; TH.from = ""; }
@@ -88,13 +95,13 @@ export function thColor(which, k, hex) {
   else if (which === "base") TH.base = v;
   notify();
 }
-export const thName = (s) => { TH.t.name = THEME.cleanName(s); notify(); };
-export const thBlack = () => { TH.t.bg = [0, 0, 0]; notify(); };
-export const thInvert = () => { TH.t = THEME.invert(TH.t); TH.from = ""; notify(); };
-export const thFix = () => { TH.t = THEME.fix(TH.t); notify(); };
-export const thRamp = () => { TH.t.c = THEME.ramp(TH.base, TH.t.bg); TH.from = ""; notify(); };
+export const thName = (s: string): void => { TH.t.name = THEME.cleanName(s); notify(); };
+export const thBlack = (): void => { TH.t.bg = [0, 0, 0]; notify(); };
+export const thInvert = (): void => { TH.t = THEME.invert(TH.t); TH.from = ""; notify(); };
+export const thFix = (): void => { TH.t = THEME.fix(TH.t); notify(); };
+export const thRamp = (): void => { TH.t.c = THEME.ramp(TH.base, TH.t.bg); TH.from = ""; notify(); };
 /* a pasted code -> the theme (false: not one) */
-export function thApply(s) {
+export function thApply(s: string): boolean {
   const th = THEME.fromCode(s);
   if (!th) { sayK("thBadCode"); return false; }
   TH.t = th;
@@ -104,7 +111,7 @@ export function thApply(s) {
 }
 
 /* ---- the FM-1 ---- */
-async function thPut(bytes) {                       /* -> the BK_PUT rc (0 written) */
+async function thPut(bytes: Uint8Array): Promise<number> {                       /* -> the BK_PUT rc (0 written) */
   let r = parse[CMD.BK_PUT](await rq(req.bkBegin(THEME.ID, bytes.length, crc32(bytes)), { timeout: 1500, retries: 1 }));
   if (r.rc) return r.rc;
   if (bytes.length) {
@@ -113,19 +120,19 @@ async function thPut(bytes) {                       /* -> the BK_PUT rc (0 writt
   }
   return parse[CMD.BK_PUT](await rq(req.bkCommit(THEME.ID), { timeout: 5000, retries: 0 })).rc;
 }
-const thSay = (rc, okKey) => sayK(rc === 0 ? okKey : rc === 3 ? "thStop" : "thRefused");
+const thSay = (rc: number, okKey: string) => sayK(rc === 0 ? okKey : rc === 3 ? "thStop" : "thRefused");
 /* -> false when the theme is unreadable (the FM-1 would refuse it: the page says why and focuses Fix) */
-export function thSend() {
+export function thSend(): boolean {
   if (!thOk()) return true;
   if (!THEME.readable(TH.t)) { sayK("thSendDark"); return false; }
   const code = THEME.code(TH.t);
   op(async () => { const rc = await thPut(THEME.encode(TH.t)); if (rc === 0) TH.sent = code; thSay(rc, "thSent"); notify(); });
   return true;
 }
-export function thRemove() {
+export function thRemove(): void {
   if (thOk() && confirm(t("thRemoveAsk"))) op(async () => { const rc = await thPut(new Uint8Array(0)); if (rc === 0) TH.sent = null; thSay(rc, "thRemoved"); notify(); });
 }
-export function thRead() {
+export function thRead(): void {
   if (!thOk()) return;
   op(async () => {
     const L = parse[CMD.BK_LIST](await rq(req.bkList(), { timeout: 5000, retries: 0 }));

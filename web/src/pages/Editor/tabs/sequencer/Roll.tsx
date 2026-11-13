@@ -4,25 +4,27 @@
 // The Sequencer page's piano roll (2.5): rows = notes C0..C8 in a box that scrolls (a keyboard on its left edge),
 // columns = steps (bar lines from DIV), a chord = one bar per note. The logic is in seq.js.
 import { useEffect, useRef } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { ROLL, noteName } from "../../lib/proto.ts";
 import { A, notify, t, useApp } from "../../core/app.ts";
+import { bar, seg, tog } from "../../ui/styles.ts";
 import { ROLL_HI, ROLL_LAB, ROLL_LO, ROLL_ROW, RV, curDiv, roll, rollApply, rollCenter, rollNoteAt, stepLen } from "./seq.ts";
 
 const BLACK = [1, 3, 6, 8, 10];
 function rollColors() {
-  const cs = getComputedStyle(document.documentElement), g = (v) => cs.getPropertyValue(v).trim();
+  const cs = getComputedStyle(document.documentElement), g = (v: string) => cs.getPropertyValue(v).trim();
   return { bg: g("--bg"), s1: g("--s1"), s2: g("--s2"), s3: g("--s3"), dim: g("--dim"), fg: g("--fg"), fg2: g("--fg2"), trk: g("--trk"), line: g("--line") };
 }
-function drawRoll(cv) {
+function drawRoll(cv: HTMLCanvasElement | null): void {
   const dev = A.dev;
   if (!cv || !dev || !dev.steps.length) return;
   const len = stepLen();
   const lo = ROLL_LO, hi = ROLL_HI, rows = hi - lo + 1;
-  const avail = Math.max(320, (cv.parentElement.clientWidth || 800) - 2);
+  const avail = Math.max(320, (cv.parentElement!.clientWidth || 800) - 2);
   const cw = Math.max(12, Math.floor((avail - ROLL_LAB) / len));
   const W = ROLL_LAB + cw * len, H = rows * ROLL_ROW, dpr = window.devicePixelRatio || 1;
   cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px";
-  const g = cv.getContext("2d"), C = rollColors();
+  const g = cv.getContext("2d")!, C = rollColors();
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   RV.geo = { lo, hi, cw, len };
   g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
@@ -59,7 +61,7 @@ function drawRoll(cv) {
 
 export default function Roll() {
   useApp();
-  const cv = useRef(null), box = useRef(null);
+  const cv = useRef<HTMLCanvasElement>(null), box = useRef<HTMLDivElement>(null);
   /* drawn after every render: the steps, LEN, DIV, the view or the selected track's colour may have changed */
   useEffect(() => {
     drawRoll(cv.current);
@@ -71,14 +73,14 @@ export default function Roll() {
     window.addEventListener("resize", r);
     return () => { window.removeEventListener("resize", r); RV.trk = -1; };   /* (opened again: on the notes again) */
   }, []);
-  const rollAt = (e) => {
-    const G = RV.geo, r = cv.current.getBoundingClientRect();
+  const rollAt = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const G = RV.geo, r = cv.current!.getBoundingClientRect();
     if (!G) return null;
     const x = e.clientX - r.left - ROLL_LAB, y = e.clientY - r.top;
     const i = Math.floor(x / G.cw), p = G.hi - Math.floor(y / ROLL_ROW);
     return { i, p, fx: x / G.cw - i, inside: x >= 0 && i >= 0 && i < G.len && p >= G.lo && p <= G.hi };
   };
-  const down = (e) => {
+  const down = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!A.dev || roll.writing) return;
     const h = rollAt(e);
     if (!h || !h.inside) return;
@@ -86,7 +88,7 @@ export default function Roll() {
     if (c) {
       if (h.i === c.at + c.dur - 1 && h.fx > 0.55) {      /* the end of a note: drag its length */
         RV.drag = { at: c.at, dur: c.dur };
-        cv.current.setPointerCapture(e.pointerId);
+        cv.current!.setPointerCapture(e.pointerId);
         drawRoll(cv.current);
         return;
       }
@@ -95,7 +97,7 @@ export default function Roll() {
     }
     rollApply(ROLL.place(A.dev.steps, len, h.i, h.p, ROLL.steps(RV.frac, curDiv())));
   };
-  const move = (e) => {
+  const move = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const h = rollAt(e);
     if (RV.drag) {
       if (!h) return;
@@ -103,23 +105,23 @@ export default function Roll() {
       if (d !== RV.drag.dur) { RV.drag.dur = d; drawRoll(cv.current); }
       return;
     }
-    const c = h && h.inside ? rollNoteAt(h) : null;
-    cv.current.style.cursor = c && h.i === c.at + c.dur - 1 && h.fx > 0.55 ? "ew-resize" : "pointer";
-    cv.current.title = h && h.p >= ROLL_LO && h.p <= ROLL_HI ? noteName(h.p) + (h.inside ? ` · ${h.i + 1}` : "") : "";
+    const c = h && h.inside ? rollNoteAt(h) : null, el = cv.current!;
+    el.style.cursor = c && h && h.i === c.at + c.dur - 1 && h.fx > 0.55 ? "ew-resize" : "pointer";
+    el.title = h && h.p >= ROLL_LO && h.p <= ROLL_HI ? noteName(h.p) + (h.inside ? ` · ${h.i + 1}` : "") : "";
   };
   const drop = () => {
     if (!RV.drag) return;
     const d = RV.drag;
     RV.drag = null;
-    rollApply(ROLL.resize(A.dev.steps, stepLen(), d.at, d.dur));
+    rollApply(ROLL.resize(A.dev!.steps, stepLen(), d.at, d.dur));
   };
   return (
     <div id="roll" className="min-w-0 flex-1">
-      <p className="bar">
+      <p className={bar}>
         <span className="text-dim">{t("sqRollKeep")}</span>
-        <span className="seg" id="rolllen">
+        <span className={seg} id="rolllen">
           {ROLL.LENGTHS.map(([k, f]) => (
-            <button key={k} type="button" data-f={String(f)} aria-pressed={f === RV.frac ? "true" : "false"}
+            <button key={k} type="button" className={tog} data-f={String(f)} aria-pressed={f === RV.frac ? "true" : "false"}
               onClick={() => { RV.frac = f; notify(); }}>{t("len_" + k)}</button>
           ))}
         </span>
@@ -128,7 +130,7 @@ export default function Roll() {
         <canvas id="rollcv" ref={cv} className="block touch-none" onPointerDown={down} onPointerMove={move} onPointerUp={drop}
           onPointerCancel={() => { RV.drag = null; drawRoll(cv.current); }} />
       </div>
-      <p className="help mt-2 text-dim">{t("rollHelp")}</p>
+      <p className="mt-2 text-dim">{t("rollHelp")}</p>
     </div>
   );
 }

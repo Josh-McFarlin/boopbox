@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The Save & load page: the four sections A..D of the song on the FM-1, and files: a song as one file (2.7), the full
 // backup (v6).
-import { A, t, tf, useApp } from "../core/app.ts";
+import type { CSSProperties, ReactNode } from "react";
+import clsx from "clsx";
+import { A, readyDev, t, tf, useApp } from "../core/app.ts";
 import { songExport } from "../core/shared.ts";
 import { Card, Ic } from "../ui/kit.tsx";
+import { help } from "../ui/styles.ts";
 import { HelpMore } from "./patterns/ui.tsx";
 import { backupLoad, backupSave, project, songFileLoad } from "./projects/files.ts";
 
 /* the sections: used, empty or unknown (PROJECT op 2 tells used / empty, nothing more) */
 function Sections() {
-  const { dev, busy } = useApp();
+  const { busy } = useApp();
+  const dev = readyDev();
   return (
     <div id="slots" className="grid grid-cols-4 gap-3">
       {[0, 1, 2, 3].map((i) => {
         const u = dev.slotUsed[i], L = "ABCD"[i];
         return (
-          <div key={i} style={{ "--c": `var(--t${i + 1})` }} className="flex flex-col gap-2 border border-line border-t-4 border-t-c bg-bg p-3">
+          <div key={i} style={{ "--c": `var(--t${i + 1})` } as CSSProperties} className="flex flex-col gap-2 border border-line border-t-4 border-t-c bg-bg p-3">
             <div className="flex items-baseline gap-3">
               <b className="text-big font-normal text-c">{L}</b>
               <span className={u ? "text-fg" : "text-dim"}>{u == null ? t("secUnknown") : t(u ? "secUsed" : "secEmptyShort")}</span>
@@ -32,10 +36,11 @@ function Sections() {
 }
 
 /* a file row: what it holds, its two buttons */
-function FileRow({ id, title, what, children }) {
+interface FileRowProps { id: string; title: string; what: string; children?: ReactNode }
+function FileRow({ id, title, what, children }: FileRowProps) {
   return (
     <div id={id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-line py-3 first:border-t-0 first:pt-0">
-      <p className="help m-0 text-dim"><b className="text-fg">{title}</b>{" — " + what}</p>
+      <p className={clsx(help, "m-0 text-dim")}><b className="text-fg">{title}</b>{" — " + what}</p>
       <div className="flex gap-2">{children}</div>
     </div>
   );
@@ -67,7 +72,7 @@ export default function Projects() {
             </FileRow>
             {bkProg != null ? <progress id="bk-prog" className="mt-2 w-full" max="1" value={bkProg} /> : null}
           </>
-        ) : <p className="help m-0 text-dim">{t("filesOld")}</p>}
+        ) : <p className={clsx(help, "m-0 text-dim")}>{t("filesOld")}</p>}
       </Card>
     </>
   );

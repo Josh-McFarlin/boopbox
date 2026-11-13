@@ -1945,7 +1945,7 @@ export interface MockDesc { label: string; fmt: number; min: number; max: number
 /** a step as the mock keeps it (lvl / rat always there) */
 export interface MockStep extends Step { lvl: number; rat: number }
 export interface MockTrack {
-  engine: number; preset: number; drum: boolean; fm6: number[]; p: number[]; step: MockStep[]; dstep: DrumStep[] | null;
+  engine: number; preset: number; drum: boolean; fm6: number[] | Uint8Array; p: number[]; step: MockStep[]; dstep: DrumStep[] | null;
   micro: number[]; locks: Lock[]; fill: number[];
 }
 /** a project slot / the snapshot of the mock's tracks (a JSON copy) */
@@ -1954,13 +1954,13 @@ export interface MockSmpSlot { flash: Uint8Array; zones: number; name: string; l
 export interface MockLive {
   t0: number; sec: number; next: number; nextAt: number; songMode: boolean; srec: number; fillHeld: boolean; fillBar: boolean;
   fillAt: number; fillTo: number; fx: number; recWait: boolean; undo: number; armed: number; armedAt: number; taps: number[];
-  rolls: Set<number>; erase: Set<number>; pattern: number[]; chain: number[]; thr: number; master: number; dtw: number[];
+  rolls: Set<string>; erase: Set<string>; pattern: number[][]; chain: number[]; thr: number; master: number; dtw: number[];
   ft?: boolean; c?: number;
 }
 /** the mock device's state (engine, preset, p, step: the selected track's) */
 export interface MockState {
   tracks: MockTrack[]; sel: number; rec: number; solo: number; g: number[]; slots: (MockProject | null)[]; smp: MockSmpSlot[];
-  bank: (PatchIn & { name: string; pattern: PatStep[] } | null)[]; fm6bank: (number[] | Uint8Array | null)[]; settings: Uint8Array;
+  bank: ({ engine: number; name: string; p: number[]; pattern: PatStep[] } | null)[]; fm6bank: (number[] | Uint8Array | null)[]; settings: Uint8Array;
   dsyn: DsynKit[] | null; dsynStored: Uint8Array | null; dsynPlayed: { k: number; lane: number; vel: number; sound: Uint8Array }[];
   ml: Uint8Array | null; bkSnap: Map<number, Uint8Array> | null; bkPut: { id: number; len: number; crc: number; pos: number; buf: Uint8Array } | null;
   watch: boolean; v4: boolean; lastReq: number; playing: boolean; live: MockLive; midiIn: number[][];
@@ -2055,7 +2055,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     for (let i = 0; i < Math.min(4, n); i++) { const l = laneOf(notes[i] & 0x7F); d.on |= 1 << l; d.lvl[l] = flags & 1 ? 3 : 0; }
   };
   /* a step's bytes as STEP_GET sends them (v5: + lvl, hi, rat) */
-  const stepOut = (b: (x: number) => void, x: Step) => {
+  const stepOut = (b: (x: number) => void, x: MockStep) => {
     b(x.n); x.notes.forEach(b); b(x.time); b(x.flags); b(x.vel);
     if (v5) { b(x.lvl | 0); b((((x.lvl | 0) >> 7) & 1) | ((((x.rat | 0) >> 7) & 1) << 1)); b(x.rat | 0); }
   };
@@ -2286,7 +2286,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     micro: new Array(NSTEP).fill(0), locks: [],      /* v7: nudges, parameter locks (at most NLOCK) */
     fill: new Array(NSTEP / 4).fill(0) });           /* v8: fill conditions, 2 bits a step */
   const NLOCK = 24;
-  const st = {
+  const st = ({
     tracks: Array.from({ length: NTRK }, (_, i) => newTrack(i)), sel: 0, rec: 0, solo: 0,
     g: GP.map((d) => d.def),
     slots: [null, null, null, null],
@@ -2305,7 +2305,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       fx: -1, recWait: false, undo: 0, armed: -1, armedAt: 0, taps: [],
       rolls: new Set(), erase: new Set(), pattern: [], chain: [], thr: 0, master: 0, dtw: new Array(16).fill(8 | 4 << 4) },
     midiIn: [],
-  } as MockState;
+  } as Omit<MockState, "engine" | "preset" | "p" | "step">) as MockState;
   for (const k of ["engine", "preset", "p", "step"]) {
     Object.defineProperty(st, k, { enumerable: false, get: () => (st.tracks[st.sel] as unknown as Record<string, unknown>)[k],
       set: (v) => { (st.tracks[st.sel] as unknown as Record<string, unknown>)[k] = v; } });
@@ -2315,12 +2315,12 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   /* (BoopBox) backup object 0 as the firmware keeps it, format 7 (PROJ7): the mock's tracks (kind, sound, parameters,
      the pattern playing: steps, nudges, fill conditions, locks) and what the last project sent kept (the other patterns,
      the chains, the components, FOLLOW, the progression: st.p7). A project sent is applied to the tracks the same way */
-  const p7def = (t, k) => (k < P_E0 ? TP[k].def : t.drum ? (k === P_E0 ? KIT.def : 0) : ENG[t.engine].edit[k - P_E0].def);
-  const p7Pat = (t, keep) => {
+  const p7def = (t: MockTrack, k: number) => (k < P_E0 ? TP[k].def : t.drum ? (k === P_E0 ? KIT.def : 0) : ENG[t.engine].edit[k - P_E0].def);
+  const p7Pat = (t: MockTrack, keep: P7Pat | null | undefined) => {
     const p = PROJ7.emptyPat(t.drum), pe0 = P_E0;
     for (let k = 0; k < NSTEP; k++) {
       if (t.drum) {
-        const d = t.dstep[k], lv = [0, 0, 0, 0], rt = [0, 0, 0, 0];
+        const d = t.dstep![k], lv = [0, 0, 0, 0], rt = [0, 0, 0, 0];
         for (let l = 0; l < 16; l++) { lv[l >> 2] |= (d.lvl[l] & 3) << (2 * (l & 3)); rt[l >> 2] |= (d.rat[l] & 3) << (2 * (l & 3)); }
         p.steps[k] = { on: [d.on & 0xFF, (d.on >> 8) & 0xFF], lvl: lv, rat: rt };
       } else { const x = t.step[k]; p.steps[k] = { notes: x.notes.slice(), n: x.n, time: x.time, flags: x.flags, vel: x.vel, lvl: x.lvl | 0, rat: x.rat | 0 }; }
@@ -2332,19 +2332,20 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     return p;
   };
   function p7Bytes() {
-    const B = st.p7 || { harm: null, bank: [], tracks: [] }, gm = new Array((G_COUNT + 7) >> 3).fill(0), gv = [];
+    const B: Pick<Proj7, "harm" | "bank" | "tracks"> & { scenes?: P7Scenes | null } = st.p7 || { harm: null, bank: [], tracks: [] },
+      gm: number[] = new Array((G_COUNT + 7) >> 3).fill(0), gv: number[] = [];
     st.g.forEach((x, k) => { if (x !== GP[k].def) { gm[k >> 3] |= 1 << (k & 7); gv.push(x); } });
     const w = PROJ7.writer(); w.u8(G_COUNT); gm.forEach((x) => w.u8(x)); gv.forEach((x) => w.v(x));
     return PROJ7.encode({ g: w.o, sel: st.sel, harm: B.harm, bank: B.bank, other: [], tracks: st.tracks.map((t, i) => {
       const o = B.tracks.find((x) => x.i === i);
       return { i, kind: t.drum ? 1 : 0, eng: t.drum ? 0 : t.engine, pre: t.drum ? 0 : t.preset, nc: P_E0,
-        p: t.p.slice(0, P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, k)),
-        e: t.p.slice(P_E0).map((x, k) => [k, x]).filter(([k, x]) => x !== p7def(t, P_E0 + k)),
+        p: t.p.slice(0, P_E0).map((x, k): [number, number] => [k, x]).filter(([k, x]) => x !== p7def(t, k)),
+        e: t.p.slice(P_E0).map((x, k): [number, number] => [k, x]).filter(([k, x]) => x !== p7def(t, P_E0 + k)),
         dtw: t.drum ? (o && o.dtw) || new Array(16).fill(0) : null, pat: p7Pat(t, o && o.pat), cur: o ? o.cur : 0, chain: o ? o.chain.slice() : [],
         coff: o ? o.coff | 0 : 0, hfol: o ? o.hfol : 0, tail: 2 };
     }), scenes: B.scenes || null });
   }
-  function p7Apply(P) {
+  function p7Apply(P: Proj7) {
     for (const x of P.tracks) {
       const t = st.tracks[x.i];
       if (!t || (x.kind === 1) !== t.drum) continue;  /* (the mock keeps its kinds) */
@@ -2353,13 +2354,12 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       x.p.forEach(([k, v]) => { if (k < P_E0) t.p[k] = v; });
       x.e.forEach(([k, v]) => { t.p[P_E0 + k] = v; });
       for (let k = 0; k < NSTEP; k++) {
-        const s = x.pat.steps[k];
         if (t.drum) {
-          const d = emptyDrum();
+          const s = x.pat.steps[k] as P7DrumStep, d = emptyDrum();
           d.on = s.on[0] | (s.on[1] << 8);
           for (let l = 0; l < 16; l++) { d.lvl[l] = (s.lvl[l >> 2] >> (2 * (l & 3))) & 3; d.rat[l] = (s.rat[l >> 2] >> (2 * (l & 3))) & 3; }
-          t.dstep[k] = d;
-        } else t.step[k] = { n: s.n, notes: s.notes.slice(), time: s.time, flags: s.flags, vel: s.vel, lvl: s.lvl, rat: s.rat };
+          t.dstep![k] = d;
+        } else { const s = x.pat.steps[k] as P7Step; t.step[k] = { n: s.n, notes: s.notes.slice(), time: s.time, flags: s.flags, vel: s.vel, lvl: s.lvl, rat: s.rat }; }
         t.micro[k] = x.pat.micro[k];
         fillSet(t.fill, k, x.pat.fill[k]);
       }
@@ -2369,20 +2369,20 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     st.p7 = P;
   }
   const drumFoc = () => (drumSel() ? st.sel : st.tracks.findIndex((t) => t.drum));   /* core.h drum_focus */
-  const lvlOf = (i) => (!EIGHT && st.tracks[i].drum ? st.g[25] : st.tracks[i].p[0]);   /* (four tracks: the drums' G_DRLVL) */
-  const setLvl = (i, lv) => { if (!EIGHT && st.tracks[i].drum) st.g[25] = lv; else st.tracks[i].p[0] = lv; };
-  const engOf = (t) => (t.drum ? ENG.length : t.engine);   /* the engine byte: NENGINES = drums */
+  const lvlOf = (i: number) => (!EIGHT && st.tracks[i].drum ? st.g[25] : st.tracks[i].p[0]);   /* (four tracks: the drums' G_DRLVL) */
+  const setLvl = (i: number, lv: number) => { if (!EIGHT && st.tracks[i].drum) st.g[25] = lv; else st.tracks[i].p[0] = lv; };
+  const engOf = (t: MockTrack) => (t.drum ? ENG.length : t.engine);   /* the engine byte: NENGINES = drums */
   const watchMs = opt.watchMs || 3000;
-  const tdesc = (t, id) => (t.drum && id === P_E0 ? KIT : id >= P_E0 ? ENG[t.engine].edit[id - P_E0] : TP[id]);
-  const desc = (scope, id) => (scope === 0 && id < P_COUNT ? tdesc(st.tracks[st.sel], id) : scope === 1 && id < G_COUNT ? GP[id] : null);
+  const tdesc = (t: MockTrack, id: number) => (t.drum && id === P_E0 ? KIT : id >= P_E0 ? ENG[t.engine].edit[id - P_E0] : TP[id]);
+  const desc = (scope: number, id: number) => (scope === 0 && id < P_COUNT ? tdesc(st.tracks[st.sel], id) : scope === 1 && id < G_COUNT ? GP[id] : null);
   const seqEmpty = () => st.step.every((s) => !s.n);
-  function loadPat16(pat) {                       /* ui.c load_pat16 */
+  function loadPat16(pat: PatStep[]) {                       /* ui.c load_pat16 */
     const ps = stepsFromPattern(pat);
     st.step.forEach((s, i) => Object.assign(s, i < 16 ? ps[i] : { n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0 }));
     st.p[29] = 16;
   }
-  const loadPattern = (k) => loadPat16(PATTERNS[k][0].map((n, i) => [n, PATTERNS[k][1][i]]));
-  function applyPreset(pi, demo) {                 /* demo: seed the mock (never from a command) */
+  const loadPattern = (k: number) => loadPat16(PATTERNS[k][0].map((n, i) => [n, PATTERNS[k][1][i]]));
+  function applyPreset(pi: number, demo?: boolean) {                 /* demo: seed the mock (never from a command) */
     if (drumSel()) return;
     const e = ENG[st.engine];
     pi %= e.presets.length;
@@ -2397,21 +2397,21 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     if (st.engine === FM6_E) fm6Slot(st.tracks[st.sel], st.p[P_E0 + 7]);   /* eng_fm6.c fm6_track_loaded: the slot's patch */
   }
   /* PTCH value s -> the track's patch: F1..F8 the factory, B1..B27 the bank (empty: the init voice) */
-  function fm6Slot(t, s) {
+  function fm6Slot(t: MockTrack, s: number) {
     const nf = FM6.FACTORY_PK.length;
     t.fm6 = (s < nf ? FM6.FACTORY_PK[s] : st.fm6bank[s - nf] || FM6.INIT_PK).slice();
   }
-  function setEngine(ei) {
+  function setEngine(ei: number) {
     if (drumSel()) return;
     st.engine = ei % ENG.length;
     for (let i = 0; i < 8; i++) st.p[P_E0 + i] = ENG[st.engine].edit[i].def;
     applyPreset(0);
   }
-  const fm6BankChanged = (k) => st.tracks.forEach((t) => { if (!t.drum && t.engine === FM6_E && t.p[P_E0 + 7] === FM6.FACTORY_PK.length + k) fm6Slot(t, t.p[P_E0 + 7]); });
+  const fm6BankChanged = (k: number) => st.tracks.forEach((t) => { if (!t.drum && t.engine === FM6_E && t.p[P_E0 + 7] === FM6.FACTORY_PK.length + k) fm6Slot(t, t.p[P_E0 + 7]); });
   const clearSteps = () => { st.step.forEach((s) => Object.assign(s, { n: 0, notes: [0, 0, 0, 0], time: 2, flags: 0, vel: 0, lvl: 0, rat: 0 })); st.tracks[st.sel].micro.fill(0); st.tracks[st.sel].locks.length = 0; st.tracks[st.sel].fill.fill(0); };
-  const snapshot = (name) => ({ engine: st.engine, name, p: st.p.slice(), pattern: patternFromSteps(st.step) });
+  const snapshot = (name: string) => ({ engine: st.engine, name, p: st.p.slice(), pattern: patternFromSteps(st.step) });
   /* a few user presets to start with */
-  [[0, 0, 0, "MY LEAD"], [1, 1, 1, "GLASS BELL"], [2, 2, 3, "PHASE RESO"], [5, 3, 2, "8BIT ARP"]].forEach(([slot, e, p, name]) => {
+  ([[0, 0, 0, "MY LEAD"], [1, 1, 1, "GLASS BELL"], [2, 2, 3, "PHASE RESO"], [5, 3, 2, "8BIT ARP"]] as [number, number, number, string][]).forEach(([slot, e, p, name]) => {
     setEngine(e); clearSteps(); applyPreset(p, true);
     st.bank[slot] = snapshot(name);
     clearSteps();
@@ -2424,7 +2424,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   const KICK = 0, SNARE = 2, CLAP = 3, HAT = 4, OHAT = 5;
   [[KICK, HAT], [HAT], [HAT], [HAT], [SNARE, HAT], [HAT], [HAT], [KICK, OHAT], [KICK, HAT], [HAT], [KICK], [HAT, SNARE], [SNARE, CLAP], [HAT], [HAT], [OHAT]]
     .forEach((ls, i) => {
-      const d = st.tracks[TRK_DRUM].dstep[i];
+      const d = st.tracks[TRK_DRUM].dstep![i];
       for (const l of ls) d.on |= 1 << l;
       if (i === 11) d.lvl[SNARE] = 1;               /* GHOST */
       if (i === 14) d.rat[HAT] = 1;                 /* x2 */
@@ -2433,10 +2433,10 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   setEngine(0);
   clearSteps();
   applyPreset(4, true);                             /* WOBBLE, a recorded-looking pattern on track 1 (mock only) */
-  const project = () => JSON.parse(JSON.stringify({ tracks: st.tracks, sel: st.sel, g: st.g }));
+  const project = (): MockProject => JSON.parse(JSON.stringify({ tracks: st.tracks, sel: st.sel, g: st.g }));
   /* v10: a factory synthesised kit (DSYN_MOCK_KITS), SYN1..4 = copies of 808, 909, TRAP, TECHNO */
   const dsynRaw = b64dec(DSYN_MOCK_KITS);
-  function dsynFactory(i) {
+  function dsynFactory(i: number): DsynKit {
     const at = i * (1 + DSYN.LANES * DSYN.SIZE);
     return { name: DSYN_MOCK_NAMES[i], crush: dsynRaw[at], src: i,
       sounds: Array.from({ length: DSYN.LANES }, (_, l) => dsynRaw.slice(at + 1 + l * DSYN.SIZE, at + 1 + (l + 1) * DSYN.SIZE)) };
@@ -2447,9 +2447,9 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   }
   st.slots[0] = project();
 
-  function handle(cmd, a) {
-    const out = [];
-    const b = (x) => out.push(x & 0x7F), v = (x) => out.push(...v14enc(x)), s = (x) => out.push(...strEnc(x));
+  function handle(cmd: number, a: number[]): number[] | null {
+    const out: number[] = [];
+    const b = (x: number) => out.push(x & 0x7F), v = (x: number) => out.push(...v14enc(x)), s = (x: unknown) => out.push(...strEnc(x));
     if (opt.legacy && cmd >= CMD.UP_LIST) return null;
     if (opt.v3 && cmd >= CMD.TRACK_PARAM) return null;
     if (opt.noBackup && cmd >= CMD.LOCK_GET) return null;   /* (a v5 device: no locks either) */
@@ -2486,7 +2486,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
           else {
             const saved = st.engine;                /* values clamped to the ranges of that engine */
             st.engine = engine;
-            st.bank[slot] = { engine, name, p: p.map((x, i) => { const d = desc(0, i); return clamp(x, d.min, d.max); }), pattern };
+            st.bank[slot] = { engine, name, p: p.map((x, i) => { const d = desc(0, i); return clamp(x, d!.min, d!.max); }), pattern };
             st.engine = saved;
           }
         } catch (e) { rc = 1; }
@@ -2583,7 +2583,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         if (a.length < 2 || a[0] >= NTRK || a[1] >= NSTEP) return null;
         const t = st.tracks[a[0]];
         if (t.drum) {
-          if (a.length >= 10) dFromOld(t.dstep[a[1]], a[2], a.slice(3, 7), a[7], a[8]);
+          if (a.length >= 10) dFromOld(t.dstep![a[1]], a[2], a.slice(3, 7), a[7], a[8]);
           b(a[0]); b(a[1]); stepOut(b, dOld(t.dstep[a[1]]));
           break;
         }
@@ -2644,9 +2644,9 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       }
       case CMD.DRUM_STEP: {                       /* v5: index [, on 3 x 7 bits, lvl 5 x 7, rat 5 x 7] */
         if (a.length < 1 || a[0] >= NSTEP) return null;
-        const d = st.tracks[Math.max(0, drumFoc())].dstep[a[0]];   /* (the drum track shown: core.h drum_focus) */
+        const d = st.tracks[Math.max(0, drumFoc())].dstep![a[0]];   /* (the drum track shown: core.h drum_focus) */
         if (a.length >= 14) {
-          const g = (k, n) => a.slice(k, k + n).reduce((x, y, j) => x + y * 2 ** (7 * j), 0);
+          const g = (k: number, n: number) => a.slice(k, k + n).reduce((x, y, j) => x + y * 2 ** (7 * j), 0);
           const on = g(1, 3) & 0xFFFF, lv = g(4, 5) % 2 ** 32, rt = g(9, 5) % 2 ** 32;
           Object.assign(d, emptyDrum());
           d.on = on;
@@ -2666,7 +2666,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       case CMD.STEP_GET: case CMD.STEP_SET: {
         if (a.length < 1 || a[0] >= NSTEP) return null;
         if (drumSel()) {
-          const d = st.tracks[st.sel].dstep[a[0]];
+          const d = st.tracks[st.sel].dstep![a[0]];
           if (cmd === CMD.STEP_SET && a.length >= 9) dFromOld(d, a[1], a.slice(2, 6), a[6], a[7]);
           b(a[0]); stepOut(b, dOld(d));
           break;
@@ -2740,9 +2740,9 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       /* v6 backup: the mock's objects are JSON bytes (projects, banks) and the raw sample slots */
       case CMD.BK_LIST: {
         if (opt.noBackup) return null;
-        const enc = (o) => Uint8Array.from(Array.from(JSON.stringify(o), (c) => c.charCodeAt(0) & 0x7F));
-        const bankOf = (h) => { const x = st.bank.slice(h * 16, h * 16 + 16); return x.some(Boolean) ? enc(x) : new Uint8Array(0); };
-        st.bkSnap = new Map([[0, EIGHT ? p7Bytes() : enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k) => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
+        const enc = (o: unknown) => Uint8Array.from(Array.from(JSON.stringify(o), (c) => c.charCodeAt(0) & 0x7F));
+        const bankOf = (h: number) => { const x = st.bank.slice(h * 16, h * 16 + 16); return x.some(Boolean) ? enc(x) : new Uint8Array(0); };
+        st.bkSnap = new Map<number, Uint8Array>([[0, EIGHT ? p7Bytes() : enc(project())], [1, st.settings.slice()], ...[0, 1, 2, 3].map((k): [number, Uint8Array] => [2 + k, st.slots[k] ? enc(st.slots[k]) : new Uint8Array(0)]),
           [6, bankOf(0)], [7, bankOf(1)], ...(v9 ? [[8, st.fm6bank.some(Boolean) ? FM6.bankObj(st.fm6bank) : new Uint8Array(0)]] : []),
           ...(v10 ? [[9, DSYN.bankEncode(dsynKits())]] : []),
           ...(EIGHT ? [[10, ml48()]] : v10 && st.ml && !mlDefault(st.ml) ? [[10, st.ml.slice()]] : []),   /* (BoopBox: always, 48 bytes) */   /* MIDI LEARN (2.6): only when not the
@@ -2841,11 +2841,11 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
           else if (!rc && a[0] === 1) { if (a[1] < FM6_BANK) { pk = st.fm6bank[a[1]]; if (!pk) rc = 2; } else rc = 1; }   /* 2: an empty slot */
           else if (!rc) { if (a[1] < nf) pk = FM6.FACTORY_PK[a[1]]; else rc = 1; }                                     /* 1: a bad index */
           b(a.length ? a[0] : 127); b(a.length > 1 ? a[1] : 127); b(rc);
-          if (!rc) pk.forEach(b);
+          if (!rc) pk!.forEach(b);
         } else {
           let rc = a.length !== 2 + FM6.PACKED ? 1 : 0;
           const pk = rc ? null : FM6.pack(FM6.unpack(a.slice(2)));   /* (every value into its range) */
-          if (!rc && a[0] === 0 && a[1] < FM6_NPART) st.tracks[a[1]].fm6 = pk;
+          if (!rc && a[0] === 0 && a[1] < FM6_NPART) st.tracks[a[1]].fm6 = pk!;
           else if (!rc && a[0] === 1 && a[1] < FM6_BANK) {
             if (st.playing) rc = 3;
             else { st.fm6bank[a[1]] = pk; fm6BankChanged(a[1]); }
@@ -2858,7 +2858,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         const K = dsynKits(), nf = DSYN_MOCK_NAMES.length;
         if (cmd === CMD.DSYN_LIST) {
           if (a.length) return null;
-          b(nf); b(K.length); b(DSYN.bankEncode(K).every((x, i) => x === st.dsynStored[i]) ? 1 : 0);
+          b(nf); b(K.length); b(DSYN.bankEncode(K).every((x, i) => x === st.dsynStored![i]) ? 1 : 0);
           DSYN_MOCK_NAMES.forEach(s);
           K.forEach((k) => { s(k.name); b(k.src); });
         } else if (cmd === CMD.DSYN_GET) {
@@ -2904,14 +2904,14 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   /* ---- v12: LIVE (firmware editor_live.c, the FM-1's own code for each control: ui_layers.c layer_key, rec_toggle) */
   const barMs = () => 240000 / Math.max(40, st.g[0]);
   const nextBar = () => st.live.t0 + Math.ceil((Date.now() - st.live.t0 + 1) / barMs()) * barMs();
-  const lenOf = (t) => Math.max(1, t.p[29] | 0);
+  const lenOf = (t: MockTrack) => Math.max(1, t.p[29] | 0);
   function liveTick() {                           /* what the sequencer does on the bar */
     const L = st.live, now = Date.now();
     if (!st.playing) return;
     if (L.next >= 0 && now >= L.nextAt) { L.sec = L.next; L.next = -1; }
     if (L.fillBar && now >= L.fillAt) { L.fillBar = false; L.fillTo = L.fillAt + barMs(); }
   }
-  function liveOp(a) {
+  function liveOp(a: number[]) {
     const L = st.live, [op, x = 0, y = 0, z = 0] = a;
     liveTick();
     if (op === LIVE.PLAY) {
@@ -2962,7 +2962,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     } else if ((op === LIVE.ROLL && a.length >= 5) || (op === LIVE.ERASE && a.length >= 4)) {   /* (kept for the tests) */
       const set = op === LIVE.ROLL ? L.rolls : L.erase, k = `${x}:${y}`, down = op === LIVE.ROLL ? a[4] : z;
       if (down) set.add(k); else set.delete(k);
-      if (op === LIVE.ERASE && down && x === 3) st.tracks[3].dsteps?.forEach((d) => { if (d) d.on &= ~(1 << y); });
+      if (op === LIVE.ERASE && down && x === 3) (st.tracks[3] as MockTrack & { dsteps?: DrumStep[] }).dsteps?.forEach((d) => { if (d) d.on &= ~(1 << y); });
     } else if (op === LIVE.SOLO_TRK && mockProto >= 13 && a.length >= 2) {
       if (x < NTRK) st.solo ^= 1 << x;
     } else if (op === LIVE.PATTERN && a.length >= 4 && x < NTRK) {
@@ -2976,7 +2976,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     else if (op === LIVE.MASTER) L.master = x >= 127 ? 0 : x + 1;
     else if (op === LIVE.DRUM_TW && a.length >= 4) L.dtw[x & 15] = (Math.min(15, y) & 15) | ((Math.min(7, z) & 7) << 4);
   }
-  function liveState(b, v, op) {
+  function liveState(b: (x: number) => void, v: (x: number) => void, op: number) {
     const L = st.live, now = Date.now(), el = now - L.t0, mutes = st.tracks.reduce((m, t, i) => m | (t.p[40] ? 1 << i : 0), 0);
     liveTick();
     b(op);
@@ -2987,7 +2987,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     b(st.playing ? 18 + Math.round(Math.random() * 6) : 9);
     b(0); b(4); b(0); b(4);                          /* (the song: entry 0 of 4, bar 0 of 4) */
     b(st.slots.reduce((m, x, k) => m | (x ? 1 << k : 0), 0));
-    const trkOut = (t, i) => {
+    const trkOut = (t: MockTrack, i: number) => {
       const steps = st.playing ? Math.floor(el * st.g[0] / 15000) : 0, heard = st.playing && !t.p[40] && !(st.solo && !((st.solo >> i) & 1));
       b(steps % lenOf(t)); b(lenOf(t)); b(heard ? 70 + Math.round(Math.random() * 40) : 0);
     };
@@ -3000,11 +3000,11 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   }
 
   /* a WebMIDI-like access object: one input and one output named "Felucca" */
-  const input = { id: "mock-in", name: "Felucca", type: "input", state: "connected", onmidimessage: null };
+  const input: MockPort = { id: "mock-in", name: "Felucca", type: "input", state: "connected", onmidimessage: null };
   let busy = false;
-  const output = {
+  const output: MockPort = {
     id: "mock-out", name: "Felucca", type: "output", state: "connected",
-    send(data) {
+    send(data: number[] | Uint8Array) {
       if (data && data.length && data[0] !== 0xF0) {   /* v12 (LIVE): a note, as a keyboard would play it */
         st.midiIn.push(Array.from(data));
         if (st.live.recWait && (data[0] & 0xF0) === 0x90 && data[2] && !st.slots.some(Boolean)) { st.live.recWait = false; st.live.ft = true; }   /* an empty project: a free take */
@@ -3018,14 +3018,14 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       busy = true;
       watching();                                   /* a lapsed WATCH ends before this request counts */
       st.lastReq = Date.now();
-      const flash = [CMD.UP_PUT, CMD.UP_STORE, CMD.UP_ERASE].includes(f.cmd) && !opt.legacy;
+      const flash = ([CMD.UP_PUT, CMD.UP_STORE, CMD.UP_ERASE] as number[]).includes(f.cmd) && !opt.legacy;
       setTimeout(() => {
         busy = false;
         const r = handle(f.cmd, f.a);
-        if (r && opt.onChange && [CMD.SET, CMD.STEP_SET, CMD.PRESET, CMD.PROJECT, CMD.UP_LOAD, CMD.TRACK,
+        if (r && opt.onChange && ([CMD.SET, CMD.STEP_SET, CMD.PRESET, CMD.PROJECT, CMD.UP_LOAD, CMD.TRACK,
           CMD.TRACK_MIX, CMD.TRACK_PARAM, CMD.TRACK_STEP, CMD.DRUM_STEP, CMD.LOCK_SET, CMD.MICRO_SET,
           CMD.FILL_SET, CMD.FM6_PUT, CMD.FM6_ERASE, CMD.DSYN_PUT, CMD.DSYN_PLAY, CMD.SMP_END,
-          CMD.SMP_ERASE, CMD.BK_PUT, CMD.LIVE].includes(f.cmd)) opt.onChange(f.cmd, f.a);
+          CMD.SMP_ERASE, CMD.BK_PUT, CMD.LIVE] as number[]).includes(f.cmd)) opt.onChange(f.cmd, f.a);
         if (r && input.onmidimessage) input.onmidimessage({ data: Uint8Array.from(r) });
         const ra = r ? r.slice(5, -1) : [];
         if (r && ((f.cmd === CMD.SET && f.a[0] === 1 && f.a[1] === G_ENGSEL) || f.cmd === CMD.PRESET
@@ -3038,7 +3038,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     if (st.watch && Date.now() - st.lastReq > watchMs) st.watch = false;
     return st.watch;
   }
-  function push(cmd, args) {
+  function push(cmd: number, args: number[]) {
     if (!watching()) return false;
     const fr = Uint8Array.from(frame(cmd, args));
     setTimeout(() => { if (input.onmidimessage) input.onmidimessage({ data: fr }); }, 0);
@@ -3048,7 +3048,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
   /* things done on the device itself */
   const sim = {
     knob(id = [9, 33, 35, P_E0 + 4][Math.floor(Math.random() * 4)], dv = Math.random() < 0.5 ? -4 : 4) {
-      const d = desc(0, id);
+      const d = desc(0, id)!;
       st.p[id] = clamp(st.p[id] + dv, d.min, d.max);
       push(CMD.CHANGED, [0, id, ...v14enc(st.p[id])]);
       return { id, value: st.p[id] };
@@ -3064,7 +3064,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       return i;
     },
     /* TRACKS page KNOB 2: the selected track's level (four tracks, the drum track: G_DRLVL); pushes CHANGED */
-    level(v) {
+    level(v: number) {
       const drum = !EIGHT && drumSel();
       v = clamp(v, 0, 127);
       setLvl(st.sel, v);
@@ -3073,7 +3073,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     },
     mute(on = !st.p[40]) { st.p[40] = on ? 1 : 0; push(CMD.CHANGED, [0, 40, ...v14enc(st.p[40])]); return st.p[40]; },
     /* a parameter of track i changed on the device: CHANGED for the selected track, else TRACK_CHANGED (v4 watch) */
-    param(i, id, val) {
+    param(i: number, id: number, val: number) {
       const t = st.tracks[i], d = id >= P_E0 ? ENG[t.engine].edit[id - P_E0] : TP[id];
       t.p[id] = clamp(val, d.min, d.max);
       if (i === st.sel) push(CMD.CHANGED, [0, id, ...v14enc(t.p[id])]);
@@ -3096,7 +3096,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     arm(i = st.sel) { st.rec ^= 1 << i; return (st.rec >> i) & 1; },
     step(i = Math.floor(Math.random() * 16)) {
       const x = st.step[i];
-      if (drumSel()) { const d = st.tracks[st.sel].dstep[i]; d.on ^= 1 << 4; d.lvl[4] = d.rat[4] = 0; }   /* the hat lane */
+      if (drumSel()) { const d = st.tracks[st.sel].dstep![i]; d.on ^= 1 << 4; d.lvl[4] = d.rat[4] = 0; }   /* the hat lane */
       else if (x.n) x.flags ^= 1;
       else Object.assign(x, { n: 1, notes: [60 + Math.floor(Math.random() * 12), 0, 0, 0], time: 0, flags: 0, vel: 96 });
       push(CMD.STEP_CHANGED, opt.legacy ? [i] : [i, st.sel]);
@@ -3119,22 +3119,24 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
 /* A detached snapshot for the audio thread; flash is copied only after an upload or a new start. */
 /* A compact sequencer click toggles a whole synth step, or just one drum lane.
    Other drum hits, levels and ratchets are preserved. Never mutate the snapshot. */
-function previewToggleStep(step, note) {
+/** the audio preview's state (previewSnapshot): a JSON copy of the mock's tracks, the samples' flash, the SYN kits */
+export interface PreviewSnapshot { tracks: MockTrack[]; g: number[]; sel: number; solo: number; samples?: Uint8Array[]; kits?: Uint8Array[] }
+function previewToggleStep<T extends Step>(step: T, note: number): T {
   // REST silences a step in the real sequencer without erasing its pitches or expression.
   if (step.time === 1) return { ...step, notes: step.notes.slice(), time: 2 };
   if (step.n > 0) return { ...step, notes: step.notes.slice(), time: step.time === 0 ? 2 : 0 };
   return previewSetStepNotes(step, [note]);
 }
-function previewSetStepNotes(step, notes) {
+function previewSetStepNotes<T extends Step>(step: T, notes: number[]): T {
   return { ...step, n: notes.length, notes: [...notes, 0, 0, 0, 0].slice(0, 4), time: 0, vel: step.vel || 100 };
 }
-function previewToggleDrum(step, lane) {
+function previewToggleDrum<T extends DrumStep>(step: T, lane: number): T {
   const d = { ...step, lvl: step.lvl.slice(), rat: step.rat.slice() };
   d.on ^= 1 << lane; d.lvl[lane] = d.rat[lane] = 0;
   return d;
 }
-function previewSnapshot(st, includeSamples = false) {
-  const state = JSON.parse(JSON.stringify({ tracks: st.tracks, g: st.g, sel: st.sel, solo: st.solo }));
+function previewSnapshot(st: Pick<MockState, "tracks" | "g" | "sel" | "solo" | "smp" | "dsyn">, includeSamples = false): PreviewSnapshot {
+  const state: PreviewSnapshot = JSON.parse(JSON.stringify({ tracks: st.tracks, g: st.g, sel: st.sel, solo: st.solo }));
   if (includeSamples) state.samples = st.smp.map((s) => s.flash.slice());
   if (st.dsyn) {
     const bank = DSYN.bankEncode(st.dsyn);
@@ -3343,13 +3345,27 @@ const ROLL = {
 /** a note of a MIDI file: at tick t, dur ticks */
 export interface SmfNote { t: number; dur: number; key: number; vel: number; ch?: number }
 export interface SmfReport { notes: number; steps: number; moved: number; chordCut: number; overlap: number; dropped: number; merged: number }
-const SMF = {
+export interface SmfApi {
+  PPQ: number;
+  stepTicks(div: number, ppq?: number): number;
+  vlq(n: number): number[];
+  write(notes: SmfNote[], opt?: { ppq?: number; bpm?: number; ch?: number; name?: string }): Uint8Array;
+  read(bytes: Uint8Array | ArrayLike<number>): { format: number; ppq: number; bpm: number; tracks: { name: string; notes: SmfNote[] }[] };
+  fromSteps(steps: RollStep[], len: number, div: number, ppq?: number): SmfNote[];
+  fromDrums(dsteps: (DrumStep | null | undefined)[], len: number, div: number, ppq?: number): SmfNote[];
+  LANE_OF_GM: number[];
+  laneOf(key: number): number;
+  levelOf(vel: number): number;
+  toSteps(notes: SmfNote[], ppq: number, div: number, nstep: number, drum?: boolean):
+    { dsteps: DrumStep[]; len: number; report: SmfReport; steps?: undefined } | { steps: MockStep[]; len: number; report: SmfReport; dsteps?: undefined };
+}
+const SMF: SmfApi = {
   PPQ: 96,
   /* ticks of one step at DIV div (a quarter = ppq ticks) */
-  stepTicks: (div: number, ppq: number = (0 as any)): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
+  stepTicks: (div: number, ppq: number = SMF.PPQ): number => Math.round(ppq * 4 / (ROLL.DIV_PER_BAR[div] ?? 16)),
   vlq(n: number): number[] { const a: number[] = [n & 0x7F]; while ((n >>= 7)) a.unshift(0x80 | (n & 0x7F)); return a; },
   /* a format 0 file: notes [{t, dur, key, vel}] on channel ch (0..15), the tempo, a track name */
-  write(notes: SmfNote[], { ppq = SMF.PPQ as number, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
+  write(notes: SmfNote[], { ppq = SMF.PPQ, bpm = 120, ch = 0, name = "" }: { ppq?: number; bpm?: number; ch?: number; name?: string } = {}): Uint8Array {
     const ev: { t: number; o: number; b: number[] }[] = [];
     for (const n of notes) {
       ev.push({ t: n.t, o: 1, b: [0x90 | ch, n.key & 0x7F, Math.max(1, Math.min(127, n.vel | 0))] });
@@ -3440,7 +3456,7 @@ const SMF = {
   /* the GM drum note -> its lane (firmware drums.c LANE_OF_GM) */
   LANE_OF_GM: [1, 0, 7, 2, 3, 8, 9, 4, 9, 6, 9, 5, 10, 10, 11, 10, 12, 11, 12, 13, 11, 15, 11, 13, 12, 14, 14, 14, 14, 14,
     14, 14, 15, 15, 13, 13, 15, 15, 13, 13, 7, 7, 7, 14, 14, 15, 15],
-  laneOf: (key: number): number => (key < 35 ? 0 : key > 81 ? 13 : (0 as any)[key - 35]),
+  laneOf: (key: number): number => (key < 35 ? 0 : key > 81 ? 13 : SMF.LANE_OF_GM[key - 35]),
   levelOf: (vel: number): number => (vel < 56 ? 1 : vel < 88 ? 2 : vel < 116 ? 0 : 3),   /* (drums.c vel_lvl: GHOST, SOFT, NORM, HARD) */
   /* notes -> the steps of a track at DIV div, at most nstep. The report says what changed on the way:
      {notes, steps, moved (off the grid by more than a quarter step), chordCut (notes over 4 on a step),
@@ -3892,6 +3908,14 @@ const PROJ7 = {
    The tone (a wave with a falling pitch, a second partial), the click, the noise (white, the 808's six metallic
    squares, both, a chip LFSR; the clap's bursts), a resonant filter, drive and level. A kit: 16 of them and its
    crush (bits dropped in the low nibble, sample-and-hold - 1 in the high one). */
+/** a synthesised drum sound as the page edits it (DSYN.decode) */
+export interface DsynSound {
+  wave: number; noise: number; clap: number; pitch: number; fine: number; bend: number; btime: number; hold: number; decay: number;
+  tlev: number; t2: number; t2lev: number; click: number; nlev: number; nhold: number; ndec: number; fmode: number; fall: number;
+  res: number; fcut: number; fenv: number; hpf: number; chip: number; drive: number; level: number;
+}
+/** a SYN kit: its name, crush, source kit, 16 sounds of 22 bytes */
+export interface DsynKit { name: string; crush: number; src: number; sounds: Uint8Array[] }
 const DSYN = {
   USER: 64, NUSER: 4, LANES: 16, SIZE: 22,
   FIELDS: ["wave", "src", "pitch", "fine", "bend", "btime", "hold", "decay", "tlev", "t2", "t2lev", "click",
@@ -3905,8 +3929,8 @@ const DSYN = {
   FMODES: ["OFF", "LP", "BP", "HP"],
   STEPS_PER_OCT: 127 / Math.log2(16000 / 30),
   /* 22 bytes -> the values the page edits */
-  decode(b) {
-    const g = (k) => b[DSYN.FIELDS.indexOf(k)] & 255;
+  decode(b: ArrayLike<number>): DsynSound {
+    const g = (k: string) => b[DSYN.FIELDS.indexOf(k)] & 255;
     const f = g("flt"), src = g("src"), fe = g("fenv");
     return { wave: g("wave"), noise: src & 15, clap: (src >> 4) & 1, pitch: g("pitch"), fine: g("fine"), bend: g("bend"),
       btime: g("btime"), hold: g("hold"), decay: g("decay"), tlev: g("tlev"), t2: g("t2"), t2lev: g("t2lev"), click: g("click"),
@@ -3914,9 +3938,9 @@ const DSYN = {
       fenv: fe > 127 ? fe - 256 : fe, hpf: g("hpf"), chip: g("chip"), drive: g("drive"), level: g("level") };
   },
   /* the values -> 22 bytes, into the ranges the firmware keeps (editor_dsyn.c dsu_fix_sound) */
-  encode(o) {
-    const c = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(+v || 0)));
-    const v = { wave: c(o.wave, 0, 5), src: c(o.noise, 0, 4) | (o.clap ? 16 : 0), pitch: c(o.pitch, 0, 127), fine: c(o.fine, 0, 15),
+  encode(o: Partial<Record<keyof DsynSound, unknown>>): Uint8Array {
+    const c = (v: unknown, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(+(v as number) || 0)));
+    const v: Record<string, number> = { wave: c(o.wave, 0, 5), src: c(o.noise, 0, 4) | (o.clap ? 16 : 0), pitch: c(o.pitch, 0, 127), fine: c(o.fine, 0, 15),
       bend: c(o.bend, 0, 96), btime: c(o.btime, 0, 127), hold: c(o.hold, 0, 255), decay: c(o.decay, 0, 127), tlev: c(o.tlev, 0, 127),
       t2: c(o.t2, 0, 255), t2lev: c(o.t2lev, 0, 127), click: c(o.click, 0, 127), nlev: c(o.nlev, 0, 127), nhold: c(o.nhold, 0, 255),
       ndec: c(o.ndec, 0, 127), flt: c(o.fmode, 0, 3) | (o.fall ? 4 : 0) | (c(o.res, 0, 31) << 3), fcut: c(o.fcut, 0, 127),
@@ -3924,17 +3948,17 @@ const DSYN = {
     return Uint8Array.from(DSYN.FIELDS.map((k) => v[k]));
   },
   /* what the numbers mean (tools/gen_tables.py, gen_drumkits.py) */
-  hz: (note, fine = 0) => 440 * 2 ** ((note + fine / 16 - 69) / 12),
-  decayMs: (i) => 5 * 800 ** (i / 127),
-  cutHz: (i) => 30 * (16000 / 30) ** (i / 127),
-  db: (level) => (level - 128) / 4,
-  name8: (s) => { const b = new Uint8Array(8); String(s || "").replace(/[^\x20-\x7E]/g, "").slice(0, 8).split("").forEach((ch, i) => { b[i] = ch.charCodeAt(0); }); return b; },
+  hz: (note: number, fine = 0) => 440 * 2 ** ((note + fine / 16 - 69) / 12),
+  decayMs: (i: number) => 5 * 800 ** (i / 127),
+  cutHz: (i: number) => 30 * (16000 / 30) ** (i / 127),
+  db: (level: number) => (level - 128) / 4,
+  name8: (s: unknown) => { const b = new Uint8Array(8); String(s || "").replace(/[^\x20-\x7E]/g, "").slice(0, 8).split("").forEach((ch, i) => { b[i] = ch.charCodeAt(0); }); return b; },
   /* a kit as a file: {format, version, name, crush, sounds: [22 numbers] x 16} */
   FORMAT: "sloop-drumsynth",
-  toFile: (k) => ({ format: DSYN.FORMAT, version: 1, name: k.name, crush: k.crush, sounds: k.sounds.map((x) => Array.from(x)) }),
+  toFile: (k: Pick<DsynKit, "name" | "crush" | "sounds">) => ({ format: DSYN.FORMAT, version: 1, name: k.name, crush: k.crush, sounds: k.sounds.map((x) => Array.from(x)) }),
   /* backup object 9: the firmware's dsu_bank_t ("DSU1", 1, 4, then per kit: name 8, crush, src, 2 reserved, 16 x 22) */
   BANK_SIZE: 8 + 4 * 364,
-  bankEncode(kits) {
+  bankEncode(kits: DsynKit[]): Uint8Array {
     const o = new Uint8Array(DSYN.BANK_SIZE);
     o.set([0x44, 0x53, 0x55, 0x31, 1, 0, 4, 0]);
     kits.forEach((k, i) => {
@@ -3944,7 +3968,7 @@ const DSYN = {
     });
     return o;
   },
-  bankDecode(b) {
+  bankDecode(b: Uint8Array | null | undefined): DsynKit[] | null {
     if (!b || b.length !== DSYN.BANK_SIZE || b[0] !== 0x44 || b[1] !== 0x53 || b[2] !== 0x55 || b[3] !== 0x31 || b[4] !== 1 || b[6] !== 4) return null;
     return Array.from({ length: 4 }, (_, i) => {
       const at = 8 + i * 364;
@@ -3952,11 +3976,11 @@ const DSYN = {
         sounds: Array.from({ length: DSYN.LANES }, (_, l) => b.slice(at + 12 + l * DSYN.SIZE, at + 12 + (l + 1) * DSYN.SIZE)) };
     });
   },
-  fromFile(j) {
+  fromFile(j: any): { name: string; crush: number; sounds: Uint8Array[] } {
     if (!j || j.format !== DSYN.FORMAT || !Array.isArray(j.sounds) || j.sounds.length !== DSYN.LANES
-      || j.sounds.some((x) => !Array.isArray(x) || x.length !== DSYN.SIZE)) throw new Error("not a BoopBox drum synth kit");
+      || j.sounds.some((x: unknown) => !Array.isArray(x) || x.length !== DSYN.SIZE)) throw new Error("not a BoopBox drum synth kit");
     return { name: String(j.name || "KIT").replace(/[^\x20-\x7E]/g, "").slice(0, 8), crush: (j.crush | 0) & 255,
-      sounds: j.sounds.map((x) => DSYN.encode(DSYN.decode(Uint8Array.from(x, (v) => v & 255)))) };
+      sounds: j.sounds.map((x: number[]) => DSYN.encode(DSYN.decode(Uint8Array.from(x, (v) => v & 255)))) };
   },
 };
 /* the device's 32 synthesised kits (build/gen/felucca_drumkits.h), for the mock: per kit its crush, then 16 x 22 */
@@ -3969,9 +3993,10 @@ const DSYN_MOCK_KITS = "AAEAHwYSJARhfAAADwAALAB/AAAAJIYBATYAAxQAPGA5XBZkAEMjUgAA
    or sound under the controls, a knob turned on the FM-1), so the same value is sent again (2.6: setting DIV 1/8 on
    one track, then 1/8 on another, sent nothing the second time). clear(): another track / sound / device */
 class SetGate {
+  m: Map<string, { last: number; sent: number | null }>;
   constructor() { this.m = new Map(); }
-  get(k) { return this.m.get(k); }
-  user(k, v, pending, now) {
+  get(k: string) { return this.m.get(k); }
+  user(k: string, v: number, pending: boolean, now: number) {
     let st = this.m.get(k);
     if (!st) this.m.set(k, (st = { last: 0, sent: null }));
     st.last = now;
@@ -3986,11 +4011,15 @@ class SetGate {
    its CRC at 32) still decodes, with a white accent (black on a light background), as the FM-1 takes it. The FM-1
    refuses a theme whose strongest step or accent does not stand out from the background (gfx.c theme_check):
    readable() / problems() say it first. A shared theme is its bytes in a line of text: "SLOOP-THEME-1:" + base64 */
+/** an RGB colour, 0..255 each */
+export type Rgb = number[];
+/** a theme (gfx.c theme_t): c the five steps, trk the tracks' colours, bg, hi the accent */
+export interface Theme { name: string; c: Rgb[]; trk: Rgb[]; bg: Rgb; hi?: Rgb | null }
 const THEME = {
   ID: 11, SIZE: 40, MAGIC: 0x324D4854, MAGIC1: 0x314D4854, PREFIX: "SLOOP-THEME-1:",
   WHITE: [255, 255, 255], BLACK: [0, 0, 0],
   /* the FM-1's own palettes (gfx.c PALETTES) and the tracks' colours (UI_COL_DEF), as RGB 0..255 */
-  BUILTIN: [
+  BUILTIN: ([
     ["GREEN", [[0, 40, 12], [0, 84, 30], [16, 140, 54], [56, 200, 92], [120, 255, 146]]],
     ["AMBER", [[60, 26, 0], [110, 50, 0], [170, 82, 0], [225, 120, 8], [255, 166, 40]]],
     ["CYAN", [[0, 30, 50], [0, 62, 96], [16, 112, 160], [56, 172, 222], [140, 222, 255]]],
@@ -3998,30 +4027,31 @@ const THEME = {
     ["MONO", [[40, 40, 40], [80, 80, 80], [130, 130, 130], [186, 186, 186], [226, 226, 226]]],
     /* (BoopBox 1.1.0) with its own tracks, background and accent (gfx.c SYNTH_*) */
     ["SYNTHWAVE", [[56, 26, 104], [96, 48, 160], [168, 124, 232], [96, 220, 255], [255, 84, 222]],
-      { trk: [[0, 228, 255], [255, 44, 212], [255, 140, 56], [160, 96, 255]], bg: [16, 4, 40], hi: [128, 252, 255] }]],
+      { trk: [[0, 228, 255], [255, 44, 212], [255, 140, 56], [160, 96, 255]], bg: [16, 4, 40], hi: [128, 252, 255] }]] as
+    [name: string, c: Rgb[], o?: { trk?: Rgb[]; bg?: Rgb; hi?: Rgb }][]),
   TRACKS: [[40, 124, 255], [30, 204, 112], [255, 198, 24], [255, 98, 26]],
-  to565: ([r, g, b]) => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3),
-  from565: (v) => [Math.round((((v >> 11) & 31) * 255) / 31), Math.round((((v >> 5) & 63) * 255) / 63), Math.round(((v & 31) * 255) / 31)],
+  to565: ([r, g, b]: Rgb): number => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3),
+  from565: (v: number): Rgb => [Math.round((((v >> 11) & 31) * 255) / 31), Math.round((((v >> 5) & 63) * 255) / 63), Math.round(((v & 31) * 255) / 31)],
   /* as the FM-1 shows it: each colour through RGB565 */
-  shown: (rgb) => THEME.from565(THEME.to565(rgb)),
-  hex: (rgb) => "#" + rgb.map((x) => x.toString(16).padStart(2, "0")).join(""),
-  unhex: (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h).trim()); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; },
+  shown: (rgb: Rgb): Rgb => THEME.from565(THEME.to565(rgb)),
+  hex: (rgb: Rgb): string => "#" + rgb.map((x) => x.toString(16).padStart(2, "0")).join(""),
+  unhex: (h: unknown): Rgb | null => { const m = /^#?([0-9a-f]{6})$/i.exec(String(h).trim()); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; },
   /* a name the FM-1 shows: printable ASCII, upper case (its menu font), 8 at most */
-  cleanName: (s) => String(s || "").toUpperCase().replace(/[^\x20-\x7E]/g, "").slice(0, 8),
+  cleanName: (s: unknown): string => String(s || "").toUpperCase().replace(/[^\x20-\x7E]/g, "").slice(0, 8),
   /* the FM-1's test (theme_check): the brightest step one channel 96 or more apart from the background (after RGB565,
      channels as x * 8, x * 4, x * 8) */
-  ch: (v) => [((v >> 11) & 31) * 8, ((v >> 5) & 63) * 4, (v & 31) * 8],
-  apart(c, bg) {
+  ch: (v: number): number[] => [((v >> 11) & 31) * 8, ((v >> 5) & 63) * 4, (v & 31) * 8],
+  apart(c: Rgb, bg?: Rgb | null): boolean {
     const a = THEME.ch(THEME.to565(c)), b = THEME.ch(THEME.to565(bg || [0, 0, 0]));
     return a.some((x, k) => Math.abs(x - b[k]) >= 96);
   },
-  hiOf: (t) => t.hi || THEME.WHITE,
+  hiOf: (t: Pick<Theme, "hi">): Rgb => t.hi || THEME.WHITE,
   /* what the FM-1 would refuse: the values (c[4]), the accent */
-  problems: (t) => ({ val: !THEME.apart(t.c[4], t.bg), acc: !THEME.apart(THEME.hiOf(t), t.bg) }),
-  readable(t) { const p = THEME.problems(t); return !p.val && !p.acc; },
-  light: (rgb) => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] > 127,
+  problems: (t: Pick<Theme, "c" | "bg" | "hi">): { val: boolean; acc: boolean } => ({ val: !THEME.apart(t.c[4], t.bg), acc: !THEME.apart(THEME.hiOf(t), t.bg) }),
+  readable(t: Pick<Theme, "c" | "bg" | "hi">): boolean { const p = THEME.problems(t); return !p.val && !p.acc; },
+  light: (rgb: Rgb): boolean => 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] > 127,
   /* a colour moved toward black (light background) or white (dark) just enough to stand out */
-  push(c, bg) {
+  push(c: Rgb, bg?: Rgb | null): Rgb {
     if (THEME.apart(c, bg)) return c.slice();
     const to = THEME.light(bg || [0, 0, 0]) ? 0 : 255;
     for (let f = 0.05; f < 1; f += 0.05) {
@@ -4031,14 +4061,14 @@ const THEME = {
     return [to, to, to];
   },
   /* the same theme readable: the values and the accent pushed apart from the background */
-  fix: (t) => ({ ...t, c: t.c.map((x, k) => (k === 4 ? THEME.push(x, t.bg) : x.slice())), hi: THEME.push(THEME.hiOf(t), t.bg) }),
+  fix: <T extends Theme>(t: T): T & { hi: Rgb } => ({ ...t, c: t.c.map((x, k) => (k === 4 ? THEME.push(x, t.bg) : x.slice())), hi: THEME.push(THEME.hiOf(t), t.bg) }),
   /* light <-> dark: the five steps the other way round (faint lines, strong values), a white or black background,
      the accent the other way */
-  invert(t) {
+  invert<T extends Theme>(t: T): T & { hi: Rgb } {
     const bg = THEME.light(t.bg || [0, 0, 0]) ? THEME.BLACK.slice() : THEME.WHITE.slice();
     return THEME.fix({ ...t, c: t.c.slice().reverse().map((x) => x.slice()), bg, hi: THEME.light(bg) ? THEME.BLACK.slice() : THEME.WHITE.slice() });
   },
-  encode(t) {
+  encode(t: Theme): Uint8Array {
     const d = new Uint8Array(THEME.SIZE), w = new DataView(d.buffer);
     w.setUint32(0, THEME.MAGIC, true);
     const nm = THEME.cleanName(t.name);
@@ -4050,7 +4080,7 @@ const THEME = {
     w.setUint32(36, crc32(d.subarray(0, 36)), true);
     return d;
   },
-  decode(d) {
+  decode(d: Uint8Array | null | undefined): (Theme & { hi: Rgb }) | null {
     if (!d || (d.length !== THEME.SIZE && d.length !== 36)) return null;
     const w = new DataView(d.buffer, d.byteOffset, d.length), v1 = d.length === 36;
     if (v1 ? w.getUint32(0, true) !== THEME.MAGIC1 || w.getUint32(32, true) !== crc32(d.subarray(0, 32))
@@ -4062,20 +4092,20 @@ const THEME = {
       hi: v1 ? (THEME.apart(THEME.WHITE, THEME.from565(w.getUint16(30, true))) ? THEME.WHITE.slice() : THEME.BLACK.slice())
         : THEME.from565(w.getUint16(32, true)) };
   },
-  code: (t) => THEME.PREFIX + b64enc(THEME.encode(t)),
-  fromCode(s) {
+  code: (t: Theme): string => THEME.PREFIX + b64enc(THEME.encode(t)),
+  fromCode(s: unknown): (Theme & { hi: Rgb }) | null {
     const m = /SLOOP-THEME-1:([A-Za-z0-9+/=]+)/.exec(String(s || ""));
     if (!m) return null;
     try { return THEME.decode(b64dec(m[1])); } catch (e) { return null; }
   },
-  builtin: (i) => {
+  builtin: (i: number): Theme & { hi: Rgb } => {
     const [name, c, o] = THEME.BUILTIN[i];
     return { name: THEME.cleanName(name), c: c.map((x) => x.slice()), trk: ((o && o.trk) || THEME.TRACKS).map((x) => x.slice()),
              bg: ((o && o.bg) || [0, 0, 0]).slice(), hi: ((o && o.hi) || [255, 255, 255]).slice() };
   },
   /* five steps from one colour, as the FM-1's palettes go: dark to the colour, the last lighter toward white; on a light
      background (bg given) the other way: faint (light) to strong (dark) */
-  ramp(rgb, bg) {
+  ramp(rgb: Rgb, bg?: Rgb | null): Rgb[] {
     if (bg && THEME.light(bg))
       return [0.8, 0.6, 0.35].map((f) => rgb.map((x) => Math.round(x + (255 - x) * f)))
         .concat([rgb.slice(), rgb.map((x) => Math.round(x * 0.45))]);
@@ -4088,11 +4118,13 @@ const THEME = {
  * list), as in/out pairs of one name, "BoopBox" / "SLOOP" / "Felucca" first, then FM-1, then the generic names. connect() keeps the
  * first pair that answers INFO, so a generic name of other gear is tried and left */
 const FM1_PORT = /fm-1|boopbox|felucca|sloop|clipper|ota|composite|sinco|usb-midi/i;
-function fm1Ports(access) {
-  const live = (p) => p.state !== "disconnected" && FM1_PORT.test(p.name || "");
+/** a Web MIDI port, as far as fm1Ports reads it */
+export interface MidiPortLike { name?: string | null; state?: string }
+function fm1Ports<I extends MidiPortLike, O extends MidiPortLike>(access: { inputs: { values(): Iterable<I> }; outputs: { values(): Iterable<O> } }) {
+  const live = (p: MidiPortLike) => p.state !== "disconnected" && FM1_PORT.test(p.name || "");
   const ins = [...access.inputs.values()].filter(live), outs = [...access.outputs.values()].filter(live);
-  const rank = (n) => (/boopbox|felucca|sloop/i.test(n) ? 0 : /fm-1/i.test(n) ? 1 : 2);
-  const pairs = [];
+  const rank = (n: string) => (/boopbox|felucca|sloop/i.test(n) ? 0 : /fm-1/i.test(n) ? 1 : 2);
+  const pairs: { input: I; output: O }[] = [];
   for (const input of ins) {
     const output = outs.find((o) => o.name === input.name) || (outs.length === 1 ? outs[0] : null);
     if (output) pairs.push({ input, output });
