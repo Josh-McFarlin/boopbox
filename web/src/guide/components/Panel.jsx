@@ -2,7 +2,8 @@
 // The FM-1's panel as one SVG, laid out as the real one: four knobs and OCT−/OCT+ on the left, the screen, KNOB 1–4 and
 // the twelve buttons on the right, 11 black and 16 white keys below. Every control is a button: a click (or Enter)
 // selects it. A layer (FX, SEQ…) shows as its button held, its labels on the keys and knobs, and its screen.
-import { BLACK, BLACK_AFTER, C, WHITE } from "./data.js";
+import { BLACK, BLACK_AFTER, WHITE } from "../data/keys.js";
+import { C } from "../data/theme.js";
 
 const LINE = "var(--body)";
 const INK = "#160d2b";
