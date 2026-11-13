@@ -2639,7 +2639,7 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`)
       'utf8',
     )
     ok(
-      /const ids = \[pSlen\(\), pDiv\(\), pById\("SWG", 31\), pById\("GATE", 32\)\]/.test(
+      /const ids = \[pSlen\(\), pDiv\(\), pById\(["']SWG["'], 31\), pById\(["']GATE["'], 32\)\]/.test(
         seq,
       ) &&
         /<Param [^>]*ctx="SEQ TIMING"/.test(seq) &&
@@ -3907,11 +3907,11 @@ async function editorTheme() {
   old.done()
   /* the page */
   ok(
-    /\["theme", "tabTheme", "ui_knob"\]/.test(
+    /\[["']theme["'], ["']tabTheme["'], ["']ui_knob["']\]/.test(
       readFileSync(join(HERE, 'src/pages/Editor/core/tabs.ts'), 'utf8'),
     ) &&
       /id="thprev"/.test(editorSrc) &&
-      /const thOk = \(\) => !!A\.dev && !!A\.dev\.info && A\.dev\.info\.proto >= 11;/.test(
+      /const thOk = \(\) => !!A\.dev && !!A\.dev\.info && A\.dev\.info\.proto >= 11;?$/m.test(
         editorSrc,
       ),
     'theme: the Theme page (preview, works without an FM-1, Send from protocol 11)',
@@ -3924,22 +3924,27 @@ function editorTabs() {
     join(HERE, 'src/pages/Editor/core/tabs.ts'),
     'utf8',
   )
+  /* (the list as Prettier writes it: single quotes, one a line, a trailing comma) */
   const TABS = JSON.parse(
-    (/export const TABS = (\[[^\]]*\]);/.exec(tabsSrc) || [])[1] || '[]',
+    ((/export const TABS = (\[[^\]]*\])/.exec(tabsSrc) || [])[1] || '[]')
+      .replace(/'/g, '"')
+      .replace(/,\s*\]$/, ']'),
   )
   const nav = [
     ...tabsSrc
       .slice(tabsSrc.indexOf('export const NAV'))
-      .matchAll(/\["(\w+)", "(\w+)", "(\w+)"\]/g),
+      .matchAll(/\[["'](\w+)["'],\s*["'](\w+)["'],\s*["'](\w+)["'],?\s*\]/g),
   ]
   const pagesSrc = readFileSync(
     join(HERE, 'src/pages/Editor/tabs/index.ts'),
     'utf8',
   )
   const mods = Object.fromEntries(
-    [...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.tsx";/gm)].map(
-      (x) => [x[1], x[2]],
-    ),
+    [
+      ...pagesSrc.matchAll(
+        /^import \* as (\w+) from ["']\.\/(\w+)\.tsx["'];?$/gm,
+      ),
+    ].map((x) => [x[1], x[2]]),
   )
   const stubs = Object.values(mods).filter((f) =>
     /TODO\(port/.test(
@@ -3956,9 +3961,9 @@ function editorTabs() {
   )
   ok(
     /localStorage\.setItem\(TAB_KEY/.test(tabsSrc) &&
-      /try \{ localStorage/.test(tabsSrc) &&
-      /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc) &&
-      /addEventListener\("hashchange"/.test(tabsSrc),
+      /try \{\s*localStorage/.test(tabsSrc) &&
+      /history\.replaceState\([^)]*["']#["'] \+ name,?\s*\)/.test(tabsSrc) &&
+      /addEventListener\(["']hashchange["']/.test(tabsSrc),
     'editor: last tab in localStorage (try/catch) and in the URL hash',
   )
   /* every string key the editor uses is in TEXT.en: the ones the source names (t("k"), tf("k"), sayK("k"), hint = "k"), the side bar's,
@@ -3975,12 +3980,13 @@ function editorTabs() {
   const used = new Set(
     [
       ...editorSrc.matchAll(
-        /\bt\("(\w+)"\)|\btf\("(\w+)"|sayK\("(\w+)"|hint = "(\w+)"/g,
+        /\bt\(["'](\w+)["']\)|\btf\(["'](\w+)["']|sayK\(["'](\w+)["']|hint = ["'](\w+)["']/g,
       ),
     ].map((x) => x[1] || x[2] || x[3] || x[4]),
   )
   for (const x of nav) used.add(x[2])
-  for (const x of tabsSrc.matchAll(/\["(nav\w+)", \[/g)) used.add(x[1])
+  for (const x of tabsSrc.matchAll(/\[\s*["'](nav\w+)["'],\s*\[/g))
+    used.add(x[1])
   for (const x of TABS) {
     used.add('tabd_' + x)
     used.add('tabh_' + x)
@@ -4029,10 +4035,16 @@ function editorTabs() {
     ok(
       !hex.length &&
         !jsxHex.length &&
-        /--t1: #00e4ff; --t2: #ff2cd4; --t3: #ff8c38; --t4: #a060ff;/.test(
-          css,
-        ) &&
-        /--t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;/.test(css),
+        Object.entries({
+          t1: '#00e4ff',
+          t2: '#ff2cd4',
+          t3: '#ff8c38',
+          t4: '#a060ff',
+          t5: '#6e8cff',
+          t6: '#ff70a8',
+          t7: '#ffd65a',
+          t8: '#e080ff',
+        }).every(([k, v]) => new RegExp(`--${k}:\\s*${v};`).test(css)),
       'editor: the track colours of the device (gfx.c SYNTH_TRK, SYNTH_TRK2), colours only as tokens' +
         (hex.length || jsxHex.length
           ? ` (${hex.concat(jsxHex).join(' ')})`
@@ -4054,7 +4066,7 @@ function editorTabs() {
       existsSync(font) &&
         readFileSync(font).length > 20000 &&
         readFileSync(font).readUInt32BE(0) === 0x00010000 &&
-        /url\("\.\.\/assets\/fonts\/terminus\.ttf"\)/.test(css),
+        /url\(["']\.\.\/assets\/fonts\/terminus\.ttf["']\)/.test(css),
       "editor: the device's Terminus font (project/tools/gen_webfont.py)",
     )
   }
@@ -4068,15 +4080,15 @@ function editorIcons() {
   )
   const blk = glyphs.slice(
     glyphs.indexOf('const GLYPH = {'),
-    glyphs.indexOf('};', glyphs.indexOf('const GLYPH = {')),
+    glyphs.indexOf('\n}', glyphs.indexOf('const GLYPH = {')),
   )
   const names = new Set(
-    [...blk.matchAll(/(\w+): 0x[0-9A-F]{4}/g)].map((m) => m[1]),
+    [...blk.matchAll(/(\w+): 0x[0-9A-F]{4}/gi)].map((m) => m[1]),
   )
   const used = new Set(
     [
       ...(editorSrc + glyphs.slice(blk.length)).matchAll(
-        /\bic="(\w+)"|\bname="(\w+_\w+)"|ic: "(\w+)"|: "((?:waveform|function|symbol|control|port|ui|note)_\w+)"|"((?:waveform|function|symbol|control|port|ui|note)_\w+)"\]/g,
+        /\bic=["'](\w+)["']|\bname=["'](\w+_\w+)["']|\bic: ["'](\w+)["']|: ["']((?:waveform|function|symbol|control|port|ui|note)_\w+)["']|["']((?:waveform|function|symbol|control|port|ui|note)_\w+)["'],?\s*\]/g,
       ),
     ].map((m) => m[1] || m[2] || m[3] || m[4] || m[5]),
   )
@@ -4095,8 +4107,9 @@ function editorIcons() {
     'editor: fukiai.ttf and FUKIAI-LICENSE.txt (served beside the editor)',
   )
   ok(
-    /html:not\(\.fk\) \.ic \{ display: none; \}/.test(editorSrc) &&
-      editorSrc.includes('classList.add("fk")'),
+    /* (pages/Editor/ui/styles.ts: the icon's Tailwind variant) */
+    editorSrc.includes('in-[html:not(.fk)]:hidden') &&
+      /classList\.add\(["']fk["']\)/.test(editorSrc),
     'editor: icons hidden until the font has loaded',
   )
 }

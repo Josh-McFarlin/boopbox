@@ -61,7 +61,7 @@ try:
     path = lambda f: (app / f / "index.html") if f.endswith("/") else (app / f)   # noqa: E731
     check("sw.js: stamped with the version", 'const STAMP = "9.9-' in sw and "/*" + "FILES*/" not in sw)
     check("sw.js keeps the installer, the editor, their scripts and fonts, the firmware",
-          {"installer/", "editor/", "../firmware/boopbox-9.9.fwsc"} <= set(files) and
+          {"installer/", "editor/", "firmware/boopbox-9.9.fwsc"} <= set(files) and
           any(re.fullmatch(r"assets/fukiai-[\w-]+\.ttf", f) for f in files) and
           any(re.fullmatch(r"assets/editor-[\w-]+\.js", f) for f in files) and
           any(re.fullmatch(r"assets/installer-[\w-]+\.js", f) for f in files))
@@ -98,9 +98,9 @@ try:
     import check_site
     check("trainer: its package beside BoopBox's, in the installer's meta (version, path, SHA-256), kept offline",
           (tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").is_file() and
-          meta["trainer"]["pkg"] == "../../firmware/boopbox-trainer-9.9.fwsc" and meta["trainer"]["version"] == "9.9" and
+          meta["trainer"]["pkg"] == "../firmware/boopbox-trainer-9.9.fwsc" and meta["trainer"]["version"] == "9.9" and
           meta["trainer"]["sha256"] == hashlib.sha256((tmp / "t.fwsc").read_bytes()).hexdigest() and
-          "../firmware/boopbox-trainer-9.9.fwsc" in sw3 and
+          "firmware/boopbox-trainer-9.9.fwsc" in sw3 and
           'id="pick"' in (ROOT / "web" / "src" / "pages" / "Installer" / "index.tsx").read_text(encoding="utf-8"))
     check("trainer: tools/check_site.py passes the site with both packages, fails it with the trainer's changed",
           not check_site.problems(tmp / "site3" / "firmware" / "boopbox-9.9.fwsc", tmp / "site3") and
