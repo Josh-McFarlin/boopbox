@@ -1,39 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Catches an error thrown while a page renders and shows a short message instead of a blank page.
-import type { ErrorInfo, ReactNode } from "react";
-import React, { Component } from "react";
+import type { ErrorInfo, ReactNode } from 'react'
+import React, { Component } from 'react'
 
 interface Props {
-  children?: ReactNode;
+  children?: ReactNode
 }
 
 interface State {
-  error: Error | null;
-  info: ErrorInfo | null;
+  error: Error | null
+  info: ErrorInfo | null
 }
 
 class ErrorBoundary extends Component<Props, State> {
   state: State = {
     error: null,
     info: null,
-  };
+  }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    return { error };
+    return { error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    this.setState({ error, info });
+    this.setState({ error, info })
   }
 
   render(): ReactNode {
-    const { error } = this.state;
-    if (error) return <ErrorBoundaryFallbackComponent />;
-    return this.props.children;
+    const { error } = this.state
+    if (error) return <ErrorBoundaryFallbackComponent />
+    return this.props.children
   }
 }
 
-export default ErrorBoundary;
+export default ErrorBoundary
 
 export const ErrorBoundaryFallbackComponent: React.FC = () => (
   <main className="flex min-h-screen min-w-full items-center justify-center">
@@ -41,5 +41,5 @@ export const ErrorBoundaryFallbackComponent: React.FC = () => (
       Something went wrong. Reload the page.
     </section>
   </main>
-);
-ErrorBoundaryFallbackComponent.displayName = "ErrorBoundaryFallbackComponent";
+)
+ErrorBoundaryFallbackComponent.displayName = 'ErrorBoundaryFallbackComponent'

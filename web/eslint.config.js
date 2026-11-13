@@ -24,4 +24,10 @@ export default defineConfig([
     },
   },
   ...tsPrefixer,
+  {
+    rules: {
+      // `x == null` is the deliberate test for null or undefined
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+    },
+  },
 ])

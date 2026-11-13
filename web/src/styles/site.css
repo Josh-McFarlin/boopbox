@@ -5,16 +5,18 @@
    tokens (bg-bg, text-dim, bg-tile, border-line, text-blue ...); the shared looks (the arcade button, the pixel screen
    and panel) are class strings in src/components/styles.ts. The four accent names stay the track colours' names
    (orange, blue, green, yellow): here they are magenta, cyan, lime and yellow. */
-@import "tailwindcss";
-@import "@fontsource/jersey-10/latin-400.css";
-@import "@fontsource/dm-sans/latin-400.css";
-@import "@fontsource/dm-sans/latin-500.css";
-@import "@fontsource/dm-sans/latin-700.css";
-@source "..";
+@import 'tailwindcss';
+@import '@fontsource/jersey-10/latin-400.css';
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@source '..';
 
 @theme {
-  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-pixel: "Jersey 10", ui-monospace, Menlo, Consolas, monospace;
+  --font-sans:
+    'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-pixel: 'Jersey 10', ui-monospace, Menlo, Consolas, monospace;
   --color-blue: #3ee6ff;
   --color-green: #c6ff3d;
   --color-yellow: #ffd23f;
@@ -24,12 +26,29 @@
 
   /* the emulator's breathing button LED (a duty layer: the sound browser's HOME and SAVE) */
   --animate-fm1-breathe: fm1-breathe 2.4s ease-in-out infinite;
-  @keyframes fm1-breathe { 0%, 100% { opacity: .1; } 50% { opacity: 1; } }
+  @keyframes fm1-breathe {
+    0%,
+    100% {
+      opacity: 0.1;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 
   /* Rooms */
   /* a jam room's chat message as it arrives */
-  --animate-room-chat-arrive: room-chat-arrive .22s ease-out both;
-  @keyframes room-chat-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  --animate-room-chat-arrive: room-chat-arrive 0.22s ease-out both;
+  @keyframes room-chat-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @theme inline {
@@ -43,13 +62,39 @@
 }
 
 /* fg: headings; body: running text; dim: captions and labels; tile: raised panels; deep: wells under them */
-:root { --bg: #160d2b; --fg: #ffffff; --body: #ddd4fb; --dim: #a99bd6; --tile: #241640; --deep: #0e081d; --line: #3a2766; }
-:root[data-theme="light"] { --bg: #f3efff; --fg: #160d2b; --body: #2b1a52; --dim: #5a4590; --tile: #e4dcfb; --deep: #d6cbf5; --line: #c4b6ee; }
+:root {
+  --bg: #160d2b;
+  --fg: #ffffff;
+  --body: #ddd4fb;
+  --dim: #a99bd6;
+  --tile: #241640;
+  --deep: #0e081d;
+  --line: #3a2766;
+}
+:root[data-theme='light'] {
+  --bg: #f3efff;
+  --fg: #160d2b;
+  --body: #2b1a52;
+  --dim: #5a4590;
+  --tile: #e4dcfb;
+  --deep: #d6cbf5;
+  --line: #c4b6ee;
+}
 
 @layer base {
-  body { @apply m-0 bg-bg text-body font-sans text-[16px] leading-[1.6]; }
+  body {
+    @apply m-0 bg-bg font-sans text-[16px] leading-[1.6] text-body;
+  }
   /* Keep pixel-style lettering consistent in headings and labels. */
-  html { font-variant-ligatures: none; }
-  a { color: inherit; }
-  h1, h2, h3 { @apply text-fg; }
+  html {
+    font-variant-ligatures: none;
+  }
+  a {
+    color: inherit;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-fg;
+  }
 }

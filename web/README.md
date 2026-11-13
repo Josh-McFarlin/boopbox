@@ -15,19 +15,19 @@ node test_web.mjs        # the tests that need no browser
 
 ## Where things are
 
-| | |
-|---|---|
-| `site/installer/`, `site/editor/`, `site/emu/` | the three pages' `index.html` (Vite's entry points) |
-| `site/public/` | files served as they are: the audio worklets, the icon font's licence |
-| `src/pages/Installer/` | the installer; `src/lib/fm1pkg.ts` and `fm1ota.js`: packages and the update protocol |
-| `src/pages/Guide/` | the visual guide: `Guide.jsx` lays out the sections that `data/sections.js` lists; `sections/` holds each section's body, `components/` the shared parts (`Panel.jsx`, the FM-1's panel as SVG, and the explorers), `data/` every word and screen it shows (from `GUIDE.md`) |
-| `src/pages/Emulator/` | the emulator page; `engine.js` starts the firmware's WebAssembly in an AudioWorklet |
-| `src/pages/Editor/lib/` | no React, no DOM: `proto.js` (the editor's SysEx protocol, file formats, sample pipeline and mock device, see `EDITOR_PROTOCOL.md`), `text.js` (every string), `glyphs.js` (the icons), `preview.js` (the local audio) |
-| `src/pages/Editor/core/` | the editor's state and the FM-1 under it: `app.js` (the shared state, strings, helpers), `device.js` (connecting, SET, the pushes, polling), `tabs.js`, `hooks.js`, `shared.js` |
-| `src/pages/Editor/ui/kit.tsx` | cards, icons, and the device's parameter knobs |
-| `src/pages/Editor/tabs/` | a page a tab (`Live.jsx`, `Sound.jsx` ...), each with its own folder for its parts |
-| `src/styles/editor.css`, `src/styles/site.css` | Tailwind's theme: the FM-1's palette and the pixel font |
-| `sw.js` | the site without internet (`make_site.py` fills in what it keeps) |
+|                                                |                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `site/installer/`, `site/editor/`, `site/emu/` | the three pages' `index.html` (Vite's entry points)                                                                                                                                                                                                                          |
+| `site/public/`                                 | files served as they are: the audio worklets, the icon font's licence                                                                                                                                                                                                        |
+| `src/pages/Installer/`                         | the installer; `src/lib/fm1pkg.ts` and `fm1ota.js`: packages and the update protocol                                                                                                                                                                                         |
+| `src/pages/Guide/`                             | the visual guide: `Guide.jsx` lays out the sections that `data/sections.js` lists; `sections/` holds each section's body, `components/` the shared parts (`Panel.jsx`, the FM-1's panel as SVG, and the explorers), `data/` every word and screen it shows (from `GUIDE.md`) |
+| `src/pages/Emulator/`                          | the emulator page; `engine.js` starts the firmware's WebAssembly in an AudioWorklet                                                                                                                                                                                          |
+| `src/pages/Editor/lib/`                        | no React, no DOM: `proto.js` (the editor's SysEx protocol, file formats, sample pipeline and mock device, see `EDITOR_PROTOCOL.md`), `text.js` (every string), `glyphs.js` (the icons), `preview.js` (the local audio)                                                       |
+| `src/pages/Editor/core/`                       | the editor's state and the FM-1 under it: `app.js` (the shared state, strings, helpers), `device.js` (connecting, SET, the pushes, polling), `tabs.js`, `hooks.js`, `shared.js`                                                                                              |
+| `src/pages/Editor/ui/kit.tsx`                  | cards, icons, and the device's parameter knobs                                                                                                                                                                                                                               |
+| `src/pages/Editor/tabs/`                       | a page a tab (`Live.jsx`, `Sound.jsx` ...), each with its own folder for its parts                                                                                                                                                                                           |
+| `src/styles/editor.css`, `src/styles/site.css` | Tailwind's theme: the FM-1's palette and the pixel font                                                                                                                                                                                                                      |
+| `sw.js`                                        | the site without internet (`make_site.py` fills in what it keeps)                                                                                                                                                                                                            |
 
 ## How the editor works
 

@@ -6,163 +6,271 @@
 // loader. Step 2: the loader reads the whole image and writes it. In both steps
 // the device sends cmd 0x30 read requests on the logical image and we answer.
 
-const HS_QUERY = [0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7];
-const UPGRADE = [0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7];
-const MAXDATA = 512;
+const HS_QUERY = [0xf0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7f, 0xf7]
+const UPGRADE = [0xf0, 0x22, 0x24, 0x35, 0x7f, 0xf7]
+const MAXDATA = 512
 /** the identity the FM-1 answers the handshake with ("FM-1_904": model "FM-1", version 904) */
-export interface Identity { text: string; model: string; version: number }
+export interface Identity {
+  text: string
+  model: string
+  version: number
+}
 /** an FM-1 (or its update loader) found on a MIDI port pair */
-export interface Device { link: Link; id: Identity; name: string | null }
+export interface Device {
+  link: Link
+  id: Identity
+  name: string | null
+}
 /** what serve() / write() report */
-export interface ServeResult { served: number; finished: boolean; lost?: boolean }
+export interface ServeResult {
+  served: number
+  finished: boolean
+  lost?: boolean
+}
 /** the error codes install() / resume() throw (see fail()) */
-export type OtaErrorCode = "notfound" | "model" | "stopped" | "noloader" | "lost" | "noreturn" | "mismatch" | "badreq" | "foreign";
-export interface OtaError extends Error { code: OtaErrorCode; detail: string }
+export type OtaErrorCode =
+  | 'notfound'
+  | 'model'
+  | 'stopped'
+  | 'noloader'
+  | 'lost'
+  | 'noreturn'
+  | 'mismatch'
+  | 'badreq'
+  | 'foreign'
+export interface OtaError extends Error {
+  code: OtaErrorCode
+  detail: string
+}
 /** progress steps: start (identity), verify (requests), loader, write (requests), reboot, done (identity) */
-export type StepFn = (step: string, arg?: string | number) => void;
-export type LogFn = (line: string) => void;
-type IdFilter = (id: Identity) => boolean;
+export type StepFn = (step: string, arg?: string | number) => void
+export type LogFn = (line: string) => void
+type IdFilter = (id: Identity) => boolean
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-const IS_OTA = (id: Identity) => /^ota-/i.test(id.model);
+const sleep = async (ms: number): Promise<void> =>
+  new Promise<void>((r) => setTimeout(r, ms))
+const IS_OTA = (id: Identity) => /^ota-/i.test(id.model)
 // the update loader of BoopBox / SLOOP / Felucca packages ("ota-FM-1_9XX"). A device left in the update mode of another
 // firmware (the stock updater's loader) is never written: its loader may lay the image out differently.
-export const OUR_LOADER = (id: Identity) => /^ota-FM-1_9\d\d$/i.test(id.text);
+export const OUR_LOADER = (id: Identity) => /^ota-FM-1_9\d\d$/i.test(id.text)
 // the MIDI ports the installer may probe (never other gear): the FM-1 under BoopBox ("BoopBox"), under SLOOP /
 // Felucca ("Felucca"), under CLIPPER ("Clipper", its sister firmware), under a firmware named after itself ("SLOOP"),
 // the update loaders ("BoopBox Update", "Felucca Update"), and
 // the names Windows / macOS give the stock firmware
-export const FM1_PORT = /fm-1|boopbox|felucca|sloop|clipper|ota|composite|sinco|usb-midi/i;
+export const FM1_PORT =
+  /fm-1|boopbox|felucca|sloop|clipper|ota|composite|sinco|usb-midi/i
 
 // errors carry a code the pages translate: notfound, model, stopped, noloader, lost, noreturn,
 // mismatch (detail: the identity the device reports), badreq, foreign (detail: the loader's identity)
-function fail(code: OtaErrorCode, msg: string, detail = ""): OtaError { const e = new Error(msg) as OtaError; e.code = code; e.detail = detail; return e; }
+function fail(code: OtaErrorCode, msg: string, detail = ''): OtaError {
+  const e = new Error(msg) as OtaError
+  e.code = code
+  e.detail = detail
+  return e
+}
 
 export function pack7(data: Iterable<number>): number[] {
-  const out: number[] = []; let acc = 0, nb = 0;
+  const out: number[] = []
+  let acc = 0,
+    nb = 0
   for (const b of data) {
-    acc |= b << nb; nb += 8;
-    while (nb >= 7) { out.push(acc & 0x7F); acc >>>= 7; nb -= 7; }
+    acc |= b << nb
+    nb += 8
+    while (nb >= 7) {
+      out.push(acc & 0x7f)
+      acc >>>= 7
+      nb -= 7
+    }
   }
-  if (nb) out.push(acc & 0x7F);
-  return out;
+  if (nb) out.push(acc & 0x7f)
+  return out
 }
 
 export function unpack7(s: Iterable<number>): number[] {
-  const out: number[] = []; let acc = 0, nb = 0;
+  const out: number[] = []
+  let acc = 0,
+    nb = 0
   for (const b of s) {
-    acc |= (b & 0x7F) << nb; nb += 7;
-    while (nb >= 8) { out.push(acc & 0xFF); acc >>>= 8; nb -= 8; }
+    acc |= (b & 0x7f) << nb
+    nb += 7
+    while (nb >= 8) {
+      out.push(acc & 0xff)
+      acc >>>= 8
+      nb -= 8
+    }
   }
-  return out;
+  return out
 }
 
 function response(addr: number, data: number[], fl = 0): number[] {
-  const len = data.length;
-  const body = [0x00, 0x59, 0x30, (len + 8) & 0xFF, ((len + 8) >> 8) & 0xFF, 0, fl,
-    addr & 0xFF, (addr >>> 8) & 0xFF, (addr >>> 16) & 0xFF, (addr >>> 24) & 0xFF,
-    len & 0xFF, (len >> 8) & 0xFF, 0, ...data];
-  let s = 0;
-  for (let i = 6; i < body.length; i++) s += body[i];
-  body.push(~s & 0xFF);
-  return [0xF0, ...pack7(body), 0xF7];
+  const len = data.length
+  const body = [
+    0x00,
+    0x59,
+    0x30,
+    (len + 8) & 0xff,
+    ((len + 8) >> 8) & 0xff,
+    0,
+    fl,
+    addr & 0xff,
+    (addr >>> 8) & 0xff,
+    (addr >>> 16) & 0xff,
+    (addr >>> 24) & 0xff,
+    len & 0xff,
+    (len >> 8) & 0xff,
+    0,
+    ...data,
+  ]
+  let s = 0
+  for (let i = 6; i < body.length; i++) s += body[i]
+  body.push(~s & 0xff)
+  return [0xf0, ...pack7(body), 0xf7]
 }
 
-function parseRequest(pkt: number[]): { fl: number; addr: number; len: number } | null {
-  if (pkt[0] !== 0xF0 || pkt[pkt.length - 1] !== 0xF7) return null;
-  const u = unpack7(pkt.slice(1, -1));
-  if (u.length !== 15 || u[0] !== 0 || u[1] !== 0x59 || u[2] !== 0x30) return null;
-  let s = 0;
-  for (let i = 6; i < 14; i++) s += u[i];
-  if ((~s & 0xFF) !== u[14]) return null;
-  return { fl: u[6], addr: (u[7] | (u[8] << 8) | (u[9] << 16) | (u[10] << 24)) >>> 0, len: u[11] | (u[12] << 8) | (u[13] << 16) };
+function parseRequest(
+  pkt: number[],
+): { fl: number; addr: number; len: number } | null {
+  if (pkt[0] !== 0xf0 || pkt[pkt.length - 1] !== 0xf7) return null
+  const u = unpack7(pkt.slice(1, -1))
+  if (u.length !== 15 || u[0] !== 0 || u[1] !== 0x59 || u[2] !== 0x30)
+    return null
+  let s = 0
+  for (let i = 6; i < 14; i++) s += u[i]
+  if ((~s & 0xff) !== u[14]) return null
+  return {
+    fl: u[6],
+    addr: (u[7] | (u[8] << 8) | (u[9] << 16) | (u[10] << 24)) >>> 0,
+    len: u[11] | (u[12] << 8) | (u[13] << 16),
+  }
 }
 
 function parseIdentity(pkt: number[]): Identity | null {
-  const d = unpack7(pkt.slice(1, -1));
-  if (d.length !== 34 || d[0] !== 0 || d[1] !== 0x59 || d[2] !== 0x11) return null;
-  const txt = String.fromCharCode(...d.slice(6, 33)).replace(/\0+$/, "");
-  const m = /^([^_]+)_(\d+)$/.exec(txt);
-  return m ? { text: txt, model: m[1], version: parseInt(m[2], 10) } : null;
+  const d = unpack7(pkt.slice(1, -1))
+  if (d.length !== 34 || d[0] !== 0 || d[1] !== 0x59 || d[2] !== 0x11)
+    return null
+  const txt = String.fromCharCode(...d.slice(6, 33)).replace(/\0+$/, '')
+  const m = /^([^_]+)_(\d+)$/.exec(txt)
+  return m ? { text: txt, model: m[1], version: parseInt(m[2], 10) } : null
 }
 
 // one MIDI in/out pair with a SysEx queue
 export class Link {
-  input: MIDIInput;
-  output: MIDIOutput;
-  q: number[][];
-  waiter: (() => void) | null;
+  input: MIDIInput
+  output: MIDIOutput
+  q: number[][]
+  waiter: (() => void) | null
   constructor(input: MIDIInput, output: MIDIOutput) {
-    this.input = input; this.output = output; this.q = []; this.waiter = null;
-    input.onmidimessage = (ev: MIDIMessageEvent) => {
-      if (!ev.data || ev.data[0] !== 0xF0) return;
-      this.q.push(Array.from(ev.data));
-      if (this.waiter) { const w = this.waiter; this.waiter = null; w(); }
-    };
+    this.input = input
+    this.output = output
+    this.q = []
+    this.waiter = null
+    input.onmidimessage = (ev: MIDIMessageEvent): void => {
+      if (!ev.data || ev.data[0] !== 0xf0) return
+      this.q.push(Array.from(ev.data))
+      if (this.waiter) {
+        const w = this.waiter
+        this.waiter = null
+        w()
+      }
+    }
   }
-  get lost() { return this.input.state === "disconnected" || this.output.state === "disconnected"; }
+  get lost() {
+    return (
+      this.input.state === 'disconnected' ||
+      this.output.state === 'disconnected'
+    )
+  }
   // false when the port is gone (unplugged): WebMIDI throws on a disconnected output
   send(bytes: number[]) {
-    try { this.output.send(bytes); return true; } catch (_) { return false; }
+    try {
+      this.output.send(bytes)
+      return true
+    } catch {
+      return false
+    }
   }
-  drain() { this.q.length = 0; }
+  drain(): void {
+    this.q.length = 0
+  }
   async read(ms: number): Promise<number[] | null> {
     if (!this.q.length) {
-      let tm: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([new Promise<void>((r) => { this.waiter = r; }), new Promise<void>((r) => { tm = setTimeout(r, ms); })]);
-      clearTimeout(tm);
-      this.waiter = null;
+      let tm: ReturnType<typeof setTimeout> | undefined
+      await Promise.race([
+        new Promise<void>((r) => {
+          this.waiter = r
+        }),
+        new Promise<void>((r) => {
+          tm = setTimeout(r, ms)
+        }),
+      ])
+      clearTimeout(tm)
+      this.waiter = null
     }
-    return this.q.shift() || null;
+    return this.q.shift() || null
   }
   // detach the callback only; do NOT close the MIDI ports. find()/probe() reuse the same input across
   // several output candidates (e.g. the always-present "Microsoft GS Wavetable Synth" is probed before
   // the FM-1's own output), and closing the input between candidates raced its re-open and broke the
   // handshake with a device that is present ("FM-1 not found" with the port listed). Leaving ports open
   // is the long-standing behaviour.
-  close() { this.input.onmidimessage = null; }
+  close(): void {
+    this.input.onmidimessage = null
+  }
 }
 
 async function handshake(link: Link, tries = 3): Promise<Identity | null> {
-  link.drain();
+  link.drain()
   for (let t = 0; t < tries; t++) {
-    if (!link.send(HS_QUERY)) return null;
-    const end = Date.now() + 1000;
+    if (!link.send(HS_QUERY)) return null
+    const end = Date.now() + 1000
     while (Date.now() < end) {
-      const p = await link.read(end - Date.now());
-      if (!p) break;
-      const id = parseIdentity(p);
-      if (id) return id;
+      const p = await link.read(end - Date.now())
+      if (!p) break
+      const id = parseIdentity(p)
+      if (id) return id
     }
   }
-  return null;
+  return null
 }
 
 export class Updater {
-  access: MIDIAccess;
-  log: LogFn;
+  access: MIDIAccess
+  log: LogFn
   constructor(access: MIDIAccess, log?: LogFn) {
-    this.access = access;
-    this.log = log || (() => {});
+    this.access = access
+    this.log = log || ((): void => {})
   }
 
   // one input against its candidate outputs: the matching port first (same name, or one name contains
   // the other, so input "Felucca" pairs with output "MIDIOUT2 (Felucca)" without probing unrelated
   // outputs like "Microsoft GS Wavetable Synth"), then (the fallback) any live output. A pair counts
   // only when it answers the FM-1 handshake and passes the filter.
-  async probe(input: MIDIInput, outs: MIDIOutput[], filter?: IdFilter): Promise<Device | null> {
-    if (input.state === "disconnected") return null;
-    const live = outs.filter((o) => o.state !== "disconnected");
-    const nm = input.name || "";
-    const named = live.filter((o) => o.name === nm || (nm && o.name && (o.name.includes(nm) || nm.includes(o.name))));
-    for (const output of (named.length ? named : live)) {
-      try { await input.open(); await output.open(); } catch (_) { continue; }
-      const link = new Link(input, output);
-      const id = await handshake(link, 2);
-      if (id && (!filter || filter(id))) return { link, id, name: input.name };
-      link.close();
+  async probe(
+    input: MIDIInput,
+    outs: MIDIOutput[],
+    filter?: IdFilter,
+  ): Promise<Device | null> {
+    if (input.state === 'disconnected') return null
+    const live = outs.filter((o) => o.state !== 'disconnected')
+    const nm = input.name || ''
+    const named = live.filter(
+      (o) =>
+        o.name === nm ||
+        (nm && o.name && (o.name.includes(nm) || nm.includes(o.name))),
+    )
+    for (const output of named.length ? named : live) {
+      try {
+        await input.open()
+        await output.open()
+      } catch {
+        continue
+      }
+      const link = new Link(input, output)
+      const id = await handshake(link, 2)
+      if (id && (!filter || filter(id))) return { link, id, name: input.name }
+      link.close()
     }
-    return null;
+    return null
   }
 
   // the FM-1 (or its update loader) among the MIDI ports. Named ports first (fast, and other gear is
@@ -173,127 +281,210 @@ export class Updater {
   // handshake fallback is what makes the loader reliably found, without probing other gear when looking
   // for the running firmware (which always names itself).
   async find(filter?: IdFilter, deep = false): Promise<Device | null> {
-    const outs = [...this.access.outputs.values()];
-    const inputs = [...this.access.inputs.values()].filter((i) => i.state !== "disconnected");
+    const outs = [...this.access.outputs.values()]
+    const inputs = [...this.access.inputs.values()].filter(
+      (i) => i.state !== 'disconnected',
+    )
     for (const input of inputs)
-      if (FM1_PORT.test(input.name || "")) {
-        const dev = await this.probe(input, outs, filter);
-        if (dev) return dev;
+      if (FM1_PORT.test(input.name || '')) {
+        const dev = await this.probe(input, outs, filter)
+        if (dev) return dev
       }
     if (deep)
       for (const input of inputs)
-        if (!FM1_PORT.test(input.name || "")) {
-          const dev = await this.probe(input, outs, filter);
-          if (dev) return dev;
+        if (!FM1_PORT.test(input.name || '')) {
+          const dev = await this.probe(input, outs, filter)
+          if (dev) return dev
         }
-    return null;
+    return null
   }
 
   // the MIDI inputs there are, for the "not found" message: " (MIDI: a, b)" (a port the installer skipped shows)
   seen() {
-    const names = [...this.access.inputs.values()].filter((p) => p.state !== "disconnected").map((p) => p.name || "?");
-    return names.length ? ` (MIDI: ${names.join(", ")})` : " (MIDI: none)";
+    const names = [...this.access.inputs.values()]
+      .filter((p) => p.state !== 'disconnected')
+      .map((p) => p.name || '?')
+    return names.length ? ` (MIDI: ${names.join(', ')})` : ' (MIDI: none)'
   }
 
-  async waitFor(filter: IdFilter, ms: number, deep = false): Promise<Device | null> {
-    const end = Date.now() + ms;
+  async waitFor(
+    filter: IdFilter,
+    ms: number,
+    deep = false,
+  ): Promise<Device | null> {
+    const end = Date.now() + ms
     while (Date.now() < end) {
-      const dev = await this.find(filter, deep);
-      if (dev) return dev;
-      await sleep(1000);
+      const dev = await this.find(filter, deep)
+      if (dev) return dev
+      await sleep(1000)
     }
-    return null;
+    return null
   }
 
   // serve read requests until the device asks for one of the finish addresses; stops early
   // when the port disappears (lost: true) instead of waiting out idleMs
-  async serve(link: Link, image: Uint8Array, finishAddr: number, idleMs: number, onProgress?: (served: number, addr: number) => void): Promise<ServeResult> {
-    let served = 0, last = Date.now();
+  async serve(
+    link: Link,
+    image: Uint8Array,
+    finishAddr: number,
+    idleMs: number,
+    onProgress?: (served: number, addr: number) => void,
+  ): Promise<ServeResult> {
+    let served = 0,
+      last = Date.now()
     for (;;) {
-      const pkt = await link.read(1000);
+      const pkt = await link.read(1000)
       if (!pkt) {
-        if (link.lost) return { served, finished: false, lost: true };
-        if (Date.now() - last > idleMs) return { served, finished: false };
-        continue;
+        if (link.lost) return { served, finished: false, lost: true }
+        if (Date.now() - last > idleMs) return { served, finished: false }
+        continue
       }
-      const r = parseRequest(pkt);
-      if (!r) continue;
-      last = Date.now();
-      if (r.addr === 0xE0000000 || r.addr === 0xF0000000) {
-        link.send(response(r.addr, [...new TextEncoder().encode("success"), 0]));
-        if (r.addr === finishAddr) return { served, finished: true };
-        continue;
+      const r = parseRequest(pkt)
+      if (!r) continue
+      last = Date.now()
+      if (r.addr === 0xe0000000 || r.addr === 0xf0000000) {
+        link.send(response(r.addr, [...new TextEncoder().encode('success'), 0]))
+        if (r.addr === finishAddr) return { served, finished: true }
+        continue
       }
-      if (r.len > MAXDATA || r.addr + r.len > image.length) throw fail("badreq", `bad request ${r.addr.toString(16)}+${r.len}`);
-      await sleep(10);
-      if (!link.send(response(r.addr, Array.from(image.subarray(r.addr, r.addr + r.len)), r.fl))) {
-        return { served, finished: false, lost: true };
+      if (r.len > MAXDATA || r.addr + r.len > image.length)
+        throw fail('badreq', `bad request ${r.addr.toString(16)}+${r.len}`)
+      await sleep(10)
+      if (
+        !link.send(
+          response(
+            r.addr,
+            Array.from(image.subarray(r.addr, r.addr + r.len)),
+            r.fl,
+          ),
+        )
+      ) {
+        return { served, finished: false, lost: true }
       }
-      served++;
-      if (onProgress) onProgress(served, r.addr);
+      served++
+      if (onProgress) onProgress(served, r.addr)
     }
   }
 
   // full install: running firmware -> loader -> new firmware
-  async install(image: Uint8Array, product: string, onStep?: StepFn): Promise<string> {
-    const step: StepFn = onStep || (() => {});
-    const dev = await this.find((id) => !IS_OTA(id));
-    if (!dev) throw fail("notfound", "FM-1 not found (USB cable, and no other app using it?)", this.seen());
-    const [model] = product.split("_");
-    if (dev.id.model !== model) { dev.link.close(); throw fail("model", `the device is ${dev.id.text}, the package is for ${product}`); }
-    step("start", dev.id.text);
-    dev.link.send(UPGRADE);
-    await sleep(2000);
-    const s1 = await this.serve(dev.link, image, 0xE0000000, 8000, (n) => step("verify", n));
-    dev.link.close();
-    if (!s1.finished) throw fail(s1.lost ? "lost" : "stopped", `the device ${s1.lost ? "was disconnected" : "stopped"} after ${s1.served} requests: nothing was written`);
-    step("loader");
-    await sleep(3000);
-    const ota = await this.waitFor(IS_OTA, 60000, true);
-    if (!ota) throw fail("noloader", "the update loader did not appear. Replug the USB cable and press Install again: the device stays in update mode until it is finished.", this.seen());
-    const s2 = await this.write(ota, image, step);
-    if (!s2.finished) throw fail(s2.lost ? "lost" : "stopped", `the loader ${s2.lost ? "was disconnected" : "stopped"} after ${s2.served} requests. Replug and press Install again to resume.`);
-    step("reboot");
-    await sleep(3000);
-    const back = await this.waitFor((id) => !IS_OTA(id), 60000);
-    if (!back) throw fail("noreturn", "the device did not come back: power-cycle it");
-    back.link.close();
-    if (back.id.text !== product) throw fail("mismatch", `installed, but the device reports ${back.id.text}`, back.id.text);
-    step("done", back.id.text);
-    return back.id.text;
+  async install(
+    image: Uint8Array,
+    product: string,
+    onStep?: StepFn,
+  ): Promise<string> {
+    const step: StepFn = onStep || ((): void => {})
+    const dev = await this.find((id) => !IS_OTA(id))
+    if (!dev)
+      throw fail(
+        'notfound',
+        'FM-1 not found (USB cable, and no other app using it?)',
+        this.seen(),
+      )
+    const [model] = product.split('_')
+    if (dev.id.model !== model) {
+      dev.link.close()
+      throw fail(
+        'model',
+        `the device is ${dev.id.text}, the package is for ${product}`,
+      )
+    }
+    step('start', dev.id.text)
+    dev.link.send(UPGRADE)
+    await sleep(2000)
+    const s1 = await this.serve(dev.link, image, 0xe0000000, 8000, (n) =>
+      step('verify', n),
+    )
+    dev.link.close()
+    if (!s1.finished)
+      throw fail(
+        s1.lost ? 'lost' : 'stopped',
+        `the device ${s1.lost ? 'was disconnected' : 'stopped'} after ${s1.served} requests: nothing was written`,
+      )
+    step('loader')
+    await sleep(3000)
+    const ota = await this.waitFor(IS_OTA, 60000, true)
+    if (!ota)
+      throw fail(
+        'noloader',
+        'the update loader did not appear. Replug the USB cable and press Install again: the device stays in update mode until it is finished.',
+        this.seen(),
+      )
+    const s2 = await this.write(ota, image, step)
+    if (!s2.finished)
+      throw fail(
+        s2.lost ? 'lost' : 'stopped',
+        `the loader ${s2.lost ? 'was disconnected' : 'stopped'} after ${s2.served} requests. Replug and press Install again to resume.`,
+      )
+    step('reboot')
+    await sleep(3000)
+    const back = await this.waitFor((id) => !IS_OTA(id), 60000)
+    if (!back)
+      throw fail('noreturn', 'the device did not come back: power-cycle it')
+    back.link.close()
+    if (back.id.text !== product)
+      throw fail(
+        'mismatch',
+        `installed, but the device reports ${back.id.text}`,
+        back.id.text,
+      )
+    step('done', back.id.text)
+    return back.id.text
   }
 
   // step 2 with the loader found by find()/waitFor()
-  async write(ota: Device, image: Uint8Array, step: StepFn): Promise<ServeResult> {
-    ota.link.send(UPGRADE);
-    await sleep(2000);
-    const s2 = await this.serve(ota.link, image, 0xF0000000, 180000, (n) => step("write", n));
-    ota.link.close();
-    return s2;
+  async write(
+    ota: Device,
+    image: Uint8Array,
+    step: StepFn,
+  ): Promise<ServeResult> {
+    ota.link.send(UPGRADE)
+    await sleep(2000)
+    const s2 = await this.serve(ota.link, image, 0xf0000000, 180000, (n) =>
+      step('write', n),
+    )
+    ota.link.close()
+    return s2
   }
 
   // resume: the device is already in update mode (loader) -> true when the write finished. Only SLOOP's
   // own loader is resumed, except for the return to the official firmware (opts.product: the official
   // package, its identity checked once the FM-1 is back, after Felucca 1.0): that one is the official
   // loader's own image, as M-UPGRADE would write it
-  async resume(image: Uint8Array, onStep?: StepFn, opts: { product?: string } = {}): Promise<boolean> {
-    const ota = await this.find(IS_OTA, true);
-    if (!ota) return false;
+  async resume(
+    image: Uint8Array,
+    onStep?: StepFn,
+    opts: { product?: string } = {},
+  ): Promise<boolean> {
+    const ota = await this.find(IS_OTA, true)
+    if (!ota) return false
     if (!OUR_LOADER(ota.id) && !opts.product) {
-      ota.link.close();
-      throw fail("foreign", `the FM-1 is in the update mode of another firmware (${ota.id.text}): finish that update with its own updater`, ota.id.text);
+      ota.link.close()
+      throw fail(
+        'foreign',
+        `the FM-1 is in the update mode of another firmware (${ota.id.text}): finish that update with its own updater`,
+        ota.id.text,
+      )
     }
-    const step: StepFn = onStep || (() => {});
-    if (!(await this.write(ota, image, step)).finished) return false;
+    const step: StepFn = onStep || ((): void => {})
+    if (!(await this.write(ota, image, step)).finished) return false
     if (opts.product) {
-      step("reboot");
-      await sleep(3000);
-      const back = await this.waitFor((id) => !IS_OTA(id), 60000);
-      if (!back) throw fail("noreturn", "the FM-1 did not come back after the write: power-cycle it");
-      back.link.close();
-      if (back.id.text !== opts.product) throw fail("mismatch", `written, but the FM-1 reports ${back.id.text}`, back.id.text);
-      step("done", back.id.text);
+      step('reboot')
+      await sleep(3000)
+      const back = await this.waitFor((id) => !IS_OTA(id), 60000)
+      if (!back)
+        throw fail(
+          'noreturn',
+          'the FM-1 did not come back after the write: power-cycle it',
+        )
+      back.link.close()
+      if (back.id.text !== opts.product)
+        throw fail(
+          'mismatch',
+          `written, but the FM-1 reports ${back.id.text}`,
+          back.id.text,
+        )
+      step('done', back.id.text)
     }
-    return true;
+    return true
   }
 }

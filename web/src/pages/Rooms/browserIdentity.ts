@@ -1,62 +1,73 @@
-const STORAGE_KEY = "boopbox.room-browser-id.v1";
-const LOCK_NAME = "boopbox.room-browser-identity.v1";
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const STORAGE_ERROR = "Room access needs browser storage and tab coordination. Enable site storage and refresh this page.";
+const STORAGE_KEY = 'boopbox.room-browser-id.v1'
+const LOCK_NAME = 'boopbox.room-browser-identity.v1'
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const STORAGE_ERROR =
+  'Room access needs browser storage and tab coordination. Enable site storage and refresh this page.'
 
 function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID_V4.test(value);
+  return typeof value === 'string' && UUID_V4.test(value)
 }
 
 function createUuid(crypto: Partial<Crypto> | undefined) {
-  if (typeof crypto?.randomUUID === "function") return crypto.randomUUID().toLowerCase();
-  if (typeof crypto?.getRandomValues !== "function") throw new Error(STORAGE_ERROR);
+  if (typeof crypto?.randomUUID === 'function')
+    return crypto.randomUUID().toLowerCase()
+  if (typeof crypto?.getRandomValues !== 'function')
+    throw new Error(STORAGE_ERROR)
 
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = [...bytes]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 /* where the identity is kept: the browser's window (globalThis), or a stand-in for it in tests */
 export interface RoomIdentityEnvironment {
-  localStorage?: Pick<Storage, "getItem" | "setItem"> | null;
-  navigator?: { locks?: Pick<LockManager, "request"> | null } | null;
-  crypto?: Partial<Crypto>;
+  localStorage?: Pick<Storage, 'getItem' | 'setItem'> | null
+  navigator?: { locks?: Pick<LockManager, 'request'> | null } | null
+  crypto?: Partial<Crypto>
 }
 
 export async function getRoomBrowserIdentity(
-  environment: RoomIdentityEnvironment = globalThis as RoomIdentityEnvironment,
+  environment: RoomIdentityEnvironment = globalThis,
 ): Promise<string> {
-  let storage: RoomIdentityEnvironment["localStorage"];
-  let locks: Pick<LockManager, "request"> | null | undefined;
-  let crypto: Partial<Crypto> | undefined;
+  let storage: RoomIdentityEnvironment['localStorage']
+  let locks: Pick<LockManager, 'request'> | null | undefined
+  let crypto: Partial<Crypto> | undefined
   try {
-    storage = environment.localStorage;
-    locks = environment.navigator?.locks;
-    crypto = environment.crypto;
-    if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
-      throw new Error(STORAGE_ERROR);
+    storage = environment.localStorage
+    locks = environment.navigator?.locks
+    crypto = environment.crypto
+    if (
+      !storage ||
+      typeof storage.getItem !== 'function' ||
+      typeof storage.setItem !== 'function'
+    ) {
+      throw new Error(STORAGE_ERROR)
     }
-    const existing = storage.getItem(STORAGE_KEY);
-    if (isUuid(existing)) return existing.toLowerCase();
+    const existing = storage.getItem(STORAGE_KEY)
+    if (isUuid(existing)) return existing.toLowerCase()
   } catch {
-    throw new Error(STORAGE_ERROR);
+    throw new Error(STORAGE_ERROR)
   }
 
-  if (!locks || typeof locks.request !== "function") throw new Error(STORAGE_ERROR);
+  if (!locks || typeof locks.request !== 'function')
+    throw new Error(STORAGE_ERROR)
   try {
     return await locks.request(LOCK_NAME, () => {
-      const existing = storage.getItem(STORAGE_KEY);
-      if (isUuid(existing)) return existing.toLowerCase();
+      const existing = storage.getItem(STORAGE_KEY)
+      if (isUuid(existing)) return existing.toLowerCase()
 
-      const browserId = createUuid(crypto);
-      storage.setItem(STORAGE_KEY, browserId);
-      const persisted = storage.getItem(STORAGE_KEY);
-      if (!isUuid(persisted)) throw new Error(STORAGE_ERROR);
-      return persisted.toLowerCase();
-    });
+      const browserId = createUuid(crypto)
+      storage.setItem(STORAGE_KEY, browserId)
+      const persisted = storage.getItem(STORAGE_KEY)
+      if (!isUuid(persisted)) throw new Error(STORAGE_ERROR)
+      return persisted.toLowerCase()
+    })
   } catch {
-    throw new Error(STORAGE_ERROR);
+    throw new Error(STORAGE_ERROR)
   }
 }
