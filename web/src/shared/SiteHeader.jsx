@@ -13,7 +13,6 @@ const LINKS = [
   ["home", "Features", "home/"],
   ["editor", "Web editor", "editor/"],
   ["emu", "Try it", "emu/"],
-  ["rooms", "Jam rooms", "rooms/"],
   ["installer", "Install", "installer/"],
 ];
 

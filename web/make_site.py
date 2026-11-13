@@ -185,7 +185,7 @@ def main(pkg, version, out, trainer=None):
 
     build_pages()
     app, fw = out / "webapp", out / "firmware"
-    for d in ("home", "installer", "editor", "emu", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
+    for d in ("home", "installer", "editor", "emu", "rooms", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
         if (app / d).exists():
             shutil.rmtree(app / d)
     shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)

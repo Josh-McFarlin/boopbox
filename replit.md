@@ -26,14 +26,14 @@ Pages:
 - `/webapp/editor/` — hardware editor
 - `/webapp/editor/?mock=1` — editor with a simulated FM-1
 - `/webapp/emu/` — browser emulator
-- `/webapp/rooms/` — live music room browser and player
 - `/webapp/installer/` — firmware installer
+
+Jam rooms are temporarily hidden from navigation and public builds. Their source,
+server implementation, and tests remain in the project for later reactivation.
 
 Hardware MIDI and installation need a connected FM-1 and a compatible browser
 (Chrome or Edge). If the embedded preview restricts MIDI access, open the preview
-in a separate browser tab. Rooms support factory synth presets and factory drum
-kits only; custom patches and sample data are not transmitted. Starting the
-website does not install any firmware.
+in a separate browser tab. Starting the website does not install any firmware.
 
 ## Source development
 

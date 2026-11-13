@@ -63,7 +63,6 @@ export default defineConfig(({ mode }) => {
               installer: resolve(SITE, "installer/index.html"),
               editor: resolve(SITE, "editor/index.html"),
               emu: resolve(SITE, "emu/index.html"),
-              rooms: resolve(SITE, "rooms/index.html"),
             },
       },
     },

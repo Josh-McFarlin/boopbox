@@ -53,6 +53,9 @@ try:
     (tmp / "p.fwsc").write_bytes(bytes(pkg))
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site")
     app = tmp / "site" / "webapp"
+    app_js = "\n".join(f.read_text(encoding="utf-8") for f in (app / "assets").glob("*.js"))
+    check("jam rooms are hidden from public navigation and stale site output",
+          not (app / "rooms").exists() and "Jam rooms" not in app_js)
     sw = (app / "sw.js").read_text(encoding="utf-8")
     files = json.loads(re.search(r"const FILES = (\[.*?\]);", sw).group(1))
     path = lambda f: (app / f / "index.html") if f.endswith("/") else (app / f)   # noqa: E731
