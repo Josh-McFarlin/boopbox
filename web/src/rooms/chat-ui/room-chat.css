@@ -46,7 +46,7 @@
 .room-chat__eyebrow {
   margin: 0 0 2px;
   color: #d1bfef;
-  font-family: "Pixelify Sans", ui-monospace, monospace;
+  font-family: "Jersey 10", ui-monospace, monospace;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .08em;
@@ -56,7 +56,7 @@
 .room-chat__title {
   margin: 0;
   color: #fff;
-  font-family: "Pixelify Sans", ui-monospace, monospace;
+  font-family: "Jersey 10", ui-monospace, monospace;
   font-size: 22px;
   line-height: 1.15;
 }
@@ -225,14 +225,14 @@
   border: 1px solid #695384;
   border-radius: 12px;
   color: var(--chat-cyan);
-  font-family: "Pixelify Sans", ui-monospace, monospace;
+  font-family: "Jersey 10", ui-monospace, monospace;
   font-size: 21px;
 }
 
 .room-chat__empty-title {
   margin: 0;
   color: #fff;
-  font-family: "Pixelify Sans", ui-monospace, monospace;
+  font-family: "Jersey 10", ui-monospace, monospace;
   font-size: 17px;
 }
 
@@ -262,7 +262,7 @@
   border-radius: 10px;
   background: #2a1c40;
   color: var(--chat-cyan);
-  font-family: "Pixelify Sans", ui-monospace, monospace;
+  font-family: "Jersey 10", ui-monospace, monospace;
   font-size: 14px;
   font-weight: 700;
 }

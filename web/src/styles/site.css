@@ -1,12 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only
    The home page's, the installer's and the emulator's look ("pocket arcade"): the FM-1's own pixel screen scaled up.
-   Deep violet, magenta, cyan and lime; Pixelify Sans for headings and labels, DM Sans for text (both SIL OFL 1.1,
+   Deep violet, magenta, cyan and lime; Jersey 10 for headings and labels, DM Sans for text (both SIL OFL 1.1,
    bundled from @fontsource, so the pages need no font host and work offline). Tailwind, with the palette as theme
    tokens (bg-bg, text-dim, bg-tile, border-line, text-blue ...). The four accent names stay the track colours' names
    (orange, blue, green, yellow): here they are magenta, cyan, lime and yellow. */
 @import "tailwindcss";
-@import "@fontsource/pixelify-sans/latin-500.css";
-@import "@fontsource/pixelify-sans/latin-700.css";
+@import "@fontsource/jersey-10/latin-400.css";
 @import "@fontsource/dm-sans/latin-400.css";
 @import "@fontsource/dm-sans/latin-500.css";
 @import "@fontsource/dm-sans/latin-700.css";
@@ -14,8 +13,7 @@
 
 @theme {
   --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-pixel: "Pixelify Sans", ui-monospace, Menlo, Consolas, monospace;
-  --font-jersey: "Jersey 10", "Pixelify Sans", ui-monospace, Menlo, Consolas, monospace;
+  --font-pixel: "Jersey 10", ui-monospace, Menlo, Consolas, monospace;
   --color-blue: #3ee6ff;
   --color-green: #c6ff3d;
   --color-yellow: #ffd23f;
@@ -40,7 +38,7 @@
 
 @layer base {
   body { @apply m-0 bg-bg text-body font-sans text-[16px] leading-[1.6]; }
-  /* (Pixelify Sans draws its "fi" ligature like an "A": no ligatures anywhere) */
+  /* Keep pixel-style lettering consistent in headings and labels. */
   html { font-variant-ligatures: none; }
   a { color: inherit; }
   h1, h2, h3 { @apply text-fg; }

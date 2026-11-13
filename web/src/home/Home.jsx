@@ -98,7 +98,7 @@ export default function Home() {
         <section id="top" className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-12 px-6 pt-[72px] pb-14">
           <div className="min-w-0 flex-[1_1_480px]">
             <p className={KICKER}>▶ Free firmware for the M-VAVE FM-1</p>
-            <h1 className="m-0 mb-6 font-jersey text-[46px] leading-[.98] font-bold text-balance min-[600px]:text-[68px]">Turn the FM-1 into
+            <h1 className="m-0 mb-6 font-pixel text-[46px] leading-[.98] font-bold text-balance min-[600px]:text-[68px]">Turn the FM-1 into
               a <span className="text-orange">groovebox you play&nbsp;live.</span></h1>
             <p className="m-0 mb-7 max-w-[36em] text-[20px] leading-[1.45] text-body">Eight tracks, thirteen synth engines, 37 drum kits and 27
               punch-in effects, under your hands. No factory patterns, nothing to load: everything you hear, you play. House, techno, hip-hop,

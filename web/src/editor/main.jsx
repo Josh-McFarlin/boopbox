@@ -2,6 +2,7 @@
 // The BoopBox editor: the FM-1's sounds, sequences, songs, samples and settings from the computer, over USB MIDI
 // (EDITOR_PROTOCOL.md). ?mock=1: a simulated FM-1 (and the firmware's own audio in the browser, when built).
 import { createRoot } from "react-dom/client";
+import "@fontsource/jersey-10/latin-400.css";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "./editor.css";

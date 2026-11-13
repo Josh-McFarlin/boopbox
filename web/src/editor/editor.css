@@ -2,7 +2,7 @@
    The editor: the FM-1's screen on a big display, in the site's "pocket arcade" look. The night indigo and purples of
    the device's SYNTHWAVE theme (firmware/src/gfx.c SYNTH_BG, SYNTH_G), its eight track colours (SYNTH_TRK, SYNTH_TRK2),
    the device's own Terminus pixel font (tools/gen_webfont.py), 16 px and 32 px only so every pixel stays sharp, and the
-   site's Pixelify Sans for the page and card titles, DM Sans for the help text (sentences read better in it). Two
+   Jersey 10 for the page and card titles, DM Sans for the help text (sentences read better in it). Two
    accents: --acc, fixed, for the interface's own state (the page's title, a pressed toggle, a primary button, the
    focus ring); --trk, the selected track's colour, only where a track shows (its chip, its steps, its strip).
    Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay hidden until it has loaded.
@@ -59,8 +59,8 @@
          font-smooth: never; text-rendering: optimizeSpeed; font-variant-numeric: tabular-nums; }
   a { color: inherit; }
   h1, h2, h3 { font-weight: 400; margin: 0; font-size: 16px; line-height: 20px; }
-  /* the page's and the cards' titles: the site's pixel display face (bundled by the site header) */
-  h1.text-big, h2.text-big { font-family: "Pixelify Sans", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
+  /* the page's and the cards' titles: Jersey 10, bundled by the editor entry */
+  h1.text-big, h2.text-big { font-family: "Jersey 10", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
                              font-variant-ligatures: none; }
   /* help text: sentences in DM Sans (the values, labels and buttons stay in the device's pixel font) */
   p, .help { font-family: var(--text-face); font-size: 15px; line-height: 22px; -webkit-font-smoothing: antialiased; text-rendering: auto; }

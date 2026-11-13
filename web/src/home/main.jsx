@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { createRoot } from "react-dom/client";
-import "@fontsource/jersey-10/latin-400.css";
 import "../styles/site.css";
 import Home from "./Home.jsx";
 
