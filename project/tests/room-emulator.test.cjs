@@ -12,7 +12,7 @@ const config = require("../../shared/room-config.json");
 const { createRoomService, normalizeRoomPerformance } = require("../../server/rooms.cjs");
 
 test("room listener retries a failed performance update and applies the saved version", async () => {
-  const { applyPerformanceWithRetry } = await import("../../web/src/rooms/performance-sync.js");
+  const { applyPerformanceWithRetry } = await import("../../web/src/pages/Rooms/performanceSync.ts");
   const states = new Map();
   const errors = [];
   const calls = [];
@@ -36,7 +36,7 @@ test("room listener retries a failed performance update and applies the saved ve
 });
 
 test("a newer room performance supersedes an older scheduled retry", async () => {
-  const { applyPerformanceWithRetry } = await import("../../web/src/rooms/performance-sync.js");
+  const { applyPerformanceWithRetry } = await import("../../web/src/pages/Rooms/performanceSync.ts");
   const states = new Map();
   const errors = [];
   const calls = [];
@@ -65,7 +65,7 @@ test("a newer room performance supersedes an older scheduled retry", async () =>
 });
 
 test("a permanently failing performance reports its error after bounded retries", async () => {
-  const { applyPerformanceWithRetry } = await import("../../web/src/rooms/performance-sync.js");
+  const { applyPerformanceWithRetry } = await import("../../web/src/pages/Rooms/performanceSync.ts");
   const states = new Map();
   const errors = [];
   let attempts = 0;
@@ -196,8 +196,8 @@ function wait(ms) {
 }
 
 test("browser emulator notes and sequenced performance reach room players and late joiners", async () => {
-  const { buildEmulatorPerformance, syncEmulatorSnapshot } = await import("../../web/src/rooms/device.js");
-  const { PROJ7 } = await import("../../web/src/editor/lib/proto.js");
+  const { buildEmulatorPerformance, syncEmulatorSnapshot } = await import("../../web/src/pages/Rooms/device.ts");
+  const { PROJ7 } = await import("../../web/src/pages/Editor/lib/proto.ts");
   const workletMessages = [];
   const emulator = createEmulatorWorklet(workletMessages);
   emulator.input({ t: "room-snapshot" });
@@ -299,7 +299,7 @@ test("browser emulator notes and sequenced performance reach room players and la
 
     // Apply the relayed update to the same state-message path used by the listener's audio worklet.
     const [{ RoomAudio }, { RoomFirmwareAudio }] = await Promise.all([
-      import("../../web/src/rooms/audio.js"),
+      import("../../web/src/pages/Rooms/audio.ts"),
       import("../../web/site/public/editor/preview-worklet.js"),
     ]);
     roomAudio = new RoomAudio(() => {});

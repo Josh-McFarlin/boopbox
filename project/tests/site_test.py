@@ -28,9 +28,9 @@ make_site.build_pages()
 src = (make_site.BUILD / "webapp-offline" / "editor" / "index.html").read_text(encoding="utf-8")
 off = make_site.offline_editor(src, "9.9")
 check("the editor links the offline file (download)", re.search(r'href:\s*"boopbox-editor\.html"|href="boopbox-editor\.html"',
-      (ROOT / "web" / "src" / "editor" / "App.jsx").read_text(encoding="utf-8")) is not None)
+      (ROOT / "web" / "src" / "pages" / "Editor" / "index.tsx").read_text(encoding="utf-8")) is not None)
 check("the installer page links it too",
-      (ROOT / "web" / "src" / "installer" / "Installer.jsx").read_text(encoding="utf-8").count('href="../editor/boopbox-editor.html"') == 1)
+      (ROOT / "web" / "src" / "pages" / "Installer" / "index.tsx").read_text(encoding="utf-8").count('href="../editor/boopbox-editor.html"') == 1)
 check("offline: the fonts inlined", "font/ttf;base64," in off and not re.search(r'url\((?!data:)["\']?[A-Za-z.]', off))
 check("offline: no download link to itself", 'href:"boopbox-editor.html"' not in off and 'href="boopbox-editor.html"' not in off)
 check("offline: the installer and the font licence online",
@@ -101,7 +101,7 @@ try:
           meta["trainer"]["pkg"] == "../../firmware/boopbox-trainer-9.9.fwsc" and meta["trainer"]["version"] == "9.9" and
           meta["trainer"]["sha256"] == hashlib.sha256((tmp / "t.fwsc").read_bytes()).hexdigest() and
           "../firmware/boopbox-trainer-9.9.fwsc" in sw3 and
-          'id="pick"' in (ROOT / "web" / "src" / "installer" / "Installer.jsx").read_text(encoding="utf-8"))
+          'id="pick"' in (ROOT / "web" / "src" / "pages" / "Installer" / "index.tsx").read_text(encoding="utf-8"))
     check("trainer: tools/check_site.py passes the site with both packages, fails it with the trainer's changed",
           not check_site.problems(tmp / "site3" / "firmware" / "boopbox-9.9.fwsc", tmp / "site3") and
           ((tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").write_bytes(b"x") or True) and

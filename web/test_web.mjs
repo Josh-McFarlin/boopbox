@@ -3,7 +3,7 @@
 //
 // Node checks of the web pages' JS (no browser, no hardware). Run from the repo root:
 //   node web/test_web.mjs
-// - src/editor/lib/proto.js: the editor's protocol and formats against its mock device (v1 commands,
+// - src/pages/Editor/lib/proto.ts: the editor's protocol and formats against its mock device (v1 commands,
 //   the user preset bank / librarian, library files, live pushes, older-firmware fallback, the v3 tracks
 //   and the mixer), its tab layout and strings,
 //   and the user-sample pipeline byte for byte against tools/sampleio.py
@@ -14,10 +14,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stripTypeScriptTypes } from "node:module";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { logicalImage, productOf } from "./src/lib/fm1pkg.js";
-import { Updater, pack7, unpack7, FM1_PORT } from "./src/lib/fm1ota.js";
+import { logicalImage, productOf } from "./src/lib/fm1pkg.ts";
+import { Updater, pack7, unpack7, FM1_PORT } from "./src/lib/fm1ota.ts";
 
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(64)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
@@ -27,13 +28,14 @@ const py = (code, ...args) => execFileSync(PYTHON, ["-c", code, ...args], { maxB
 const HERE = fileURLToPath(new URL(".", import.meta.url));
 
 /* ------------------------------------------------------------ editor protocol --- */
-/* the protocol, formats and mock device (src/editor/lib/proto.js), run as a script: its export list stripped */
-const protoSrc = readFileSync(join(HERE, "src/editor/lib/proto.js"), "utf8");
+/* the protocol, formats and mock device (src/pages/Editor/lib/proto.ts), run as a script: its export list stripped */
+/* (TypeScript: its types stripped first, as Node does when it imports a .ts file) */
+const protoSrc = stripTypeScriptTypes(readFileSync(join(HERE, "src/pages/Editor/lib/proto.ts"), "utf8"));
 const proto = protoSrc.slice(0, protoSrc.lastIndexOf("\nexport {"));
-/* the React editor's own source (src/editor/**, site/editor/index.html), for the checks on the page itself */
+/* the React editor's own source (src/pages/Editor/**, site/editor/index.html), for the checks on the page itself */
 const srcFiles = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
-  d.isDirectory() ? srcFiles(join(dir, d.name)) : /\.(jsx?|css|html)$/.test(d.name) ? [join(dir, d.name)] : []);
-const editorSrc = [join(HERE, "site/editor/index.html"), ...srcFiles(join(HERE, "src/editor"))]
+  d.isDirectory() ? srcFiles(join(dir, d.name)) : /\.(tsx?|css|html)$/.test(d.name) ? [join(dir, d.name)] : []);
+const editorSrc = [join(HERE, "site/editor/index.html"), join(HERE, "src/styles/editor.css"), ...srcFiles(join(HERE, "src/pages/Editor"))]
   .filter((f) => existsSync(f)).map((f) => readFileSync(f, "utf8")).join("\n");
 const E = vm.runInNewContext(proto + `
 ;({ frame, unframe, parse, req, Link, parseWav, resample, normalize, rootFromName, buildSlot, makeMockDevice, CMD, SMP,
@@ -1045,8 +1047,8 @@ sys.stdout.buffer.write(hd+t1+b'MTrk'+struct.pack('>I',len(tr))+tr)`);
   /* the page */
   {   /* the LEN control (the device's LEN knob, one control, in the timing row); the grid renders from LEN, the roll
          redraws in an effect */
-    const seq = readFileSync(join(HERE, "src/editor/pages/Sequencer.jsx"), "utf8");
-    const rollSrc = readFileSync(join(HERE, "src/editor/pages/sequencer/Roll.jsx"), "utf8");
+    const seq = readFileSync(join(HERE, "src/pages/Editor/tabs/Sequencer.tsx"), "utf8");
+    const rollSrc = readFileSync(join(HERE, "src/pages/Editor/tabs/sequencer/Roll.tsx"), "utf8");
     ok(/const ids = \[pSlen\(\), pDiv\(\), pById\("SWG", 31\), pById\("GATE", 32\)\]/.test(seq) && /<Param [^>]*ctx="SEQ TIMING"/.test(seq)
       && !/id="lenval"/.test(seq) && /pSlen\(\)/.test(editorSrc) && /const len = stepLen\(\)/.test(seq) && /useEffect\(\(\) => \{\s*drawRoll/.test(rollSrc),
       "editor: the LEN control (one, in the timing row), the grid and roll redrawn when LEN changes");
@@ -1518,25 +1520,25 @@ async function editorTheme() {
   ok(oi.proto === 10 && r10 === 5 && !l10.some((x) => x.id === 11), "theme: a v10 FM-1 (2.6): INFO 10, object 11 unknown (5, as editor.c answers), a 2.7 backup restores without it");
   old.done();
   /* the page */
-  ok(/\["theme", "tabTheme", "ui_knob"\]/.test(readFileSync(join(HERE, "src/editor/core/tabs.js"), "utf8")) && /id="thprev"/.test(editorSrc) && /const thOk = \(\) => !!A\.dev && !!A\.dev\.info && A\.dev\.info\.proto >= 11;/.test(editorSrc),
+  ok(/\["theme", "tabTheme", "ui_knob"\]/.test(readFileSync(join(HERE, "src/pages/Editor/core/tabs.ts"), "utf8")) && /id="thprev"/.test(editorSrc) && /const thOk = \(\) => !!A\.dev && !!A\.dev\.info && A\.dev\.info\.proto >= 11;/.test(editorSrc),
     "theme: the Theme page (preview, works without an FM-1, Send from protocol 11)");
 }
 
 function editorTabs() {
   /* the pages: core/tabs.js TABS, the side bar (NAV) in that order, a page module each (pages/index.js), none a stub */
-  const tabsSrc = readFileSync(join(HERE, "src/editor/core/tabs.js"), "utf8");
+  const tabsSrc = readFileSync(join(HERE, "src/pages/Editor/core/tabs.ts"), "utf8");
   const TABS = JSON.parse((/export const TABS = (\[[^\]]*\]);/.exec(tabsSrc) || [])[1] || "[]");
   const nav = [...tabsSrc.slice(tabsSrc.indexOf("export const NAV")).matchAll(/\["(\w+)", "(\w+)", "(\w+)"\]/g)];
-  const pagesSrc = readFileSync(join(HERE, "src/editor/pages/index.js"), "utf8");
-  const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.jsx";/gm)].map((x) => [x[1], x[2]]));
-  const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/editor/pages", f + ".jsx"), "utf8")));
+  const pagesSrc = readFileSync(join(HERE, "src/pages/Editor/tabs/index.ts"), "utf8");
+  const mods = Object.fromEntries([...pagesSrc.matchAll(/^import \* as (\w+) from "\.\/(\w+)\.tsx";/gm)].map((x) => [x[1], x[2]]));
+  const stubs = Object.values(mods).filter((f) => /TODO\(port/.test(readFileSync(join(HERE, "src/pages/Editor/tabs", f + ".tsx"), "utf8")));
   ok(TABS.length === 10 && js(nav.map((x) => x[1])) === js(TABS) && TABS.every((x) => mods[x]) && mods.preview && !stubs.length,
     `editor: ${TABS.length} tabs, one page each (${TABS.join(" ")})${stubs.length ? ", stubs: " + stubs : ""}`);
   ok(/localStorage\.setItem\(TAB_KEY/.test(tabsSrc) && /try \{ localStorage/.test(tabsSrc) && /history\.replaceState\([^)]*"#" \+ name\)/.test(tabsSrc)
     && /addEventListener\("hashchange"/.test(tabsSrc), "editor: last tab in localStorage (try/catch) and in the URL hash");
   /* every string key the editor uses is in TEXT.en: the ones the source names (t("k"), tf("k"), sayK("k"), hint = "k"), the side bar's,
      and the ones the core builds (tabd_/tabh_ of each tab) */
-  const TEXT = vm.runInNewContext(readFileSync(join(HERE, "src/editor/lib/text.js"), "utf8").replace("export const TEXT =", "(").trim().replace(/;$/, "") + ")");
+  const TEXT = vm.runInNewContext(stripTypeScriptTypes(readFileSync(join(HERE, "src/pages/Editor/lib/text.ts"), "utf8")).replace("export const TEXT =", "(").trim().replace(/;$/, "") + ")");
   const en = new Set(Object.keys(TEXT.en));
   const used = new Set([...editorSrc.matchAll(/\bt\("(\w+)"\)|\btf\("(\w+)"|sayK\("(\w+)"|hint = "(\w+)"/g)].map((x) => x[1] || x[2] || x[3] || x[4]));
   for (const x of nav) used.add(x[2]);
@@ -1547,8 +1549,8 @@ function editorTabs() {
   const miss = [...used].filter((k) => !en.has(k));
   ok(!miss.length && Object.keys(TEXT).join() === "en", `editor: every string in en, the only language (${used.size} used${miss.length ? ", missing " + miss : ""})`);
   {   /* 2.4: the device's palette as tokens (:root, the Tailwind theme), used through them; outside them only #000 (text on a colour) */
-    const css = readFileSync(join(HERE, "src/editor/editor.css"), "utf8");
-    const pageCss = srcFiles(join(HERE, "src/editor")).filter((f) => f.endsWith(".css")).map((f) => readFileSync(f, "utf8")).join("\n");
+    const css = readFileSync(join(HERE, "src/styles/editor.css"), "utf8");
+    const pageCss = srcFiles(join(HERE, "src/pages/Editor")).filter((f) => f.endsWith(".css")).map((f) => readFileSync(f, "utf8")).join("\n");
     const hex = [...pageCss.replace(/:root\s*\{[^}]*\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/#[0-9a-f]{3,8}\b/gi)]
       .map((m) => m[0].toLowerCase()).filter((c) => c !== "#000");
     const jsxHex = [...editorSrc.matchAll(/-\[#[0-9a-f]{3,8}\]|(?:color|background|fill|stroke(?:Style)?|fillStyle)\s*[:=]\s*["'`]#[0-9a-f]{3,8}\b/gi)]
@@ -1561,22 +1563,22 @@ function editorTabs() {
     ok(/SYNTH_TRK\[4\] = \{RGB\(0, 228, 255\), RGB\(255, 44, 212\), RGB\(255, 140, 56\), RGB\(160, 96, 255\)\}/.test(te)
       && /SYNTH_TRK2\[4\] = \{RGB\(110, 140, 255\), RGB\(255, 112, 168\), RGB\(255, 214, 90\), RGB\(224, 128, 255\)\}/.test(te),
       "editor: ... the same eight as the firmware's SYNTHWAVE tracks");
-    const font = join(HERE, "src/editor/assets/terminus.ttf");
-    ok(existsSync(font) && readFileSync(font).length > 20000 && readFileSync(font).readUInt32BE(0) === 0x00010000 && /url\("\.\/assets\/terminus\.ttf"\)/.test(css),
+    const font = join(HERE, "src/assets/fonts/terminus.ttf");
+    ok(existsSync(font) && readFileSync(font).length > 20000 && readFileSync(font).readUInt32BE(0) === 0x00010000 && /url\("\.\.\/assets\/fonts\/terminus\.ttf"\)/.test(css),
       "editor: the device's Terminus font (project/tools/gen_webfont.py)");
   }
 }
 
 /* ------------------------------------------------- editor icons (Fukiai) --- */
 function editorIcons() {
-  const glyphs = readFileSync(join(HERE, "src/editor/lib/glyphs.js"), "utf8");
+  const glyphs = readFileSync(join(HERE, "src/pages/Editor/lib/glyphs.ts"), "utf8");
   const blk = glyphs.slice(glyphs.indexOf("const GLYPH = {"), glyphs.indexOf("};", glyphs.indexOf("const GLYPH = {")));
   const names = new Set([...blk.matchAll(/(\w+): 0x[0-9A-F]{4}/g)].map((m) => m[1]));
   const used = new Set([...(editorSrc + glyphs.slice(blk.length)).matchAll(/\bic="(\w+)"|\bname="(\w+_\w+)"|ic: "(\w+)"|: "((?:waveform|function|symbol|control|port|ui|note)_\w+)"|"((?:waveform|function|symbol|control|port|ui|note)_\w+)"\]/g)]
     .map((m) => m[1] || m[2] || m[3] || m[4] || m[5]));
   const missing = [...used].filter((n) => !names.has(n));
   ok(names.size > 0 && !missing.length, `editor: every icon name is in GLYPH (${used.size} used${missing.length ? ", missing " + missing : ""})`);
-  const ttf = join(HERE, "src/editor/assets/fukiai.ttf"), lic = join(HERE, "site/public/editor/FUKIAI-LICENSE.txt");
+  const ttf = join(HERE, "src/assets/fonts/fukiai.ttf"), lic = join(HERE, "site/public/editor/FUKIAI-LICENSE.txt");
   ok(existsSync(ttf) && readFileSync(ttf).readUInt32BE(0) === 0x00010000 && existsSync(lic) && editorSrc.includes("FUKIAI-LICENSE.txt"),
     "editor: fukiai.ttf and FUKIAI-LICENSE.txt (served beside the editor)");
   ok(/html:not\(\.fk\) \.ic \{ display: none; \}/.test(editorSrc) && editorSrc.includes('classList.add("fk")'), "editor: icons hidden until the font has loaded");
@@ -1854,7 +1856,7 @@ async function updater() {
   wrong.boot("ota-FM-1_015", "FM-1 Update");
   const e5 = await new Updater(wrong.access).resume(image, null, { product: "FM-1_015" }).then(() => null, (x) => x);
   ok(e5 && e5.code === "mismatch", "fm1ota.js: return to official: another firmware coming back is not 'done'");
-  const pk = await import(join(HERE, "src/lib/fm1pkg.js"));
+  const pk = await import(join(HERE, "src/lib/fm1pkg.ts"));
   const notStock = new Uint8Array(pk.STOCK_V15_SIZE);
   const e6 = await pk.validateStockPackage(notStock).then(() => null, (x) => x);
   ok(e6 && /official FM-1 V15/.test(e6.message), "fm1pkg.js: only the exact official V15 is accepted (SHA-256)");

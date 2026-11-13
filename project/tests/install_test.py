@@ -5,7 +5,7 @@
 The fake device is the one in web/test_web.mjs: identity on the handshake,
 then "device asks, host answers" reads of the logical image. Run from project/:
   python3 tests/install_test.py
-Also checks logical_image/product_of against web/src/lib/fm1pkg.js (needs node and
+Also checks logical_image/product_of against web/src/lib/fm1pkg.ts (needs node and
 build/felucca.fwsc, skipped otherwise)."""
 import io
 import queue
@@ -301,7 +301,7 @@ def against_js():
         return
     js = ("import { logicalImage, productOf } from %r; import { readFileSync } from 'node:fs';"
           "const p = readFileSync(process.argv[1]); process.stderr.write(productOf(p));"
-          "process.stdout.write(logicalImage(p));") % str(ROOT / "web/src/lib/fm1pkg.js")
+          "process.stdout.write(logicalImage(p));") % str(ROOT / "web/src/lib/fm1pkg.ts")
     r = subprocess.run(["node", "--input-type=module", "-e", js, str(clean)], capture_output=True, check=True)
     raw = clean.read_bytes()
     ok(I.logical_image(raw) == r.stdout and I.product_of(raw) == r.stderr.decode(),

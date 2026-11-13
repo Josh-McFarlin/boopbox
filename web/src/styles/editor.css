@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+   The editor: the FM-1's screen on a big display, in the site's "pocket arcade" look. The night indigo and purples of
+   the device's SYNTHWAVE theme (firmware/src/gfx.c SYNTH_BG, SYNTH_G), its eight track colours (SYNTH_TRK, SYNTH_TRK2),
+   the device's own Terminus pixel font (tools/gen_webfont.py), 16 px and 32 px only so every pixel stays sharp, and the
+   Jersey 10 for the page and card titles, DM Sans for the help text (sentences read better in it). Two
+   accents: --acc, fixed, for the interface's own state (the page's title, a pressed toggle, a primary button, the
+   focus ring); --trk, the selected track's colour, only where a track shows (its chip, its steps, its strip).
+   Fukiai: Hügelton Instruments' icon font (MIT, FUKIAI-LICENSE.txt); icons stay hidden until it has loaded.
+
+   Tailwind: the palette is the theme (bg-s1, text-dim, border-line, text-trk, bg-t3 ...), the pages use utilities.
+   Native controls (buttons, selects, fields, sliders, checkboxes) get the device's look once, below in @layer base,
+   so a plain <button> or <select> in a page already looks right; .pri / .warn / .tog / .seg are the variants. */
+@import "tailwindcss";
+@source "..";
+
+@font-face { font-family: "BoopBox Terminus"; src: url("../assets/fonts/terminus.ttf") format("truetype"); }
+@font-face { font-family: "Fukiai"; src: url("../assets/fonts/fukiai.ttf") format("truetype"); font-display: block; unicode-range: U+EA00-EB09; }
+
+:root {
+  --bg: #160d2b; --s1: #1d1238; --s2: #2b1a52; --s3: #4a3680; --line: #3a2766; --dim: #a28ad8; --fg2: #ddd4fb; --fg: #ffffff;
+  --red: #ff4d6d;
+  /* the tracks: cyan, magenta, sunset orange, violet; 5..8 periwinkle, rose, gold, orchid (gfx.c SYNTH_TRK, SYNTH_TRK2) */
+  --t1: #00e4ff; --t2: #ff2cd4; --t3: #ff8c38; --t4: #a060ff; --trk: var(--t1);
+  --t5: #6e8cff; --t6: #ff70a8; --t7: #ffd65a; --t8: #e080ff;
+  --acc: var(--t1);
+  --font: "BoopBox Terminus", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  --text-face: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-mono: var(--font);
+  --font-sans: var(--font);
+  --font-text: var(--text-face);
+  --color-bg: var(--bg);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-line: var(--line);
+  --color-dim: var(--dim);
+  --color-fg2: var(--fg2);
+  --color-fg: var(--fg);
+  --color-red: var(--red);
+  --color-trk: var(--trk);
+  --color-acc: var(--acc);
+  --color-c: var(--c);
+  --color-t1: var(--t1); --color-t2: var(--t2); --color-t3: var(--t3); --color-t4: var(--t4);
+  --color-t5: var(--t5); --color-t6: var(--t6); --color-t7: var(--t7); --color-t8: var(--t8);
+  --text-px: 16px;
+  --text-px--line-height: 20px;
+  --text-big: 32px;
+  --text-big--line-height: 32px;
+  --breakpoint-wide: 1000px;   /* the editor is for a desktop: narrower, App.jsx shows a note instead */
+}
+
+@layer base {
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--fg2); font: 16px/20px var(--font); -webkit-font-smoothing: none;
+         font-smooth: never; text-rendering: optimizeSpeed; font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+  h1, h2, h3 { font-weight: 400; margin: 0; font-size: 16px; line-height: 20px; }
+  /* the page's and the cards' titles: Jersey 10, bundled by the editor entry */
+  h1.text-big, h2.text-big { font-family: "Jersey 10", var(--font); font-weight: 700; -webkit-font-smoothing: antialiased;
+                             font-variant-ligatures: none; }
+  /* help text: sentences in DM Sans (the values, labels and buttons stay in the device's pixel font) */
+  p, .help { font-family: var(--text-face); font-size: 15px; line-height: 22px; -webkit-font-smoothing: antialiased; text-rendering: auto; }
+  ::selection { background: var(--acc); color: #000; }
+  [hidden] { display: none !important; }
+  label { white-space: nowrap; }
+  table { border-collapse: collapse; }
+  th { font-weight: 400; color: var(--dim); text-align: left; padding: 0 12px 4px 0; text-transform: lowercase; }
+  td { padding: 2px 12px 2px 0; }
+
+  /* ---- controls ---- */
+  button { font: inherit; color: var(--fg); background: var(--s2); border: 0; padding: 6px 12px; cursor: pointer;
+           white-space: nowrap; text-transform: lowercase; }
+  button:hover:not(:disabled) { background: var(--s3); }
+  button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+  /* disabled: still readable (its title says why it is off), never the colour of the background */
+  button:disabled { color: var(--dim); background: var(--s1); opacity: .6; cursor: not-allowed; }
+  button.pri { background: var(--acc); color: #000; }
+  button.pri:hover:not(:disabled) { background: var(--fg); }
+  button.pri:disabled { background: var(--s2); color: var(--dim); }
+  button.warn:hover:not(:disabled) { background: var(--red); color: #000; }
+  button:disabled .ic { opacity: .5; }
+  select, input[type=text], input[type=number], input[type=search] {
+    font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--s3); padding: 3px 6px; border-radius: 0; min-width: 0; }
+  select { appearance: none; padding-right: 22px; cursor: pointer;
+           /* the arrow: two layers; the colour on its own (a colour is only valid in a background's last layer) */
+           background-color: var(--bg);
+           background-image: linear-gradient(45deg, transparent 50%, var(--fg2) 50%), linear-gradient(-45deg, transparent 50%, var(--fg2) 50%);
+           background-repeat: no-repeat; background-position: calc(100% - 13px) 55%, calc(100% - 7px) 55%; background-size: 6px 6px;
+           padding-right: 26px; }
+  select:hover:not(:disabled) { border-color: var(--dim); }
+  select[size], select[multiple] { background-image: none; padding: 0; }
+  select option { background: var(--bg); color: var(--fg); }
+  select[size] option { padding: 2px 8px; }
+  select[size] option:checked { background: var(--acc); color: #000; }
+  input[type=search] { padding-left: 8px; }
+  input::placeholder { color: var(--s3); }
+  input[type=checkbox] { appearance: none; width: 16px; height: 16px; margin: 0; border: 1px solid var(--dim); background: var(--bg);
+                         vertical-align: -3px; cursor: pointer; display: inline-grid; place-content: center; }
+  input[type=checkbox]:checked { background: var(--acc); border-color: var(--acc); }
+  input[type=checkbox]:checked::after { content: ""; width: 8px; height: 8px; background: #000; }
+  /* a slider: a thin bar filled to the value (--a .. --p, set by the page), a small white handle; no native chrome */
+  input[type=range] { appearance: none; -webkit-appearance: none; width: 100%; height: 16px; margin: 0; background: transparent; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 4px;
+    background: linear-gradient(90deg, var(--s3) var(--a, 0%), var(--c, var(--trk)) var(--a, 0%), var(--c, var(--trk)) var(--p, 0%), var(--s3) var(--p, 0%)); }
+  input[type=range]::-moz-range-track { height: 4px;
+    background: linear-gradient(90deg, var(--s3) var(--a, 0%), var(--c, var(--trk)) var(--a, 0%), var(--c, var(--trk)) var(--p, 0%), var(--s3) var(--p, 0%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 6px; height: 14px; margin-top: -5px; background: var(--fg); border: 0; border-radius: 0; }
+  input[type=range]::-moz-range-thumb { width: 6px; height: 14px; background: var(--fg); border: 0; border-radius: 0; }
+  input[type=range]:disabled { opacity: .3; }
+  progress { appearance: none; -webkit-appearance: none; height: 6px; border: 0; background: var(--s3); vertical-align: middle; }
+  progress::-webkit-progress-bar { background: var(--s3); }
+  progress::-webkit-progress-value { background: var(--acc); }
+  progress::-moz-progress-bar { background: var(--acc); }
+}
+
+@layer components {
+  /* a row of controls */
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }
+  .bar .grow { flex: 1; }
+  /* toggles: a segmented group, or one button that stays pressed (aria-pressed) */
+  .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; }
+  .seg button, button.tog { background: var(--s2); color: var(--dim); }
+  .seg button[aria-pressed="true"], button.tog[aria-pressed="true"] { background: var(--acc); color: #000; }
+  .seg.ids button { text-transform: none; }
+  .dim { color: var(--dim); }
+  .bad { color: var(--red); }
+  /* the icon font (html.fk: loaded) */
+  /* a fixed-width box, its glyph centred and lowered onto the text's middle (Fukiai draws above the pixel font's), so
+     the words after icons of different widths start in one column */
+  .ic { font-family: "Fukiai"; font-style: normal; font-weight: 400; font-synthesis: none; line-height: 1; margin-right: .45em;
+        -webkit-font-smoothing: antialiased; display: inline-block; width: 1.15em; text-align: center; vertical-align: -0.2em; }
+  html:not(.fk) .ic { display: none; }
+  /* wave choices: a page-drawn picker so the options carry an icon (Chrome 135+); native menus get words only */
+  @supports (appearance: base-select) {
+    select.wave, select.wave::picker(select) { appearance: base-select; }
+    select.wave { background-image: none !important; }   /* (it draws its own arrow) */
+    select.wave > button { font: inherit; background: none; color: inherit; padding: 0; text-align: start; text-transform: none; }
+    select.wave::picker(select) { border: 1px solid var(--s3); background: var(--bg); color: var(--fg); padding: 0; }
+    select.wave option { padding: 2px 8px; min-block-size: 0; }
+    select.wave option:checked { color: var(--acc); }
+    select.wave option:hover, select.wave option:focus-visible { background: var(--acc); color: #000; }
+    select.wave option::checkmark { display: none; }
+  }
+}

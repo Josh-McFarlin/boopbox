@@ -38,7 +38,7 @@ function environment(storage, idSource = () => UUIDS[0], locks = makeLocks()) {
 }
 
 test("room browser identity persists and is shared by concurrent tabs", async () => {
-  const { getRoomBrowserIdentity } = await import("../../web/src/rooms/browser-identity.js");
+  const { getRoomBrowserIdentity } = await import("../../web/src/pages/Rooms/browserIdentity.ts");
   const storage = makeStorage();
   let generated = 0;
   const env = environment(storage, () => {
@@ -58,7 +58,7 @@ test("room browser identity persists and is shared by concurrent tabs", async ()
 });
 
 test("room browser identity replaces malformed storage values under the tab lock", async () => {
-  const { getRoomBrowserIdentity } = await import("../../web/src/rooms/browser-identity.js");
+  const { getRoomBrowserIdentity } = await import("../../web/src/pages/Rooms/browserIdentity.ts");
   const storage = makeStorage("not-an-id");
   const identity = await getRoomBrowserIdentity(environment(storage));
 
@@ -67,7 +67,7 @@ test("room browser identity replaces malformed storage values under the tab lock
 });
 
 test("room browser identity fails clearly when storage or tab coordination is unavailable", async () => {
-  const { getRoomBrowserIdentity } = await import("../../web/src/rooms/browser-identity.js");
+  const { getRoomBrowserIdentity } = await import("../../web/src/pages/Rooms/browserIdentity.ts");
   await assert.rejects(getRoomBrowserIdentity({}), /browser storage and tab coordination/);
   await assert.rejects(
     getRoomBrowserIdentity({ localStorage: makeStorage(), crypto: { randomUUID: () => UUIDS[0] }, navigator: {} }),

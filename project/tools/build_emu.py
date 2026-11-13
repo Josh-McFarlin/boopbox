@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Compile the BoopBox emulator for the browser: the whole firmware (UI, sequencer, sound, storage) as WebAssembly
-(firmware/host/emu.c), run by the site's emulator page (web/src/emu/, 1.8, after JIANT FM's emulator).
+(firmware/host/emu.c), run by the site's emulator page (web/src/pages/Emulator/, 1.8, after JIANT FM's emulator).
 
 python3 tools/build_emu.py [--trainer]
 Writes build/emu/boopbox-emu.wasm (with --trainer: build/emu/boopbox-trainer-emu.wasm, BoopBox Trainer: the lessons,

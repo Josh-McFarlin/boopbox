@@ -90,7 +90,7 @@ More details:
 - **Step components.** The behavior of each type is a definition of this firmware. `docs/groovebox-controls.md`
   lists them. They are not copies from another instrument.
 - **The web editor.** It reads the working project (backup object 0, format 7) and changes it in the browser
-  (`web/src/editor/lib/proto.js`, `PROJ7`). Then it sends the project back whole. The FM-1 loads it immediately. This
+  (`web/src/pages/Editor/lib/proto.ts`, `PROJ7`). Then it sends the project back whole. The FM-1 loads it immediately. This
   is possible only while the song is stopped. `tests/proj7_tool.c` compares this codec with the capture and the load
   of the firmware.
 - **Song sections in the web editor.** The Patterns page edits only the working project. To edit a section A..D,
