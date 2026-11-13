@@ -1,0 +1,35 @@
+# The website (web/): lint, typecheck, test and build, as web/scripts/validate does locally
+# (the create-react-app-vite template's lint / typecheck / test / build workflows, in one file).
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'shared/**', 'project/tests/**', '.github/workflows/web.yml']
+  pull_request:
+    branches: [main]
+    paths: ['web/**', 'shared/**', 'project/tests/**', '.github/workflows/web.yml']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [lint, typecheck, test, build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run ${{ matrix.task }}

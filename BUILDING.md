@@ -36,7 +36,7 @@ If your WSL distribution is different, set `SLOOP_WSL_DISTRO` (default `Ubuntu`)
       https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
   ```
 
-- Node.js (optional, for the web tests).
+- Node.js 22.18 or newer (optional, for the web tests).
 
 On Linux x86-64, the toolchain runs natively. Docker is not necessary.
 
@@ -238,7 +238,7 @@ If the emulator is built, `web/make_site.py` puts it in the site as `webapp/emu/
 ## The website
 
 The installer, the editor and the emulator are React pages in `web/`
-(see [web/README.md](web/README.md)). They use Vite for the build and Tailwind CSS for the styles. They need Node.js 20 or newer:
+(see [web/README.md](web/README.md)). They use Vite for the build and Tailwind CSS for the styles. They need Node.js 22.18 or newer (the tests run the TypeScript sources with Node's type stripping):
 
 ```sh
 cd web
