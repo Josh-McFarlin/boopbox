@@ -4,18 +4,26 @@
    Its pan, filter, sends and drive are in the strip's "more" panel (always in the page, hidden, so MIDI learn still
    finds them) */
 import { useEffect } from "react";
-import { A, drumLvGlobal, gDrLvl, notify, t, tcol, useApp } from "../../core/app.ts";
+import type { CSSProperties, ReactNode } from "react";
+import { clsx } from "clsx";
+import { A, drumLvGlobal, gDrLvl, notify, readyDev, t, tcol, useApp } from "../../core/app.ts";
+import { dim } from "../../ui/styles.ts";
 import { showTab } from "../../core/tabs.ts";
 import { Fader, Knob, SyncSelect } from "./controls.tsx";
 import { LvCard } from "./Guide.tsx";
 import {
   LV, LVG, LVP, lvDrum, lvDrumLv, lvGlobal, lvGv, lvLevel, lvMute, lvNum, lvOk, lvParam, lvSolo, lvSound, lvStep, lvTarget,
 } from "./state.ts";
+import type { LvTrack } from "./state.ts";
 import { LVS, lvxFav, lvxFavKey, lvxUser } from "./pro.ts";
+
+const num = "relative flex-none bg-c px-1 leading-5 text-black";
+const favCls = "w-4 flex-none border-0 bg-transparent p-0 text-t3";
 
 /* the option groups before the engines' presets: the favourites, the USER presets */
 function SoundOptions() {
-  const { dev } = useApp();
+  useApp();
+  const dev = readyDev();
   const favs = [...LVS.favs].map((k) => k.split(":").map(Number)).filter(([e, p]) => dev.names[e] && dev.names[e][p] != null);
   const us = dev.bank ? dev.bank.slots.filter((s) => s.used) : [];
   return (
@@ -27,35 +35,41 @@ function SoundOptions() {
 }
 
 /* the strip's "more" panel: one open at a time (LV.ui.more), closed by a click elsewhere or Esc */
-function useMoreClose(open) {
+function useMoreClose(open: boolean): void {
   useEffect(() => {
     if (!open) return undefined;
-    const away = (e) => { if (!e.target.closest || !e.target.closest(".lsmorebox, .lsmore")) { LV.ui.more = -1; notify(); } };
-    const esc = (e) => { if (e.key === "Escape") { LV.ui.more = -1; notify(); } };
+    const away = (e: PointerEvent) => { const el = e.target as Element; if (!el.closest || !el.closest("[data-lsmore]")) { LV.ui.more = -1; notify(); } };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { LV.ui.more = -1; notify(); } };
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
   }, [open]);
 }
 
-function Strip({ i, n }) {
-  const { dev } = useApp();
+/* a strip's buttons: mute (red), solo (white), play (its colour) */
+const sBtn = "h-[26px] bg-s2 px-0.5 py-0 text-dim aria-pressed:text-black";
+
+interface StripProps { i: number; n: number }
+interface KnobD { min: number; max: number; def: number }
+function Strip({ i, n }: StripProps) {
+  useApp();
+  const dev = readyDev();
   const drum = lvDrum(i), P = LVP(), g = LVG();
-  const tr = () => LV.tr[i] || { p: [] };
+  const tr = (): LvTrack => LV.tr[i] || { p: [] };
   const o = tr();
-  const pd = (id, d) => dev.pdesc[id] || d;
+  const pd = (id: number, d: KnobD): KnobD => dev.pdesc[id] || d;
   const lvD = (lvDrumLv(i) ? dev.gdesc[gDrLvl()] : dev.pdesc[0]) || { min: 0, max: 127, def: 100 };
-  const kn = (lbl, id, bip, glob) => {
-    const d = glob ? (dev.gdesc[id] || { min: 0, max: 127, def: 0 }) : pd(id, { min: bip ? -64 : 0, max: bip ? 63 : 127, def: 0 });
-    return <Knob key={lbl} label={lbl} o={{ min: d.min, max: d.max, def: d.def, bip,
+  const kn = (lbl: string, id: number, bip?: boolean, glob?: boolean): ReactNode => {
+    const d: KnobD = glob ? (dev.gdesc[id] || { min: 0, max: 127, def: 0 }) : pd(id, { min: bip ? -64 : 0, max: bip ? 63 : 127, def: 0 });
+    return <Knob key={lbl} look="cell" label={lbl} o={{ min: d.min, max: d.max, def: d.def, bip,
       get: () => (glob ? lvGv(id) : tr().p[id] ?? 0), set: (v, f) => (glob ? lvGlobal(id, v, f) : lvParam(i, id, v)), mid: glob ? `g:${id}` : `s${i}:${id}` }} />;
   };
   const knobs = drum && drumLvGlobal()
     ? [kn(t("lsPan"), P.pan, true), kn(t("lsFilt"), P.filt, true), kn(t("lsRev"), g.drRev, false, true), kn(t("lsDly"), g.drDly, false, true)]
     : drum ? [kn(t("lsPan"), P.pan, true), kn(t("lsFilt"), P.filt, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly)]
     : [kn(t("lsPan"), P.pan, true), kn(t("lsFilt"), P.filt, true), kn(t("lsRev"), P.rev), kn(t("lsDly"), P.dly), kn(t("lsCho"), P.cho), kn(t("lsDrv"), P.dst)];
-  const eng = drum ? "drums" : String(dev.info.engines[o.engine] || "").toLowerCase();
-  const nm = drum ?(LV.kitNames || [])[o.p[dev.info.pe0]] || "DRUMS" : (dev.names[o.engine] || [])[o.preset] || "";
+  const eng = drum ? "drums" : String(dev.info.engines[o.engine!] || "").toLowerCase();
+  const nm = drum ?(LV.kitNames || [])[o.p[dev.info.pe0]] || "DRUMS" : (dev.names[o.engine!] || [])[o.preset!] || "";
   const muted = !!o.mute, solo = !!((LV.solo >> i) & 1), target = LV.target === i;
   const fav = !drum && LVS.favs.has(lvxFavKey(o.engine, o.preset));
   const s = LV.s && LV.s.tracks[i], playing = !!(LV.s && LV.s.playing);
@@ -64,16 +78,16 @@ function Strip({ i, n }) {
   const want = drum ? String(o.p[dev.info.pe0] ?? 0) : `${o.engine}:${o.preset}`;
   const more = LV.ui.more === i;
   return (
-    <div className={`lstrip ${drum ? "drum" : ""} ${target ? "target" : ""} ${muted || (!!LV.solo && !solo) ? "muted" : ""} ${armed ? "rec" : ""}`}
-      style={{ "--c": tcol(i) }} role="group" aria-label={`${t("lvTrack")} ${i + 1}`}>
-      <div className="lshead">
-        <span className="lsnum" title={armed ? t("lvxArmed") : `${t("lvTrack")} ${i + 1}`}>{lvNum(i)}{armed ? <i className="lsdot" aria-label={t("lvxArmed")} /> : null}</span>
-        <span className="lsname" />
-        {drum ? <span className="lsfav" aria-hidden="true" /> : <button type="button" className="lsfav" title={t("lvxTip_fav")} aria-label={t("lvxFavToggle")} aria-pressed={fav}
+    <div className={clsx("relative flex min-w-0 flex-col gap-1 border border-t-3 bg-bg p-1", target ? "border-c" : "border-line border-t-c")}
+      style={{ "--c": tcol(i) } as CSSProperties} role="group" aria-label={`${t("lvTrack")} ${i + 1}`}>
+      <div className="flex h-5 min-w-0 items-center gap-1">
+        <span className={num} title={armed ? t("lvxArmed") : `${t("lvTrack")} ${i + 1}`}>{lvNum(i)}{armed ? <i className="absolute -top-[5px] -right-[5px] size-2.5 rounded-full border-2 border-bg bg-red" aria-label={t("lvxArmed")} /> : null}</span>
+        <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-dim" />
+        {drum ? <span className={favCls} aria-hidden="true" /> : <button type="button" className={favCls} title={t("lvxTip_fav")} aria-label={t("lvxFavToggle")} aria-pressed={fav}
           onClick={() => lvxFav(i)}>{fav ? "★" : "☆"}</button>}
       </div>
       {/* the sound picker: the engine's presets (any engine: grouped), the drum track: the kits */}
-      <SyncSelect className="lssound" aria-label={t(drum ? "lvKit" : "lvSound")} title={`${eng} · ${nm}`} value={want} onChange={(e) => {
+      <SyncSelect className="w-full min-w-0 py-0.5 pr-3 pl-1 text-fg [background-position:right_1px_center]" aria-label={t(drum ? "lvKit" : "lvSound")} title={`${eng} · ${nm}`} value={want} onChange={(e) => {
         const v = e.target.value;
         if (drum) lvParam(i, dev.info.pe0, +v);
         else if (v.startsWith("u:")) lvxUser(i, +v.slice(2));
@@ -83,42 +97,44 @@ function Strip({ i, n }) {
           : <><SoundOptions />{dev.names.map((names, e) => <optgroup key={e} label={dev.info.engines[e]}>
             {(names || []).map((x, p) => <option key={p} value={`${e}:${p}`}>{x}</option>)}</optgroup>)}</>}
       </SyncSelect>
-      <div className="lsnavrow">
-        <button type="button" className="lsnav" aria-label="previous" data-lvm={`s${i}:prev`} onClick={() => lvStep(i, -1)}>‹</button>
-        <button type="button" className="lsmore" aria-expanded={more} title={t("lvxMoreTip")} aria-label={`${t("lvxMore")} ${i + 1}`}
+      <div className="grid grid-cols-3 gap-0.5 [&>button]:h-6 [&>button]:p-0">
+        <button type="button" aria-label="previous" data-lvm={`s${i}:prev`} onClick={() => lvStep(i, -1)}>‹</button>
+        <button type="button" className="aria-expanded:bg-acc aria-expanded:text-black" data-lsmore="" aria-expanded={more} title={t("lvxMoreTip")} aria-label={`${t("lvxMore")} ${i + 1}`}
           onClick={() => { LV.ui.more = more ? -1 : i; notify(); }}>⋯</button>
-        <button type="button" className="lsnav" aria-label="next" data-lvm={`s${i}:next`} onClick={() => lvStep(i, 1)}>›</button>
+        <button type="button" aria-label="next" data-lvm={`s${i}:next`} onClick={() => lvStep(i, 1)}>›</button>
       </div>
-      <div className={`lsmorebox ${i >= n / 2 ? "right" : ""}`} hidden={!more}>
-        <div className="lsmorehead"><span className="lsnum">{lvNum(i)}</span><span className="dim">{t("lvxMoreTip")}</span></div>
-        <div className="lsknobs">{knobs}</div>
+      <div className={clsx("absolute top-[76px] z-25 w-[228px] border border-c bg-s1 p-2 shadow-[0_8px_24px_rgb(0_0_0/.55)]", i >= n / 2 ? "-right-px" : "-left-px")}
+        data-lsmore="" hidden={!more}>
+        <div className="mb-1.5 flex items-center gap-1.5 font-text text-[13px] leading-[18px]"><span className={num}>{lvNum(i)}</span><span className={dim}>{t("lvxMoreTip")}</span></div>
+        <div className="grid grid-cols-3 justify-items-center gap-x-1 gap-y-1.5">{knobs}</div>
       </div>
-      <div className="lsprog"><i style={{ width: (playing && s ? ((s.step + 1) / Math.max(1, s.len)) * 100 : 0).toFixed(1) + "%" }} /></div>
-      <div className="lsbody">
+      <div className="h-[3px] bg-s2"><i className="block h-full w-0 bg-c" style={{ width: (playing && s ? ((s.step + 1) / Math.max(1, s.len)) * 100 : 0).toFixed(1) + "%" }} /></div>
+      <div className={clsx("flex min-h-24 flex-1 flex-col items-center gap-0.5", (muted || (!!LV.solo && !solo)) && "opacity-40")}>
         <Fader label={t("lvLevel") + " " + (i + 1)} meter={s && s.meter ? Math.max(0, (s.meter - 48) / 80) : 0}
           o={{ min: 0, max: 127, def: lvD.def ?? 100, get: () => tr().level ?? 0, set: (v) => lvLevel(i, v), mid: `s${i}:lvl` }} />
-        <span className="lslvl">{o.level ?? ""}</span>
+        <span className="leading-4 text-fg2">{o.level ?? ""}</span>
       </div>
-      <div className="lsbtns">
-        <button type="button" className="tog lsmute" data-lvm={`s${i}:mute`} aria-pressed={muted} onClick={() => lvMute(i, !tr().mute)}>{t("lvMute")}</button>
+      <div className="grid grid-cols-2 gap-0.5">
+        <button type="button" className={clsx(sBtn, "aria-pressed:bg-red")} data-lvm={`s${i}:mute`} aria-pressed={muted} onClick={() => lvMute(i, !tr().mute)}>{t("lvMute")}</button>
         {/* (solo: the GLO keys, 2.7) */}
-        <button type="button" className="tog lssolo" data-lvm={`s${i}:solo`} aria-pressed={solo} disabled={!lvOk()} title={lvOk() ? undefined : t("lvNeeds")}
+        <button type="button" className={clsx(sBtn, "aria-pressed:bg-fg")} data-lvm={`s${i}:solo`} aria-pressed={solo} disabled={!lvOk()} title={lvOk() ? undefined : t("lvNeeds")}
           onClick={() => lvSolo(i)}>{t("lvSolo")}</button>
-        <button type="button" className="tog lssel" data-lvm={`s${i}:sel`} aria-pressed={target} onClick={() => lvTarget(i)}>{t(target ? "lvSelOn" : "lvSel")}</button>
+        <button type="button" className={clsx(sBtn, "col-span-2 aria-pressed:bg-c")} data-lvm={`s${i}:sel`} aria-pressed={target} onClick={() => lvTarget(i)}>{t(target ? "lvSelOn" : "lvSel")}</button>
       </div>
     </div>
   );
 }
 
 export default function Mixer() {
-  const { dev } = useApp();
+  useApp();
+  const dev = readyDev();
   const n = dev.info.ntrk || 4;
-  useMoreClose(LV.ui.more >= 0);
+  useMoreClose((LV.ui.more ?? -1) >= 0);
   return (
-    <LvCard k="mixer" className="lvmix" title={t("lvMixer")}
-      head={<button type="button" className="lvsoundlink" title={t("lvxSoundLinkTip")}
+    <LvCard k="mixer" className="flex flex-col" title={t("lvMixer")}
+      head={<button type="button" className="flex-none bg-transparent text-acc normal-case hover:underline" title={t("lvxSoundLinkTip")}
         onClick={() => { if (A.dev && A.dev.sel !== LV.target) lvTarget(LV.target); showTab("sound"); }}>{t("lvxSoundLink")}</button>}>
-      <div className="lvstrips" style={{ "--n": n }}>{Array.from({ length: n }, (_, i) => <Strip key={i} i={i} n={n} />)}</div>
+      <div className="grid flex-1 grid-cols-[repeat(var(--n,8),minmax(0,1fr))] gap-1" style={{ "--n": n } as CSSProperties}>{Array.from({ length: n }, (_, i) => <Strip key={i} i={i} n={n} />)}</div>
     </LvCard>
   );
 }
