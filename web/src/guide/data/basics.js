@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The big ideas: the eight tracks, and tap / hold / lock. From GUIDE.md, section 3.
+// Basics: the eight tracks, and tap / hold / lock. From GUIDE.md, section 3.
 
 /* [track, what it plays at power-on, its colour] */
 export const TRACKS = [

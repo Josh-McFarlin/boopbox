@@ -35,7 +35,7 @@ const ERROR_TEXT = {
   name_taken: "That room name is already in use.",
   name_rate_limited: "Wait a moment before changing your room name again.",
   invalid_chat: "The message was empty, too long, or included unsupported control characters.",
-  chat_rate_limited: "Chat is moving quickly. Wait a moment before sending another message.",
+  chat_rate_limited: "You’re sending messages too fast. Wait a moment.",
 };
 const ENGINE_LABELS = config.engineNames;
 
@@ -483,7 +483,7 @@ function RoomPage() {
         <header className="rooms-hero">
           <p className="rooms-kicker">LIVE MUSIC · UP TO 8 PLAYERS</p>
           <h1>Jam rooms</h1>
-          <p>Jam with up to seven other BoopBox players. Each FM-1 or browser emulator mixes everyone’s stock-sound performances, while every player keeps their own patterns, scenes, and chains.</p>
+          <p>Jam with up to seven other BoopBox players. You hear everyone’s parts through your own FM-1 or the emulator. Only stock sounds are shared, and your patterns, scenes and chains stay yours.</p>
           <div className="rooms-status" role="status" aria-live="polite">
             <span className={`status-dot ${socketState === "connected" ? "is-connected" : ""}`} aria-hidden="true" />
             {status}
@@ -506,14 +506,14 @@ function RoomPage() {
             <div className="room-controls">
               <div className="room-control-card">
                 <h3>Hear the room</h3>
-              <p>Enable audio once to hear the other players’ tracks and sequences locally. Your own device or emulator stays audible directly, without a doubled browser copy.</p>
+              <p>Turn on room audio to hear the other players. You still hear your own FM-1 or emulator directly, and the browser won’t play it a second time.</p>
                 <button className="button button-primary" type="button" onClick={startAudio}>
                   {audioEnabled ? "Restart room audio" : "Enable room audio"}
                 </button>
               </div>
               <div className="room-control-card">
                 <h3>{deviceMode === "emulator" ? "Play from the emulator" : "Play from your device"}</h3>
-                <p>Stock engine, preset, sound-control, pattern, scene, and chain changes sync automatically. Your music stays attached to your player, not copied onto other devices; starts and stops stay individual while room tempo is shared.</p>
+                <p>When you change a stock sound, pattern, scene or chain, the room hears it. Nothing is copied onto anyone else’s device. Everyone shares the tempo, but each player starts and stops on their own.</p>
                 <div className="control-row">
                   {deviceMode === "emulator" ? (
                     <button className="button button-primary" type="button" onClick={usePhysicalDevice}>Use physical FM-1</button>
@@ -533,13 +533,13 @@ function RoomPage() {
                   </button>
                   <p className="emulator-sync-status" role="status" aria-live="polite">
                     {soundEditsPaused
-                      ? "Live sound edits are paused. Shared sounds, notes, and playback continue."
-                      : "Preset, sound-control, and performance changes sync automatically."}
+                      ? "Sound edits aren’t being shared right now. The room still hears your notes and playback."
+                      : "Your sound and pattern changes are shared with the room."}
                   </p>
                 </div>
                 {deviceMode === "emulator" && (
                   <p className="emulator-sync-status" role="status" aria-live="polite">
-                    {emulatorReady ? "Emulator connected; performance syncs automatically." : "Start the emulator below to connect it to this room."}
+                    {emulatorReady ? "Emulator connected." : "Start the emulator below to connect it to this room."}
                   </p>
                 )}
               </div>
@@ -560,7 +560,7 @@ function RoomPage() {
               <section className="player-list" aria-labelledby="room-players-title">
                 <h3 id="room-players-title">Players</h3>
                 <p className="room-mix-hint">
-                  Mute or solo only changes the browser-rendered room mix here. Your own FM-1 or emulator stays audible.
+                  Mute and solo only change what you hear in this browser. Your own FM-1 or emulator keeps playing.
                 </p>
                 <ul>
                   {players.slice().sort((a, b) => a.slot - b.slot).map((player) => {
@@ -614,7 +614,7 @@ function RoomPage() {
               />
             </div>
             <p className="room-safety-note">
-              Only factory synth presets, factory drum kits, and bounded musical controls and sequence data are shared. User samples and custom presets are not shared; raw MIDI, SysEx, arbitrary data, and audio streams are never relayed.
+              Rooms share factory presets, factory drum kits, knob moves and sequences. Your own samples and presets stay on your device, and no raw MIDI, SysEx or audio goes through the server.
             </p>
           </section>
         ) : (
@@ -622,7 +622,7 @@ function RoomPage() {
             <section className="room-create" aria-labelledby="create-title">
               <p className="rooms-kicker">START A SESSION</p>
               <h2 id="create-title">Create a room</h2>
-              <p>Pick a genre to help other musicians find the sound you’re after.</p>
+              <p>The genre shows in the room list so people know what you’re playing.</p>
               <label htmlFor="room-genre">Genre</label>
               <select id="room-genre" value={genre} onChange={(event) => setGenre(event.target.value)}>
                 {GENRES.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -645,7 +645,7 @@ function RoomPage() {
               {rooms.length === 0 ? (
                 <div className="empty-rooms">
                   <p>No rooms yet.</p>
-                  <p>Create one and invite other BoopBox players to join.</p>
+                  <p>Create one and other players can join it from this list.</p>
                 </div>
               ) : (
                 <ul className="room-list">

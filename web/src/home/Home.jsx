@@ -33,7 +33,7 @@ const STATS = [
   ["223", "sounds, every one level-matched", "yellow"],
   ["37", "drum kits, 808 to amapiano", "orange"],
   ["27", "punch-in effects on the keys", "blue"],
-  ["64", "steps a track, with locks and fills", "green"],
+  ["64", "steps per track, with locks and fills", "green"],
 ];
 const LAYERS = [
   ["FX · punch", "27 effects on the whole mix", "orange"],
@@ -50,7 +50,7 @@ const MORE = [
   ["MIDI in, out and clock", "USB and the TRS jack; CCs from your controller, MIDI learn, the sequencer to MIDI out, clock in.", "green"],
   ["USB audio", "Record the FM-1 on a computer over the same cable, no driver.", "yellow"],
   ["USB keyboards", "Plug a USB-MIDI keyboard into the FM-1 itself and play its tracks.", "orange"],
-  ["Nothing gets lost", "Autosave after 2.5 s, undo and redo, a full backup and restore from the editor.", "blue"],
+  ["Autosave and backups", "Autosave after 2.5 s, undo and redo, a full backup and restore from the editor.", "blue"],
   ["BoopBox Trainer", "A second firmware that teaches three songs, step by step, on the FM-1 itself.", "green"],
 ];
 const STEPS = [
@@ -101,8 +101,8 @@ export default function Home() {
             <h1 className="m-0 mb-6 font-pixel text-[46px] leading-[.98] font-bold text-balance min-[600px]:text-[68px]">Turn the FM-1 into
               a <span className="text-orange">groovebox you play&nbsp;live.</span></h1>
             <p className="m-0 mb-7 max-w-[36em] text-[20px] leading-[1.45] text-body">Eight tracks, thirteen synth engines, 37 drum kits and 27
-              punch-in effects, under your hands. No factory patterns, nothing to load: everything you hear, you play. House, techno, hip-hop,
-              drum &amp; bass, lo-fi, ambient: it does not pick a style for you.</p>
+              punch-in effects. There are no factory patterns to load, so every beat starts with what you play. It works just as well for house,
+              techno, hip-hop, drum &amp; bass, lo-fi or ambient.</p>
             <div className="mb-6 flex flex-wrap gap-4">
               <a href="../installer/" className={PRIMARY}>Install from the browser</a>
               <a href="../emu/" className={SECONDARY}>Try it first</a>
@@ -128,15 +128,15 @@ export default function Home() {
         </section>
 
         <section id="features" className="mx-auto max-w-[1200px] px-6 pt-20 pb-6">
-          <p className={KICKER}>Why BoopBox</p>
+          <p className={KICKER}>Features</p>
           <h2 className={`${H2} mb-16 max-w-[24em] text-balance text-[36px] leading-none min-[600px]:text-[48px]`}>
-            The most complete firmware for the <span className="whitespace-nowrap">FM-1</span>.</h2>
+            What's in it</h2>
 
           <Feature media={<Screen src={punch} caption="FX held: loops, stutter, tape stop, DJ kills, rewind, reverb freeze."
             alt="The PUNCH screen: FX held, the 27 effects laid out on the keys: loops, stutter, reverse, tape stop, kills, rewind, freeze" />}>
-            <H3 color="orange" lead="27 effects, mutes and fills">under your fingers</H3>
+            <H3 color="orange" lead="27 effects, mutes and fills">on the keys</H3>
             <P>Hold FX and the 16 white keys become 27 punch-in effects, locked to the tempo. Hold GLO for mutes, solos, fills and tap tempo. Tap
-              the button to open its pages; hold it and tap HOME to lock it open, both hands free.</P>
+              the button to open its pages; hold it and tap HOME to lock it open so both hands are free.</P>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-1.5">
               {LAYERS.map(([name, what, c]) => (
                 <div key={name} className="pixel-panel px-3.5 py-3">
@@ -164,7 +164,7 @@ export default function Home() {
             alt="The CHORDS screen: a progression VI, IV, I, V in C major that the tracks follow" />}>
             <H3 color="blue" lead="Thirteen engines,">DX7 cartridges included</H3>
             <P>Sliding 808s and acid 303s, a real Steinway, Rhodes, string machines, granular clouds, plucked guitars and sitar, supersaws.
-              Every sound level-matched; 32 slots for your own.</P>
+              Every sound is level-matched, and there are 32 slots for your own.</P>
             <div className="mb-5 flex flex-wrap gap-1.5">
               {ENGINES.map((e) => <span key={e} className="pixel-panel px-2.5 py-1.5 font-pixel text-[15px] text-fg">{e}</span>)}
             </div>
@@ -175,12 +175,12 @@ export default function Home() {
           <Feature reverse media={<Screen src={notes} color="yellow" caption="The piano roll of a synth track, on the FM-1 itself."
             alt="The NOTES screen: the piano roll of a synth track, notes on a timeline" />}>
             <H3 color="yellow" lead="Record a pass,">then another on top</H3>
-            <P>Press REC while it plays and every pass is layered on top. Notes land where you heard them: the keys' latency is taken back. Or
-              play freely with no tempo at all, and the loop's length sets the tempo.</P>
+            <P>Press REC while it plays and every pass is layered on top. Notes land where you heard them, because BoopBox makes up for the keys' latency.
+              Or play freely with no tempo at all, and the loop's length sets the tempo.</P>
             <ul className="m-0 list-disc pl-5 text-body [&_li]:mb-1.5">
-              <li>64 steps a track, each with its own length and division: polymeters that stay in phase.</li>
+              <li>Up to 64 steps per track, and each track has its own length and division, so polymeters stay in phase.</li>
               <li>Parameter locks, micro timing and fill conditions on any step.</li>
-              <li>Chords up to 4 notes a step, ties, slide, MPC swing.</li>
+              <li>Chords up to 4 notes per step, ties, slide, MPC swing.</li>
               <li>Undo and redo for everything; hold REC to clear a track.</li>
             </ul>
           </Feature>
@@ -198,7 +198,7 @@ export default function Home() {
             </div>}>
             <H3 color="orange" lead="Build a song">from four sections</H3>
             <P>Save the loop into sections A–D and jump between them on the next bar. Hold SAVE and tap several for a quick chain, or record the
-              song as you perform it. Eight patterns a track, with scenes that switch them all at once.</P>
+              song as you perform it. Eight patterns per track, with scenes that switch them all at once.</P>
             <p className="m-0 text-body">Master effects on top: <B>DUST</B> (an old sampler and a record), <B>DUCK</B> (the kick pumps the
               synths), a DJ filter, and a <B>TEXTURE</B> bed of vinyl, tape, rain or your own sample.</p>
           </Feature>
@@ -220,8 +220,8 @@ export default function Home() {
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-14 gap-y-10 px-6 py-20">
             <div className="min-w-0 flex-[1_1_400px]">
               <p className={KICKER}>The web editor</p>
-              <h2 className={`${H2} mb-4 text-[40px] leading-none`}>The FM-1's screen, on a big one.</h2>
-              <P>Plug the FM-1 in and the editor follows every knob you turn, live. Shape sounds, draw in a piano roll, import and export MIDI
+              <h2 className={`${H2} mb-4 text-[40px] leading-none`}>Edit on a bigger screen</h2>
+              <P>With the FM-1 plugged in, the editor updates as you turn the knobs. Shape sounds, draw in a piano roll, import and export MIDI
                 files, build sample instruments and drum kits, keep a library of sounds, back up the whole FM-1.</P>
               <ul className="m-0 mb-6 list-disc pl-5 text-body [&_li]:mb-1.5">
                 <li><B>LIVE page:</B> play a set from a laptop or a tablet: scenes, morphs, MIDI learn, a playlist of songs.</li>
@@ -234,9 +234,9 @@ export default function Home() {
               </div>
             </div>
             <figure className="m-0 min-w-0 flex-[1_1_520px]">
-              <img src={editorShot} alt="The web editor's Sound page: the ENV, LFO and FX cards, four knobs a row in the track colours"
+              <img src={editorShot} alt="The web editor's Sound page: the ENV, LFO and FX cards, four knobs per row"
                 className="block h-auto w-full border-[6px] border-bg shadow-[10px_10px_0_var(--color-orange)]" />
-              <figcaption className="mt-5 text-[14px] text-dim">The Sound page: the device's own pages, four knobs a row in the track colours.</figcaption>
+              <figcaption className="mt-5 text-[14px] text-dim">The Sound page uses the device's layout, with four knobs per row.</figcaption>
             </figure>
           </div>
         </section>
@@ -246,7 +246,7 @@ export default function Home() {
             <div className="min-w-0 flex-[1_1_520px]">
               <p className="m-0 mb-2 font-pixel text-[18px] font-medium">No FM-1 yet?</p>
               <h2 className="m-0 mb-3 font-pixel text-[40px] leading-none font-bold text-ink">Play the real firmware in your browser.</h2>
-              <p className="m-0 max-w-[40em]">The emulator runs BoopBox itself: the same screen, sequencer and sound engines. Click
+              <p className="m-0 max-w-[40em]">The emulator runs the actual BoopBox firmware, so the screen, sequencer and sound engines match the device. Click
                 the keys or use your computer's keyboard; your projects stay in the browser.</p>
             </div>
             <a href="../emu/" className="arcade-btn bg-ink !text-green [--shadow:var(--color-orange)]">Open the emulator ▶</a>
@@ -255,8 +255,8 @@ export default function Home() {
 
         <section id="install" className="mx-auto max-w-[1200px] px-6 pb-24">
           <h2 className={`${H2} mb-3 text-[40px] leading-none`}>Install in a minute, from the browser.</h2>
-          <p className="m-0 mb-8 max-w-[46em] text-body">No app, no account, no extra hardware: Chrome or Edge on a computer, and a USB data
-            cable straight into the FM-1.</p>
+          <p className="m-0 mb-8 max-w-[46em] text-body">You need Chrome or Edge on a computer and a USB data cable plugged straight into
+            the FM-1. There's nothing to download and no account to make.</p>
           <ol className="m-0 mb-10 grid list-none grid-cols-1 gap-3 p-0 min-[700px]:grid-cols-3">
             {STEPS.map(([n, title, text, c]) => (
               <li key={n} className="pixel-panel p-[22px]">
@@ -268,8 +268,8 @@ export default function Home() {
           </ol>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
             <a href="../installer/" className={PRIMARY}>Go to the installer</a>
-            <p className="m-0 flex-[1_1_360px] text-sm text-dim">The package is checked (SHA-256) before it is written and again by the loader; an
-              interrupted install finishes when you press Install again; USB rescue and a way back to the official firmware are always there.</p>
+            <p className="m-0 flex-[1_1_360px] text-sm text-dim">The installer checks the package's SHA-256 before writing it, and the loader
+              checks it again. If an install is interrupted, press Install again to finish it. You can go back to the official firmware at any time.</p>
           </div>
         </section>
       </main>
