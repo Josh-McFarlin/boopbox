@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """SLOOP 2.6: the offline editor (web/make_site.py offline_editor, Vite's offline build): one file that needs nothing
-next to it; and the site without internet (webapp/sw.js, the manifest): what sw.js keeps is all there and all it needs."""
+next to it; and the site without internet (sw.js, the manifest): what sw.js keeps is all there and all it needs."""
 import json
 import re
 import shutil
@@ -34,7 +34,7 @@ check("the installer page links it too",
 check("offline: the fonts inlined", "font/ttf;base64," in off and not re.search(r'url\((?!data:)["\']?[A-Za-z.]', off))
 check("offline: no download link to itself", 'href:"boopbox-editor.html"' not in off and 'href="boopbox-editor.html"' not in off)
 check("offline: the installer and the font licence online",
-      ONLINE.rstrip("/") in off and "/webapp/installer/" in off and "editor/FUKIAI-LICENSE.txt" in off)
+      ONLINE.rstrip("/") in off and "/installer/" in off and "editor/FUKIAI-LICENSE.txt" in off)
 rel = [m for m in re.findall(r'(?:src|href)="([^"#]+)"', off) if not re.match(r"(https?:|data:|mailto:|`)", m)]   # (` : React's own templates)
 check("offline: no other file next to it (no relative src / href)", not rel)
 check("offline: no app, no service worker (a file has no site)",
@@ -52,7 +52,7 @@ try:
     pkg[2000:2016] = b"FELUCCA-LOADER-1"
     (tmp / "p.fwsc").write_bytes(bytes(pkg))
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site")
-    app = tmp / "site" / "webapp"
+    app = tmp / "site"
     app_js = "\n".join(f.read_text(encoding="utf-8") for f in (app / "assets").glob("*.js"))
     check("jam rooms are hidden from public navigation and stale site output",
           not (app / "rooms").exists() and "Jam rooms" not in app_js)
@@ -80,19 +80,19 @@ try:
     stamp = sw.split('const STAMP = "')[1].split('"')[0]
     (tmp / "site2").mkdir()
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site2")
-    same = (tmp / "site2" / "webapp" / "sw.js").read_text(encoding="utf-8").split('const STAMP = "')[1].split('"')[0]
+    same = (tmp / "site2" / "sw.js").read_text(encoding="utf-8").split('const STAMP = "')[1].split('"')[0]
     pkg[3000] ^= 1
     (tmp / "p.fwsc").write_bytes(bytes(pkg))
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site2")
-    other = (tmp / "site2" / "webapp" / "sw.js").read_text(encoding="utf-8").split('const STAMP = "')[1].split('"')[0]
+    other = (tmp / "site2" / "sw.js").read_text(encoding="utf-8").split('const STAMP = "')[1].split('"')[0]
     check("sw.js: the same site, the same stamp; a file changed, a new one", stamp == same and stamp != other)
     # BoopBox Trainer as the installer's second choice (make_site.py --trainer): its package in firmware/, its version,
     # path and SHA-256 in the installer's meta, kept offline; tools/check_site.py accepts the site with both
     (tmp / "t.fwsc").write_bytes(bytes(pkg[:4000]) + b"trainer" + bytes(pkg[4007:]))
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site3", trainer=tmp / "t.fwsc")
-    inst = (tmp / "site3" / "webapp" / "installer" / "index.html").read_text(encoding="utf-8")
+    inst = (tmp / "site3" / "installer" / "index.html").read_text(encoding="utf-8")
     meta = json.loads(re.search(r"^const meta = (\{.*\});$", inst, re.M).group(1))
-    sw3 = (tmp / "site3" / "webapp" / "sw.js").read_text(encoding="utf-8")
+    sw3 = (tmp / "site3" / "sw.js").read_text(encoding="utf-8")
     import hashlib
     sys.path.insert(0, str(ROOT / "tools"))
     import check_site
@@ -109,7 +109,7 @@ try:
     make_site.main(tmp / "p.fwsc", "9.9", tmp / "site3")
     check("trainer: a site made without it again leaves no trainer package or choice",
           not (tmp / "site3" / "firmware" / "boopbox-trainer-9.9.fwsc").exists() and
-          "trainer" not in json.loads(re.search(r"^const meta = (\{.*\});$", (tmp / "site3" / "webapp" / "installer" /
+          "trainer" not in json.loads(re.search(r"^const meta = (\{.*\});$", (tmp / "site3" / "installer" /
                                                  "index.html").read_text(encoding="utf-8"), re.M).group(1)))
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

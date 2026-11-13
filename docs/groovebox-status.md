@@ -149,7 +149,7 @@ On Windows with WSL:
 site into `build/boopbox-site` and serves it on `http://localhost:8766`. Then it opens the installer in the browser.
 
 To open the editor again later, run `scripts/OPEN-EDITOR.bat`. It serves `build/boopbox-site` and opens
-`http://localhost:8766/webapp/editor/`.
+`http://localhost:8766/editor/`.
 
 Notes about the build:
 
@@ -176,7 +176,7 @@ python3 web/make_site.py build/felucca.fwsc dev /tmp/felucca-site
 cd /tmp/felucca-site && python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000/webapp/installer/` in Chrome or Edge. Web MIDI needs `localhost`.
+Then open `http://localhost:8000/installer/` in Chrome or Edge. Web MIDI needs `localhost`.
 
 Recovery:
 

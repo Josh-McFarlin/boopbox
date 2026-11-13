@@ -21,7 +21,7 @@ catch {
 const site = process.argv[2];
 if (!site) { console.log("usage: node tests/pwa_test.mjs SITE_DIR"); process.exit(2); }
 const PORT = 8790 + Math.floor(Math.random() * 100);
-const base = `http://127.0.0.1:${PORT}/webapp/`;
+const base = `http://127.0.0.1:${PORT}/`;
 let failed = 0;
 const ok = (c, what) => { console.log(`pwa: ${what.padEnd(70)} ${c ? "ok" : "FAIL"}`); if (!c) failed++; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -66,8 +66,8 @@ try {
     const c = await caches.open(ks.find((k) => k.startsWith("boopbox-site-")));
     return (await c.keys()).map((r) => new URL(r.url).pathname);
   });
-  ok(cached.includes("/webapp/editor/") && cached.includes("/webapp/installer/") &&
-     cached.some((p) => /^\/firmware\/boopbox-.*\.fwsc$/.test(p)) && cached.some((p) => /^\/webapp\/assets\/fukiai-[\w-]+\.ttf$/.test(p)),
+  ok(cached.includes("/editor/") && cached.includes("/installer/") &&
+     cached.some((p) => /^\/firmware\/boopbox-.*\.fwsc$/.test(p)) && cached.some((p) => /^\/assets\/fukiai-[\w-]+\.ttf$/.test(p)),
      "kept: the installer, the editor, its font, the firmware");
 
   const cdp = await ctx.newCDPSession(page);
@@ -93,7 +93,7 @@ try {
   ok(miss === "error", "offline: what is not kept is not invented");
 
   await serve();                                         // ---- online again, the site changed
-  const f = join(site, "webapp", "editor", "index.html");
+  const f = join(site, "editor", "index.html");
   const orig = readFileSync(f, "utf8");
   writeFileSync(f, orig.replace("<title>BoopBox Editor</title>", "<title>BoopBox Editor NEW</title>"));
   await page.goto(base + "editor/");
@@ -104,7 +104,7 @@ try {
   writeFileSync(f, orig);
 
   await serve();                                         // ---- a new site: a new sw.js takes over, the old copy goes
-  const swf = join(site, "webapp", "sw.js");
+  const swf = join(site, "sw.js");
   const sw0 = readFileSync(swf, "utf8");
   writeFileSync(swf, sw0.replace(/const STAMP = "([^"]*)"/, 'const STAMP = "$1-next"'));
   const keys = await page.evaluate(async () => {
@@ -121,7 +121,7 @@ try {
 
   /* (2.7) a new build keeps the firmware's name: the copy the browser kept of the build before (a server that lets it
      keep one, no service worker) is not offered as "damaged": the installer asks the server first */
-  const fw = join(site, "firmware", "boopbox-2.7.fwsc"), ix = join(site, "webapp", "installer", "index.html");
+  const fw = join(site, "firmware", "boopbox-2.7.fwsc"), ix = join(site, "installer", "index.html");
   const fw0 = readFileSync(fw), ix0 = readFileSync(ix, "utf8");
   server = spawn("python3", ["-c", `import http.server, os
 class H(http.server.SimpleHTTPRequestHandler):

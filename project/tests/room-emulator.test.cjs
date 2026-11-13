@@ -225,7 +225,7 @@ test("browser emulator notes and sequenced performance reach room players and la
   const originalDocument = global.document;
   let roomAudio;
   try {
-    global.document = { baseURI: "http://localhost/webapp/rooms/" };
+    global.document = { baseURI: "http://localhost/rooms/" };
     const emulatorPlayer = createClient(app.url);
     const listener = createClient(app.url);
     clients.push(emulatorPlayer, listener);

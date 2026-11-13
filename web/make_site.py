@@ -3,22 +3,22 @@
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
 """Build a complete static site from a firmware package:
 
-  index.html                  the home page (webapp/home/index.html with <base href="webapp/home/">): what BoopBox is
+  index.html                  the home page (home/index.html with <base href="home/">): what BoopBox is
   firmware/boopbox-VER.fwsc   the package
   firmware/boopbox-trainer-VER.fwsc  with --trainer: BoopBox Trainer's package (project/tools/build.py --trainer), offered as a
                               second choice in the installer
-  webapp/home/, webapp/guide/, webapp/installer/, webapp/editor/, webapp/emu/, webapp/assets/
+  home/, guide/, installer/, editor/, emu/, assets/
                               the React pages (web/site/, web/src/), built by Vite (npm run build, into
                               project/build/webapp-vite/); the installer's meta (the package, its version and SHA-256) and the
                               editor's version are written into their index.html here
-  webapp/emu/                 (1.8) the browser emulator: only with project/build/emu/boopbox-emu.wasm (project/tools/build_emu.py);
+  emu/                        (1.8) the browser emulator: only with project/build/emu/boopbox-emu.wasm (project/tools/build_emu.py);
                               BoopBox Trainer's too, to switch to, with project/build/emu/boopbox-trainer-emu.wasm
                               (project/tools/build_emu.py --trainer)
-  webapp/editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6; npm run build:offline): its
+  editor/boopbox-editor.html  the editor in one file, for offline use (SLOOP 2.6; npm run build:offline): its
                               fonts and scripts inlined, its links to the installer and the font licence online;
                               opened from the disk in Chrome / Edge (file:// is a secure context: Web MIDI asks for
                               permission)
-  webapp/sw.js, webapp/boopbox.webmanifest, webapp/icon-*.png  the site without internet (SLOOP 2.6): an app to
+  sw.js, boopbox.webmanifest, icon-*.png  the site without internet (SLOOP 2.6): an app to
                               install; opened once online, the installer, the editor and the firmware are kept
                               by the browser and work offline, still on https (on Android a downloaded file opens
                               as content://, where Chrome refuses Web MIDI)
@@ -48,7 +48,7 @@ _built = False
 
 
 def build_pages():
-    """the React pages with Vite: project/build/webapp-vite/ (the site's webapp/) and project/build/webapp-offline/editor/index.html
+    """the React pages with Vite: project/build/webapp-vite/ (the site's pages, at its root) and project/build/webapp-offline/editor/index.html
     (the editor in one file); once per run"""
     global _built
     if _built:
@@ -64,7 +64,7 @@ def build_pages():
 
 
 def emu_page(emu):
-    """(1.8) webapp/emu: the browser emulator (its page from Vite, project/build/emu/boopbox-emu.wasm from project/tools/build_emu.py);
+    """(1.8) emu/: the browser emulator (its page from Vite, project/build/emu/boopbox-emu.wasm from project/tools/build_emu.py);
     without its wasm none at all, never an old one"""
     wasm = BUILD / "emu" / "boopbox-emu.wasm"
     if not wasm.exists():
@@ -99,7 +99,7 @@ ICONS = ("icon-192.png", "icon-512.png", "icon-maskable-512.png")
 
 
 def page_assets(app, page):
-    """the built files a page needs (webapp/assets/...): its scripts, styles and fonts, and theirs, by name"""
+    """the built files a page needs (assets/...): its scripts, styles and fonts, and theirs, by name"""
     names = {f.name for f in (app / "assets").iterdir()} if (app / "assets").is_dir() else set()
     todo, seen = [app / page / "index.html"], set()
     while todo:
@@ -113,9 +113,9 @@ def page_assets(app, page):
 
 
 def app_files(out, version, fw_name, more=()):
-    """webapp/: the manifest, the icons and sw.js with the list of what it keeps (relative to webapp/) and a
+    """the site's root: the manifest, the icons and sw.js with the list of what it keeps (relative to the root) and a
     stamp of their contents, so any change makes a new sw.js and the browser takes the new site"""
-    app = out / "webapp"
+    app = out
     for f in ICONS:
         shutil.copy(HERE / f, app / f)
     manifest = {
@@ -128,9 +128,9 @@ def app_files(out, version, fw_name, more=()):
     }
     (app / "boopbox.webmanifest").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
     keep = {"installer/": app / "installer" / "index.html", "editor/": app / "editor" / "index.html",
-            "../firmware/" + fw_name: out / "firmware" / fw_name, "boopbox.webmanifest": app / "boopbox.webmanifest"}
+            "firmware/" + fw_name: out / "firmware" / fw_name, "boopbox.webmanifest": app / "boopbox.webmanifest"}
     for f in more:                                   # (the trainer's package)
-        keep["../firmware/" + f] = out / "firmware" / f
+        keep["firmware/" + f] = out / "firmware" / f
     for page in ("installer", "editor"):             # their scripts, styles and fonts
         for f in page_assets(app, page):
             keep[f] = app / f
@@ -171,23 +171,25 @@ def main(pkg, version, out, trainer=None):
     pkg, out = Path(pkg), Path(out)
     raw, product = check_pkg(pkg)
     name = f"boopbox-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
-    meta = {"version": version, "product": product, "pkg": "../../firmware/" + name,
+    meta = {"version": version, "product": product, "pkg": "../firmware/" + name,
             "sha256": hashlib.sha256(raw).hexdigest()}   # the page checks the download against it
     tname = None
     if trainer:                                     # BoopBox Trainer: a second choice, the same version
         traw, tproduct = check_pkg(trainer)
         tname = f"boopbox-trainer-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
-        meta["trainer"] = {"version": version, "product": tproduct, "pkg": "../../firmware/" + tname,
+        meta["trainer"] = {"version": version, "product": tproduct, "pkg": "../firmware/" + tname,
                            "sha256": hashlib.sha256(traw).hexdigest()}
     if "--beta" in sys.argv:                       # the beta channel (docs/beta): what it is, what it implies
         notes = HERE / "beta_banner.html"
         meta["banner"] = notes.read_text(encoding="utf-8") if notes.exists() else "<p><b>BETA</b></p>"
 
     build_pages()
-    app, fw = out / "webapp", out / "firmware"
+    app, fw = out, out / "firmware"
     for d in ("home", "guide", "installer", "editor", "emu", "rooms", "assets", "song"):   # (song: the trainer's song page, gone in 1.9.1)
         if (app / d).exists():
             shutil.rmtree(app / d)
+    if (out / "webapp").exists():                   # (the pages were under webapp/ before they moved to the root)
+        shutil.rmtree(out / "webapp")
     shutil.copytree(BUILD / "webapp-vite", app, dirs_exist_ok=True)
     fw.mkdir(parents=True, exist_ok=True)
 
@@ -212,10 +214,10 @@ def main(pkg, version, out, trainer=None):
     emu_page(app / "emu")
     app_files(out, version, name, (tname,) if tname else ())
     home = (app / "home" / "index.html").read_text(encoding="utf-8")   # the home page, at the root too: its links and
-    if home.count("<head>") != 1:                                      # assets are relative to webapp/home/
+    if home.count("<head>") != 1:                                      # assets are relative to home/
         raise SystemExit("home/index.html must contain <head> once; update make_site.py")
-    (out / "index.html").write_text(home.replace("<head>", '<head>\n<base href="webapp/home/">'), encoding="utf-8")
-    print(f"site: {out}: webapp/installer, webapp/editor, firmware/{name} ({len(raw)} B, {product})"
+    (out / "index.html").write_text(home.replace("<head>", '<head>\n<base href="home/">'), encoding="utf-8")
+    print(f"site: {out}: installer/, editor/, firmware/{name} ({len(raw)} B, {product})"
           + (f", firmware/{tname}" if tname else ""))
 
 

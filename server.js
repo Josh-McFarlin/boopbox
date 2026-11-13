@@ -51,11 +51,10 @@ function staticTarget(pathname) {
     return fileExists(home) ? home : resolve(ROOT, "index.html");
   }
 
-  if (pathname.startsWith("/webapp/") || pathname.startsWith("/firmware/")) {
-    const generated = resolve(SITE_ROOT, `.${pathname}`);
-    if (generated.startsWith(`${SITE_ROOT}${sep}`) && fileOrDirectoryExists(generated)) {
-      return generated;
-    }
+  // the generated site first (its pages, assets and firmware, at the root), then docs/
+  const generated = resolve(SITE_ROOT, `.${pathname}`);
+  if (generated.startsWith(`${SITE_ROOT}${sep}`) && fileOrDirectoryExists(generated)) {
+    return generated;
   }
 
   const file = resolve(ROOT, `.${pathname}`);
@@ -78,8 +77,14 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (pathname === "/webapp/home" || pathname === "/webapp/home/") {
+  // the home page is the root; the old /webapp/... links (before the pages moved to the root) go to their page
+  if (pathname === "/home" || pathname === "/home/" || pathname === "/webapp/home" || pathname === "/webapp/home/") {
     res.writeHead(308, { Location: "/" }).end();
+    return;
+  }
+  if (pathname === "/webapp" || pathname.startsWith("/webapp/")) {
+    const url = new URL(req.url, "http://localhost");
+    res.writeHead(308, { Location: (pathname.slice("/webapp".length) || "/") + url.search }).end();
     return;
   }
 

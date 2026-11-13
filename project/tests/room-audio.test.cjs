@@ -371,7 +371,7 @@ function roomPerformance(playing = false) {
 
 test("browser listeners keep solo and mute local and clear them when a room ends", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   let modules;
   try {
     modules = await Promise.all([
@@ -442,7 +442,7 @@ test("browser listeners keep solo and mute local and clear them when a room ends
 
 test("room audio maps all eight factory tracks onto two local firmware groups", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   try {
     const { RoomAudio } = await import("../../web/src/pages/Rooms/audio.ts");
     const audio = new RoomAudio(() => {});
@@ -503,7 +503,7 @@ test("room audio maps all eight factory tracks onto two local firmware groups", 
 
 test("room firmware renders all eight tracks and sequenced patterns for eight members", async () => {
   const originalDocument = global.document;
-  global.document = { baseURI: "http://localhost/webapp/rooms/" };
+  global.document = { baseURI: "http://localhost/rooms/" };
   let audio;
   try {
     const [{ RoomAudio }, { FirmwareAudio, RoomFirmwareAudio }] = await Promise.all([

@@ -21,8 +21,8 @@ Write-Host "== Making the installer site" -ForegroundColor Cyan
 python ..\..\web\make_site.py build/felucca.fwsc $Version build/boopbox-site
 if ($LASTEXITCODE -ne 0) { throw "make_site failed" }
 Write-Host ""
-Write-Host "Installer: http://localhost:8766/webapp/installer/  (Chrome or Edge, FM-1 on USB)" -ForegroundColor Green
-Write-Host "Editor:    http://localhost:8766/webapp/editor/" -ForegroundColor Green
+Write-Host "Installer: http://localhost:8766/installer/  (Chrome or Edge, FM-1 on USB)" -ForegroundColor Green
+Write-Host "Editor:    http://localhost:8766/editor/" -ForegroundColor Green
 Write-Host "Keep this window open during the install. Ctrl+C stops the server."
-Start-Process "http://localhost:8766/webapp/installer/"
+Start-Process "http://localhost:8766/installer/"
 python -m http.server 8766 --bind 127.0.0.1 --directory build/boopbox-site

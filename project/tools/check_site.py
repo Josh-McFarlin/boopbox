@@ -31,7 +31,7 @@ def problems(fw, site):
     if others:
         out.append((site / "firmware", f"old packages still in {site}/firmware/: {', '.join(others)}"))
 
-    inst = site / "webapp" / "installer" / "index.html"
+    inst = site / "installer" / "index.html"
     m = re.search(r"^const meta = (\{.*\});$", inst.read_text(encoding="utf-8"), re.M)
     if not m:
         out.append((inst, "no 'const meta = {...};' line"))
@@ -39,7 +39,7 @@ def problems(fw, site):
         meta = json.loads(m.group(1))
         if re.sub(r"[^A-Za-z0-9.-]", "-", str(meta.get("version"))) != ver:
             out.append((inst, f"installer is built for {meta.get('version')!r}, the binary is {ver}"))
-        if meta.get("pkg") != "../../firmware/" + name:
+        if meta.get("pkg") != "../firmware/" + name:
             out.append((inst, f"installer installs {meta.get('pkg')!r}, not {name}"))
         if meta.get("sha256") != hashlib.sha256(fw.read_bytes()).hexdigest():
             out.append((inst, f"installer's SHA-256 is not the SHA-256 of {name}"))
@@ -47,21 +47,21 @@ def problems(fw, site):
         if tpath.exists() != bool(tm):
             out.append((inst, f"the trainer's package and the installer's trainer choice do not go together ({tname})"))
         elif tm:
-            if tm.get("pkg") != "../../firmware/" + tname or str(tm.get("version")) != str(meta.get("version")):
+            if tm.get("pkg") != "../firmware/" + tname or str(tm.get("version")) != str(meta.get("version")):
                 out.append((inst, f"installer's trainer choice is {tm.get('pkg')!r}, not {tname}"))
             if tm.get("sha256") != hashlib.sha256(tpath.read_bytes()).hexdigest():
                 out.append((inst, f"installer's trainer SHA-256 is not the SHA-256 of {tname}"))
 
-    sw = site / "webapp" / "sw.js"
+    sw = site / "sw.js"
     text = sw.read_text(encoding="utf-8")
     m = re.search(r'^const STAMP = "([^"]*)";', text, re.M)
     if not m or not m.group(1).startswith(ver + "-"):
         out.append((sw, f"STAMP is {m.group(1) if m else None!r}, not one for {ver}"))
     m = re.search(r"^const FILES = (\[.*?\]);", text, re.M)
-    if not m or "../firmware/" + name not in json.loads(m.group(1)):
-        out.append((sw, f"FILES does not keep ../firmware/{name}"))
-    if m and tpath.exists() and "../firmware/" + tname not in json.loads(m.group(1)):
-        out.append((sw, f"FILES does not keep ../firmware/{tname}"))
+    if not m or "firmware/" + name not in json.loads(m.group(1)):
+        out.append((sw, f"FILES does not keep firmware/{name}"))
+    if m and tpath.exists() and "firmware/" + tname not in json.loads(m.group(1)):
+        out.append((sw, f"FILES does not keep firmware/{tname}"))
     return out
 
 

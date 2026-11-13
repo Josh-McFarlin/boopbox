@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// SLOOP 2.6: the site without internet (webapp/sw.js, made by web/make_site.py). Opened once online, the
+// SLOOP 2.6: the site without internet (sw.js at the site's root, made by web/make_site.py). Opened once online, the
 // installer, the editor and the firmware they install are kept here; offline they come from this copy, still on
 // https, so Web MIDI asks as usual (a downloaded file on Android opens as content://, where Chrome refuses MIDI).
 // Online the network always wins (the page as published, never an old one); the copy is only the fallback.

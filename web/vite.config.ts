@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The BoopBox site: React + Vite + Tailwind. Pages under site/, relative URLs
-// everywhere (base "./"), so the build drops into the site's webapp/ folder as it is (web/make_site.py).
+// everywhere (base "./"), so the build drops into the site's root as it is (web/make_site.py).
 //
 //   npm run dev                      the pages at http://localhost:5173/home/ /guide/ /installer/ /editor/ /emu/ (editor: ?mock=1
 //                                    for a simulated FM-1)

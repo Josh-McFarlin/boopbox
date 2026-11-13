@@ -305,7 +305,7 @@ test("physical FM-1 sequence edits update active listeners without sharing playb
     configurable: true,
     value: { requestMIDIAccess: async () => mock.access },
   });
-  globalThis.document = { baseURI: "http://localhost/webapp/rooms/" };
+  globalThis.document = { baseURI: "http://localhost/rooms/" };
 
   try {
   const { RoomAudio } = await import("../../web/src/pages/Rooms/audio.ts");

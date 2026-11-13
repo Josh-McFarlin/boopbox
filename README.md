@@ -5,11 +5,11 @@ Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/slo
 
 <p align="center">
 <a href="https://boopbox.replit.app/"><b>Website</b></a> ·
-<a href="https://boopbox.replit.app/webapp/installer/"><b>Install from the browser</b></a> ·
+<a href="https://boopbox.replit.app/installer/"><b>Install from the browser</b></a> ·
 <a href="GUIDE.md">Complete guide</a> ·
 <a href="BOOPBOX.md">Manual</a> ·
-<a href="https://boopbox.replit.app/webapp/editor/">Web editor</a> ·
-<a href="https://boopbox.replit.app/webapp/emu/">Try it in the browser</a> ·
+<a href="https://boopbox.replit.app/editor/">Web editor</a> ·
+<a href="https://boopbox.replit.app/emu/">Try it in the browser</a> ·
 <a href="../../releases">Releases</a> ·
 <a href="CHANGELOG.md">Changelog</a> ·
 <a href="../../issues">Report a bug</a>
@@ -101,7 +101,7 @@ Each item links to the section of the guide that gives the full details.
 
 ### From the browser (recommended)
 
-1. On a computer, open **[the BoopBox installer](https://boopbox.replit.app/webapp/installer/)** in **Chrome or Edge**.
+1. On a computer, open **[the BoopBox installer](https://boopbox.replit.app/installer/)** in **Chrome or Edge**.
 2. Connect the FM-1 directly with a USB **data** cable. Do not use a hub.
 3. Press **INSTALL**.
 4. Allow MIDI access.

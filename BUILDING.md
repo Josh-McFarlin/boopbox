@@ -11,7 +11,7 @@ The build makes three files in `project/build/`:
 ## Windows (WSL)
 
 `project/scripts/INSTALL-BOOPBOX.bat` builds BoopBox in a WSL distribution. Then it opens the installer on
-`http://localhost:8766/webapp/installer/`. The script needs three items: Python 3 with Pillow on Windows, a WSL
+`http://localhost:8766/installer/`. The script needs three items: Python 3 with Pillow on Windows, a WSL
 distribution with the JieLi toolchain, and the three SDK files (below) in `project/build/deps/ac79`.
 If your WSL distribution is different, set `SLOOP_WSL_DISTRO` (default `Ubuntu`). If your toolchain location is different, set `SLOOP_TOOLCHAIN` (a Linux path, default
 `/root/.jieli/toolchain`). For example, in PowerShell: `$env:SLOOP_WSL_DISTRO = 'MinUI-Build'`.
@@ -171,7 +171,7 @@ python3 web/make_site.py project/build/releases/boopbox-2.6.fwsc 2.6 project/bui
 python3 -m http.server 8766 --bind 127.0.0.1 --directory project/build/site
 ```
 
-Open `http://localhost:8766/webapp/editor/?mock=1`. Select **Connect**. To hear all four tracks, select **Play loop**.
+Open `http://localhost:8766/editor/?mock=1`. Select **Connect**. To hear all four tracks, select **Play loop**.
 **Show preview** opens the piano/pads, volume and editable sequence. **Hide preview** folds them, and
 playback continues. The piano keys and labelled computer keys audition the selected track.
 The audio controls are available only in simulated mode. The physical-device editor continues to use Web MIDI.
@@ -195,7 +195,7 @@ Web MIDI needs a secure context. `make_site.py` builds the pages with Node.js (s
 ```
 python3 web/make_site.py project/build/felucca.fwsc dev /tmp/felucca-site
 cd /tmp/felucca-site && python3 -m http.server 8000
-# open http://localhost:8000/webapp/installer/
+# open http://localhost:8000/installer/
 ```
 
 You install firmware at your own risk. If an install fails and the FM-1 does not start any more,
@@ -232,7 +232,7 @@ serves `project/build/emu/boopbox-emu.wasm` there).
 If it is built, the emulator page shows a switch between BoopBox and BoopBox Trainer (`?fw=trainer` opens the trainer).
 Each firmware keeps its own flash in the browser.
 
-If the emulator is built, `web/make_site.py` puts it in the site as `webapp/emu/`, with the trainer if that is built too. The tests are `project/tests/emu_test.c` (the same core on the host) and
+If the emulator is built, `web/make_site.py` puts it in the site as `emu/`, with the trainer if that is built too. The tests are `project/tests/emu_test.c` (the same core on the host) and
 `project/tests/emu_wasm_test.mjs` (the wasm in Node). Both are in `project/tests/run_tests.sh`.
 
 ## The website
