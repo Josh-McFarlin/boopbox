@@ -11,10 +11,9 @@ const GITHUB = 'https://github.com/josh-mcfarlin/boopbox'
    of the home page. The home key uses the site's root URL. */
 const LINKS: [key: string, label: string, page: string][] = [
   ['home', 'Features', 'home/'],
-  ['editor', 'Web editor', 'editor/'],
-  ['guide', 'Guide', 'guide/'],
   ['emu', 'Try it', 'emu/'],
-  ['installer', 'Install', 'installer/'],
+  ['guide', 'Guide', 'guide/'],
+  ['editor', 'Web editor', 'editor/'],
 ]
 
 /* current: the page shown ("home", "guide", "editor", "emu", "installer"); base: the way to the site's root (absolute in the offline
