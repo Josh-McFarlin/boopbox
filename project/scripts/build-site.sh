@@ -12,7 +12,7 @@ fi
 python3 tools/build_emu.py
 python3 tools/build_emu.py --trainer
 python3 tools/build_preview.py
-npm --prefix ../web ci
+npm --prefix ../web ci --include=dev
 
 shopt -s nullglob
 packages=(firmware/releases/boopbox-[0-9]*.fwsc)
