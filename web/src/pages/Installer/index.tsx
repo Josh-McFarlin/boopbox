@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import SiteHeader from '../../components/SiteHeader.tsx'
 import { arcadeButton, pixelPanel } from '../../components/styles.ts'
+import { trackFirmwareInstallOutcome } from '../../lib/analytics.ts'
 import { Updater } from '../../lib/fm1ota.ts'
 import type { OtaError } from '../../lib/fm1ota.ts'
 import { logicalImage, productOf } from '../../lib/fm1pkg.ts'
@@ -199,9 +200,15 @@ const Installer: React.FC<InstallerProps> = ({ meta }) => {
       const ota = await up.find((id) => /^ota-/i.test(id.model), true)
       if (ota) {
         ota.link.close()
-        sayK((await up.resume(image!, step)) ? 'done' : 'stopped')
+        if (await up.resume(image!, step)) {
+          trackFirmwareInstallOutcome('success', choice, cur!.version)
+          sayK('done')
+        } else {
+          sayK('stopped')
+        }
       } else {
         await up.install(image!, cur!.product, step)
+        trackFirmwareInstallOutcome('success', choice, cur!.version)
       }
     } catch (e) {
       failed(e)
