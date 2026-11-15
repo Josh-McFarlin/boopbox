@@ -5,7 +5,7 @@
 // the manifest is one Chrome can install. Run from the repo root after a site is made:
 //   node tests/pwa_test.mjs SITE_DIR      (skipped, exit 0, without Playwright)
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
@@ -121,7 +121,9 @@ try {
 
   /* (2.7) a new build keeps the firmware's name: the copy the browser kept of the build before (a server that lets it
      keep one, no service worker) is not offered as "damaged": the installer asks the server first */
-  const fw = join(site, "firmware", "boopbox-2.7.fwsc"), ix = join(site, "installer", "index.html");
+  const fwName = readdirSync(join(site, "firmware")).find((f) => /^boopbox-[0-9].*\.fwsc$/.test(f));   /* (the site's own
+     package: the test site's, or a release's) */
+  const fw = join(site, "firmware", fwName), ix = join(site, "installer", "index.html");
   const fw0 = readFileSync(fw), ix0 = readFileSync(ix, "utf8");
   server = spawn("python3", ["-c", `import http.server, os
 class H(http.server.SimpleHTTPRequestHandler):
@@ -143,7 +145,8 @@ os.chdir(${JSON.stringify(site)}); http.server.ThreadingHTTPServer(("127.0.0.1",
   await p2.reload();
   await p2.waitForTimeout(800);
   const second = await p2.textContent("#status");
-  ok(/BoopBox 2\.7/.test(first) && /BoopBox 2\.7/.test(second), "a new build of the same name: the new firmware, not the browser's old copy");
+  const shown = new RegExp("BoopBox " + fwName.slice(8, -5).replace(/\./g, "\\."));   /* ("BoopBox 2.7", or the release's) */
+  ok(shown.test(first) && shown.test(second), "a new build of the same name: the new firmware, not the browser's old copy");
   writeFileSync(fw, fw0); writeFileSync(ix, ix0);
   await c2.close();
 } finally {

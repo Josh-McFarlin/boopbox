@@ -420,6 +420,8 @@ static void proj_lendiv(const project_t *p, uint32_t k, int32_t *len, int32_t *d
 #include "arranger_scene.c"
 #endif
 static uint8_t sec_dirty, song_dirty;           /* live sections / the song: in RAM, not yet in flash */
+static uint8_t sec_stores[4];                   /* each section: how many times it was stored (the trainer's SAVE IT
+                                                 * AS: a store counts, also of the same loop as before) */
 #if FELUCCA_FLASH
 /* slot from flash into RAM (also the staging buffer of the user preset and FM6 banks and of a backup's objects) */
 static project_t proj_tmp;
@@ -940,8 +942,10 @@ UI_SMALL static int section_store(uint32_t s)          /* 0: PROJECT FULL, the s
     if (ok)
         live_sec = (int8_t)s;
     fm1_irq_on();
-    if (ok)
+    if (ok) {
         sec_dirty |= (uint8_t)(1u << s);
+        sec_stores[s]++;
+    }
     return ok;
 }
 UI_SMALL static void section_load(uint32_t s)                    /* stopped: the section is the loop now */

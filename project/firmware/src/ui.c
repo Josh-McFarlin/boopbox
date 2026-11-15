@@ -3,7 +3,7 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "BOOPBOX 1.9.4"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
+#define FELUCCA_VERSION "BOOPBOX 1.9.5"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
@@ -807,21 +807,26 @@ UI_SMALL static void page_show(void)
         page_entered();
 }
 
-UI_SMALL static void open_family(uint32_t fam)
+UI_SMALL static uint32_t family_next(uint32_t fam)   /* the page a tap of the family's button opens from here */
 {
+    uint32_t i;
     if (!ui.home && cur_page()->fam == fam) {          /* same button again: next page */
-        uint32_t i = ui.page + 1u;
+        i = ui.page + 1u;
         while (i < NPAGES && PAGES[i].fam == fam && !page_shown(&PAGES[i]))
             i++;                                        /* (not a page of another engine: EDIT > FILTER) */
         if (i >= NPAGES || PAGES[i].fam != fam)
             i = page_first(fam);
-        ui.page = (uint8_t)i;
     } else {
-        ui.page = (uint8_t)page_first(fam);           /* (1.7) from another button: always its first page, so the
+        i = page_first(fam);                            /* (1.7) from another button: always its first page, so the
                                                         * taps to a page are always the same (not the page last used) */
     }
-    if (PAGES[ui.page].graph == GR_BROWSE && ui.page + 1u < NPAGES && PAGES[ui.page + 1u].fam == fam)
-        ui.page++;                                      /* (the browser: PRESETS opens it, SAVE closes it) */
+    if (PAGES[i].graph == GR_BROWSE && i + 1u < NPAGES && PAGES[i + 1u].fam == fam)
+        i++;                                            /* (the browser: PRESETS opens it, SAVE closes it) */
+    return i;
+}
+UI_SMALL static void open_family(uint32_t fam)
+{
+    ui.page = (uint8_t)family_next(fam);
     page_show();
 }
 

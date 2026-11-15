@@ -13,6 +13,28 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.5
+
+**BoopBox Trainer: the coach shows the way to a step's screen.** A lesson step that needs a screen (the SONG page,
+the NOTES page, the drum grid, PATTERNS, SCENES, CHAIN, the FX or ENV page, the HOME screen) now checks that you are
+on it. When you are not, the coach shows a card of its own in place of the step: *GO TO THE SONG PAGE* and only the way
+there (*TAP SAVE*, or *TAP HOME, THEN TAP SAVE*), with that button blinking. When you get there, the step shows again.
+The card does not count as a step. The steps' actions now say only what to do on their screen (*TURN KNOB 4 (REV) TO
+40%*, where they said *TAP FX, TURN KNOB 4 TO 40%*). See [the coach](docs/trainer.md#the-coach).
+
+Fixed in BoopBox Trainer:
+
+- Level 3, *SEVEN PARTS*: away from the SONG page (on HOME, KNOB 3 is the track's steps and KNOB 4 its pan), the
+  coach said *KNOB 4: STEPS TO 7* and the step could not be done. It now shows the way to the SONG page.
+- A note's length, accent or slide, a lock's value or slide, the song mode, and HOME's level, pan and tempo steps
+  also gave their knob off their screen, where that knob changes something else. They now show the way first.
+- On HOME, the drum steps said *TAP HOME, THEN SEQ*. They now say *TAP SEQ*.
+- Level 3 played again: *SAVE IT AS A* to *D* could not be done when the section already held the same loop. Storing
+  the section again now completes the step.
+
+BoopBox itself is unchanged apart from its version. Projects, presets, settings and the trainer's progress from 1.9.4
+open as before.
+
 ## 1.9.4
 
 **A new look for the logo.** The logo now matches the [website](https://boopbox.replit.app/): the name
