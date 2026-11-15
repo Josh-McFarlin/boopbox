@@ -69,6 +69,8 @@ static struct {
     uint32_t log_at;                               /* the log's next free record (offset in TR_LOG) */
     uint32_t mq_t0, mq_sig;                        /* (1.5.1) a line too wide scrolls: since when, for which text */
     char hint[48];                                 /* (1.5.1: 48, a hint may be wider than the screen: it scrolls) */
+    char go[32];                                   /* the page card ("GO TO THE SONG PAGE"; the hint: the way), "": none */
+    uint8_t was_go;                                /* the page card was shown (its end: the step's own card again) */
 } tr;
 
 UI_SMALL static const tr_card_t *tr_card(void)
@@ -98,6 +100,31 @@ UI_SMALL static void tr_step(uint32_t i, const char *a, const char *b)   /* "STE
     tr_cat(": ");
     tr_cat(a);
     tr_cat(b);
+}
+/* the page card: the step needs another screen. A card of its own, only while there: "GO TO " where, the way there
+ * (the hint), its button lit; on that screen the step's own card again */
+UI_SMALL static int tr_goto(const char *where, const char *way, uint32_t btn)
+{
+    str_cpy(tr.go, "GO TO ", sizeof tr.go);
+    str_cpy(tr.go + str_len(tr.go), where, sizeof tr.go - str_len(tr.go));
+    tr_say(way, "");
+    tr.btn = (uint8_t)btn;
+    tr.keys = 0;
+    return 0;
+}
+UI_SMALL static int tr_home_ok(void) { return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown(); }
+UI_SMALL static int tr_to_song(void)                /* the SONG page: SAVE from HOME's screen */
+{
+    if (!ui.menu && ui.layer == LY_PLAY && on_song_page())
+        return 1;
+    return tr_home_ok() ? tr_goto("THE SONG PAGE", "TAP SAVE", B_SAVE) :
+                          tr_goto("THE SONG PAGE", "TAP HOME, THEN TAP SAVE", B_HOME);
+}
+UI_SMALL static int tr_to_notes(void)               /* the NOTES page (the SEQ pages) */
+{
+    if (!ui.menu && ui.layer == LY_PLAY && on_notes_page())
+        return 1;
+    return tr_goto("THE NOTES PAGE", "TAP SEQ UNTIL YOU SEE NOTES", B_SEQ);
 }
 UI_SMALL static void tr_value(char *b, const param_desc_t *d, int32_t v)   /* a value as the screen shows it: "24%" */
 {
@@ -274,7 +301,9 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
         tr_st(c, s0, &x);
         while (s0 + L < len && (tr_st(c, s0 + L, &w), w.kind == 2u))
             L++;
-        if (on_notes_page() && ui.cursor != s0) {
+        if (!tr_to_notes())
+            return 0;
+        if (ui.cursor != s0) {
             tr_say("KNOB 1 TO STEP ", "");
             tr_num((int32_t)s0 + 1);
         } else {
@@ -284,7 +313,9 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
         return 0;
     }
     if (why == 3u) {
-        if (on_notes_page() && ui.cursor != bad) {
+        if (!tr_to_notes())
+            return 0;
+        if (ui.cursor != bad) {
             tr_say("KNOB 1 TO STEP ", "");
             tr_num((int32_t)bad + 1);
         } else
@@ -295,11 +326,8 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
         uint32_t pen = 0, first = NSTEP;
-        if (on_notes_page() && !held) {             /* (1.7) NOTES types a key played into its step: leave it first */
-            tr_say("TAP HOME FIRST", "");
-            tr.btn = B_HOME;
-            return 0;
-        }
+        if (on_notes_page() && !held)               /* (1.7) NOTES types a key played into its step: leave it first */
+            return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         page = ui.step_page;
         /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
          * first step wrong may want another note: going there would put out the keys of this one) */
@@ -385,11 +413,8 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
         return 0;
     }
     /* the NOTES page: KNOB 1 to the step, the keys write it */
-    if (!on_notes_page()) {
-        tr_say("TAP SEQ UNTIL YOU SEE NOTES", "");
-        tr.btn = B_SEQ;
+    if (!tr_to_notes())
         return 0;
-    }
     if (ui.cursor != bad) {
         tr_say("KNOB 1 TO STEP ", "");
         tr_num((int32_t)bad + 1);
@@ -457,13 +482,9 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
     if (bad == NSTEP)
         return 1;
     if (!layer && !(on_drum_page() && !drum_page)) {   /* the DRUMS grid first (SEQ held: its keys are the steps anywhere) */
-        if (on_drum_page())
-            tr_say("TAP SEQ: THE GRID", ""), tr.btn = B_SEQ;
-        else if (ui.home && !ui.menu)
-            tr_say("TAP SEQ: THE DRUM GRID", ""), tr.btn = B_SEQ;
-        else
-            tr_say("TAP HOME, THEN SEQ: THE GRID", ""), tr.btn = B_HOME;
-        return 0;
+        if (on_drum_page() || tr_home_ok())         /* (SEQ: from HOME's screen the grid, on the DRUMS screen too) */
+            return tr_goto("THE DRUM GRID", "TAP SEQ", B_SEQ);
+        return tr_goto("THE DRUM GRID", "TAP HOME, THEN SEQ", B_HOME);
     }
     if (pen_lane != lane) {                         /* the sound to work on: KNOB 1 (or its black key) */
         tr_say("KNOB 1 TO ", LANE_NAME[lane]);
@@ -526,25 +547,23 @@ UI_SMALL static int tr_algo_ok(void)
 {
     return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page() && !tr_browsing();
 }
-UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first */
+UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first (the page card) */
 {
-    tr_say(tr_algo_ok() ? "TURN ALGORITHM TO TRACK " : "TAP HOME, ALGORITHM TO ", "");
+    if (!tr_algo_ok()) {
+        tr_goto("THE HOME SCREEN", "TAP HOME", ui.layer == LY_PLAY ? B_HOME : NB);
+        return;
+    }
+    tr_say("TURN ALGORITHM TO TRACK ", "");
     tr_num((int32_t)k + 1);
-    if (!tr_algo_ok() && ui.layer == LY_PLAY)
-        tr.btn = B_HOME;
 }
 /* the way to the PATTERNS page: SEQ held + SAVE (SCENES), from any page and track; then SELECT left to PATTERNS */
 UI_SMALL static int tr_to_pats(void)
 {
     if (tr_quiet || (on_pats_page() && pats_view() == PV_PADS))
         return 1;
-    if (on_pats_page()) {
-        tr_say("TURN SELECT LEFT: PATTERNS", "");
-        return 0;
-    }
-    tr_say("HOLD SEQ, TAP SAVE", "");
-    tr.btn = B_SEQ;
-    return 0;
+    if (on_pats_page())
+        return tr_goto("THE PATTERNS PAGE", "TURN SELECT LEFT: PATTERNS", NB);
+    return tr_goto("THE PATTERNS PAGE", "HOLD SEQ, TAP SAVE", B_SEQ);
 }
 /* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
 UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
@@ -575,16 +594,16 @@ UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
 /* the way to a page of the three (PV_*): SEQ held + SAVE (SCENES), then SELECT left */
 UI_SMALL static int tr_to_view(uint32_t view)
 {
-    static const char *const VN[3] = {"PATTERNS", "CHAIN", "SCENES"};
+    static const char *const VN[3] = {"PATTERNS", "CHAIN", "SCENES"}, *const WN[3] = {"THE PATTERNS PAGE",
+                                      "THE CHAIN PAGE", "THE SCENES PAGE"};
     if (tr_quiet || (on_pats_page() && pats_view() == view))
         return 1;
     if (on_pats_page()) {
-        tr_say(pats_view() > view ? "TURN SELECT LEFT: " : "TURN SELECT RIGHT: ", VN[view % 3u]);
+        tr_goto(WN[view % 3u], pats_view() > view ? "TURN SELECT LEFT: " : "TURN SELECT RIGHT: ", NB);
+        tr_cat(VN[view % 3u]);
         return 0;
     }
-    tr_say("HOLD SEQ, TAP SAVE", "");
-    tr.btn = B_SEQ;
-    return 0;
+    return tr_goto(WN[view % 3u], "HOLD SEQ, TAP SAVE", B_SEQ);
 }
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
@@ -596,17 +615,30 @@ UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selecte
 /* a parameter card's page (data: 1 + its PAGES index, 0: any, a held button's knobs): off it, the hint says where */
 UI_SMALL static int tr_on_page(const tr_card_t *c)
 {
-    if (tr_quiet || !c->data || ui.layer != LY_PLAY || (!ui.home && !ui.menu && ui.page == c->data - 1u))
+    char where[24];
+    uint32_t pg = c->data - 1u;
+    if (tr_quiet || ui.layer != LY_PLAY || ui.menu)
         return 1;
-    tr_say("OPEN THE ", PAGES[c->data - 1u].title);
-    tr_cat(" PAGE");
-    tr.btn = c->btn;
+    if (!c->data)                                   /* a held button's knobs (any page), or HOME's dials and tempo */
+        return c->btn != B_HOME || tr_home_ok() ? 1 : tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
+    if (!ui.home && ui.page == pg)
+        return 1;
+    str_cpy(where, "THE ", sizeof where);
+    str_cpy(where + str_len(where), PAGES[pg].title, sizeof where - str_len(where));
+    str_cpy(where + str_len(where), " PAGE", sizeof where - str_len(where));
+    tr_goto(where, "TAP ", c->btn);
+    tr_cat(B_NAME[c->btn % NB]);
+    if (family_next(PAGES[pg].fam) != pg) {         /* (more than one tap) */
+        tr_cat(" UNTIL YOU SEE ");
+        tr_cat(PAGES[pg].title);
+    }
     return 0;
 }
 UI_SMALL static int tr_goal(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk % NTRK];
     tr.hint[0] = 0;
+    tr.go[0] = 0;
     tr.keys = 0;
     tr.btn = NB;
     switch (c->goal) {
@@ -669,6 +701,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             while (i > 0u && PAGES[i - 1u].scope == SC_PATS)
                 i--, v++;
             tr_to_view(v);
+            tr.go[0] = 0;                               /* (a page step: its own card says the page) */
             if (str_eq(tr.hint, c->act))
                 tr.hint[0] = 0;                         /* (what the action says already) */
         } else if (PAGES[c->p].scope == SC_DRUM && on_drum_page())
@@ -710,7 +743,12 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         uint32_t k, step = TR_D[c->data];
         for (k = 0; k < NLOCK; k++)
             if (t->lock[k].step == step && (t->lock[k].param & LOCK_PID) == c->p) {
-                if (!tr_near(t->lock[k].val, c->v, c->tol)) {
+                int val = tr_near(t->lock[k].val, c->v, c->tol), sl = !(c->flags & 1u) || (t->lock[k].param & LOCK_SLIDE);
+                if (val && sl)
+                    return 1;
+                if (!tr_quiet && (ui.home || ui.menu || ui.layer != LY_PLAY || cur_page()->scope != SC_STEP))
+                    return tr_goto("THE NOTES PAGE", "TAP SEQ UNTIL YOU SEE NOTES", B_SEQ);
+                if (!val) {
                     tr_now(lock_desc(t, c->p), t->lock[k].val, c->v);
                     return 0;
                 }
@@ -725,7 +763,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         if (tr_quiet)
             return 0;
         if (ui.home || ui.menu || cur_page()->scope != SC_STEP)
-            tr_say("OPEN THE NOTES PAGE (SEQ)", ""), tr.btn = B_SEQ;
+            tr_goto("THE NOTES PAGE", "TAP SEQ UNTIL YOU SEE NOTES", B_SEQ);
         else if (!ui.sheet && ui.cursor != step) {
             tr_say("KNOB 1 TO STEP ", "");
             tr_num((int32_t)step + 1);
@@ -786,12 +824,13 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_SONG: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t k;
-        if (!tr_quiet && (ui.menu || ui.layer != LY_PLAY || !on_song_page())) {   /* (its knobs: the SONG page only) */
-            int trks = !ui.menu && ui.layer == LY_PLAY && !ui.home && cur_page()->graph == GR_TRK;   /* (HOME's screen) */
-            tr_say(trks ? "TAP SAVE: THE SONG PAGE" : "TAP HOME, THEN TAP SAVE", "");
-            tr.btn = trks ? B_SAVE : B_HOME;
+        int same = arrangement.count == d[0];
+        for (k = 0; same && !(c->flags & 1u) && k < d[0]; k++)
+            same = arrangement.entry[k].scene == d[1u + 2u * k] && arrangement.entry[k].bars == d[2u + 2u * k];
+        if (same)
+            return 1;
+        if (!tr_quiet && !tr_to_song())                 /* (its knobs: the SONG page only) */
             return 0;
-        }
         if (arrangement.count != d[0]) {
             tr_say("KNOB 4: STEPS TO ", "");
             tr_num(d[0]);
@@ -815,7 +854,11 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         return 1;
     }
     case TG_SONGMODE:
-        return arrangement_enabled && song.playing;
+        if (arrangement_enabled && song.playing)
+            return 1;
+        if (!arrangement_enabled && !tr_quiet)          /* (OCT- turns it on on the SONG page; then PLAY anywhere) */
+            tr_to_song();
+        return 0;
     case TG_SCENE: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t s = c->p % NSCENE, k, bad = NTRK, store = 1;
@@ -955,6 +998,8 @@ UI_SMALL static void tr_card_begin(void)
     const tr_card_t *c = tr_card();
     tr.ok = 0;
     tr.t0 = fm1_ms;
+    tr.go[0] = 0;
+    tr.was_go = 0;
     tr.sig = 0;
     tr.keyed = 0;
     if (c && c->goal == TG_SAVED)
@@ -1083,6 +1128,12 @@ UI_SMALL static void trainer_tick(void)
         tr.ok_ms = fm1_ms;
         tr.keys = 0;
         tr.btn = NB;
+        tr.go[0] = 0;
+    }
+    if ((tr.go[0] != 0) != tr.was_go) {                 /* the page card came or went: each starts from its top (the
+                                                         * step's own card again: its number and headline) */
+        tr.was_go = tr.go[0] != 0;
+        tr.t0 = fm1_ms;
     }
 }
 
@@ -1097,11 +1148,6 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 {
     const char *a = c->act;
     uint32_t o = 0;
-    if (!tr_algo_ok() && tr_prefix(a, "TURN ALGORITHM TO TRACK ")) {   /* (ALGORITHM does nothing here: HOME first) */
-        str_cpy(b, "TAP HOME, ALGORITHM TO ", n);
-        o = str_len(b);
-        a += 24;
-    }
     for (; *a && o + 1u < n; a++) {
         if (*a == '@' && (c->goal == TG_PARAM || c->goal == TG_GLOBAL)) {
             char v[16];
@@ -1139,12 +1185,13 @@ UI_SMALL static int32_t tr_marquee(const char *s, uint32_t el)
         return over;
     return (int32_t)((t - TR_MQ_HOLD) / TR_MQ_PX) & ~1;
 }
-/* the band: the card's number and headline, or what is wrong (amber); the action; a UI message; NICE; a progress bar */
+/* the band: the card's number and headline, or what is wrong (amber); the action; a UI message; NICE; a progress bar.
+ * The page card (tr.go) in the card's place: "GO TO ..." and the way there */
 UI_SMALL static void trainer_draw(void)
 {
     const tr_card_t *c = tr_card();
     const tr_level_t *L;
-    uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD, mel = 0, own = 0;
+    uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD, mel = 0, own = 0, go;
     int32_t o1, o2;
     char b[48], act[48];
     uint16_t col;
@@ -1153,6 +1200,9 @@ UI_SMALL static void trainer_draw(void)
     L = tr_level(tr.lvl - 1u);
     el = fm1_ms - tr.t0;
     tr_act(c, act, sizeof act);
+    go = tr.go[0] && !tr.ok;
+    if (go)
+        str_cpy(act, tr.hint, sizeof act);          /* (the page card: the way is its action) */
     /* line 1 (or the line): 0 number + headline, 1 the action (one line only), 2 what is wrong, 3 NICE, 4 a message.
      * Two lines: what is wrong stays on line 1 (the action under it); one line: the action and it take turns */
     if (two)
@@ -1170,6 +1220,12 @@ UI_SMALL static void trainer_draw(void)
     }
     if (c->goal == TG_DONE)
         phase = two || el < TR_HEAD_MS ? 0u : 1u;
+    if (go) {                                       /* 5: "GO TO ..." (one line: it and the way take turns) */
+        uint32_t d = tr_mq_len(act) > TR_ALT_MS ? tr_mq_len(act) : TR_ALT_MS, t = el % (TR_ALT_MS + d);
+        phase = two || t < TR_ALT_MS ? 5u : 1u;
+        mel = t < TR_ALT_MS ? 0u : t - TR_ALT_MS;
+        own = !two;
+    }
     if (tr.ok)
         phase = 3u;
     if (ui.msg_t && !tr.ok)
@@ -1190,6 +1246,9 @@ UI_SMALL static void trainer_draw(void)
     } else if (phase == 4u) {
         str_cpy(b, ui.msg, sizeof b);
         col = C_WHITE;
+    } else if (phase == 5u) {
+        str_cpy(b, tr.go, sizeof b);
+        col = C_AMB;
     } else {
         str_cpy(b, "NICE!", sizeof b);
         col = RGB(90, 240, 150);

@@ -94,8 +94,9 @@ The coach uses the title area of the screen.
   in turn on this line.
 - The colored bar under the coach shows the progress in the level.
 
-The actions tell you where to go and what to turn. They give the value as the screen shows it. Examples are
-*TAP SEQ UNTIL YOU SEE TIMING* and then *TURN KNOB 4 (GATE) TO 79%*.
+The actions tell you what to turn on the step's screen. They give the value as the screen shows it, for example
+*TURN KNOB 4 (GATE) TO 79%*. The way to the screen is not part of the action: when you are on another screen, the page
+card (below) shows it.
 
 A line that is wider than the screen scrolls like a ticker (1.5.1). It stays still for 1.2 s. Then it moves one pixel
 every 25 ms until its end shows. Then it stays still again and starts again from its start. On the one-line coach, a
@@ -106,8 +107,13 @@ When something is wrong, the hint tells you what is wrong and how to correct it.
 - *STEP 5: NO KICK HERE (KEY 5)*
 - *STEP 9: PLAY F4 (KEY 7)*
 - *NOW 30% (WANT 24%)*
-- *OPEN THE FX PAGE*
 - *TRACK 6: MUTE (GLO + KEY 2)*
+
+**The page card.** A lesson step that needs a screen (the SONG page, the NOTES page, the drum grid, the FX page, the
+HOME screen and others) checks that you are on it. When you are not, the coach shows a card of its own in place of the
+step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP SAVE* or *TAP HOME, THEN TAP SAVE*.
+The button to press blinks. When you get to that screen, the card goes and the step shows again from its headline.
+The card does not count as a step: the step numbers and the progress bar stay the same.
 
 The button to press **blinks**. On a lesson step about keys, the coach controls the key lights. Only the keys to press
 are lit. Every step of the page that is still wrong blinks. BoopBox's beat markers and the steps that are already

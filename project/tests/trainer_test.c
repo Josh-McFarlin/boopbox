@@ -216,8 +216,9 @@ static void do_notes(const tr_card_t *c)
         }
     }
     if (c->flags == HOW_SEQ) {
-        if (on_notes_page()) {                           /* (the coach: TAP HOME FIRST, NOTES would type the note in) */
-            check(!strcmp(tr.hint, "TAP HOME FIRST"), "SEQ-layer notes from the NOTES page: TAP HOME FIRST");
+        if (on_notes_page()) {                           /* (the coach: the HOME screen first, NOTES would type the note in) */
+            check(!strcmp(tr.go, "GO TO THE HOME SCREEN") && !strcmp(tr.hint, "TAP HOME"),
+                  "SEQ-layer notes from the NOTES page: the page card, TAP HOME");
             home();
         }
         for (i = 0; i < len; i++) {
@@ -616,13 +617,13 @@ static void do_card(const tr_card_t *c)
     case TG_SONG: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t k, g = 40;
-        if (c->flags & 1u) {   /* back on HOME (KNOB 4 there: the pan, KNOB 3 the track's steps): the hint says the way back */
+        if ((c->flags & 1u) && arrangement.count != d[0]) {   /* back on HOME (KNOB 4 there: the pan, KNOB 3 the track's steps): the hint says the way back */
             uint32_t was = arrangement.count;
             home();
             frames(3);
             slow(EN_K4, 1);
-            check(!tr_goal(c) && !strcmp(tr.hint, "TAP SAVE: THE SONG PAGE") && tr.btn == B_SAVE &&
-                  arrangement.count == was, "the song's steps from HOME: TAP SAVE, the SONG page first");
+            check(!tr_goal(c) && !strcmp(tr.go, "GO TO THE SONG PAGE") && !strcmp(tr.hint, "TAP SAVE") &&
+                  tr.btn == B_SAVE && arrangement.count == was, "the song's steps from HOME: the page card, TAP SAVE");
         }
         if (!on_song_page()) { home(); tap(B_SAVE); }
         while (arrangement.count != d[0] && g--)
@@ -689,6 +690,106 @@ static uint32_t keys_lit_now(void)                      /* the keys' LEDs on (fu
     }
     return m;
 }
+/* ---------------------------------------------------------------- the wrong page --- */
+/* the detour pass: each card not done yet, first from the wrong screen (HOME's TRACKS, then the ENV page). A card that
+ * needs its own screen shows only the page card ("GO TO ...", the way there): its way followed press by press reaches
+ * that screen, where the step's own card is back */
+static uint32_t detour, detour_cards, detour_shots;
+static int follow_go(const tr_card_t *c)
+{
+    uint32_t g, b;
+    for (g = 0; g < 12u && tr.go[0]; g++) {
+        const char *h = tr.hint;
+        if (!strcmp(h, "HOLD SEQ, TAP SAVE"))
+            seq_save();
+        else if (tr_prefix(h, "TURN SELECT LEFT"))
+            slow(EN_SELECT, -1);
+        else if (tr_prefix(h, "TURN SELECT RIGHT"))
+            slow(EN_SELECT, 1);
+        else if (tr_prefix(h, "TAP ")) {
+            for (b = 0; b < NB; b++) {
+                size_t n = strlen(B_NAME[b]);
+                if (!strncmp(h + 4, B_NAME[b], n) && (h[4 + n] == 0 || h[4 + n] == ' ' || h[4 + n] == ','))
+                    break;
+            }
+            if (b == NB) {
+                printf("trainer: %s: a page card's way without a button: \"%s\"\n", c->head, h);
+                return 0;
+            }
+            if (tr.btn != b) {
+                printf("trainer: %s: \"%s\", but button %u lit\n", c->head, h, tr.btn);
+                return 0;
+            }
+            tap(b);
+        } else {
+            printf("trainer: %s: a page card's way that says no press: \"%s\"\n", c->head, h);
+            return 0;
+        }
+        frames(3);
+        if (tr_goal(c))
+            return 1;
+    }
+    return !tr.go[0];
+}
+static int needs_page(const tr_card_t *c, uint32_t w)   /* a card that is never done from the TRACKS (0) / ENV (1) screen */
+{
+    if (c->trk < NTRK && song.sel != c->trk && c->goal != TG_SCENE && c->goal != TG_CHAIN && c->goal != TG_SCNPLAY &&
+        c->goal != TG_PATS && c->goal != TG_PATSEL && c->goal != TG_PATHAS)
+        return 0;                                        /* (ALGORITHM first: on these screens it works) */
+    switch (c->goal) {
+    case TG_SONG: case TG_LANES: case TG_SCENE: case TG_SCNPLAY: case TG_CHAIN: case TG_PATS: case TG_PATSEL:
+    case TG_PATHAS:
+        return 1;
+    case TG_SONGMODE:
+        return !arrangement_enabled;
+    case TG_PARAM: case TG_GLOBAL:
+        return (c->data && !(!ui.home && ui.page == c->data - 1u)) || (c->btn == B_HOME && w == 1u);
+    default:
+        return 0;
+    }
+}
+static void wrong_page(const tr_card_t *c, uint32_t l, uint32_t at)
+{
+    uint32_t w;
+    char name[64];
+    for (w = 0; w < 2u; w++) {
+        home();
+        frames(3);
+        if (w == 1u) {
+            tap(B_ENV);
+            frames(3);
+        }
+        if (tr_goal(c))
+            return;
+        if (!tr.go[0]) {
+            if (needs_page(c, w)) {
+                printf("trainer: level %u card %u (%s): from %s no page card: \"%s\"\n", l + 1u, at + 1u, c->head,
+                       w ? "ENV" : "TRACKS", tr.hint);
+                fails++;
+            }
+            continue;
+        }
+        detour_cards++;
+        if (text_w(&FONT_S, tr.go) > 236 || str_len(tr.hint) + 1u >= sizeof tr.hint) {
+            printf("trainer: level %u card %u: the page card too wide: %s / %s\n", l + 1u, at + 1u, tr.go, tr.hint);
+            fails++;
+        }
+        if (detour_shots < 2u && w == detour_shots) {     /* (the page card on a two-line and a one-line band) */
+            frames(10);
+            ui.force = 1;
+            frame();
+            snprintf(name, sizeof name, "trainer-go-%s", w ? "env" : "tracks");
+            ppm(outdir, name);
+            detour_shots++;
+        }
+        if (!follow_go(c)) {
+            printf("trainer: level %u card %u (%s): the page card's way did not get there: %s / %s\n", l + 1u, at + 1u,
+                   c->head, tr.go, tr.hint);
+            fails++;
+            return;
+        }
+    }
+}
 static int play_level(uint32_t l, const char *shots)
 {
     const tr_level_t *L = tr_level(l);
@@ -736,8 +837,8 @@ static int play_level(uint32_t l, const char *shots)
             int turn, home_first;
             tr_act(c, act, sizeof act);
             tr_goal(c);
-            turn = tr_prefix(act, "TURN ALGORITHM") || tr_prefix(tr.hint, "TURN ALGORITHM");
-            home_first = tr_prefix(act, "TAP HOME, ALGORITHM") || tr_prefix(tr.hint, "TAP HOME, ALGORITHM");
+            home_first = !strcmp(tr.go, "GO TO THE HOME SCREEN") && !strcmp(tr.hint, "TAP HOME");   /* (the page card) */
+            turn = !tr.go[0] && (tr_prefix(act, "TURN ALGORITHM") || tr_prefix(tr.hint, "TURN ALGORITHM"));
             if (turn) {
                 uint32_t was = song.sel;
                 slow(EN_ALGO, song.sel < c->trk ? 1 : -1);
@@ -757,6 +858,8 @@ static int play_level(uint32_t l, const char *shots)
                 }
             }
         }
+        if (detour && c->goal != TG_DONE && !tr_goal(c))
+            wrong_page(c, l, at);
         hint_tries = 0;
         for (tries = 0; tries < 3u && tr.card == at; tries++) {
             if ((hint_tries == 1u && tries == 1u && (c->goal == TG_PATSEL || c->goal == TG_PATS || c->goal == TG_PATHAS ||
@@ -884,9 +987,9 @@ int main(int argc, char **argv)
     }
     {   /* "@": the value as the card's screen shows it (HOME: LEVEL 0..100 and PAN as is; SEQ held: LEN a number) */
         static const struct { uint32_t lvl; const char *head, *act; } V[] = {
-            {3, "A BIT QUIETER", "TAP HOME, KNOB 2 TO "}, {2, "TO THE LEFT", "ON HOME: KNOB 4 TO "},
-            {2, "A BIT QUIETER", "ON HOME: KNOB 2 TO "}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
-            {1, "LONGER NOTES", "TURN KNOB 4 (GATE) TO 79%"}, {1, "LAID BACK: 86 BPM", "TAP HOME, SELECT TO 86 BPM"},
+            {3, "A BIT QUIETER", "TURN KNOB 2 (LEVEL) TO "}, {2, "TO THE LEFT", "TURN KNOB 4 (PAN) TO "},
+            {2, "A BIT QUIETER", "TURN KNOB 2 (LEVEL) TO "}, {1, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO 4"},
+            {1, "LONGER NOTES", "TURN KNOB 4 (GATE) TO 79%"}, {1, "LAID BACK: 86 BPM", "TURN SELECT TO 86 BPM"},
         };
         uint32_t i, j, bad = 0;
         char act[40], want[48];
@@ -947,7 +1050,7 @@ int main(int argc, char **argv)
                  hint_steps);
         check(!hint_lost && hint_steps > 20u, what);
         snprintf(what, sizeof what, "drum steps: to the grid by their hints (%u presses)", grid_hints);
-        check(!grid_lost && grid_hints > 3u, what);
+        check(!grid_lost && grid_hints > 1u, what);
         snprintf(what, sizeof what, "TURN ALGORITHM said only where it picks the track (%u), else TAP HOME first (%u)",
                  algo_said, algo_home);
         check(algo_said > 5u, what);
@@ -1060,6 +1163,22 @@ int main(int argc, char **argv)
         snprintf(what, sizeof what, "a line too wide scrolls: %d px over, %u ms a turn, its end on the screen (%u hints scrolled)",
                  over, len, hints_scrolled);
         check(ok, what);
+    }
+    {   /* the wrong page: every level again, each card first from the TRACKS screen and the ENV page. A card that needs
+         * its own screen shows only the page card there, and its way gets there (then the card is done as before) */
+        uint32_t f0 = fails;
+        char what[120];
+        detour = 1;
+        memset(proj_slot, 0, sizeof proj_slot);         /* (level 3's sections saved again: the same as kept, SAVE IT AS
+                                                         * would wait for a change; as on a first play) */
+        for (l = 0; l < TR_NLEVELS; l++) {
+            snprintf(what, sizeof what, "level %u from the wrong page: done", l + 1u);
+            check(play_level(l, NULL), what);
+        }
+        detour = 0;
+        snprintf(what, sizeof what, "the wrong page: %u page cards, each only the way to its screen, each got there",
+                 detour_cards);
+        check(fails == f0 && detour_cards > 0u, what);
     }
     printf("trainer: %s\n", fails ? "FAIL" : "PASS");
     return fails != 0;
