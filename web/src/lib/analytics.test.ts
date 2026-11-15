@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   trackEmulatorInteraction,
+  trackFirmwareInstallFailed,
   trackFirmwareInstallOutcome,
+  trackFirmwareInstallStarted,
 } from './analytics.ts'
 
 afterEach(() => {
@@ -54,6 +56,24 @@ describe('anonymous analytics events', () => {
     })
   })
 
+  it('reports install starts and allow-listed failure reasons', () => {
+    const track = vi.fn()
+    window.umami = { track }
+
+    trackFirmwareInstallStarted('boopbox', '1.9.4')
+    trackFirmwareInstallFailed('trainer', '1.9.4', 'permission_denied')
+
+    expect(track).toHaveBeenNthCalledWith(1, 'firmware_install_started', {
+      product: 'boopbox',
+      version: '1.9.4',
+    })
+    expect(track).toHaveBeenNthCalledWith(2, 'firmware_install_failed', {
+      product: 'trainer',
+      version: '1.9.4',
+      reason: 'permission_denied',
+    })
+  })
+
   it('rejects invalid install products and versions', () => {
     const track = vi.fn()
     window.umami = { track }
@@ -64,6 +84,12 @@ describe('anonymous analytics events', () => {
       '1.9.4',
     )
     trackFirmwareInstallOutcome('success', 'boopbox', '1.9.4 beta')
+    trackFirmwareInstallStarted('boopbox', '1.9.4 beta')
+    trackFirmwareInstallFailed(
+      'boopbox',
+      '1.9.4',
+      'raw error message' as 'other',
+    )
 
     expect(track).not.toHaveBeenCalled()
   })
