@@ -786,6 +786,12 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_SONG: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t k;
+        if (!tr_quiet && (ui.menu || ui.layer != LY_PLAY || !on_song_page())) {   /* (its knobs: the SONG page only) */
+            int trks = !ui.menu && ui.layer == LY_PLAY && !ui.home && cur_page()->graph == GR_TRK;   /* (HOME's screen) */
+            tr_say(trks ? "TAP SAVE: THE SONG PAGE" : "TAP HOME, THEN TAP SAVE", "");
+            tr.btn = trks ? B_SAVE : B_HOME;
+            return 0;
+        }
         if (arrangement.count != d[0]) {
             tr_say("KNOB 4: STEPS TO ", "");
             tr_num(d[0]);

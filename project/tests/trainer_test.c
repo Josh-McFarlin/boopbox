@@ -616,6 +616,14 @@ static void do_card(const tr_card_t *c)
     case TG_SONG: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t k, g = 40;
+        if (c->flags & 1u) {   /* back on HOME (KNOB 4 there: the pan, KNOB 3 the track's steps): the hint says the way back */
+            uint32_t was = arrangement.count;
+            home();
+            frames(3);
+            slow(EN_K4, 1);
+            check(!tr_goal(c) && !strcmp(tr.hint, "TAP SAVE: THE SONG PAGE") && tr.btn == B_SAVE &&
+                  arrangement.count == was, "the song's steps from HOME: TAP SAVE, the SONG page first");
+        }
         if (!on_song_page()) { home(); tap(B_SAVE); }
         while (arrangement.count != d[0] && g--)
             slow(EN_K4, arrangement.count < d[0] ? 1 : -1);
