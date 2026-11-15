@@ -610,7 +610,8 @@ static void do_card(const tr_card_t *c)
         home();
         hold_layer(B_SAVE);
         key(key_of_white(4u + (uint32_t)c->v));
-        if (proj_slot[c->v].sum == tr.base)              /* a used section: the key again */
+        frames(2);
+        if (!tr.ok && tr_card() == c)                    /* a used section (AGAIN: ...): the key again */
             key(key_of_white(4u + (uint32_t)c->v));
         let_go(B_SAVE);
         break;
@@ -1169,8 +1170,8 @@ int main(int argc, char **argv)
         uint32_t f0 = fails;
         char what[120];
         detour = 1;
-        memset(proj_slot, 0, sizeof proj_slot);         /* (level 3's sections saved again: the same as kept, SAVE IT AS
-                                                         * would wait for a change; as on a first play) */
+        check(proj_ok(&proj_slot[0]) && proj_ok(&proj_slot[1]) && proj_ok(&proj_slot[2]) && proj_ok(&proj_slot[3]),
+              "level 3 again: its sections A-D are still saved (SAVE IT AS: the same loop stored again counts)");
         for (l = 0; l < TR_NLEVELS; l++) {
             snprintf(what, sizeof what, "level %u from the wrong page: done", l + 1u);
             check(play_level(l, NULL), what);

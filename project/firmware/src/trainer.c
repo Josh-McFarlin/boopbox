@@ -63,7 +63,7 @@ static struct {
     uint8_t btn;                                   /* a button the hint asks for (B_*, NB: the card's) */
     uint8_t keyed;                                 /* the card is about keys: the coach owns their lights */
     uint32_t ok_ms, t0;
-    uint32_t base;                                 /* TG_SAVED: the section's sum when the card came */
+    uint32_t base;                                 /* TG_SAVED: the section's stores when the card came */
     uint32_t sig, psig;                            /* the band, the picker as last drawn */
     uint32_t keys;                                 /* the keys lit */
     uint32_t log_at;                               /* the log's next free record (offset in TR_LOG) */
@@ -820,7 +820,8 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
         return 0;
     }
     case TG_SAVED:
-        return proj_ok(&proj_slot[c->v & 3]) && proj_slot[c->v & 3].sum != tr.base;
+        return proj_ok(&proj_slot[c->v & 3]) && sec_stores[c->v & 3] != tr.base;   /* (stored: also the same loop
+                                                                                      * as before, a level played again) */
     case TG_SONG: {
         const uint8_t *d = &TR_D[c->data];
         uint32_t k;
@@ -1003,7 +1004,7 @@ UI_SMALL static void tr_card_begin(void)
     tr.sig = 0;
     tr.keyed = 0;
     if (c && c->goal == TG_SAVED)
-        tr.base = proj_ok(&proj_slot[c->v & 3]) ? proj_slot[c->v & 3].sum : 0u;
+        tr.base = sec_stores[c->v & 3];
     if (c && c->goal == TG_DONE)
         tr.done |= (uint8_t)(1u << (tr.lvl - 1u));
     tr.at[tr.lvl - 1u] = tr.card;
