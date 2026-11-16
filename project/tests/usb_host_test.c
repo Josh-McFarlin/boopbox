@@ -293,12 +293,16 @@ static void mock_ep0_send(void *p, uint32_t n) { mock_send(0, p, n); }
 static void mock_ep0_buf(void *p) { ep_radr[0] = p; }
 static void mock_nop(void) {}
 static void mock_off(void) { off_count++; USB_CON0 = 0; }
-static void mock_attach(void *p) { (void)p; }
+static uint8_t sie_silent;              /* no cable: the SIE never finishes an access */
+static uint32_t resets, attaches, delayed_ms;
+static void mock_reset(void) { resets++; }
+static void mock_attach(void *p) { (void)p; attaches++; }
+static uint32_t mock_sie_done(void) { return !sie_silent; }
 static void mock_host_attach(void *p) { host_attaches++; ep_radr[0] = p; USB_CON0 = 0x25; }
 static uint32_t mock_one(void) { return 1; }
 static uint32_t mock_zero(void) { return 0; }
 static uint32_t mock_line(void) { return line_state; }
-static void fm1_delay_ms(uint32_t ms) { (void)ms; }
+static void fm1_delay_ms(uint32_t ms) { delayed_ms += ms; }
 
 #define fm1_usb_ep_enable mock_enable
 #define fm1_usb_ep_txbuf mock_txbuf
@@ -308,11 +312,11 @@ static void fm1_delay_ms(uint32_t ms) { (void)ms; }
 #define fm1_usb_ep0_buf mock_ep0_buf
 #define fm1_usb_rx_sync mock_nop
 #define fm1_usb_sie_on mock_one
-#define fm1_usb_sie_done mock_one
+#define fm1_usb_sie_done mock_sie_done
 #define fm1_usb_sie_wr_start mock_write
 #define fm1_usb_sie_rd_start mock_rd
 #define fm1_usb_sie_data mock_dt
-#define fm1_usb_reset mock_nop
+#define fm1_usb_reset mock_reset
 #define fm1_usb_off mock_off
 #define fm1_usb_attach mock_attach
 #define fm1_usb_host_attach mock_host_attach
@@ -494,7 +498,9 @@ static void test_keyboard(int via_hub)
     assert(!uh.on && !uh.run && uh.msg == UH_MSG_OFF);
     uh.msg = 0;
     usb.up = 0;
-    usb_retry(fm1_ms + 5000u);                          /* usb_start again as a device */
+    usb_retry(fm1_ms + 5000u);                          /* usb_start again as a device: the reset, */
+    assert(!usb.up);
+    usb_retry(fm1_ms + 5025u);                          /* the attach 25 ms later (the main loop never waits) */
     assert(usb.up);
     usb.up = 0;
     printf("USB host: keyboard %s: enumeration, events, ring back-pressure, unplug, replug, back to device: OK\n",
@@ -720,15 +726,44 @@ static void test_device_mode_untouched(void)
     uh_task(100);
     assert(!uh.on && !uh.msg);
     usb_retry(fm1_ms + 5000u);
+    usb_retry(fm1_ms + 5025u);
     assert(usb.up);
     usb.up = 0;
     puts("USB host: off at boot, the device side starts as before: OK");
+}
+
+/* on battery, no cable: the main loop's retry never waits (no fm1_delay_ms: the reset on one call, the attach on a
+ * call >= 25 ms later), gives up at the first SIE write left unanswered, and enumerates once a cable answers */
+static void test_retry_no_cable(void)
+{
+    uint32_t t = fm1_ms + 20000u, r0, a0, d0;
+    uh.want = uh.on = uh.run = 0;
+    usb.up = 0;
+    usb.detached = 0;
+    sie_silent = 1;
+    r0 = resets, a0 = attaches, d0 = delayed_ms;
+    usb_retry(t);                                       /* the reset */
+    assert(resets == r0 + 1 && attaches == a0 && !usb.up);
+    usb_retry(t + 10u);                                 /* the reset's 25 ms not out: nothing */
+    assert(resets == r0 + 1 && attaches == a0);
+    usb_retry(t + 25u);                                 /* the attach: the first write unanswered, given up */
+    assert(attaches == a0 + 1 && usb.timeouts == 1u && !usb.up);
+    usb_retry(t + 500u);                                /* then nothing until a second has gone by */
+    assert(resets == r0 + 1 && attaches == a0 + 1);
+    assert(delayed_ms == d0);                           /* never a wait in the main loop */
+    sie_silent = 0;                                     /* a cable */
+    usb_retry(t + 1025u);
+    usb_retry(t + 1050u);
+    assert(usb.up && delayed_ms == d0);
+    usb.up = 0;
+    puts("USB: the retry without a cable never waits in the main loop, and starts once a cable answers: OK");
 }
 
 int main(void)
 {
     devices_init();
     test_parse();
+    test_retry_no_cable();
     test_device_mode_untouched();
     test_keyboard(0);
     test_keyboard(1);
