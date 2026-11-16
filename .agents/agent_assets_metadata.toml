@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "4r2cEOMk9pLbJ1C-pmxHT"
+uri = "file://web/site/public/boopbox-social.png"
+type = "image"
+title = "BoopBox social preview"
+description = "1200 × 630 pixel-art Open Graph preview; the device illustration is removed and the headline now spans the card."
+logical_id = "986fc48c-7032-4937-9738-ae2ff2fd531c"
+content_hash = "sha256:ad3c5ccedb03aac7bfaa1f57550f66493341eb4b3420437e76eb4693612d7f3d"
+size = 15845
+mtime_ms = 1794848310743
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:ce832f97-6fbd-4bbd-ab18-149a21fcc715/986fc48c-7032-4937-9738-ae2ff2fd531c/6579d6f2-f9a8-400a-a105-4b96c9050592"
+storage_version_token = "1794848433893703"
+content_type = "image/png"
