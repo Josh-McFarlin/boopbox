@@ -33,6 +33,9 @@
  * The pressure: a held key's driven reading under its strike, past a dead zone (a resting finger does not move it):
  * (strike - reading) x 1 / 2 / 4 - 16, 0..127, smoothed a quarter of the way a driven sample, 0 when let go. A track's
  * aftertouch is its held keys' highest (seq.c kv_block), with MIDI channel pressure beside it (trk_at). */
+#ifndef FM1_FAST
+#define FM1_FAST                /* (hal/fm1_cc.h: the TIMER5 tick's code, in RAM; the host tests place nothing) */
+#endif
 #ifndef FM1_NCOL                        /* (the host tests: no HAL, the converter's owner as data) */
 static volatile struct {
     uint8_t want, on, drive;
@@ -99,7 +102,7 @@ static __attribute__((noinline)) void kv_cal_reset(void)
 
 /* the velocity of key k's press now: 100 with VELOCITY OFF; its strike's so far, else the key's recent mean, else every
  * key's */
-static uint32_t kv_vel_now(uint32_t k)
+FM1_FAST static uint32_t kv_vel_now(uint32_t k)
 {
     if (!(kv.on & 1u))
         return 100u;
@@ -108,7 +111,7 @@ static uint32_t kv_vel_now(uint32_t k)
     return kv.mean ? kv.mean : 100u;
 }
 /* the velocity of driven reading d on key key */
-static __attribute__((noinline)) uint32_t kv_map(uint32_t key, uint32_t d)
+FM1_FAST static __attribute__((noinline)) uint32_t kv_map(uint32_t key, uint32_t d)
 {
     const uint16_t *r = kv.ref[key];
     int32_t x = (int32_t)d, j = x > r[1] >> 4, lo = r[j] >> 4, hi = r[j + 1] >> 4, ylo = j ? 76 : 112, yhi = j ? 36 : 76, v;
@@ -122,7 +125,7 @@ static __attribute__((noinline)) uint32_t kv_map(uint32_t key, uint32_t d)
 }
 
 /* (ISR) key k's press let through to the keys' block (seq.c) with its velocity */
-static __attribute__((noinline)) void kv_take(uint32_t k)
+FM1_FAST static __attribute__((noinline)) void kv_take(uint32_t k)
 {
     kv.velx[k % 27u] = (uint8_t)(kv_vel_now(k) ^ 100u);
     KV_BARRIER();                               /* (the velocity before the press: the audio ISR may come between) */
@@ -130,7 +133,7 @@ static __attribute__((noinline)) void kv_take(uint32_t k)
 }
 /* (the scan's ISR, FM1_INPUT_NOTE_ON) key k's press debounced, before its bit sets: its strike's window still open, it
  * waits (at most KV_WAIT_T ticks: kv_tick), else it plays now; a key going to a drum track never waits */
-static __attribute__((noinline)) void kv_note_on(uint32_t k)
+FM1_FAST static __attribute__((noinline)) void kv_note_on(uint32_t k)
 {
     if ((kv.on & 1u) && k < KV_NK && !((kv.now >> k) & 1u) && (kv.k[k].pend || kv.k[k].st == KV_OPEN)) {
         kv.k[k].cnt = KV_WAIT_T;
@@ -143,7 +146,7 @@ static __attribute__((noinline)) void kv_note_on(uint32_t k)
     KV_BARRIER();                               /* (before the caller sets the key's bit) */
 }
 /* (the scan's ISR, every tick, FM1_INPUT_TICK) a press waiting past KV_WAIT_T ticks plays with the velocity so far */
-static __attribute__((noinline)) void kv_tick(void)
+FM1_FAST static __attribute__((noinline)) void kv_tick(void)
 {
     uint32_t k;
     if (!kv.hold)
@@ -154,7 +157,7 @@ static __attribute__((noinline)) void kv_tick(void)
 }
 /* (ISR) a driven reading v of key key, touched: the strike's window (closed once seated, or once its press waits), the
  * pressure's zero once seated, then the pressure */
-static __attribute__((noinline)) void kv_driven(uint32_t key, kv_key_t *k, uint32_t v)
+FM1_FAST static __attribute__((noinline)) void kv_driven(uint32_t key, kv_key_t *k, uint32_t v)
 {
     int32_t t, a = k->at;
     if (v < k->dmin)
@@ -183,7 +186,7 @@ static __attribute__((noinline)) void kv_driven(uint32_t key, kv_key_t *k, uint3
     k->at = (uint8_t)(a + (t - a + (t > a ? 3 : -3)) / 4);   /* (smoothed) */
 }
 /* (ISR) key let go: no pressure; a seated press moves its references by the reading its velocity came from */
-static __attribute__((noinline)) void kv_lift(uint32_t key, kv_key_t *k, uint32_t now_ms)
+FM1_FAST static __attribute__((noinline)) void kv_lift(uint32_t key, kv_key_t *k, uint32_t now_ms)
 {
     static const uint8_t DN[3] = {34, 16, 6}, UP[3] = {6, 16, 34};
     uint16_t *r = kv.ref[key];
@@ -205,7 +208,7 @@ static __attribute__((noinline)) void kv_lift(uint32_t key, kv_key_t *k, uint32_
 
 /* (the scan's ISR, FM1_INPUT_ANALOG) one sample of note key key (0..19; 20: none): v 0..1023; driven: taken with the
  * row driven high */
-static void kv_sample(uint32_t key, uint32_t v, uint32_t driven, uint32_t now_ms)
+FM1_FAST static void kv_sample(uint32_t key, uint32_t v, uint32_t driven, uint32_t now_ms)
 {
     kv_key_t *k;
     if (key >= KV_NK)
@@ -239,7 +242,7 @@ static void kv_sample(uint32_t key, uint32_t v, uint32_t driven, uint32_t now_ms
     k->dnext = k->st != KV_OPEN;                /* touched or held: the next sample driven */
 }
 /* (the scan's ISR, FM1_INPUT_DRIVE) drive the next sample of note key key? */
-static int kv_drive(uint32_t key) { return key < KV_NK && kv.k[key].dnext; }
+FM1_FAST static int kv_drive(uint32_t key) { return key < KV_NK && kv.k[key].dnext; }
 
 /* ---------------------------------------------------------------- main loop --- */
 /* x (counts) as a field: (x - lo) / 2^sh rounded, 0..top */

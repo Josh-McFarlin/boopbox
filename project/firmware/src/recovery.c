@@ -42,6 +42,9 @@ static void recovery_step(void)
  * leave it undriven, and lcd_init (fm1_lcd_hw_init) comes after this scan, so OCT- was never seen and SLOOP USB RESCUE
  * never opened (measured on an FM-1 and reported in a YouTube comment; the fix there was the same). The backlight comes
  * on ~50 ms earlier */
+#ifndef FM1_FAR
+#define FM1_FAR(fn) fn                      /* (hal/fm1_cc.h: a call into RAM code; the host tests call directly) */
+#endif
 #ifndef RECOVERY_KEYS_ON
 #define RECOVERY_KEYS_ON() fm1_lcd_backlight_on()   /* (2.7.2) the PA register access lives in hal/ (fm1_lcd_hw.h) */
 #endif
@@ -49,10 +52,10 @@ static int recovery_key(void)
 {
     uint32_t start = fm1_ticks();
     RECOVERY_KEYS_ON();
-    fm1_input_init();
+    FM1_FAR(fm1_input_init)();               /* (in RAM with the tick: hal/fm1_cc.h FM1_FAST) */
     do {
         fm1_wdt_feed();
-        fm1_input_scan();
+        FM1_FAR(fm1_input_scan)();
     } while ((uint32_t)(fm1_ticks() - start) < 50u * 1000u * FM1_TICKS_PER_US);
     return bootguard_manual(fm1_in.buttons);
 }
