@@ -113,6 +113,12 @@ UI_SMALL static int tr_goto(const char *where, const char *way, uint32_t btn)
     return 0;
 }
 UI_SMALL static int tr_home_ok(void) { return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown(); }
+/* the keys play notes and OCT- / OCT+ the octave: not on the screens that give them their own use (PATTERNS: pads,
+ * CHORDS: chords, SONG: its commands, DRUMS: the grid) */
+UI_SMALL static int tr_keys_ok(void)
+{
+    return !ui.menu && !on_pats_page() && !on_chords_page() && !on_song_page() && !on_drum_page();
+}
 UI_SMALL static int tr_to_song(void)                /* the SONG page: SAVE from HOME's screen */
 {
     if (!ui.menu && ui.layer == LY_PLAY && on_song_page())
@@ -326,7 +332,8 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
         uint32_t pen = 0, first = NSTEP;
-        if (on_notes_page() && !held)               /* (1.7) NOTES types a key played into its step: leave it first */
+        if ((on_notes_page() || !tr_keys_ok()) && !held)   /* (1.7) NOTES types a key played into its step, the
+                                                     * studio screens give the keys their own use: leave it first */
             return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         page = ui.step_page;
         /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
@@ -626,6 +633,11 @@ UI_SMALL static int tr_on_page(const tr_card_t *c)
     str_cpy(where, "THE ", sizeof where);
     str_cpy(where + str_len(where), PAGES[pg].title, sizeof where - str_len(where));
     str_cpy(where + str_len(where), " PAGE", sizeof where - str_len(where));
+    if ((c->btn == B_ENV || c->btn == B_LFO) && (on_song_page() || on_drum_page() || on_chords_page())) {
+        tr_goto(where, "TAP HOME, THEN TAP ", B_HOME);  /* (ENV and LFO hold no layer: these screens ignore them) */
+        tr_cat(B_NAME[c->btn % NB]);
+        return 0;
+    }
     tr_goto(where, "TAP ", c->btn);
     tr_cat(B_NAME[c->btn % NB]);
     if (family_next(PAGES[pg].fam) != pg) {         /* (more than one tap) */
@@ -659,6 +671,8 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             tr_say("THAT'S IT! TAP SAVE TO KEEP IT", ""), tr.btn = B_SAVE;
         else if (tr_browsing())
             tr_say("FOLLOW THE DOTS: KNOB 2, 3", "");
+        else if (!tr_quiet && !tr_home_ok())            /* (PRESETS opens the browser from HOME's screen only) */
+            return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         else
             tr_say("TURN PRESETS, FOLLOW THE DOTS", "");
         return 0;
@@ -713,6 +727,10 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_OCT:
         if (song.octave == c->v)
             return 1;
+        if (!tr_sel(c))                                 /* (OCT- / OCT+ do nothing on a drum track) */
+            return 0;
+        if (!tr_quiet && !tr_keys_ok())
+            return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         tr_say("NOW OCTAVE ", "");
         tr_num(song.octave);
         tr.btn = song.octave < c->v ? B_OCTUP : B_OCTDN;

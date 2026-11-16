@@ -28,6 +28,13 @@ Fixed in BoopBox Trainer:
   coach said *KNOB 4: STEPS TO 7* and the step could not be done. It now shows the way to the SONG page.
 - A note's length, accent or slide, a lock's value or slide, the song mode, and HOME's level, pan and tempo steps
   also gave their knob off their screen, where that knob changes something else. They now show the way first.
+- The sound and kit steps said *TURN PRESETS, FOLLOW THE DOTS* on any screen, but PRESETS opens the sound browser
+  from the HOME screen only. Elsewhere it did nothing, and the step could not be done. They now show the way HOME first.
+- The octave steps and the steps where you play notes on the keys now check the screen too: on the PATTERNS, CHORDS,
+  SONG and DRUMS screens the keys and OCT- / OCT+ do other things. The octave steps also check the track (OCT- / OCT+
+  do nothing on a drum track).
+- From the SONG, DRUMS and CHORDS screens, the way to an ENV page is now *TAP HOME, THEN TAP ENV* (ENV does nothing
+  there).
 - On HOME, the drum steps said *TAP HOME, THEN SEQ*. They now say *TAP SEQ*.
 - Level 3 played again: *SAVE IT AS A* to *D* could not be done when the section already held the same loop. Storing
   the section again now completes the step.
