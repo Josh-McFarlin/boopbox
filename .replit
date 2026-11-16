@@ -44,7 +44,7 @@ localPort = 23636
 externalPort = 3001
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "cloudrun"
 run = ["node", "server.js"]
 ignorePorts = false
 build = ["npm", "run", "build"]

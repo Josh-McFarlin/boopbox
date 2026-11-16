@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import SiteHeader from '../../components/SiteHeader.tsx'
 import { arcadeButton, kbd, pixelPanel } from '../../components/styles.ts'
+import { trackEmulatorInteraction } from '../../lib/analytics.ts'
 
 import * as K from './classes.ts'
 import {
@@ -107,6 +108,7 @@ function PanelButton({
   const [held, setHeld] = useState(false)
   const b = B[name]
   const onDown = (ev: ReactPointerEvent<HTMLButtonElement>): void => {
+    trackEmulatorInteraction('button')
     ev.preventDefault()
     if (ev.shiftKey) {
       // latched: held until clicked again
@@ -194,6 +196,7 @@ function Knob({ name, e, send, value, onValue }: KnobProps) {
   const turn = useCallback(
     (s: number) => {
       if (!s) return
+      trackEmulatorInteraction('knob')
       if (pot) {
         onValue(s)
         return
@@ -367,6 +370,7 @@ const Emulator: React.FC = () => {
   const noteOn = useCallback(
     (k: number, vel: number) => {
       if (heldRef.current.has(k)) return
+      trackEmulatorInteraction('key')
       heldRef.current = new Set(heldRef.current).add(k)
       setHeld(heldRef.current)
       send({ t: 'key', k, down: true, vel })
@@ -396,9 +400,11 @@ const Emulator: React.FC = () => {
         noteOn(KEYMAP[ev.code], ev.shiftKey ? 127 : 100)
         ev.preventDefault()
       } else if (ev.code in BTNMAP) {
+        trackEmulatorInteraction('button')
         send({ t: 'button', b: BTNMAP[ev.code], down: true })
         ev.preventDefault()
       } else if (ev.code in KNOBMAP) {
+        trackEmulatorInteraction('knob')
         const [e, s] = KNOBMAP[ev.code]
         send({ t: 'knob', e, s })
         ev.preventDefault()
@@ -523,6 +529,7 @@ const Emulator: React.FC = () => {
 
   /* the other firmware: the running one is switched off (its flash is already kept) and the new one powered on */
   const pick = async (f: FirmwareId): Promise<void> => {
+    trackEmulatorInteraction('firmware')
     setFw(f)
     const u = new URL(location.href)
     if (f === 'main') u.searchParams.delete('fw')
@@ -712,7 +719,10 @@ const Emulator: React.FC = () => {
               <button
                 type="button"
                 disabled={starting}
-                onClick={async () => power()}
+                onClick={async () => {
+                  trackEmulatorInteraction('power')
+                  await power()
+                }}
                 className={`${arcadeButton} min-h-[60px] bg-green px-9 text-[24px] [--shadow:var(--color-orange)]`}
               >
                 {starting ? 'Starting…' : '▶ Power on'}
@@ -731,7 +741,10 @@ const Emulator: React.FC = () => {
               <button
                 type="button"
                 className={`${pixelPanel} min-h-11 cursor-pointer border-0 px-4 font-pixel text-[16px] text-fg hover:text-blue`}
-                onClick={() => send({ t: 'flash' })}
+                onClick={() => {
+                  trackEmulatorInteraction('utility')
+                  send({ t: 'flash' })
+                }}
               >
                 Download the flash
               </button>
@@ -745,6 +758,7 @@ const Emulator: React.FC = () => {
                     )
                   )
                     return
+                  trackEmulatorInteraction('utility')
                   await flashErase(fw)
                   location.reload()
                 }}

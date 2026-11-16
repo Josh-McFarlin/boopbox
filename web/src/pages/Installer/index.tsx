@@ -9,6 +9,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import SiteHeader from '../../components/SiteHeader.tsx'
 import { arcadeButton, pixelPanel } from '../../components/styles.ts'
+import {
+  trackFirmwareInstallFailed,
+  trackFirmwareInstallOutcome,
+  trackFirmwareInstallStarted,
+} from '../../lib/analytics.ts'
+import type { InstallFailureReason } from '../../lib/analytics.ts'
 import { Updater } from '../../lib/fm1ota.ts'
 import type { OtaError } from '../../lib/fm1ota.ts'
 import { logicalImage, productOf } from '../../lib/fm1pkg.ts'
@@ -43,10 +49,26 @@ const NAMES: Record<Choice, string> = {
 }
 const TOTAL =
   74 + 1179 /* reads: step 1, step 2 (head + app area, SLOOP 2.0 loader) */
+const OTA_FAILURE_CODES = new Set<OtaError['code']>([
+  'notfound',
+  'model',
+  'stopped',
+  'noloader',
+  'lost',
+  'noreturn',
+  'mismatch',
+  'badreq',
+  'foreign',
+])
 const sha = async (pkg: Uint8Array<ArrayBuffer>) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', pkg))]
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
+
+function installFailureReason(err: unknown): InstallFailureReason {
+  const code = (err as Partial<OtaError> | null)?.code
+  return code && OTA_FAILURE_CODES.has(code) ? code : 'other'
+}
 
 const A = (props: AnchorHTMLAttributes<HTMLAnchorElement>) => (
   <a target="_blank" rel="noopener" className="underline" {...props} />
@@ -184,29 +206,48 @@ const Installer: React.FC<InstallerProps> = ({ meta }) => {
   }
 
   const install = async (): Promise<void> => {
-    if (writing) return
+    if (writing || writingRef.current || !cur) return
+    const product = choice
+    const version = cur.version
+    writingRef.current = true
     setWriting(true)
-    let midi: MIDIAccess
+    trackFirmwareInstallStarted(product, version)
     try {
-      midi = await navigator.requestMIDIAccess({ sysex: true })
-    } catch {
-      sayK('denied')
-      setWriting(false)
-      return
-    }
-    try {
+      if (typeof navigator.requestMIDIAccess !== 'function') {
+        trackFirmwareInstallFailed(product, version, 'unsupported_browser')
+        sayK('nomidi')
+        return
+      }
+      let midi: MIDIAccess
+      try {
+        midi = await navigator.requestMIDIAccess({ sysex: true })
+      } catch {
+        trackFirmwareInstallFailed(product, version, 'permission_denied')
+        sayK('denied')
+        return
+      }
       const up = new Updater(midi, addLog)
       const ota = await up.find((id) => /^ota-/i.test(id.model), true)
       if (ota) {
         ota.link.close()
-        sayK((await up.resume(image!, step)) ? 'done' : 'stopped')
+        if (await up.resume(image!, step)) {
+          trackFirmwareInstallOutcome('success', product, version)
+          sayK('done')
+        } else {
+          trackFirmwareInstallFailed(product, version, 'stopped')
+          sayK('stopped')
+        }
       } else {
-        await up.install(image!, cur!.product, step)
+        await up.install(image!, cur.product, step)
+        trackFirmwareInstallOutcome('success', product, version)
       }
     } catch (e) {
+      trackFirmwareInstallFailed(product, version, installFailureReason(e))
       failed(e)
+    } finally {
+      writingRef.current = false
+      setWriting(false)
     }
-    setWriting(false)
   }
 
   const statusText = status.key ? t(status.key) + status.arg : status.text
