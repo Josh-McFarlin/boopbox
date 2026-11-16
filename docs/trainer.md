@@ -115,6 +115,14 @@ step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP S
 The button to press blinks. When you get to that screen, the card goes and the step shows again from its headline.
 The card does not count as a step: the step numbers and the progress bar stay the same.
 
+The same kind of card shows when something else stops the step's controls from working (1.9.6):
+
+- *TURN RECORDING OFF* (*TAP REC (REC OFF)*): REC is armed, or a take or a recording runs. No lesson records, and the
+  REC screen gives the keys, the knobs, HOME, SELECT and PRESETS other uses.
+- *CLOSE THE STEP MENU* (*TAP OCT-*): the step's menu (OCT+ held on NOTES or the drum grid) is open. Its knobs work the
+  menu, and the keys do not write steps. The menu stays when the step needs it (SLIDE, RATCHET).
+- *STOP THE MUSIC* (*PRESS PLAY TO STOP*): the SONG page's knobs 2–4 and OCT- work only when stopped.
+
 The button to press **blinks**. On a lesson step about keys, the coach controls the key lights. Only the keys to press
 are lit. Every step of the page that is still wrong blinks. BoopBox's beat markers and the steps that are already
 correct are not lit.

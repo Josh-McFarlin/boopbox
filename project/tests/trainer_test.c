@@ -707,6 +707,8 @@ static int follow_go(const tr_card_t *c)
             slow(EN_SELECT, -1);
         else if (tr_prefix(h, "TURN SELECT RIGHT"))
             slow(EN_SELECT, 1);
+        else if (tr_prefix(h, "PRESS PLAY") && tr.btn == B_PLAY)
+            tap(B_PLAY);
         else if (tr_prefix(h, "TAP ")) {
             for (b = 0; b < NB; b++) {
                 size_t n = strlen(B_NAME[b]);
@@ -732,19 +734,71 @@ static int follow_go(const tr_card_t *c)
     }
     return !tr.go[0];
 }
-/* the wrong screens of the detour: each from HOME's screen */
-static const char *const WRONG[] = {"TRACKS", "ENV", "SEL", "FX", "SEQ", "SCENES", "SONG"};
-static void wrong_screen(uint32_t w)
+/* the states of the detour: each from HOME's screen (stopped as the card found it, or playing). Every screen, the sound
+ * browser, the visualiser, REC armed, playing */
+static const char *const WRONG[] = {"TRACKS", "ENV", "SEL", "CHORDS", "FX", "SEQ", "TIMING", "PATTERNS", "CHAIN", "SCENES",
+                                    "SONG", "BROWSER", "VISUALISER", "REC ARMED", "TRACKS PLAYING", "SONG PLAYING",
+                                    "SCENES PLAYING", "RECORDING", "OTHER TRACK", "STEP MENU", "DRUM STEP MENU"};
+static int was_playing;
+static uint32_t was_sel;
+static int wrong_screen(uint32_t w)                 /* 0: this state cannot be made here */
 {
+    uint32_t g;
+    was_playing = song.playing != 0;
+    was_sel = song.sel;
     home();
     frames(3);
-    if (w == 1u) tap(B_ENV);
-    else if (w == 2u) tap(B_SCL);
-    else if (w == 3u) tap(B_FX);
-    else if (w == 4u) tap(B_SEQ);
-    else if (w == 5u) seq_save();
-    else if (w == 6u) tap(B_SAVE);
-    frames(3);
+    if ((w >= 14u && w <= 17u) != (song.playing != 0)) {          /* (the transport as the state wants it) */
+        if (w == 13u || (w >= 14u && arrangement_enabled))
+            return 0;
+        tap(B_PLAY);
+        frames(4);
+        if ((w >= 14u && w <= 17u) != (song.playing != 0))
+            return 0;
+    }
+    switch (w) {
+    case 1: tap(B_ENV); break;
+    case 2: tap(B_SCL); break;
+    case 3: for (g = 0; g < 8u && !on_chords_page(); g++) tap(B_SCL); break;
+    case 4: tap(B_FX); break;
+    case 5: tap(B_SEQ); break;
+    case 6: for (g = 0; g < 8u && strcmp(cur_page()->title, "TIMING"); g++) tap(B_SEQ); break;
+    case 7: seq_save(); slow(EN_SELECT, -1); slow(EN_SELECT, -1); break;
+    case 8: seq_save(); slow(EN_SELECT, -1); break;
+    case 9: case 16: seq_save(); break;
+    case 10: case 15: tap(B_SAVE); break;
+    case 11: slow(EN_PRESET, 1); break;
+    case 12: tap(B_HOME); break;
+    case 13: if (song.playing || song.rec || rec_wait) return 0; tap(B_REC); break;
+    case 17: if (song.rec) return 0; tap(B_REC); break;     /* (playing: REC records at once) */
+    case 18: slow(EN_ALGO, song.sel < NTRK - 1u ? 1 : -1); break;
+    case 19: case 20:                                     /* (a synth track's NOTES, the drum grid: OCT+ held, its menu) */
+        if ((w == 20u) != (is_drum(TSEL) != 0))
+            return 0;
+        tap(B_SEQ);
+        down(B_OCTUP);
+        frames(40);
+        up(B_OCTUP);
+        break;
+    default: break;
+    }
+    frames(4);
+    return w == 3u ? on_chords_page() : w == 6u ? !strcmp(cur_page()->title, "TIMING") : w == 11u ? tr_browsing() :
+           w == 12u ? vis_shown() : w == 13u ? rec_wait != 0 : w == 17u ? song.rec != 0 : w >= 19u ? ui.sheet != 0 : 1;
+}
+static void wrong_restore(void)                     /* back to HOME's screen, the transport as it was, not armed */
+{
+    if (tr_browsing())
+        tap(B_HOME);                                     /* (the browser closed: the sound it opened on) */
+    if ((rec_wait && !song.playing) || song.rec) {
+        home();
+        tap(B_REC);
+    }
+    home();
+    algo_to(was_sel);                                    /* (OTHER TRACK: the card's track again) */
+    if ((song.playing != 0) != was_playing && !arrangement_enabled)
+        tap(B_PLAY);
+    frames(4);
 }
 /* a card with no page card here: its controls work on every screen (a held button's layer, PLAY, ALGORITHM), or this
  * is its own screen. Anything else would name a control that does nothing here, or something else */
@@ -759,41 +813,174 @@ static int own_screen(const tr_card_t *c)
     case TG_TRACK: case TG_PLAY: case TG_PAGE: case TG_DONE: case TG_MUTES: case TG_SAVED:
         return 1;
     case TG_SONGMODE:
-        return arrangement_enabled || on_song_page();
+        return arrangement_enabled || (on_song_page() && !song.playing);
     case TG_SONG:
-        return on_song_page();
+        return on_song_page() && !song.playing;
     case TG_KIT: case TG_SOUND:
         return on_home() || tr_browsing();
     case TG_OCT:
-        return plain;
+        return plain && !(ui.sheet && (on_notes_page() || on_drum_page()));
     case TG_PARAM: case TG_GLOBAL:
         if (c->data)
             return !ui.home && ui.page == c->data - 1u;
         return c->btn != B_HOME || on_home();
-    case TG_NOTES:
-        return c->flags == HOW_SEQ ? plain && !on_notes_page() : on_notes_page();
+    case TG_NOTES:                                       /* (the step's menu open: only for SLIDE and RATCHET) */
+        return c->flags == HOW_SEQ ? plain && !on_notes_page() :
+               on_notes_page() && (!ui.sheet || strstr(tr.hint, "SLIDE"));
     case TG_LANES:
-        return on_drum_page() && !drum_page;
+        return on_drum_page() && !drum_page && (!ui.sheet || strstr(tr.hint, "RATCHET"));
     case TG_LOCK:
         return !ui.home && cur_page()->scope == SC_STEP;
     default:                                             /* (PATTERNS, CHAIN, SCENES: the view is checked as it goes) */
         return on_pats_page();
     }
 }
+/* no page card here: the card's own control, once, as its action / hint says it. 1: it moved toward the card (or did
+ * it), 0: it did nothing (the bug: a control named where it does nothing), -1: a card of many presses (its own screen
+ * is checked by own_screen) */
+static int knob_of(const char *a)
+{
+    const char *k = strstr(a, "KNOB ");
+    return strstr(a, "SELECT") && !k ? EN_SELECT : k ? EN_K1 + (k[5] - '1') : -1;
+}
+static int probe_act(const tr_card_t *c)
+{
+    char act[40];
+    int32_t was, want;
+    int e;
+    tr_act(c, act, sizeof act);
+    if (tr_prefix(tr.hint, "TURN ALGORITHM TO TRACK ")) {
+        int n = hint_num(tr.hint, "TRACK "), r;
+        was = (int32_t)song.sel;
+        slow(EN_ALGO, (int32_t)song.sel < n - 1 ? 1 : -1);
+        r = (int32_t)song.sel != was;
+        if (r)
+            slow(EN_ALGO, (int32_t)song.sel > was ? -1 : 1);   /* (undone: every state tries the card as it came) */
+        return r;
+    }
+    switch (c->goal) {
+    case TG_KIT: case TG_SOUND:
+        if (tr_browsing())
+            return -1;
+        slow(EN_PRESET, 1);
+        return tr_browsing();
+    case TG_OCT:
+        was = song.octave;
+        tap(song.octave < c->v ? B_OCTUP : B_OCTDN);
+        if (song.octave == was)
+            return 0;
+        song.octave = (int8_t)was;
+        return 1;
+    case TG_PLAY:
+        was = song.playing != 0;
+        tap(B_PLAY);
+        frames(4);
+        if ((song.playing != 0) == was)
+            return 0;
+        tap(B_PLAY);
+        frames(4);
+        return 1;
+    case TG_SAVED:
+        was = sec_stores[c->v & 3];
+        hold_layer(B_SAVE);
+        key(key_of_white(4u + (uint32_t)c->v));
+        if (sec_stores[c->v & 3] == (uint8_t)was)
+            key(key_of_white(4u + (uint32_t)c->v));
+        let_go(B_SAVE);
+        return sec_stores[c->v & 3] != (uint8_t)was;
+    case TG_MUTES: {
+        uint32_t m0 = 0, m1 = 0, k, n = (uint32_t)hint_num(tr.hint, "KEY ");
+        for (k = 0; k < NTRK; k++) m0 |= (trk[k].p[P_MUTE] != 0) << k;
+        if (!n)
+            return -1;
+        hold_layer(B_GLO);
+        key(key_of_white(n - 1u));
+        let_go(B_GLO);
+        for (k = 0; k < NTRK; k++) m1 |= (trk[k].p[P_MUTE] != 0) << k;
+        if (m0 == m1)
+            return 0;
+        hold_layer(B_GLO);
+        key(key_of_white(n - 1u));
+        let_go(B_GLO);
+        return 1;
+    }
+    case TG_SONGMODE:
+        if (arrangement_enabled) {
+            tap(B_PLAY);
+            frames(4);
+            return song.playing != 0;
+        }
+        tap(B_OCTDN);
+        was = arrangement_enabled != 0;
+        if (was)
+            tap(B_OCTDN);                                /* (back: the other states find it as the card did) */
+        return was;
+    case TG_SONG: {
+        const uint8_t *d = &TR_D[c->data];
+        if (arrangement.count == d[0])
+            return -1;
+        was = arrangement.count;
+        slow(EN_K4, arrangement.count < d[0] ? 1 : -1);
+        return arrangement.count != (uint32_t)was;
+    }
+    case TG_PARAM: case TG_GLOBAL: {
+        int16_t *v = c->goal == TG_GLOBAL ? &song.g[c->p] : &trk[c->trk % NTRK].p[c->p];
+        int held = tr_prefix(act, "HOLD SEQ") ? B_SEQ : tr_prefix(act, "HOLD SEL") ? B_SCL : -1;
+        if (c->goal == TG_PARAM && c->p == P_ROOT) {
+            uint32_t k = 0;
+            was = *v;
+            while (k < 27u && !((tr.keys >> k) & 1u)) k++;
+            if (k == 27u)
+                return 0;
+            hold_layer(B_SCL);
+            key(k);
+            let_go(B_SCL);
+            if (*v == was)
+                return 0;
+            *v = (int16_t)was;
+            return 1;
+        }
+        if ((e = knob_of(act)) < 0)
+            return -1;
+        was = *v, want = c->v;
+        if (held >= 0) hold_layer((uint32_t)held);
+        slow((uint32_t)e, was < want ? 1 : -1);
+        slow((uint32_t)e, was < want ? 1 : -1);
+        if (held >= 0) let_go((uint32_t)held);
+        if (*v == was)
+            return 0;
+        *v = (int16_t)was;
+        return 1;
+    }
+    default:
+        return -1;
+    }
+}
+static uint32_t probe_acts, probe_bad;
 static void wrong_page(const tr_card_t *c, uint32_t l, uint32_t at)
 {
     uint32_t w;
     char name[64];
-    for (w = 0; w < NELEM(WRONG); w++) {
-        wrong_screen(w);
+    for (w = 0; w < NELEM(WRONG) && tr.card == at; w++) {
+        int r;
+        if (!wrong_screen(w)) {
+            wrong_restore();
+            continue;
+        }
         if (tr_goal(c))
             return;
         if (!tr.go[0]) {
-            if (!own_screen(c)) {
-                printf("trainer: level %u card %u (%s): from %s no page card: \"%s\"\n", l + 1u, at + 1u, c->head,
-                       WRONG[w], tr.hint);
+            char hint[48];
+            strcpy(hint, tr.hint);
+            r = probe_act(c);
+            probe_acts += r >= 0;
+            if (r == 0 || (r < 0 && !own_screen(c))) {
+                printf("trainer: level %u card %u (%s): %s: no page card, %s: \"%s\"\n", l + 1u, at + 1u, c->head,
+                       WRONG[w], r == 0 ? "its control does nothing here" : "not its screen", hint);
+                probe_bad++;
                 fails++;
             }
+            wrong_restore();
             continue;
         }
         detour_cards++;
@@ -813,8 +1000,15 @@ static void wrong_page(const tr_card_t *c, uint32_t l, uint32_t at)
             printf("trainer: level %u card %u (%s): from %s the page card's way did not get there: %s / %s\n", l + 1u,
                    at + 1u, c->head, WRONG[w], tr.go, tr.hint);
             fails++;
+            wrong_restore();
             return;
         }
+        if (w + 1u < NELEM(WRONG))
+            wrong_restore();
+    }
+    if (song.rec || rec_wait) {                          /* (the last state: recording, not the card's) */
+        home();
+        tap(B_REC);
     }
 }
 static int play_level(uint32_t l, const char *shots)
@@ -1199,6 +1393,8 @@ int main(int argc, char **argv)
         detour = 1;
         check(proj_ok(&proj_slot[0]) && proj_ok(&proj_slot[1]) && proj_ok(&proj_slot[2]) && proj_ok(&proj_slot[3]),
               "level 3 again: its sections A-D are still saved (SAVE IT AS: the same loop stored again counts)");
+        arr_defaults(&arrangement);                     /* (the song as new: level 3's song steps from the wrong page too) */
+        arrangement_enabled = 0;
         for (l = 0; l < TR_NLEVELS; l++) {
             snprintf(what, sizeof what, "level %u from the wrong page: done", l + 1u);
             check(play_level(l, NULL), what);

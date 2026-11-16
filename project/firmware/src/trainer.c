@@ -112,7 +112,11 @@ UI_SMALL static int tr_goto(const char *where, const char *way, uint32_t btn)
     tr.keys = 0;
     return 0;
 }
-UI_SMALL static int tr_home_ok(void) { return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown(); }
+static uint8_t tr_sheet_ok;                         /* the hint given is one for the step's menu (OCT+ held: SLIDE, RATCHET) */
+UI_SMALL static int tr_home_ok(void)
+{
+    return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown() && !rec_wait && !ft_on;
+}
 /* the keys play notes and OCT- / OCT+ the octave: not on the screens that give them their own use (PATTERNS: pads,
  * CHORDS: chords, SONG: its commands, DRUMS: the grid) */
 UI_SMALL static int tr_keys_ok(void)
@@ -125,6 +129,23 @@ UI_SMALL static int tr_to_song(void)                /* the SONG page: SAVE from 
         return 1;
     return tr_home_ok() ? tr_goto("THE SONG PAGE", "TAP SAVE", B_SAVE) :
                           tr_goto("THE SONG PAGE", "TAP HOME, THEN TAP SAVE", B_HOME);
+}
+UI_SMALL static int tr_menu_closed(void)            /* the step's menu (OCT+ held on NOTES / the grid): closed */
+{
+    if (!ui.sheet || !(on_notes_page() || on_drum_page()))
+        return 1;
+    tr_goto("", "TAP OCT-", B_OCTDN);               /* (its knobs are the menu's, the keys do not write, OCT+ acts on
+                                                     * its row; OCT- closes it, or goes back to it from a strip) */
+    str_cpy(tr.go, "CLOSE THE STEP MENU", sizeof tr.go);
+    return 0;
+}
+UI_SMALL static int tr_stopped(void)                /* the SONG page's knobs 2-4 and OCT-: stopped only ("STOP FIRST") */
+{
+    if (!song.playing && !transport_req)
+        return 1;
+    tr_goto("", "PRESS PLAY TO STOP", B_PLAY);
+    str_cpy(tr.go, "STOP THE MUSIC", sizeof tr.go);
+    return 0;
 }
 UI_SMALL static int tr_to_notes(void)               /* the NOTES page (the SEQ pages) */
 {
@@ -321,6 +342,7 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (why == 3u) {
         if (!tr_to_notes())
             return 0;
+        tr_sheet_ok = ui.cursor == bad && !(w.fl & 1u) && !(t->step[bad].flags & SF_ACCENT);   /* (SLIDE: the menu's) */
         if (ui.cursor != bad) {
             tr_say("KNOB 1 TO STEP ", "");
             tr_num((int32_t)bad + 1);
@@ -534,6 +556,7 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
                                        (w & 3u) == LV_SOFT ? "SOFT" : "NORM");
         } else {
             static const char *const R[4] = {"X1", "X2", "X3", "X4"};
+            tr_sheet_ok = 1;
             if (ui.sheet)
                 tr_step(bad, "KNOB 2: RATCHET ", R[(w >> 2) & 3u]);
             else {
@@ -646,7 +669,21 @@ UI_SMALL static int tr_on_page(const tr_card_t *c)
     }
     return 0;
 }
+UI_SMALL static int tr_goal_in(const tr_card_t *c);
+/* a card's goal: done, or what to do (the hint) or the page card. No step records: while REC is on (armed, a free take,
+ * recording) the REC screen and its takes give the keys, knobs, HOME, SELECT and PRESETS other uses, so the page card
+ * says to turn it off first */
 UI_SMALL static int tr_goal(const tr_card_t *c)
+{
+    if (tr_goal_in(c))
+        return 1;
+    if (!tr_quiet && c->goal != TG_DONE && (song.rec || rec_wait || ft_on)) {
+        tr_goto("", "TAP REC (REC OFF)", B_REC);
+        str_cpy(tr.go, "TURN RECORDING OFF", sizeof tr.go);
+    }
+    return 0;
+}
+UI_SMALL static int tr_goal_in(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk % NTRK];
     tr.hint[0] = 0;
@@ -731,16 +768,22 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             return 0;
         if (!tr_quiet && !tr_keys_ok())
             return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
+        if (!tr_quiet && !tr_menu_closed())
+            return 0;
         tr_say("NOW OCTAVE ", "");
         tr_num(song.octave);
         tr.btn = song.octave < c->v ? B_OCTUP : B_OCTDN;
         return 0;
     case TG_NOTES:
+    case TG_LANES: {
+        int r;
         tr.keyed = 1;
-        return tr_sel(c) && tr_notes(c, t);
-    case TG_LANES:
-        tr.keyed = 1;
-        return tr_sel(c) && tr_lanes(c, t);
+        tr_sheet_ok = 0;
+        r = tr_sel(c) && (c->goal == TG_NOTES ? tr_notes(c, t) : tr_lanes(c, t));
+        if (!r && !tr_quiet && !tr.go[0] && !tr_sheet_ok)
+            tr_menu_closed();
+        return r;
+    }
     case TG_MUTES: {
         uint32_t k;
         for (k = 0; k < NTRK; k++)
@@ -848,7 +891,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             same = arrangement.entry[k].scene == d[1u + 2u * k] && arrangement.entry[k].bars == d[2u + 2u * k];
         if (same)
             return 1;
-        if (!tr_quiet && !tr_to_song())                 /* (its knobs: the SONG page only) */
+        if (!tr_quiet && (!tr_to_song() || !tr_stopped()))   /* (its knobs: the SONG page only, stopped) */
             return 0;
         if (arrangement.count != d[0]) {
             tr_say("KNOB 4: STEPS TO ", "");
@@ -875,8 +918,9 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_SONGMODE:
         if (arrangement_enabled && song.playing)
             return 1;
-        if (!arrangement_enabled && !tr_quiet)          /* (OCT- turns it on on the SONG page; then PLAY anywhere) */
-            tr_to_song();
+        if (!arrangement_enabled && !tr_quiet && tr_to_song())   /* (OCT- turns it on on the SONG page, stopped; then
+                                                                 * PLAY anywhere) */
+            tr_stopped();
         return 0;
     case TG_SCENE: {
         const uint8_t *d = &TR_D[c->data];

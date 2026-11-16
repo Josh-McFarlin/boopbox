@@ -25,6 +25,13 @@ Fixed in BoopBox Trainer (the page card that came in 1.9.5 now covers these step
   do nothing on a drum track).
 - From the SONG, DRUMS and CHORDS screens, the way to an ENV page is now *TAP HOME, THEN TAP ENV* (ENV does nothing
   there).
+- With REC armed, or while recording, the coach gave a step's controls, but on the REC screen they do other things
+  (PRESETS, HOME and SELECT too). It now shows *TURN RECORDING OFF* and *TAP REC (REC OFF)* first. No lesson records.
+- With the step's menu open (OCT+ held on NOTES or the drum grid), the coach said *KNOB 1 TO STEP 5*, *KNOB 4 TO ACC*,
+  *ADD HAT (KEY 3)* or *NOW OCTAVE 0*, but the knobs then work the menu, the keys do not write, and OCT- / OCT+ act on
+  the menu. It now shows *CLOSE THE STEP MENU* and *TAP OCT-* first (the menu stays for SLIDE and RATCHET).
+- The song steps and song mode while the music plays: the SONG page answered *STOP FIRST*. The coach now shows *STOP THE
+  MUSIC* and *PRESS PLAY TO STOP* first.
 
 BoopBox itself is unchanged apart from its version. Projects, presets, settings and the trainer's progress from 1.9.5
 open as before.
