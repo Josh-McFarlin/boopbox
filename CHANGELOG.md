@@ -13,6 +13,46 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.6
+
+Fixed in BoopBox Trainer (the page card that came in 1.9.5 now covers these steps too):
+
+- The sound and kit steps said *TURN PRESETS, FOLLOW THE DOTS* on any screen, but PRESETS opens the sound browser
+  from the HOME screen only. Elsewhere it did nothing, and the step could not be done. Off the HOME screen, the coach
+  now shows *GO TO THE HOME SCREEN* and *TAP HOME* first.
+- The octave steps and the steps where you play notes on the keys now check the screen too: on the PATTERNS, CHORDS,
+  SONG and DRUMS screens the keys and OCT- / OCT+ do other things. The octave steps also check the track (OCT- / OCT+
+  do nothing on a drum track).
+- From the SONG, DRUMS and CHORDS screens, the way to an ENV page is now *TAP HOME, THEN TAP ENV* (ENV does nothing
+  there).
+- With REC armed, or while recording, the coach gave a step's controls, but on the REC screen they do other things
+  (PRESETS, HOME and SELECT too). It now shows *TURN RECORDING OFF* and *TAP REC (REC OFF)* first. No lesson records.
+- With the step's menu open (OCT+ held on NOTES or the drum grid), the coach said *KNOB 1 TO STEP 5*, *KNOB 4 TO ACC*,
+  *ADD HAT (KEY 3)* or *NOW OCTAVE 0*, but the knobs then work the menu, the keys do not write, and OCT- / OCT+ act on
+  the menu. It now shows *CLOSE THE STEP MENU* and *TAP OCT-* first (the menu stays for SLIDE and RATCHET).
+- The song steps and song mode while the music plays: the SONG page answered *STOP FIRST*. The coach now shows *STOP THE
+  MUSIC* and *PRESS PLAY TO STOP* first.
+- A button held that the step does not use (its layer changes what the knobs and keys do; REC held clears the track):
+  the coach shows *LET GO OF SEQ* (or the button's name) first. When ALGORITHM is blocked only by a held button, it says
+  that too, not *TAP HOME*.
+- BoopBox's menu open: the coach's line now shows in the menu's header, *BACK TO THE LESSON* and *TAP OCT- (CLOSE)*.
+- A track changed to the other kind (TOOLS → KIND, or a kit chosen on a synth track): its pattern, sound and settings
+  went back to their defaults, and the coach did not see it. Now the steps of that track ask for *MAKE IT A SYNTH TRACK*
+  (or *A DRUM TRACK*), and the browser's dots lead to the track's own sound. Then the coach goes back only to the steps
+  that no longer hold, and on to the step you were on.
+- In the sound browser, a sound or kit on the other side (a kit for a synth track) said *FOLLOW THE DOTS: KNOB 2, 3*,
+  but those knobs stay on their side. It now says *KNOB 1 RIGHT: DRUMS* or *KNOB 1 LEFT: SYNTH* first.
+- *THE SONG IS IN …* and *… MINOR* checked track 1 only, but SEL sets every synth track. A track that had lost them
+  played in the wrong key. They now check every synth track.
+- The drum grid's, NOTES' and TIMING's page steps now check that their track is selected (*TURN ALGORITHM TO TRACK 4*).
+- Continuing a level after power-off checked the steps since the last pattern or section change, and a later step that
+  added to a pattern made an earlier one fail: in level 1, after *SNARE*, it went back to *KICK* and asked to take the
+  snare out. Now a step done again by a later one is not checked, a track's sound and settings are checked across the
+  whole level, and after the steps that broke it goes on where you were.
+
+BoopBox itself is unchanged apart from its version. Projects, presets, settings and the trainer's progress from 1.9.5
+open as before.
+
 ## 1.9.5
 
 **BoopBox Trainer: the coach shows the way to a step's screen.** A lesson step that needs a screen (the SONG page,

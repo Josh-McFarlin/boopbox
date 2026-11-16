@@ -111,8 +111,8 @@ class Level:
     def timing(self, head):                           # the TIMING page, before its knobs
         self.page("TIMING", "SEQ", head, "TAP SEQ UNTIL YOU SEE TIMING")
 
-    def octave(self, o, head, act):
-        self.add(head, act, "TG_OCT", v=o, btn="OCT+" if o > 0 else "OCT-")
+    def octave(self, n, o, head, act):                # (track n selected: OCT- / OCT+ do nothing on a drum track)
+        self.add(head, act, "TG_OCT", trk=n - 1, v=o, btn="OCT+" if o > 0 else "OCT-")
 
     def notes(self, n, head, act, how="NOTES", pat=None, upto=None, plain=False, ties=True):
         """the synth pattern of track n (this level's section, or pat): every step; upto: only steps before it (the
@@ -199,6 +199,10 @@ class Level:
 
     def done(self, head, act):
         self.add(head, act, "TG_DONE")
+        track_pages = {page_index("DRUMS", "TRK"), page_index("NOTES", "SEQ"), page_index("TIMING", "SEQ")}
+        for i, c in enumerate(self.cards):              # a track's page step (its grid, NOTES, TIMING): the track of the
+            if c.goal == "TG_PAGE" and c.p in track_pages:   # step after it (another track: ALGORITHM first; its kind)
+                c.trk = next(d.trk for d in self.cards[i + 1:] if d.trk != 255)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -230,7 +234,7 @@ def level1():
     L.param(2, "CHORD", 2, "ONE KEY, ONE CHORD", "HOLD SEL, TURN KNOB 1 TO @", btn="SEL", held=True)
     L.param(2, "SDIV", 7, "ONE STEP A BAR", "HOLD SEQ, TURN KNOB 2 TO @", btn="SEQ", held=True)
     L.param(2, "SLEN", 4, "FOUR BARS, FOUR STEPS", "HOLD SEQ, KNOB 4 TO @", btn="SEQ", held=True)
-    L.octave(-1, "AN OCTAVE DOWN", "PRESS OCT- ONCE")
+    L.octave(2, -1, "AN OCTAVE DOWN", "PRESS OCT- ONCE")
     L.notes(2, "FOUR CHORDS", PLAY_SEQ, how="SEQ")
     L.timing("LET THEM RING")
     L.param(2, "SGATE", 120, "LET THEM RING", "TURN KNOB 4 (GATE) TO @", tol=4)
@@ -238,7 +242,7 @@ def level1():
     L.track(3, "THE HOOK: TRACK 3")
     L.sound(3, "A NEW SOUND: KALIMBA")
     L.param(3, "SDIV", 1, "EIGHTH NOTES", "HOLD SEQ, TURN KNOB 2 TO @", btn="SEQ", held=True)
-    L.octave(1, "UP AN OCTAVE", "TAP OCT+ UNTIL OCTAVE IS +1")
+    L.octave(3, 1, "UP AN OCTAVE", "TAP OCT+ UNTIL OCTAVE IS +1")
     L.notes(3, "THE HOOK", PLAY_SEQ, how="SEQ")
     L.param(3, "SSWING", 30, "SWING IT TOO", "HOLD SEQ, TURN KNOB 3 TO @", tol=3, btn="SEQ", held=True)
     L.param(3, "DLY", 40, "AN ECHO", "TURN KNOB 3 (DLY) TO @", tol=4)
