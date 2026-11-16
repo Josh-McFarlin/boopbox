@@ -199,6 +199,10 @@ class Level:
 
     def done(self, head, act):
         self.add(head, act, "TG_DONE")
+        track_pages = {page_index("DRUMS", "TRK"), page_index("NOTES", "SEQ"), page_index("TIMING", "SEQ")}
+        for i, c in enumerate(self.cards):              # a track's page step (its grid, NOTES, TIMING): the track of the
+            if c.goal == "TG_PAGE" and c.p in track_pages:   # step after it (another track: ALGORITHM first; its kind)
+                c.trk = next(d.trk for d in self.cards[i + 1:] if d.trk != 255)
 
 
 # ---------------------------------------------------------------------------------------------------------------
