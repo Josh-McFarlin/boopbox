@@ -13,6 +13,25 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+Fixed in BoopBox:
+
+- **SEL + KNOB 2 (SCALE) with a drum track selected** went only between CHR and MAJ when turned slowly. It took the
+  new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
+  goes to the next scale.
+
+Changed in BoopBox Trainer:
+
+- **The way to PATTERNS, CHAIN and SCENES** is now *TAP SEQ, SELECT TO PATTERNS* (SEQ, then turn SELECT through the
+  SEQ pages), not *HOLD SEQ + SAVE, SELECT LEFT ×2*.
+- **The coach changes tracks from the HOME screen only.** When a step needs another track, it says *TAP HOME* first,
+  then *TURN ALGORITHM TO TRACK 4*, then the way back to the step's screen.
+- **The screen's name shows on SONG, PATTERNS, CHAIN, SCENES and CHORDS.** The coach covers their title, so their name
+  now shows in grey at the right of the coach's first line.
+
+Projects, presets, settings and the trainer's progress open as they are.
+
 ## 1.9.6
 
 Fixed in BoopBox Trainer (the page card that came in 1.9.5 now covers these steps too):
