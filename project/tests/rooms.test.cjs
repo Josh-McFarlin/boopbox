@@ -648,6 +648,48 @@ test("room capacity is eight and only members can share typed notes", async () =
   }
 });
 
+test("the server answers the clock sync and stamps every note with the time it was played", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const peer = createClient(app.url);
+    clients.push(owner, peer);
+    await owner.ready;
+    await peer.ready;
+    const created = await createRoom(owner, "house");
+    peer.send({ type: "join", roomId: created.room.id });
+    await peer.next("room_state");
+    owner.send({ type: "voice", voice: { engine: 0, preset: 2 } });
+    await peer.next("voice");
+
+    const before = Date.now();
+    owner.send({ type: "time", t: 1234.5 });
+    const time = await owner.next("time");
+    assert.equal(time.t, 1234.5);
+    assert.ok(time.serverAt >= before && time.serverAt <= Date.now());
+    owner.send({ type: "time", t: "soon" });
+    assert.equal((await owner.next("error")).code, "invalid_message");
+
+    const played = Date.now() - 40;                        /* a note played 40 ms ago: its own time is kept */
+    owner.send({ type: "note_on", track: 0, note: 60, velocity: 100, at: played });
+    assert.equal((await peer.next("note_on")).at, played);
+    owner.send({ type: "note_off", track: 0, note: 60, at: played + 10 });
+    assert.equal((await peer.next("note_off")).at, played + 10);
+
+    for (const at of [Date.now() + 5000, Date.now() - 60_000, "now"]) {   /* off the server's clock: when it arrived */
+      const sent = Date.now();
+      owner.send({ type: "note_on", track: 0, note: 62, velocity: 100, at });
+      const note = await peer.next("note_on");
+      assert.ok(note.at >= sent && note.at <= Date.now(), `${at} -> ${note.at}`);
+    }
+    owner.send({ type: "note_on", track: 0, note: 64, velocity: 100 });   /* no "at" (an older page): when it arrived */
+    assert.ok(Number.isFinite((await peer.next("note_on")).at));
+  } finally {
+    await app.close(clients);
+  }
+});
+
 test("the server caps the browser at 50 rooms", async () => {
   const app = await startRoomServer();
   const clients = [];

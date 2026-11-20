@@ -16,6 +16,7 @@
   "maxMessagesPerSecond": 60,
   "maxActiveNotesPerPlayer": 32,
   "noteTimeoutMs": 12000,
+  "noteDelayMs": 150,
   "genres": [
     { "id": "house", "label": "House" },
     { "id": "techno", "label": "Techno" },

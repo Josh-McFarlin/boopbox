@@ -7,6 +7,7 @@ import SiteHeader from '../../components/SiteHeader.tsx'
 
 import { RoomAudio } from './audio.ts'
 import { getRoomBrowserIdentity } from './browserIdentity.ts'
+import { ServerClock } from './clock.ts'
 import { connectFm1, syncEmulatorSnapshot } from './device.ts'
 import type {
   EmulatorSnapshot,
@@ -124,9 +125,19 @@ type ServerMessage =
       slot: number
       track: number
       note: number
+      at?: number
     }
+  | { type: 'time'; t: number; serverAt: number }
   | { type: 'error'; code: string }
   | { type: 'server_closing' }
+
+/* when a room note sounds, on the server's clock: config.noteDelayMs after the time it was played (its "at"); a
+   note without one (an older server) at once */
+function notePlayAt(at: number | undefined): number | null {
+  return typeof at === 'number' && Number.isFinite(at)
+    ? at + config.noteDelayMs
+    : null
+}
 
 /* what the emulator page posts to the room page */
 type EmulatorMessage =
@@ -190,6 +201,9 @@ const Rooms: React.FC = () => {
   const emulatorTransportRef = useRef<string | null>(null)
   const emulatorHasPerformanceRef = useRef(false)
   const audioRef = useRef<RoomAudio | null>(null)
+  /* the room server's clock (clock.ts): notes carry the time they were played and sound noteDelayMs after it */
+  const clockRef = useRef(new ServerClock())
+  const clockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roomRef = useRef(room)
   const voiceStateRef = useRef(new Map<string, string>())
   const performanceStateRef = useRef(new Map<string, PerformanceState>())
@@ -230,6 +244,7 @@ const Rooms: React.FC = () => {
         on,
         velocity,
         track,
+        clockRef.current.serverNow(),
       )
     },
     [send],
@@ -329,6 +344,18 @@ const Rooms: React.FC = () => {
         if (message.type === 'connected') {
           selfPlayerIdRef.current = message.playerId
         } else if (message.type === 'identified') {
+          /* the clock: five quick samples, then one every 15 s (the fastest reply of the last eight counts) */
+          let samples = 0
+          const syncClock = (): void => {
+            send({ type: 'time', t: clockRef.current.stamp() })
+            samples += 1
+            clockTimerRef.current = setTimeout(
+              syncClock,
+              samples < 5 ? 250 : 15_000,
+            )
+          }
+          if (clockTimerRef.current) clearTimeout(clockTimerRef.current)
+          syncClock()
           setSocketState('connected')
           setStatus(
             'Connected. Choose a genre and create a room, or join one below.',
@@ -463,6 +490,7 @@ const Rooms: React.FC = () => {
               message.track,
               message.note,
               true,
+              notePlayAt(message.at),
             )
         } else if (message.type === 'note_off') {
           if (message.playerId !== selfPlayerIdRef.current)
@@ -471,6 +499,7 @@ const Rooms: React.FC = () => {
               message.track,
               message.note,
               false,
+              notePlayAt(message.at),
             )
         } else if (message.type === 'error') {
           const errorText = ERROR_TEXT[message.code]
@@ -483,11 +512,15 @@ const Rooms: React.FC = () => {
           } else {
             setError(errorText || 'The room server rejected that request.')
           }
+        } else if (message.type === 'time') {
+          clockRef.current.sample(message.t, message.serverAt)
         } else if (message.type === 'server_closing') {
           setStatus('The room server is restarting. Reconnecting…')
         }
       }
       ws.onclose = (): void => {
+        if (clockTimerRef.current) clearTimeout(clockTimerRef.current)
+        clockTimerRef.current = null
         if (stopped) return
         setSocketState('connecting')
         selfPlayerIdRef.current = null
@@ -533,6 +566,7 @@ const Rooms: React.FC = () => {
     try {
       if (!audioRef.current)
         audioRef.current = new RoomAudio((err) => setError(err.message))
+      audioRef.current.clock = clockRef.current
       await audioRef.current.start()
       setAudioEnabled(true)
       const mix = roomMixRef.current.getState()

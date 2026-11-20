@@ -101,6 +101,9 @@ export class RoomFirmwareAudio {
     this.soloSlot = null;
     this.left = new Float32Array(0);
     this.right = new Float32Array(0);
+    this.frame = 0;          // frames rendered so far: the room notes' time line
+    this.pending = [];       // room notes not due yet: { due, seq, slot, track, note, on }, in order
+    this.seq = 0;
   }
   setMix(mutedSlots, soloSlot) {
     if (!Array.isArray(mutedSlots) || mutedSlots.length !== 8
@@ -121,9 +124,18 @@ export class RoomFirmwareAudio {
     this.players[slot][group].w.preview_play(state.playing ? 1 : 0);
     this.active[slot][group] = !!state.hasVoice;
   }
-  note(slot, track, note, on) {
+  // a room note, played delayFrames from now (the room's steady lag: clock.ts), at the start of the block it falls in
+  note(slot, track, note, on, delayFrames = 0) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
     if (!Number.isInteger(track) || track < 0 || track > 7) return;
+    const delay = Number.isFinite(delayFrames) ? Math.min(Math.max(0, Math.round(delayFrames)), 44_100) : 0;
+    if (!delay) return this.play(slot, track, note, on);
+    const item = { due: this.frame + delay, seq: this.seq++, slot, track, note, on };
+    let i = this.pending.length;
+    while (i > 0 && this.pending[i - 1].due > item.due) i -= 1;
+    this.pending.splice(i, 0, item);
+  }
+  play(slot, track, note, on) {
     const group = Math.floor(track / 4);
     this.players[slot][group].w.preview_note(track % 4, note, on ? 1 : 0);
   }
@@ -143,6 +155,7 @@ export class RoomFirmwareAudio {
   }
   panic(slot) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    this.pending = this.pending.filter((item) => item.slot !== slot);
     for (const dsp of this.players[slot]) dsp.w.preview_panic();
   }
   drop(slot) {
@@ -152,6 +165,11 @@ export class RoomFirmwareAudio {
   render(left, right) {
     left.fill(0);
     right.fill(0);
+    const end = this.frame + left.length;
+    let due = 0;
+    while (due < this.pending.length && this.pending[due].due < end) due += 1;
+    for (const item of this.pending.splice(0, due)) this.play(item.slot, item.track, item.note, item.on);
+    this.frame = end;
     if (this.left.length !== left.length) {
       this.left = new Float32Array(left.length);
       this.right = new Float32Array(right.length);
@@ -223,7 +241,7 @@ if (typeof registerProcessor === 'function') {
       this.port.onmessage = ({ data }) => {
         try {
           if (data.type === 'state') this.dsp.sync(data.slot, data.group, data.state);
-          else if (data.type === 'note') this.dsp.note(data.slot, data.track, data.note, data.on);
+          else if (data.type === 'note') this.dsp.note(data.slot, data.track, data.note, data.on, data.delayFrames);
           else if (data.type === 'transport') this.dsp.transport(data.slot, data.tempo, data.playing, data.beat);
           else if (data.type === 'panic') this.dsp.panic(data.slot);
           else if (data.type === 'drop') this.dsp.drop(data.slot);
