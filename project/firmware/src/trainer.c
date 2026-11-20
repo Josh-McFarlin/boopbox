@@ -71,6 +71,9 @@ static struct {
     char hint[48];                                 /* (1.5.1: 48, a hint may be wider than the screen: it scrolls) */
     char go[32];                                   /* the page card ("GO TO THE SONG PAGE"; the hint: the way), "": none */
     uint8_t was_go;                                /* the page card was shown (its end: the step's own card again) */
+    uint8_t kinds;                                 /* the tracks' kinds (a bit each: drum) when the step came */
+    uint8_t kfix;                                  /* the kind card is up: 1 + its track (the browser's dots: its own sound) */
+    uint8_t ret;                                   /* sent back to steps that broke: 1 + the step to come back to, 0: none */
 } tr;
 
 UI_SMALL static const tr_card_t *tr_card(void)
@@ -101,6 +104,15 @@ UI_SMALL static void tr_step(uint32_t i, const char *a, const char *b)   /* "STE
     tr_cat(a);
     tr_cat(b);
 }
+UI_SMALL static int str_eq_n(const char *a, const char *b, uint32_t n)   /* 0: the n characters the same */
+{
+    while (n--)
+        if (*a++ != *b++)
+            return 1;
+    return 0;
+}
+UI_SMALL static int tr_browsing(void);
+UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n);
 /* the page card: the step needs another screen. A card of its own, only while there: "GO TO " where, the way there
  * (the hint), its button lit; on that screen the step's own card again */
 UI_SMALL static int tr_goto(const char *where, const char *way, uint32_t btn)
@@ -112,13 +124,87 @@ UI_SMALL static int tr_goto(const char *where, const char *way, uint32_t btn)
     tr.keys = 0;
     return 0;
 }
-UI_SMALL static int tr_home_ok(void) { return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown(); }
+static uint8_t tr_sheet_ok;                         /* the hint given is one for the step's menu (OCT+ held: SLIDE, RATCHET) */
+UI_SMALL static uint32_t tr_held(void)              /* the button held (a layer's, REC or SAVE as a hold), NB: none */
+{
+    return ui.hold_kind == 1u ? B_REC : ui.hold_kind == 2u ? B_SAVE :
+           ui.layer != LY_PLAY ? LAYER_BTN[ui.layer % LY_COUNT] : NB;
+}
+UI_SMALL static int tr_letgo(void)                  /* the card: LET GO OF SEQ (its layer gives the controls other uses) */
+{
+    uint32_t b = tr_held();
+    tr_goto("", "LET GO, THEN THE STEP", NB);
+    str_cpy(tr.go, "LET GO OF ", sizeof tr.go);
+    str_cpy(tr.go + str_len(tr.go), B_NAME[b % NB], sizeof tr.go - str_len(tr.go));
+    return 0;
+}
+UI_SMALL static uint8_t tr_kinds(void)
+{
+    uint32_t k, m = 0;
+    for (k = 0; k < NTRK; k++)
+        m |= (is_drum(&trk[k]) ? 1u : 0u) << k;
+    return (uint8_t)m;
+}
+UI_SMALL static int tr_home_ok(void)
+{
+    return !ui.menu && ui.layer == LY_PLAY && on_home() && !vis_shown() && !rec_wait && !ft_on;
+}
+/* the keys play notes and OCT- / OCT+ the octave: not on the screens that give them their own use (PATTERNS: pads,
+ * CHORDS: chords, SONG: its commands, DRUMS: the grid) */
+UI_SMALL static int tr_keys_ok(void)
+{
+    return !ui.menu && !on_pats_page() && !on_chords_page() && !on_song_page() && !on_drum_page();
+}
 UI_SMALL static int tr_to_song(void)                /* the SONG page: SAVE from HOME's screen */
 {
     if (!ui.menu && ui.layer == LY_PLAY && on_song_page())
         return 1;
     return tr_home_ok() ? tr_goto("THE SONG PAGE", "TAP SAVE", B_SAVE) :
                           tr_goto("THE SONG PAGE", "TAP HOME, THEN TAP SAVE", B_HOME);
+}
+UI_SMALL static int tr_menu_closed(void)            /* the step's menu (OCT+ held on NOTES / the grid): closed */
+{
+    if (!ui.sheet || !(on_notes_page() || on_drum_page()))
+        return 1;
+    tr_goto("", "TAP OCT-", B_OCTDN);               /* (its knobs are the menu's, the keys do not write, OCT+ acts on
+                                                     * its row; OCT- closes it, or goes back to it from a strip) */
+    str_cpy(tr.go, "CLOSE THE STEP MENU", sizeof tr.go);
+    return 0;
+}
+UI_SMALL static int tr_stopped(void)                /* the SONG page's knobs 2-4 and OCT-: stopped only ("STOP FIRST") */
+{
+    if (!song.playing && !transport_req)
+        return 1;
+    tr_goto("", "PRESS PLAY TO STOP", B_PLAY);
+    str_cpy(tr.go, "STOP THE MUSIC", sizeof tr.go);
+    return 0;
+}
+/* the step's track the kind it needs (a synth track for notes, octaves and locks; a drum track for the grid). TOOLS >
+ * KIND or the sound browser changes it: the browser's KNOB 1 (right DRUMS, left SYNTH, twice with a pattern), then SAVE
+ * keeps it (HOME would put the old kind back) */
+UI_SMALL static int tr_def_sound(void)              /* the selected track has its own sound (or kit) of power-on */
+{
+    uint32_t i = song.sel % NTRK;
+    const engine_t *e = ENGINES[TRK_DEF[i][1] % NENGINES];
+    if (trk_def_kind(i) == TK_DRUM)
+        return is_drum(TSEL) && TSEL->p[P_E0] == TRK_DEF[i][1];
+    return !is_drum(TSEL) && TSEL->eng_req == TRK_DEF[i][1] && user_of(TSEL) >= UP_SLOTS &&
+           TSEL->preset == (e->npresets ? TRK_DEF[i][2] % e->npresets : 0u);
+}
+UI_SMALL static int tr_kind_ok(int drum)
+{
+    if (!is_drum(TSEL) == !drum && !(tr_browsing() && br_was.on && br_was.kind != TSEL->kind))
+        return 1;
+    tr.kfix = (uint8_t)(1u + song.sel % NTRK);     /* (the browser's dots: the track's own sound, as it had) */
+    if (!is_drum(TSEL) != !drum)
+        tr_goto("", !tr_browsing() ? (tr_home_ok() ? "TURN PRESETS" : "TAP HOME") :
+                    drum ? "KNOB 1 RIGHT: DRUMS" : "KNOB 1 LEFT: SYNTH", !tr_browsing() && !tr_home_ok() ? B_HOME : NB);
+    else if (!tr_def_sound())
+        tr_goto("", "FOLLOW THE DOTS: KNOB 2, 3", NB);
+    else
+        tr_goto("", "TAP SAVE TO KEEP IT", B_SAVE);
+    str_cpy(tr.go, drum ? "MAKE IT A DRUM TRACK" : "MAKE IT A SYNTH TRACK", sizeof tr.go);
+    return 0;
 }
 UI_SMALL static int tr_to_notes(void)               /* the NOTES page (the SEQ pages) */
 {
@@ -315,6 +401,7 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (why == 3u) {
         if (!tr_to_notes())
             return 0;
+        tr_sheet_ok = ui.cursor == bad && !(w.fl & 1u) && !(t->step[bad].flags & SF_ACCENT);   /* (SLIDE: the menu's) */
         if (ui.cursor != bad) {
             tr_say("KNOB 1 TO STEP ", "");
             tr_num((int32_t)bad + 1);
@@ -326,7 +413,8 @@ UI_SMALL static int tr_notes(const tr_card_t *c, track_t *t)
     if (c->flags == HOW_SEQ) {                      /* the SEQ layer: play the note, then SEQ held + the step keys */
         int held = ui.layer == LY_STEP;
         uint32_t pen = 0, first = NSTEP;
-        if (on_notes_page() && !held)               /* (1.7) NOTES types a key played into its step: leave it first */
+        if ((on_notes_page() || !tr_keys_ok()) && !held)   /* (1.7) NOTES types a key played into its step, the
+                                                     * studio screens give the keys their own use: leave it first */
             return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         page = ui.step_page;
         /* the note in hand first: every step of the page still empty that wants it stays lit until all are in (the
@@ -527,6 +615,7 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
                                        (w & 3u) == LV_SOFT ? "SOFT" : "NORM");
         } else {
             static const char *const R[4] = {"X1", "X2", "X3", "X4"};
+            tr_sheet_ok = 1;
             if (ui.sheet)
                 tr_step(bad, "KNOB 2: RATCHET ", R[(w >> 2) & 3u]);
             else {
@@ -550,7 +639,10 @@ UI_SMALL static int tr_algo_ok(void)
 UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first (the page card) */
 {
     if (!tr_algo_ok()) {
-        tr_goto("THE HOME SCREEN", "TAP HOME", ui.layer == LY_PLAY ? B_HOME : NB);
+        if (tr_held() < NB)                         /* (a button held: ALGORITHM is its layer's) */
+            tr_letgo();
+        else
+            tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         return;
     }
     tr_say("TURN ALGORITHM TO TRACK ", "");
@@ -626,6 +718,11 @@ UI_SMALL static int tr_on_page(const tr_card_t *c)
     str_cpy(where, "THE ", sizeof where);
     str_cpy(where + str_len(where), PAGES[pg].title, sizeof where - str_len(where));
     str_cpy(where + str_len(where), " PAGE", sizeof where - str_len(where));
+    if ((c->btn == B_ENV || c->btn == B_LFO) && (on_song_page() || on_drum_page() || on_chords_page())) {
+        tr_goto(where, "TAP HOME, THEN TAP ", B_HOME);  /* (ENV and LFO hold no layer: these screens ignore them) */
+        tr_cat(B_NAME[c->btn % NB]);
+        return 0;
+    }
     tr_goto(where, "TAP ", c->btn);
     tr_cat(B_NAME[c->btn % NB]);
     if (family_next(PAGES[pg].fam) != pg) {         /* (more than one tap) */
@@ -634,11 +731,67 @@ UI_SMALL static int tr_on_page(const tr_card_t *c)
     }
     return 0;
 }
+UI_SMALL static int tr_goal_in(const tr_card_t *c);
+/* a card's goal: done, or what to do (the hint) or the page card. No step records: while REC is on (armed, a free take,
+ * recording) the REC screen and its takes give the keys, knobs, HOME, SELECT and PRESETS other uses, so the page card
+ * says to turn it off first */
+/* the step holds button w: its action, hint or way says HOLD w, w + (a key), +w, or its next press is w itself (a layer
+ * button let go untouched is a tap; LET GO OF w) */
+UI_SMALL static int tr_holds(const tr_card_t *c, const char *w)
+{
+    char a[48];
+    const char *t[2], *p;
+    uint32_t i, j, n = str_len(w);
+    tr_act(c, a, sizeof a);
+    t[0] = a, t[1] = tr.hint;
+    for (i = 0; i < 2u; i++)
+        for (p = t[i]; *p; p++) {
+            for (j = 0; j < n && p[j] == w[j]; j++)
+                ;
+            if (j < n || (p > t[i] && p[-1] >= 'A' && p[-1] <= 'Z') || (p[n] >= 'A' && p[n] <= 'Z'))
+                continue;                               /* (a whole word: SEL, not SELECT) */
+            if ((p - t[i] >= 5 && !str_eq_n(p - 5, "HOLD ", 5)) || (p > t[i] && p[-1] == '+') || p[n] == '+' ||
+                (p[n] == ' ' && p[n + 1] == '+') || (p - t[i] == 4 && !str_eq_n(t[i], "TAP ", 4)) ||
+                (p - t[i] >= 10 && !str_eq_n(p - 10, "LET GO OF ", 10)))
+                return 1;
+        }
+    return 0;
+}
 UI_SMALL static int tr_goal(const tr_card_t *c)
+{
+    uint32_t held;
+    if (tr_goal_in(c))
+        return 1;
+    if (tr_quiet || c->goal == TG_DONE)
+        return 0;
+    held = tr_held();
+    if (ui.menu == 1u || ui.menu == 2u) {               /* BoopBox's menu (or ABOUT): the coach's line in its header */
+        tr_goto("", "TAP OCT- (CLOSE)", B_OCTDN);         /* (as the menu's own line says: OCT- CLOSE; ABOUT: twice) */
+        str_cpy(tr.go, "BACK TO THE LESSON", sizeof tr.go);
+    } else if (c->trk < NTRK && c->goal != TG_TRACK && c->goal != TG_KIT && c->goal != TG_SOUND && song.sel == c->trk &&
+               tr_held() == NB && (!is_drum(&trk[c->trk]) != (trk_def_kind(c->trk) != TK_DRUM) ||
+                                   (tr_browsing() && br_was.on && br_was.kind != TSEL->kind))) {   /* (changed in the
+                                                         * browser: SAVE keeps it, HOME would put the old kind back) */
+        tr_kind_ok(trk_def_kind(c->trk) == TK_DRUM);    /* (the lessons keep each track's kind: a synth part's settings,
+                                                         * notes and octaves do nothing on a drum track, the grid needs
+                                                         * one; the sound and kit steps cross over themselves) */
+    } else if (held < NB && !tr_holds(c, B_NAME[held]) &&
+               !(held == B_SEQ && (c->goal == TG_LANES || (c->goal == TG_NOTES && c->flags == HOW_SEQ)))) {
+        tr_letgo();                                     /* a button held the step does not use: its layer gives the knobs
+                                                         * and keys other uses (REC held clears the track). (SEQ held:
+                                                         * its keys are the steps of the grid and of the SEQ notes) */
+    } else if (song.rec || rec_wait || ft_on) {
+        tr_goto("", "TAP REC (REC OFF)", B_REC);
+        str_cpy(tr.go, "TURN RECORDING OFF", sizeof tr.go);
+    }
+    return 0;
+}
+UI_SMALL static int tr_goal_in(const tr_card_t *c)
 {
     track_t *t = &trk[c->trk % NTRK];
     tr.hint[0] = 0;
     tr.go[0] = 0;
+    tr.kfix = 0;
     tr.keys = 0;
     tr.btn = NB;
     switch (c->goal) {
@@ -657,14 +810,33 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             return 0;
         if (on)
             tr_say("THAT'S IT! TAP SAVE TO KEEP IT", ""), tr.btn = B_SAVE;
+        else if (tr_browsing() && (c->goal == TG_KIT) != (is_drum(t) != 0))   /* (KNOB 2, 3 stay on their side:
+                                                         * the kits or the synths; KNOB 1 crosses, twice with a pattern) */
+            tr_say(c->goal == TG_KIT ? "KNOB 1 RIGHT: DRUMS" : "KNOB 1 LEFT: SYNTH", "");
         else if (tr_browsing())
             tr_say("FOLLOW THE DOTS: KNOB 2, 3", "");
+        else if (!tr_quiet && !tr_home_ok())            /* (PRESETS opens the browser from HOME's screen only) */
+            return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
         else
             tr_say("TURN PRESETS, FOLLOW THE DOTS", "");
         return 0;
     }
     case TG_PARAM:
-        if (tr_near(t->p[c->p], c->v, c->tol))
+        if (c->p == P_ROOT || c->p == P_SCALE) {        /* the song's key and scale: every synth track's (SEL's layer
+                                                         * sets them all; a track made a synth track again has its own) */
+            uint32_t k, ok = 1;
+            for (k = 0; k < NTRK; k++)
+                ok &= is_drum(&trk[k]) || tr_near(trk[k].p[c->p], c->v, c->tol);
+            if (ok)
+                return 1;
+            if (c->p == P_SCALE && tr_near(t->p[c->p], c->v, c->tol)) {   /* (KNOB 2 sets them all from this one) */
+                if (!tr_sel(c))
+                    return 0;
+                tr_say("TURN KNOB 2 ONE WAY, THEN BACK", "");
+                tr.btn = B_SCL;
+                return 0;
+            }
+        } else if (tr_near(t->p[c->p], c->v, c->tol))
             return 1;
         if (c->p == P_ROOT) {                           /* SEL held + a key of that note: the keys lit */
             uint32_t k;
@@ -690,7 +862,10 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_PLAY:
         return (song.playing != 0) == (c->v != 0);
     case TG_PAGE: {
-        int at = ui.menu || ui.layer != LY_PLAY ? 0 :
+        int at;
+        if (c->trk < NTRK && !tr_sel(c))                /* (the DRUMS grid: of the drum track, selected first) */
+            return 0;
+        at = ui.menu || ui.layer != LY_PLAY ? 0 :
                  PAGES[c->p].scope == SC_DRUM ? on_drum_page() && !drum_page :
                  PAGES[c->p].scope == SC_PATS ? on_pats_page() && ui.page == c->p : PAGES[c->p].scope == SC_SONG ? on_song_page() :
                  !ui.home && ui.page == c->p;
@@ -713,16 +888,26 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_OCT:
         if (song.octave == c->v)
             return 1;
+        if (!tr_sel(c))                                 /* (OCT- / OCT+ do nothing on a drum track: tr_goal) */
+            return 0;
+        if (!tr_quiet && !tr_keys_ok())
+            return tr_goto("THE HOME SCREEN", "TAP HOME", B_HOME);
+        if (!tr_quiet && !tr_menu_closed())
+            return 0;
         tr_say("NOW OCTAVE ", "");
         tr_num(song.octave);
         tr.btn = song.octave < c->v ? B_OCTUP : B_OCTDN;
         return 0;
     case TG_NOTES:
+    case TG_LANES: {
+        int r;
         tr.keyed = 1;
-        return tr_sel(c) && tr_notes(c, t);
-    case TG_LANES:
-        tr.keyed = 1;
-        return tr_sel(c) && tr_lanes(c, t);
+        tr_sheet_ok = 0;
+        r = tr_sel(c) && (c->goal == TG_NOTES ? tr_notes(c, t) : tr_lanes(c, t));
+        if (!r && !tr_quiet && !tr.go[0] && !tr_sheet_ok)
+            tr_menu_closed();
+        return r;
+    }
     case TG_MUTES: {
         uint32_t k;
         for (k = 0; k < NTRK; k++)
@@ -830,7 +1015,7 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
             same = arrangement.entry[k].scene == d[1u + 2u * k] && arrangement.entry[k].bars == d[2u + 2u * k];
         if (same)
             return 1;
-        if (!tr_quiet && !tr_to_song())                 /* (its knobs: the SONG page only) */
+        if (!tr_quiet && (!tr_to_song() || !tr_stopped()))   /* (its knobs: the SONG page only, stopped) */
             return 0;
         if (arrangement.count != d[0]) {
             tr_say("KNOB 4: STEPS TO ", "");
@@ -857,8 +1042,9 @@ UI_SMALL static int tr_goal(const tr_card_t *c)
     case TG_SONGMODE:
         if (arrangement_enabled && song.playing)
             return 1;
-        if (!arrangement_enabled && !tr_quiet)          /* (OCT- turns it on on the SONG page; then PLAY anywhere) */
-            tr_to_song();
+        if (!arrangement_enabled && !tr_quiet && tr_to_song())   /* (OCT- turns it on on the SONG page, stopped; then
+                                                                 * PLAY anywhere) */
+            tr_stopped();
         return 0;
     case TG_SCENE: {
         const uint8_t *d = &TR_D[c->data];
@@ -1001,6 +1187,7 @@ UI_SMALL static void tr_card_begin(void)
     tr.t0 = fm1_ms;
     tr.go[0] = 0;
     tr.was_go = 0;
+    tr.kinds = tr_kinds();
     tr.sig = 0;
     tr.keyed = 0;
     if (c && c->goal == TG_SAVED)
@@ -1010,34 +1197,77 @@ UI_SMALL static void tr_card_begin(void)
     tr.at[tr.lvl - 1u] = tr.card;
     tr.dirty = 1;
 }
+UI_SMALL static uint32_t tr_broken(uint32_t a, uint32_t end);
 UI_SMALL static void tr_go(int32_t d)                    /* the next / the card before */
 {
     const tr_level_t *L = tr_level(tr.lvl - 1u);
     int32_t n = (int32_t)tr.card + d;
+    if (d > 0 && tr.ret) {                              /* (sent back: the next step that broke, else where it was) */
+        uint32_t end = tr.ret - 1u;
+        n = (int32_t)tr_broken(tr.card + 1u, end);
+        if ((uint32_t)n >= end)
+            tr.ret = 0;
+    } else
+        tr.ret = 0;
     tr.card = (uint8_t)clamp(n, 0, L->n - 1);
     tr_card_begin();
 }
 /* going on with a level: the cards done since its last change of pattern or section are checked again (the loop may be
  * older than the progress: BoopBox autosaves it only when stopped); it goes on at the first one that no longer holds */
 static const uint8_t TR_STATE[] = {TG_KIT, TG_SOUND, TG_PARAM, TG_GLOBAL, TG_NOTES, TG_LANES, TG_LOCK};
-UI_SMALL static void tr_resume(void)
+/* card i is done again by a card after it (before the one now): the same track's pattern (a drum step adds lanes to the
+ * kick the one before wrote), the same parameter, sound or lock. Checked again, i would fail on what came after it */
+UI_SMALL static int tr_later(const tr_level_t *L, uint32_t i, uint32_t end)
+{
+    const tr_card_t *a = &L->cards[i], *b;
+    uint32_t j;
+    for (j = i + 1u; j < end; j++) {
+        b = &L->cards[j];
+        if (b->trk != a->trk && a->goal != TG_GLOBAL)
+            continue;
+        if (((a->goal == TG_NOTES || a->goal == TG_LANES) && b->goal == a->goal) ||
+            ((a->goal == TG_KIT || a->goal == TG_SOUND) && (b->goal == TG_KIT || b->goal == TG_SOUND)) ||
+            ((a->goal == TG_PARAM || a->goal == TG_GLOBAL || a->goal == TG_LOCK) && b->goal == a->goal && b->p == a->p))
+            return 1;
+    }
+    return 0;
+}
+/* a step about the track itself, not its pattern (a pattern keeps its steps, LEN and locks: patbank.c): its sound, kit, a
+ * setting, a global one. It holds across the pattern and section steps after it (a track's kind changed resets them) */
+UI_SMALL static int tr_track_state(const tr_card_t *c)
+{
+    return c->goal == TG_KIT || c->goal == TG_SOUND || c->goal == TG_GLOBAL ||
+           (c->goal == TG_PARAM && c->p != P_SLEN && c->p != P_MUTE);
+}
+/* the first step in [a, end) whose result no longer holds (end: none). The pattern's steps only since the last
+ * change of pattern or section (before it: other patterns); the track's own state across the whole level */
+UI_SMALL static uint32_t tr_broken(uint32_t a, uint32_t end)
 {
     const tr_level_t *L = tr_level(tr.lvl - 1u);
-    uint32_t i, from = 0, k;
-    for (i = 0; i < tr.card; i++)
+    uint32_t i, from = 0, k, r = end;
+    for (i = 0; i < end; i++)
         if (L->cards[i].goal == TG_PATSEL || L->cards[i].goal == TG_PATS || L->cards[i].goal == TG_PATHAS ||
             L->cards[i].goal == TG_SAVED || L->cards[i].goal == TG_SCENE || L->cards[i].goal == TG_SCNPLAY ||
             L->cards[i].goal == TG_CHAIN)
             from = i + 1u;
     tr_quiet = 1;
-    for (i = from; i < tr.card; i++)
+    for (i = a; i < end && r == end; i++)
         for (k = 0; k < sizeof TR_STATE; k++)
-            if (L->cards[i].goal == TR_STATE[k] && !tr_goal(&L->cards[i])) {
-                tr.card = (uint8_t)i;
-                i = tr.card;
+            if (L->cards[i].goal == TR_STATE[k] && (i >= from || tr_track_state(&L->cards[i])) &&
+                !tr_later(L, i, end) && !tr_goal(&L->cards[i])) {
+                r = i;
                 break;
             }
     tr_quiet = 0;
+    return r;
+}
+/* going on (power on, a track's kind changed): the steps done are checked again; it goes to the first one that no longer
+ * holds, then only to the others that broke, then back to the step it was on (not through the ones that hold) */
+UI_SMALL static void tr_resume(void)
+{
+    uint32_t end = tr.ret ? tr.ret - 1u : tr.card, n = tr_broken(0, end);
+    tr.card = (uint8_t)n;
+    tr.ret = (uint8_t)(n < end ? end + 1u : 0u);
     tr_card_begin();
 }
 /* level l from its first card: a new project, in loop mode (when stopped: stopping a song puts the loop it kept back);
@@ -1053,6 +1283,7 @@ UI_SMALL static void tr_begin(uint32_t l)
     tr.done &= (uint8_t)~(1u << l);
     tr.lvl = (uint8_t)(l + 1u);
     tr.card = 0;
+    tr.ret = 0;
     tr_card_begin();
 }
 UI_SMALL static void tr_start(uint32_t l, int again)    /* level l: on where it was left; again: from its start */
@@ -1061,6 +1292,7 @@ UI_SMALL static void tr_start(uint32_t l, int again)    /* level l: on where it 
     if (!again && tr.at[l] && !((tr.done >> l) & 1u)) {
         tr.lvl = (uint8_t)(l + 1u);
         tr.card = tr.at[l];
+        tr.ret = 0;
         tr_resume();
         return;
     }
@@ -1086,7 +1318,7 @@ UI_SMALL static void tr_quit(void)
 UI_SMALL static uint32_t tr_band_h(void)
 {
     if (ui.menu)
-        return 0;
+        return ui.menu == 3u ? 0u : H_HEAD;            /* (BoopBox's menu: the coach's line in its header) */
     if (ui.layer != LY_PLAY || ui.hold_kind || rec_wait || ft_on || vis_shown() || on_song_page() || on_pats_page() ||
         on_chords_page() || on_drum_page() || (!ui.home && cur_page()->scope == SC_TRK))
         return 40;
@@ -1115,14 +1347,21 @@ UI_SMALL static void trainer_tick(void)
             tr.sig = 0;
         lcd_clip_y = (uint8_t)h;
     }
-    if (ui.menu) {
-        tr.sig = 0;                                     /* (the menu drew over the band: again after it) */
+    if (ui.menu == 3u) {
+        tr.sig = 0;                                     /* (the picker drew over the band: again after it) */
         return;
     }
     if (tr.ok) {
         if (fm1_ms - tr.ok_ms >= TR_OK_MS)
             tr_go(1);
         return;
+    }
+    if (c->goal != TG_DONE && tr.kinds != tr_kinds() && !tr_browsing()) {   /* a track changed kind (TOOLS > KIND,
+                                                         * the browser once closed: HOME there puts it back): its
+                                                         * pattern and sound went; the steps done since the last
+                                                         * pattern or section change checked again (tr_resume) */
+        tr_resume();
+        c = tr_card();
     }
     if (c->goal != TG_DONE && tr_goal(c)) {
         tr.ok = 1;
@@ -1196,7 +1435,7 @@ UI_SMALL static void trainer_draw(void)
     int32_t o1, o2;
     char b[48], act[48];
     uint16_t col;
-    if (!c || ui.menu || !h)
+    if (!c || ui.menu == 3u || !h)
         return;
     L = tr_level(tr.lvl - 1u);
     el = fm1_ms - tr.t0;
@@ -1293,7 +1532,7 @@ UI_SMALL static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl)
             led_put(nl, panel.btn[B_OCTUP], 1);
         return;
     }
-    if (!c || ui.menu || tr.ok)
+    if (!c || ui.menu == 3u || tr.ok)
         return;
     {
         uint32_t b = tr.btn < NB ? tr.btn : c->btn;
@@ -1313,6 +1552,14 @@ UI_SMALL static void trainer_leds(uint8_t *nl, uint8_t *dl, uint8_t *bl)
 UI_SMALL static int tr_browse_target(uint32_t *kit, uint32_t *e, uint32_t *k)
 {
     const tr_card_t *c = tr_card();
+    if (c && tr.kfix && song.sel == tr.kfix - 1u) {     /* (the kind card: the track's own sound) */
+        uint32_t i = song.sel % NTRK;
+        const engine_t *en = ENGINES[TRK_DEF[i][1] % NENGINES];
+        *kit = trk_def_kind(i) == TK_DRUM;
+        *e = TRK_DEF[i][1];
+        *k = *kit ? TRK_DEF[i][1] : en->npresets ? TRK_DEF[i][2] % en->npresets : 0u;
+        return 1;
+    }
     if (!c || (c->goal != TG_SOUND && c->goal != TG_KIT) || song.sel != c->trk)
         return 0;
     *kit = c->goal == TG_KIT;

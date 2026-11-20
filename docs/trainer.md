@@ -115,6 +115,24 @@ step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP S
 The button to press blinks. When you get to that screen, the card goes and the step shows again from its headline.
 The card does not count as a step: the step numbers and the progress bar stay the same.
 
+The same kind of card shows when something else stops the step's controls from working (1.9.6):
+
+- *TURN RECORDING OFF* (*TAP REC (REC OFF)*): REC is armed, or a take or a recording runs. No lesson records, and the
+  REC screen gives the keys, the knobs, HOME, SELECT and PRESETS other uses.
+- *CLOSE THE STEP MENU* (*TAP OCT-*): the step's menu (OCT+ held on NOTES or the drum grid) is open. Its knobs work the
+  menu, and the keys do not write steps. The menu stays when the step needs it (SLIDE, RATCHET).
+- *STOP THE MUSIC* (*PRESS PLAY TO STOP*): the SONG page's knobs 2–4 and OCT- work only when stopped.
+- *LET GO OF SEQ* (or another button): a button is held that the step does not use. Its layer gives the knobs and keys
+  other uses (REC held clears the track).
+- *BACK TO THE LESSON* (*TAP OCT- (CLOSE)*): BoopBox's menu is open. The coach's line is in the menu's header.
+- *MAKE IT A SYNTH TRACK* (or *A DRUM TRACK*): the step's track has the other kind (TOOLS → KIND, or a kit chosen in the
+  sound browser). The card opens the browser (*TURN PRESETS*), crosses with KNOB 1, follows the dots to the track's own
+  sound and keeps it with SAVE.
+
+When something undoes a step you have done (a track's kind changed: its pattern, sound and settings go back to their
+defaults), the coach goes back to each step that no longer holds, one after the other, and then on to the step you were
+on. The steps that still hold are not asked again. After power-off, a level that you continue is checked the same way.
+
 The button to press **blinks**. On a lesson step about keys, the coach controls the key lights. Only the keys to press
 are lit. Every step of the page that is still wrong blinks. BoopBox's beat markers and the steps that are already
 correct are not lit.
