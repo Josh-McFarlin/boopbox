@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #define FELUCCA_ID "ota-FM-1_900"
 #define FELUCCA_OTA_DRYRUN 0
@@ -17,6 +18,13 @@ static size_t logical_len;
 static uint8_t rx[1024];
 static uint32_t rx_len, rx_full, now_ms, requests, erases, bad_range, record_cleared, f0_asked;
 static uint32_t corrupt_at, corrupt_once, no_finish;   /* the host serves a damaged byte / never says "success" */
+static uint32_t cut_after, flash_ops;                  /* power cut: the flash operation after cut_after never happens */
+static jmp_buf cut_jmp;
+static void flash_op(void)
+{
+    if (cut_after && ++flash_ops > cut_after)
+        longjmp(cut_jmp, 1);
+}
 
 static uint32_t pack7(const uint8_t *in, uint32_t n, uint8_t *out)
 {
@@ -92,6 +100,7 @@ static int ldr_erase(uint32_t off)
 {
     if (off < 0x4000u || off >= 0xFC000u || (off & 0xFFFu)) bad_range++;
     if (off < 0x4000u) { printf("ERASE IN THE HEAD %#x\n", off); exit(1); }
+    flash_op();
     erases++;
     memset(nor + off, 0xFF, 0x1000);
     return 0;
@@ -101,6 +110,7 @@ static int ldr_prog(uint32_t off, const void *p, uint32_t n)
     const uint8_t *s = p;
     uint32_t i;
     if (off < 0x4000u || off + n > 0x93000u || ((off & 0xFFu) + n) > 256u) bad_range++;
+    flash_op();
     for (i = 0; i < n; i++) nor[off + i] &= s[i];
     return 0;
 }
@@ -138,6 +148,16 @@ static uint32_t flash_off(const uint8_t *lg)        /* flash.bin offset in the l
         ota_jl_enc(e, 0x50);
         if (ota_rd16(e) == 0) return ota_rd32(e + 8);
     }
+    return 0;
+}
+
+/* what the SPL would start: the app area's first page (app_area_head) programmed, erased or not */
+static int head_present(void)
+{
+    uint32_t i;
+    for (i = 0x4000u; i < 0x4100u; i++)
+        if (nor[i] != 0xFF)
+            return 1;
     return 0;
 }
 
@@ -220,6 +240,45 @@ int main(int argc, char **argv)
         no_finish = 0;
         rc = ldr_session();
         bad += check("... and the next session finishes", rc == 0 && record_cleared && nor[0xE4F06] == 0xFF);
+    }
+    /* the damaged package above left the head erased: power off there, and the SPL finds nothing to start */
+    {
+        memcpy(nor, old + ofo, 0x93000);
+        corrupt_at = nfo + 0x30123u;
+        corrupt_once = 0;
+        rc = ldr_session();
+        corrupt_at = 0;
+        bad += check("a damaged package leaves no app head (nothing to start)", rc == -12 && !head_present());
+    }
+    /* a power cut after every few flash operations (a pulled cable, a flat battery): the head is never there over a
+     * half-written app, and the next install finishes */
+    {
+        uint32_t total, n, cuts = 0, torn = 0, unfinished = 0;
+        memcpy(nor, old + ofo, 0x93000);
+        flash_ops = 0;
+        cut_after = 0xFFFFFFFFu;                     /* count the operations of a whole install */
+        rc = ldr_session();
+        total = flash_ops;
+        cut_after = 0;
+        for (n = 1; n < total; n += n + 40u < total ? 7u : 1u) {   /* every 7th, every one near the end (the head) */
+            memcpy(nor, old + ofo, 0x93000);
+            put_record();
+            flash_ops = 0;
+            cut_after = n;
+            if (!setjmp(cut_jmp))
+                ldr_session();
+            cut_after = 0;
+            cuts++;
+            if (head_present() && memcmp(nor + 0x4000, old + ofo + 0x4000, 0x93000 - 0x4000) &&
+                memcmp(nor + 0x4000, logical + nfo + 0x4000, 0x93000 - 0x4000))
+                torn++;                              /* a head over a mix: the SPL would start it */
+            rc = ldr_session();                      /* the user runs the install again */
+            if (rc != 0 || memcmp(nor + 0x4000, logical + nfo + 0x4000, 0x93000 - 0x4000))
+                unfinished++;
+        }
+        printf("  %u flash operations in an install, %u cuts\n", total, cuts);
+        bad += check("a cut anywhere: never a head over a half-written app", cuts > 100 && torn == 0);
+        bad += check("... and the install run again finishes", unfinished == 0);
     }
     /* another flash chip: nothing written, the records go (the old firmware starts again) */
     {

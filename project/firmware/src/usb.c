@@ -1335,13 +1335,16 @@ static void usb_poll(void)                              /* TIMER5 ISR, 2 kHz */
 #endif
 }
 
-static void usb_start(void)                             /* boot, or main-loop retry while usb.up == 0 */
+/* the second half of a start, >= 20 ms after fm1_usb_reset: attach and set the SIE up. quick: the main loop's retry
+ * gives up at the first write the SIE leaves unanswered (no cable: it never answers), not after six */
+static void usb_attach_sie(uint32_t quick)
 {
-    usb.timeouts = 0;
-    fm1_usb_reset();                                    /* reset whatever the ROM left */
-    fm1_delay_ms(25);
     fm1_usb_attach(ep0buf);
     sie_wr(S_POWER, 0x60);
+    if (quick && usb.timeouts) {
+        usb.up = 0;
+        return;
+    }
     sie_wr(S_INTRUSBE, 0x07);                           /* suspend, resume, reset (polled) */
     sie_wr(S_INTRTX1E, 0x01);
     sie_wr(S_INTRTX2E, 0);
@@ -1351,21 +1354,49 @@ static void usb_start(void)                             /* boot, or main-loop re
     usb.up = usb.timeouts < 3u;                         /* a dead SIE leaves USB off */
 }
 
+static void usb_start(void)                             /* boot (main.c, recovery.c): waits the reset out */
+{
+    usb.timeouts = 0;
+    fm1_usb_reset();                                    /* reset whatever the ROM left */
+    fm1_delay_ms(25);
+    usb_attach_sie(0);
+}
+
 /* Powered on without a cable, the SIE does not answer and usb_start leaves
  * USB off: retry once a second from the main loop so a cable plugged in
- * later still enumerates. */
+ * later still enumerates. The retry never waits in the main loop: it resets
+ * the controller on one pass and attaches on a pass >= 25 ms later. (It
+ * called usb_start, whose 25 ms wait and six unanswered SIE writes held the
+ * main loop, the screen, the keys' and MIDI's handling, ~30-40 ms once a second
+ * on battery.) */
 static void usb_retry(uint32_t now_ms)
 {
     static uint32_t t;
-    if (usb.up || usb.detached || now_ms - t < 1000u)
+    static uint8_t in_reset;                            /* the controller reset, its 25 ms not out yet */
+    if (usb.up || usb.detached) {
+        in_reset = 0;
         return;
+    }
 #if FELUCCA_USB_HOST
-    if (uh.on)
+    if (uh.on) {
+        in_reset = 0;
         return;                                         /* the port is a host: uh_task owns it */
+    }
 #endif
-    t = now_ms;
-    usb.retries++;
-    usb_start();
+    if (!in_reset) {
+        if (now_ms - t < 1000u)
+            return;
+        t = now_ms;
+        usb.retries++;
+        usb.timeouts = 0;
+        fm1_usb_reset();
+        in_reset = 1;
+        return;
+    }
+    if (now_ms - t < 25u)
+        return;
+    in_reset = 0;
+    usb_attach_sie(1);
 }
 
 static void usb_detach(void)

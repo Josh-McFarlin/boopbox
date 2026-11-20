@@ -3,7 +3,8 @@
 /* Felucca memory map.
  * Code + constants execute in place from XIP (app.bin offset 0 = 0x02000120).
  * 0x01C00000..0x01C07F00 holds .ram_text (code that must run while the flash
- * is busy: the flash driver), .c1_text (the second core's waiting loop, fm1_cpu1.h) and, after them, .lowram
+ * is busy: the flash driver), .fast_text (the 10 kHz TIMER5 tick, hal/fm1_cc.h FM1_FAST), .c1_text (the second
+ * core's waiting loop, fm1_cpu1.h) and, after them, .lowram
  * (sloop-lab: the reverb lines, the second core's stacks and the render split's scratch; before this patch that
  * SRAM sat unused: Felucca kept 0x01C06000..0x01C08000 for RAM-run debug, which SLOOP has no build for). crt0.S
  * writes the SPL's state at 0x01C07F20: the region stops at 0x01C07F00. main.c proves and zeroes .lowram at boot.
@@ -24,6 +25,11 @@ SECTIONS
     .text : { KEEP(*(.text.crt0)) *(.text*) *(.rodata*) . = ALIGN(4); _etext = .; } > XIP
     .ram_text : { _rt_start = .; KEEP(*(.ram_text*)) . = ALIGN(4); } > RAMTEXT AT > XIP
     _rt_load = LOADADDR(.ram_text);
+    /* the TIMER5 tick's code (hal/fm1_cc.h FM1_FAST, hal/fm1_isr.S): it may call into XIP, so it is kept out of
+     * .ram_text (build.py checks that for calls). Between .ram_text and .c1_text, in RAM and in the image alike:
+     * main.c's copy of [_rt_start, _rt_end) and the guard's RAM code window cover it */
+    .fast_text : { _ft_start = .; KEEP(*(.fast_text*)) . = ALIGN(4); _ft_end = .; } > RAMTEXT AT > XIP
+    _ft_load = LOADADDR(.fast_text);
     .c1_text : { _c1_start = .; KEEP(*(.c1_text*)) . = ALIGN(4); _c1_end = .; } > RAMTEXT AT > XIP
     _c1_load = LOADADDR(.c1_text);
     _rt_end = _c1_end;                  /* the guard's RAM code window covers both (fm1_cpu1.h) */

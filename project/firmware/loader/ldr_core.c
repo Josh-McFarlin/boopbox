@@ -11,15 +11,24 @@
  *      package for another key is refused before anything is erased;
  *   3. writes ONLY the app area [0x4000, 0x93000), sector by sector, skipping
  *      sectors that are already equal, and verifies each one; the flash head
- *      (SPL, isd_config) is never written;
+ *      (SPL, isd_config) is never written. The app's first sector (its head,
+ *      app_area_head, which is all the SPL checks before it starts the app) is
+ *      erased before any other sector changes and written back last, after 4.'s
+ *      CRC;
  *   4. checks the CRC16 the package stores for flash.bin against everything it
  *      was served (the head too, which it never writes; a mismatch: up to two
  *      more passes, rewriting what differs), asks 0xF0000000 ("success"), then
  *      invalidates the update record (RAM and flash) so the SPL boots the new
  *      app, and resets. A damaged package or no "success" leaves the record:
- *      the loader stays (also after a power cycle) and the host can resume.
- * Power loss during 3: the record is still there, the SPL runs the loader
- * again on the next power-on and the host can resume.
+ *      the loader stays while the FM-1 is on, and the host can resume (a
+ *      damaged package also leaves the head erased: nothing to start).
+ * Power loss during 3 or 4: the SPL does not run the loader again from the
+ * flash record on a cold start (only from the RAM record, which a power cut
+ * clears), and it starts any app whose head it finds without checking the
+ * rest. With the head erased first and written last, a cut leaves no head:
+ * the FM-1 starts in USB update mode instead of a half-written app, and the
+ * installer can run again. A cut while the head's own sector is written back
+ * (its pages last to first, the head's page last) is the one short window.
  *
  * Hooks from the platform (loader.c, tests/ldr_test.c):
  *   ldr_fread(off, p, n)  ldr_erase(off)  ldr_prog(off, p, n)   flash, 0 = ok
@@ -102,10 +111,29 @@ static void ldr_records_drop(void)
     }
 }
 
+/* sector s written with src[0x1000] and read back, at most twice. The pages go from the last to the first: in the app's
+ * first sector, its head (the SPL's app_area_head, in the first page) is the last thing written */
+static int ldr_put(uint32_t s, const uint8_t *src, uint8_t *cur)
+{
+    uint32_t tries, k;
+    for (tries = 0; tries < 2u; tries++) {
+        if (ldr_erase(s))
+            return -9;
+        for (k = 0x1000u; k; k -= 256u)
+            if (ldr_prog(s + k - 256u, src + k - 256u, 256))
+                return -10;
+        if (ldr_fread(s, cur, 0x1000u))
+            return -8;
+        if (ota_memeq(src, cur, 0x1000u))
+            return 0;
+    }
+    return -11;                                          /* verify failed twice */
+}
+
 static int ldr_pass(void)
 {
-    static uint8_t hdr[0x400], sec[0x1000], cur[0x1000];
-    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, n, want, crc = 0, done = 0;
+    static uint8_t hdr[0x400], sec[0x1000], cur[0x1000], first[0x1000];
+    uint32_t i, k, fl_off, fl_size, ota_off, ota_len, key, s, n, want, crc = 0, done = 0, head_open = 0;
     int rc;
     /* 1. UFW header + entry list (ota.c) */
     if ((rc = ota_ufw(hdr, &fl_off, &fl_size, &ota_off, &ota_len, &want)) != 0)
@@ -130,29 +158,26 @@ static int ldr_pass(void)
             return -7;
         crc = ota_crc16(sec, 512, crc);
     }
-    /* 3. app area, sector by sector */
+    /* 3. app area, sector by sector. Before the first sector that changes, the app's first sector is erased (head_open),
+     * and it is written back only once everything else is written and the whole package checked (4.): the SPL starts
+     * whatever app_area_head it finds there without checking the app behind it, so until then a cut leaves nothing to
+     * start, never a valid head over a half-written app */
     for (s = LDR_APP_LO; s < LDR_APP_HI; s += 0x1000u) {
+        uint8_t *p = s == LDR_APP_LO ? first : sec;
         for (k = 0; k < 0x1000u; k += 512u)
-            if (ota_read(fl_off + s + k, sec + k, 512))
+            if (ota_read(fl_off + s + k, p + k, 512))
                 return -7;
-        crc = ota_crc16(sec, 0x1000u, crc);
+        crc = ota_crc16(p, 0x1000u, crc);
         if (ldr_fread(s, cur, 0x1000u))
             return -8;
-        if (!ota_memeq(sec, cur, 0x1000u)) {
-            uint32_t tries;
-            for (tries = 0; tries < 2u; tries++) {
-                if (ldr_erase(s))
+        if (!ota_memeq(p, cur, 0x1000u)) {
+            if (!head_open) {
+                if (ldr_erase(LDR_APP_LO))
                     return -9;
-                for (k = 0; k < 0x1000u; k += 256u)
-                    if (ldr_prog(s + k, sec + k, 256))
-                        return -10;
-                if (ldr_fread(s, cur, 0x1000u))
-                    return -8;
-                if (ota_memeq(sec, cur, 0x1000u))
-                    break;
+                head_open = 1;
             }
-            if (tries == 2u)
-                return -11;                              /* verify failed twice */
+            if (s != LDR_APP_LO && (rc = ldr_put(s, sec, cur)) != 0)
+                return rc;
         }
         done += 0x1000u;
         ldr_progress(done, LDR_APP_HI - LDR_APP_LO);
@@ -166,7 +191,9 @@ static int ldr_pass(void)
     /* 4. finish: the whole package arrived as it was built, the host confirms, the record goes,
      *    the SPL boots the app */
     if (crc != want)
-        return LDR_EBADPKG;
+        return LDR_EBADPKG;                              /* (the first sector stays erased: nothing to start) */
+    if (head_open && (rc = ldr_put(LDR_APP_LO, first, cur)) != 0)
+        return rc;                                       /* the app's first sector, its head last of all */
     for (i = 0; i < 4u; i++)
         if (!ota_read(0xF0000000u, sec, 8))
             break;

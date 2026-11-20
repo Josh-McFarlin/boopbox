@@ -15,8 +15,19 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## 1.9.7
 
-Fixed in BoopBox:
+**An install that is cut off no longer leaves a dead FM-1.** If the cable came out or the battery ran flat during an
+install, the FM-1 could start the half-written firmware and show a black screen, with no USB to install again. The
+update loader now clears the start of the firmware first and writes it back last, after the whole package has been
+checked. A cut install leaves nothing to start, so the FM-1 comes up in update mode and you can run the install
+again. This works from the first install of this version: the loader comes in the package. Keep the battery charged
+anyway.
 
+Also fixed in BoopBox:
+
+- On battery, with no USB cable, BoopBox looked for a computer once a second and stopped the screen and the handling
+  of keys and MIDI for about 30–40 ms each time. It now looks without stopping anything.
+- The key and LED scan, which runs 10,000 times a second, now runs from RAM instead of flash, so it no longer competes
+  with the sound for the flash.
 - **SEL + KNOB 2 (SCALE) with a drum track selected** went only between CHR and MAJ when turned slowly. It took the
   new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
   goes to the next scale.
@@ -30,7 +41,7 @@ Changed in BoopBox Trainer:
 - **The screen's name shows on SONG, PATTERNS, CHAIN, SCENES and CHORDS.** The coach covers their title, so their name
   now shows in grey at the right of the coach's first line.
 
-Projects, presets, settings and the trainer's progress open as they are.
+Projects, presets, settings and the trainer's progress from 1.9.6 open as before.
 
 ## 1.9.6
 
