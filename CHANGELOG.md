@@ -32,6 +32,9 @@ Also fixed in BoopBox:
   new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
   goes to the next scale.
 
+- **PATTERNS, CHAIN and SCENES show their page tabs at the bottom**, as the other SEQ pages do: the page in a box
+  between the page before and after it, and a dot for each page. What OCT+ and OCT- do is now at the top, under the
+  track.
 - **SEQ held + SAVE no longer jumps to SCENES.** To get to PATTERNS, CHAIN and SCENES, tap SEQ, then turn SELECT
   through the SEQ pages. SEQ held + SAVE now does nothing (it opens neither SONG nor NOTES).
 

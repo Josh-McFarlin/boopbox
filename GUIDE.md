@@ -519,6 +519,8 @@ The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of 
 
 To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
+As on the other pages, the bottom line of PATTERNS, CHAIN and SCENES shows the page in a box between the page before and the page after it (1.9.7). The top of the screen shows the track and what OCT+ and OCT− do there.
+
 ### Beats from the keys (1.9)
 
 On a **drum track's PLAY page**, the white keys write beats. If you **hold one or more white keys**, BoopBox writes a whole pattern across the kit, over the length of the track (TIMING → LEN). The keys play no sound on this page. When you open the page, the screen shows *HOLD KEYS: A NEW BEAT*. The screen also shows the name of the groove (*BEAT HOUSE*).

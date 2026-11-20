@@ -330,6 +330,9 @@ from PLAY.
 To go to one of these pages from any page and track, push **SEQ**, then turn **SELECT** to the page. (Before
 1.9.7, **SEQ** held + **SAVE** went to SCENES. Now that does nothing.)
 
+As on the other pages, the bottom line shows the page's name in a box between its neighbours, with a dot for each SEQ
+page (1.9.7). The top of the screen shows the track and what OCT+ and OCT- do on the page.
+
 On all three pages, **the keys are pads**. They play no notes.
 
 | Keys | Function |
