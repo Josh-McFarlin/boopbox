@@ -283,6 +283,13 @@ usb_host() {
         -o "$OUT/usb_host_test" tests/usb_host_test.c && "$OUT/usb_host_test"
 }
 run "USB MIDI host: enumeration (direct, hubs, a hub on a hub), events, the filter, back-pressure, unplug, recovery" usb_host
+# the jam rooms' shareable sounds (shared/room-config.json) against the firmware's engines, presets, controls and kits
+room_config() {
+    $CC -O2 -w -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/room_config_dump" tests/room_config_dump.c -lm &&
+        "$OUT/room_config_dump" > "$OUT/room_config.json" &&
+        python3 tests/room_config_test.py "$OUT/room_config.json" ../shared/room-config.json
+}
+run "jam rooms: the shareable presets, sound controls, sample sets and kits match the firmware" room_config
 
 if [ -z "$NOFW" ]; then
 run "M-UPGRADE entry" cc_run ota_test "" tests/ota_test.c build/felucca.fwsc

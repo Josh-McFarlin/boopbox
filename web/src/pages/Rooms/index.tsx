@@ -8,7 +8,11 @@ import SiteHeader from '../../components/SiteHeader.tsx'
 import { RoomAudio } from './audio.ts'
 import { getRoomBrowserIdentity } from './browserIdentity.ts'
 import { connectFm1, syncEmulatorSnapshot } from './device.ts'
-import type { EmulatorSnapshot, Fm1Connection } from './device.ts'
+import type {
+  EmulatorSnapshot,
+  Fm1Connection,
+  UnsharedTrack,
+} from './device.ts'
 import { createSoundEditSharingController } from './editSharing.ts'
 import type { SoundEditSharingController } from './editSharing.ts'
 import { createRoomMixController } from './mix.ts'
@@ -171,6 +175,8 @@ const Rooms: React.FC = () => {
   const [soundEditsPaused, setSoundEditsPaused] = useState(false)
   const [deviceMode, setDeviceMode] = useState<'fm1' | 'emulator'>('fm1')
   const [emulatorReady, setEmulatorReady] = useState(false)
+  /* the device's tracks the room plays muted, and why (device.ts unsharedTracks) */
+  const [unshared, setUnshared] = useState<UnsharedTrack[]>([])
   const [status, setStatus] = useState('Connecting to the room server…')
   const [error, setError] = useState('')
   const soundEditSharingRef = useRef<SoundEditSharingController>(null!)
@@ -551,6 +557,7 @@ const Rooms: React.FC = () => {
     setError('')
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorSnapshotRef.current = ''
     emulatorTransportRef.current = null
     emulatorHasPerformanceRef.current = false
@@ -561,13 +568,17 @@ const Rooms: React.FC = () => {
         playNote,
         (state) => {
           setFm1State(state)
-          if (state === 'disconnected') stopAllNotes()
+          if (state === 'disconnected') {
+            stopAllNotes()
+            setUnshared([])
+          }
         },
         (track, param, value) => {
           if (roomRef.current && !soundEditSharingRef.current.paused)
             send({ type: 'sound_edit', track, param, value })
         },
-        (performance) => {
+        (performance, tracks) => {
+          setUnshared(tracks)
           if (roomRef.current && !send({ type: 'performance', performance })) {
             setError('Wait for the room server to reconnect.')
           }
@@ -597,6 +608,7 @@ const Rooms: React.FC = () => {
     fm1Ref.current = null
     soundEditSharingRef.current.attachDevice(null)
     setFm1State('disconnected')
+    setUnshared([])
     setDeviceMode('emulator')
     setEmulatorReady(false)
     emulatorSnapshotRef.current = ''
@@ -610,6 +622,7 @@ const Rooms: React.FC = () => {
     stopAllNotes()
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorHasPerformanceRef.current = false
     setStatus('Connect the FM-1 with its USB MIDI cable.')
   }
@@ -679,6 +692,7 @@ const Rooms: React.FC = () => {
           emulatorSnapshotRef.current = synced.performanceKey
           emulatorTransportRef.current = synced.transportKey
           emulatorHasPerformanceRef.current = synced.hasPerformance
+          setUnshared(synced.unshared || [])
         } catch (err) {
           setError(
             (err as Error).message ||
@@ -738,6 +752,7 @@ const Rooms: React.FC = () => {
     roomMixRef.current.reset()
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorHasPerformanceRef.current = false
     setRoom(null)
     setSoundEditsPaused(soundEditSharingRef.current.setPaused(false))
@@ -914,6 +929,26 @@ const Rooms: React.FC = () => {
                       ? 'Emulator connected.'
                       : 'Start the emulator below to connect it to this room.'}
                   </p>
+                )}
+                {unshared.length > 0 && (
+                  <div
+                    className={clsx(CONTROL_TEXT, 'mb-0')}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <p className="m-0">
+                      The room plays{' '}
+                      {unshared.length === 1 ? 'this track' : 'these tracks'}{' '}
+                      muted, because their sound can’t be shared:
+                    </p>
+                    <ul className="m-0 mt-1 pl-5">
+                      {unshared.map(({ track, reason }) => (
+                        <li key={track}>
+                          Track {track + 1}: it uses {reason}.
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             </div>

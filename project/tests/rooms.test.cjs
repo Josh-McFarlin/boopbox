@@ -191,16 +191,24 @@ test("voice descriptors allow only factory presets and factory drum kits", () =>
   assert.deepEqual(normalizeVoice({ engine: 13, kit: 36 }), { engine: 13, kit: 36 });
   assert.deepEqual(normalizeVoice({ engine: 0, preset: 2, params: { 63: 3, 68: 64 } }),
     { engine: 0, preset: 2, params: { 63: 3, 68: 64 } });
-  assert.equal(normalizeVoice({ engine: 4, preset: 0 }), null);
+  /* SAMPLE's factory presets and factory sets (SET 0..7) are shared; a USR slot (SET 8..11) is not */
+  assert.deepEqual(normalizeVoice({ engine: 4, preset: 10 }), { engine: 4, preset: 10 });
+  assert.deepEqual(normalizeVoice({ engine: 4, preset: 0, params: { 63: 7, 64: -12 } }),
+    { engine: 4, preset: 0, params: { 63: 7, 64: -12 } });
+  assert.equal(normalizeVoice({ engine: 4, preset: 0, params: { 63: 8 } }), null);
   assert.equal(normalizeVoice({ engine: 4, preset: 0, params: { 68: 64 } }), null);
-  assert.equal(normalizeVoice({ engine: 0, preset: 15 }), null);
+  assert.equal(normalizeVoice({ engine: 4, preset: 11 }), null);
+  assert.equal(normalizeVoice({ engine: 8, preset: 0, params: { 63: 11 } }), null);
+  assert.deepEqual(normalizeVoice({ engine: 0, preset: 21 }), { engine: 0, preset: 21 });
+  assert.equal(normalizeVoice({ engine: 0, preset: 22 }), null);
   assert.equal(normalizeVoice({ engine: 13, kit: 37 }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: [1, 2, 3] }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 71: 1 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 63: 5 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 128 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 1.5 } }), null);
-  assert.equal(normalizeVoice({ engine: 8, preset: 0, params: { 63: 0 } }), null);
+  assert.deepEqual(normalizeVoice({ engine: 8, preset: 0, params: { 63: 0 } }),   /* GRAIN on a factory set */
+    { engine: 8, preset: 0, params: { 63: 0 } });
   assert.equal(normalizeVoice({ engine: 9, preset: 0, params: { 70: 0 } }), null);
   assert.equal(normalizeVoice({ engine: 99, preset: 0 }), null);
   for (const [engine, allowlist] of Object.entries(config.shareableParameters)) {
@@ -222,7 +230,7 @@ test("room performance validation accepts typed sequences and rejects arbitrary 
   unsafeComponent.tracks[0].patterns[0].components.push([0, 1, 999, 0]);
   assert.equal(normalizeRoomPerformance(unsafeComponent), null);
   const customSound = roomPerformance();
-  customSound.tracks[0].voice = { engine: 4, preset: 0 };
+  customSound.tracks[0].voice = { engine: 4, preset: 0, params: { 63: 8 } };   /* a USR sample slot */
   assert.equal(normalizeRoomPerformance(customSound), null);
 });
 

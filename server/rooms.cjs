@@ -62,7 +62,7 @@ function normalizeVoice(value) {
     if (!Number.isSafeInteger(value.kit) || !SHAREABLE_DRUM_KITS.has(value.kit)) return null;
     return { engine: ENGINE_COUNT, kit: value.kit };
   }
-  if (!isIntegerInRange(value.engine, 0, ENGINE_COUNT - 1) || value.engine === 4) return null;
+  if (!isIntegerInRange(value.engine, 0, ENGINE_COUNT - 1)) return null;
   const keys = Object.keys(value);
   if (!Object.hasOwn(value, "preset") || keys.some((key) => !["engine", "preset", "params"].includes(key))
     || keys.length < 2 || keys.length > 3) return null;
