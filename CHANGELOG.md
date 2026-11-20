@@ -13,6 +13,24 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**An install that is cut off no longer leaves a dead FM-1.** If the cable came out or the battery ran flat during an
+install, the FM-1 could start the half-written firmware and show a black screen, with no USB to install again. The
+update loader now clears the start of the firmware first and writes it back last, after the whole package has been
+checked. A cut install leaves nothing to start, so the FM-1 comes up in update mode and you can run the install
+again. This works from the first install of this version: the loader comes in the package. Keep the battery charged
+anyway.
+
+Fixed:
+
+- On battery, with no USB cable, BoopBox looked for a computer once a second and stopped the screen and the handling
+  of keys and MIDI for about 30–40 ms each time. It now looks without stopping anything.
+- The key and LED scan, which runs 10,000 times a second, now runs from RAM instead of flash, so it no longer competes
+  with the sound for the flash.
+
+Projects, presets and settings from 1.9.6 open as before.
+
 ## 1.9.6
 
 Fixed in BoopBox Trainer (the page card that came in 1.9.5 now covers these steps too):
