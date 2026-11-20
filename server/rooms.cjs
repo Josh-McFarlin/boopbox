@@ -62,7 +62,7 @@ function normalizeVoice(value) {
     if (!Number.isSafeInteger(value.kit) || !SHAREABLE_DRUM_KITS.has(value.kit)) return null;
     return { engine: ENGINE_COUNT, kit: value.kit };
   }
-  if (!isIntegerInRange(value.engine, 0, ENGINE_COUNT - 1) || value.engine === 4) return null;
+  if (!isIntegerInRange(value.engine, 0, ENGINE_COUNT - 1)) return null;
   const keys = Object.keys(value);
   if (!Object.hasOwn(value, "preset") || keys.some((key) => !["engine", "preset", "params"].includes(key))
     || keys.length < 2 || keys.length > 3) return null;
@@ -305,6 +305,21 @@ function createRoomService(server, options = {}) {
     return `${track}:${note}`;
   }
 
+  /* a note's "at": the server time the player played it (their estimate: the page syncs with "time"). Kept when it
+   * is close to the server's own clock (up to 250 ms ahead, a clock estimate's error; up to 2 s behind, a slow trip:
+   * listeners then play it at once), else the time it arrived. Listeners play a note config.noteDelayMs after its
+   * "at" */
+  function noteTime(message, now) {
+    const at = message.at;
+    return typeof at === "number" && Number.isFinite(at) && at <= now + 250 && at >= now - 2000
+      ? Math.round(at) : now;
+  }
+
+  /* a message with the given keys, and "at" (a note's time) or not */
+  function validNoteEnvelope(message, keys) {
+    return validEnvelope(message, keys) || validEnvelope(message, [...keys, "at"]);
+  }
+
   function releaseNotes(player) {
     if (!player.room) return;
     for (const [key, timer] of player.activeNotes) {
@@ -316,6 +331,7 @@ function createRoomService(server, options = {}) {
         slot: player.slot,
         track,
         note,
+        at: Date.now(),
       });
     }
     player.activeNotes.clear();
@@ -691,8 +707,15 @@ function createRoomService(server, options = {}) {
         });
         break;
       }
+      case "time":
+        /* the page's clock sync (web/src/pages/Rooms/clock.ts): its own time back, and the server's */
+        if (!validEnvelope(message, ["t"]) || typeof message.t !== "number" || !Number.isFinite(message.t)) {
+          return protocolError(player);
+        }
+        safeSend(player.ws, { type: "time", t: message.t, serverAt: Date.now() });
+        break;
       case "note_on": {
-        if (!validEnvelope(message, ["track", "note", "velocity"])
+        if (!validNoteEnvelope(message, ["track", "note", "velocity"])
           || !isIntegerInRange(message.track, 0, 7)) return protocolError(player);
         if (!player.room) return sendError(player, "not_in_room");
         if (!player.performance?.tracks[message.track]?.voice
@@ -715,6 +738,7 @@ function createRoomService(server, options = {}) {
               slot: player.slot,
               track: message.track,
               note: message.note,
+              at: Date.now(),
             });
           }
         }, noteTimeoutMs);
@@ -727,11 +751,12 @@ function createRoomService(server, options = {}) {
           track: message.track,
           note: message.note,
           velocity: message.velocity,
+          at: noteTime(message, Date.now()),
         });
         break;
       }
       case "note_off": {
-        if (!validEnvelope(message, ["track", "note"]) || !isIntegerInRange(message.track, 0, 7)
+        if (!validNoteEnvelope(message, ["track", "note"]) || !isIntegerInRange(message.track, 0, 7)
           || !isIntegerInRange(message.note, 0, 127)) {
           return protocolError(player);
         }
@@ -747,6 +772,7 @@ function createRoomService(server, options = {}) {
             slot: player.slot,
             track: message.track,
             note: message.note,
+            at: noteTime(message, Date.now()),
           });
         }
         break;

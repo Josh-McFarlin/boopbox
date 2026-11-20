@@ -191,16 +191,24 @@ test("voice descriptors allow only factory presets and factory drum kits", () =>
   assert.deepEqual(normalizeVoice({ engine: 13, kit: 36 }), { engine: 13, kit: 36 });
   assert.deepEqual(normalizeVoice({ engine: 0, preset: 2, params: { 63: 3, 68: 64 } }),
     { engine: 0, preset: 2, params: { 63: 3, 68: 64 } });
-  assert.equal(normalizeVoice({ engine: 4, preset: 0 }), null);
+  /* SAMPLE's factory presets and factory sets (SET 0..7) are shared; a USR slot (SET 8..11) is not */
+  assert.deepEqual(normalizeVoice({ engine: 4, preset: 10 }), { engine: 4, preset: 10 });
+  assert.deepEqual(normalizeVoice({ engine: 4, preset: 0, params: { 63: 7, 64: -12 } }),
+    { engine: 4, preset: 0, params: { 63: 7, 64: -12 } });
+  assert.equal(normalizeVoice({ engine: 4, preset: 0, params: { 63: 8 } }), null);
   assert.equal(normalizeVoice({ engine: 4, preset: 0, params: { 68: 64 } }), null);
-  assert.equal(normalizeVoice({ engine: 0, preset: 15 }), null);
+  assert.equal(normalizeVoice({ engine: 4, preset: 11 }), null);
+  assert.equal(normalizeVoice({ engine: 8, preset: 0, params: { 63: 11 } }), null);
+  assert.deepEqual(normalizeVoice({ engine: 0, preset: 21 }), { engine: 0, preset: 21 });
+  assert.equal(normalizeVoice({ engine: 0, preset: 22 }), null);
   assert.equal(normalizeVoice({ engine: 13, kit: 37 }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: [1, 2, 3] }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 71: 1 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 63: 5 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 128 } }), null);
   assert.equal(normalizeVoice({ engine: 0, preset: 0, params: { 68: 1.5 } }), null);
-  assert.equal(normalizeVoice({ engine: 8, preset: 0, params: { 63: 0 } }), null);
+  assert.deepEqual(normalizeVoice({ engine: 8, preset: 0, params: { 63: 0 } }),   /* GRAIN on a factory set */
+    { engine: 8, preset: 0, params: { 63: 0 } });
   assert.equal(normalizeVoice({ engine: 9, preset: 0, params: { 70: 0 } }), null);
   assert.equal(normalizeVoice({ engine: 99, preset: 0 }), null);
   for (const [engine, allowlist] of Object.entries(config.shareableParameters)) {
@@ -222,7 +230,7 @@ test("room performance validation accepts typed sequences and rejects arbitrary 
   unsafeComponent.tracks[0].patterns[0].components.push([0, 1, 999, 0]);
   assert.equal(normalizeRoomPerformance(unsafeComponent), null);
   const customSound = roomPerformance();
-  customSound.tracks[0].voice = { engine: 4, preset: 0 };
+  customSound.tracks[0].voice = { engine: 4, preset: 0, params: { 63: 8 } };   /* a USR sample slot */
   assert.equal(normalizeRoomPerformance(customSound), null);
 });
 
@@ -635,6 +643,48 @@ test("room capacity is eight and only members can share typed notes", async () =
     assert.equal((await owner.next("error")).code, "invalid_message");
     owner.send({ type: "midi", data: [0xf0, 0, 0xf7] });
     assert.equal((await owner.next("error")).code, "unsupported_message");
+  } finally {
+    await app.close(clients);
+  }
+});
+
+test("the server answers the clock sync and stamps every note with the time it was played", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const peer = createClient(app.url);
+    clients.push(owner, peer);
+    await owner.ready;
+    await peer.ready;
+    const created = await createRoom(owner, "house");
+    peer.send({ type: "join", roomId: created.room.id });
+    await peer.next("room_state");
+    owner.send({ type: "voice", voice: { engine: 0, preset: 2 } });
+    await peer.next("voice");
+
+    const before = Date.now();
+    owner.send({ type: "time", t: 1234.5 });
+    const time = await owner.next("time");
+    assert.equal(time.t, 1234.5);
+    assert.ok(time.serverAt >= before && time.serverAt <= Date.now());
+    owner.send({ type: "time", t: "soon" });
+    assert.equal((await owner.next("error")).code, "invalid_message");
+
+    const played = Date.now() - 40;                        /* a note played 40 ms ago: its own time is kept */
+    owner.send({ type: "note_on", track: 0, note: 60, velocity: 100, at: played });
+    assert.equal((await peer.next("note_on")).at, played);
+    owner.send({ type: "note_off", track: 0, note: 60, at: played + 10 });
+    assert.equal((await peer.next("note_off")).at, played + 10);
+
+    for (const at of [Date.now() + 5000, Date.now() - 60_000, "now"]) {   /* off the server's clock: when it arrived */
+      const sent = Date.now();
+      owner.send({ type: "note_on", track: 0, note: 62, velocity: 100, at });
+      const note = await peer.next("note_on");
+      assert.ok(note.at >= sent && note.at <= Date.now(), `${at} -> ${note.at}`);
+    }
+    owner.send({ type: "note_on", track: 0, note: 64, velocity: 100 });   /* no "at" (an older page): when it arrived */
+    assert.ok(Number.isFinite((await peer.next("note_on")).at));
   } finally {
     await app.close(clients);
   }

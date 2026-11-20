@@ -7,8 +7,13 @@ import SiteHeader from '../../components/SiteHeader.tsx'
 
 import { RoomAudio } from './audio.ts'
 import { getRoomBrowserIdentity } from './browserIdentity.ts'
+import { ServerClock } from './clock.ts'
 import { connectFm1, syncEmulatorSnapshot } from './device.ts'
-import type { EmulatorSnapshot, Fm1Connection } from './device.ts'
+import type {
+  EmulatorSnapshot,
+  Fm1Connection,
+  UnsharedTrack,
+} from './device.ts'
 import { createSoundEditSharingController } from './editSharing.ts'
 import type { SoundEditSharingController } from './editSharing.ts'
 import { createRoomMixController } from './mix.ts'
@@ -120,9 +125,19 @@ type ServerMessage =
       slot: number
       track: number
       note: number
+      at?: number
     }
+  | { type: 'time'; t: number; serverAt: number }
   | { type: 'error'; code: string }
   | { type: 'server_closing' }
+
+/* when a room note sounds, on the server's clock: config.noteDelayMs after the time it was played (its "at"); a
+   note without one (an older server) at once */
+function notePlayAt(at: number | undefined): number | null {
+  return typeof at === 'number' && Number.isFinite(at)
+    ? at + config.noteDelayMs
+    : null
+}
 
 /* what the emulator page posts to the room page */
 type EmulatorMessage =
@@ -171,6 +186,8 @@ const Rooms: React.FC = () => {
   const [soundEditsPaused, setSoundEditsPaused] = useState(false)
   const [deviceMode, setDeviceMode] = useState<'fm1' | 'emulator'>('fm1')
   const [emulatorReady, setEmulatorReady] = useState(false)
+  /* the device's tracks the room plays muted, and why (device.ts unsharedTracks) */
+  const [unshared, setUnshared] = useState<UnsharedTrack[]>([])
   const [status, setStatus] = useState('Connecting to the room server…')
   const [error, setError] = useState('')
   const soundEditSharingRef = useRef<SoundEditSharingController>(null!)
@@ -184,6 +201,9 @@ const Rooms: React.FC = () => {
   const emulatorTransportRef = useRef<string | null>(null)
   const emulatorHasPerformanceRef = useRef(false)
   const audioRef = useRef<RoomAudio | null>(null)
+  /* the room server's clock (clock.ts): notes carry the time they were played and sound noteDelayMs after it */
+  const clockRef = useRef(new ServerClock())
+  const clockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roomRef = useRef(room)
   const voiceStateRef = useRef(new Map<string, string>())
   const performanceStateRef = useRef(new Map<string, PerformanceState>())
@@ -224,6 +244,7 @@ const Rooms: React.FC = () => {
         on,
         velocity,
         track,
+        clockRef.current.serverNow(),
       )
     },
     [send],
@@ -323,6 +344,18 @@ const Rooms: React.FC = () => {
         if (message.type === 'connected') {
           selfPlayerIdRef.current = message.playerId
         } else if (message.type === 'identified') {
+          /* the clock: five quick samples, then one every 15 s (the fastest reply of the last eight counts) */
+          let samples = 0
+          const syncClock = (): void => {
+            send({ type: 'time', t: clockRef.current.stamp() })
+            samples += 1
+            clockTimerRef.current = setTimeout(
+              syncClock,
+              samples < 5 ? 250 : 15_000,
+            )
+          }
+          if (clockTimerRef.current) clearTimeout(clockTimerRef.current)
+          syncClock()
           setSocketState('connected')
           setStatus(
             'Connected. Choose a genre and create a room, or join one below.',
@@ -457,6 +490,7 @@ const Rooms: React.FC = () => {
               message.track,
               message.note,
               true,
+              notePlayAt(message.at),
             )
         } else if (message.type === 'note_off') {
           if (message.playerId !== selfPlayerIdRef.current)
@@ -465,6 +499,7 @@ const Rooms: React.FC = () => {
               message.track,
               message.note,
               false,
+              notePlayAt(message.at),
             )
         } else if (message.type === 'error') {
           const errorText = ERROR_TEXT[message.code]
@@ -477,11 +512,15 @@ const Rooms: React.FC = () => {
           } else {
             setError(errorText || 'The room server rejected that request.')
           }
+        } else if (message.type === 'time') {
+          clockRef.current.sample(message.t, message.serverAt)
         } else if (message.type === 'server_closing') {
           setStatus('The room server is restarting. Reconnecting…')
         }
       }
       ws.onclose = (): void => {
+        if (clockTimerRef.current) clearTimeout(clockTimerRef.current)
+        clockTimerRef.current = null
         if (stopped) return
         setSocketState('connecting')
         selfPlayerIdRef.current = null
@@ -527,6 +566,7 @@ const Rooms: React.FC = () => {
     try {
       if (!audioRef.current)
         audioRef.current = new RoomAudio((err) => setError(err.message))
+      audioRef.current.clock = clockRef.current
       await audioRef.current.start()
       setAudioEnabled(true)
       const mix = roomMixRef.current.getState()
@@ -551,6 +591,7 @@ const Rooms: React.FC = () => {
     setError('')
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorSnapshotRef.current = ''
     emulatorTransportRef.current = null
     emulatorHasPerformanceRef.current = false
@@ -561,13 +602,17 @@ const Rooms: React.FC = () => {
         playNote,
         (state) => {
           setFm1State(state)
-          if (state === 'disconnected') stopAllNotes()
+          if (state === 'disconnected') {
+            stopAllNotes()
+            setUnshared([])
+          }
         },
         (track, param, value) => {
           if (roomRef.current && !soundEditSharingRef.current.paused)
             send({ type: 'sound_edit', track, param, value })
         },
-        (performance) => {
+        (performance, tracks) => {
+          setUnshared(tracks)
           if (roomRef.current && !send({ type: 'performance', performance })) {
             setError('Wait for the room server to reconnect.')
           }
@@ -597,6 +642,7 @@ const Rooms: React.FC = () => {
     fm1Ref.current = null
     soundEditSharingRef.current.attachDevice(null)
     setFm1State('disconnected')
+    setUnshared([])
     setDeviceMode('emulator')
     setEmulatorReady(false)
     emulatorSnapshotRef.current = ''
@@ -610,6 +656,7 @@ const Rooms: React.FC = () => {
     stopAllNotes()
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorHasPerformanceRef.current = false
     setStatus('Connect the FM-1 with its USB MIDI cable.')
   }
@@ -679,6 +726,7 @@ const Rooms: React.FC = () => {
           emulatorSnapshotRef.current = synced.performanceKey
           emulatorTransportRef.current = synced.transportKey
           emulatorHasPerformanceRef.current = synced.hasPerformance
+          setUnshared(synced.unshared || [])
         } catch (err) {
           setError(
             (err as Error).message ||
@@ -738,6 +786,7 @@ const Rooms: React.FC = () => {
     roomMixRef.current.reset()
     setDeviceMode('fm1')
     setEmulatorReady(false)
+    setUnshared([])
     emulatorHasPerformanceRef.current = false
     setRoom(null)
     setSoundEditsPaused(soundEditSharingRef.current.setPaused(false))
@@ -914,6 +963,26 @@ const Rooms: React.FC = () => {
                       ? 'Emulator connected.'
                       : 'Start the emulator below to connect it to this room.'}
                   </p>
+                )}
+                {unshared.length > 0 && (
+                  <div
+                    className={clsx(CONTROL_TEXT, 'mb-0')}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <p className="m-0">
+                      The room plays{' '}
+                      {unshared.length === 1 ? 'this track' : 'these tracks'}{' '}
+                      muted, because their sound can’t be shared:
+                    </p>
+                    <ul className="m-0 mt-1 pl-5">
+                      {unshared.map(({ track, reason }) => (
+                        <li key={track}>
+                          Track {track + 1}: it uses {reason}.
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             </div>

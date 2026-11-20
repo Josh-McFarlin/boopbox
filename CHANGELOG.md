@@ -29,6 +29,21 @@ Fixed:
 - The key and LED scan, which runs 10,000 times a second, now runs from RAM instead of flash, so it no longer competes
   with the sound for the flash.
 
+Fixed in the [jam rooms](https://boopbox.replit.app/rooms/):
+
+- Tracks went silent for the other players although they played factory sounds. The rooms knew only the presets of
+  an older BoopBox: a track on one of the newer factory presets of ANALOG, DIGITAL, PHASE, LOFI, VOICE, TRIO, WHEEL or
+  GRAIN was played muted, and so was every track on the SAMPLE engine (GRAND PNO, UP BASS, VIBES and the others). They
+  all play now, with their factory sample sets. LOFI's fifth wave and GRAIN's sample source are shared too.
+- When a track can't be shared, the room page now says which one and why (*Track 5: it uses your own sample (USR)*),
+  where it used to mute it without a word. Your own samples, drum kits (USR, SYN) and FM6 bank patches stay on your
+  FM-1.
+- The notes the others play now come in steadily. Each note used to play the moment its message arrived, so the
+  internet's ups and downs made the timing uneven. Now each note carries the time it was played, and every listener
+  plays it 150 ms after that time. The delay is the same for every note, so a part stays in time with itself.
+- The room's shared beat now follows the room server's clock, not each computer's own clock. A computer whose clock
+  was a little off heard the others' patterns early or late.
+
 Projects, presets and settings from 1.9.6 open as before.
 
 ## 1.9.6

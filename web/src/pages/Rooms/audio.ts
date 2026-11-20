@@ -8,6 +8,7 @@ import {
   req,
 } from '../Editor/lib/proto.ts'
 
+import type { ServerClock } from './clock.ts'
 import type {
   RoomClock,
   RoomDrumStep,
@@ -113,11 +114,24 @@ interface RoomPreviewSnapshot {
   roomScenes?: { names: number[]; patterns: number[][] }
 }
 
+/* the room beat now: the clock's beat at its serverAt, moved on by the time since on the server's clock */
+function roomBeatNow(
+  clock: RoomClock,
+  tempo: number,
+  serverNow: number,
+): number {
+  return (
+    clock.beat! +
+    (Math.max(0, serverNow - (clock.serverAt || serverNow)) * tempo) / 60_000
+  )
+}
+
 function performanceGroupSnapshot(
   mock: RoomMock,
   performance: RoomPerformance,
   group: number,
   clock: RoomClock | null,
+  serverNow: number,
 ) {
   mock.state.g[0] = performance.tempo
   const snapshot = previewSnapshot(mock.state, false) as RoomPreviewSnapshot
@@ -128,10 +142,7 @@ function performanceGroupSnapshot(
     .some((track) => !!track.voice)
   snapshot.roomBeat =
     clock && Number.isFinite(clock.beat)
-      ? clock.beat! +
-        (Math.max(0, Date.now() - (clock.serverAt || Date.now())) *
-          performance.tempo) /
-          60_000
+      ? roomBeatNow(clock, performance.tempo, serverNow)
       : 0
   snapshot.tracks = snapshot.tracks.slice(0, 4).map((track, local) => {
     const source = performance.tracks[group * 4 + local]
@@ -173,6 +184,8 @@ export class RoomAudio {
   gain: GainNode | null
   loading: Promise<void> | null
   onError: ErrorHandler
+  /* the room server's clock (clock.ts): the room beat and the notes' times. Without it, this browser's own clock */
+  clock: ServerClock | null = null
 
   constructor(onError: ErrorHandler) {
     this.players = Array.from(
@@ -414,6 +427,7 @@ export class RoomAudio {
           performance,
           group,
           this.roomClocks[slot],
+          this.serverNow(),
         ),
       })
     }
@@ -456,9 +470,7 @@ export class RoomAudio {
     this.setTempo(tempo)
     const beat =
       clock && Number.isFinite(clock.beat)
-        ? clock.beat! +
-          (Math.max(0, Date.now() - (clock.serverAt || Date.now())) * tempo) /
-            60_000
+        ? roomBeatNow(clock, tempo, this.serverNow())
         : null
     this.node?.port.postMessage({
       type: 'transport',
@@ -523,21 +535,33 @@ export class RoomAudio {
     return this.queue
   }
 
+  serverNow(): number {
+    return this.clock ? this.clock.serverNow() : Date.now()
+  }
+
+  /* a room note. playAt: when to play it, on the server's clock (its "at" + config.noteDelayMs); the audio thread
+     holds it until then. The delay is worked out as the note is handed over: it may have waited in the queue */
   async note(
     slot: number,
     track: number,
     note: number,
     on: boolean,
+    playAt: number | null = null,
   ): Promise<void> {
     const next = this.queue.then(() => {
       const node = this.node
       if (!this.performances[slot]?.tracks[track]?.voice || !node) return
+      const delayMs =
+        playAt === null || !Number.isFinite(playAt)
+          ? 0
+          : Math.min(1000, Math.max(0, playAt - this.serverNow()))
       node.port.postMessage({
         type: 'note',
         slot,
         track,
         note,
         on,
+        delayFrames: Math.round((delayMs * 44_100) / 1000),
       })
     })
     this.queue = next.catch(() => {})
