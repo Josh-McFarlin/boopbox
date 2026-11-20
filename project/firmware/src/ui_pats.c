@@ -2,8 +2,8 @@
 /* The PATTERNS, CHAIN and SCENES pages, and the CHORDS screen.
  * PATTERNS, CHAIN and SCENES are the last SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then SONG; SELECT
  * walks them: from anywhere, SEQ, then SELECT). On all three the keys are pads (seq.c kb_pats, pats_key):
- * white keys 1..8 the selected track's patterns, white keys 9..16 the song's scenes 1..8; their lights show what plays
- * (lit) and what is asked for (blinking). ALGORITHM the track, ENV / LFO their pages, PLAY and HOME as everywhere.
+ * white keys 1..8 the selected track's patterns; on SCENES only (1.9.7), white keys 9..16 the song's scenes 1..8 (on
+ * PATTERNS and CHAIN nothing, dark); their lights show what plays (lit) and what is asked for (blinking). ALGORITHM the track, ENV / LFO their pages, PLAY and HOME as everywhere.
  *   PATTERNS: the selected track's eight patterns as tiles (NOW playing, NEXT asked for, what each holds, empty). A key
  *     asks for its pattern (quantized: PAT Q). KNOB 1 the cursor, KNOB 2 PAT Q, KNOB 3 COPY the pattern playing into
  *     the cursor's (turned twice), KNOB 4 CLEAR the cursor's (twice). OCT+ asks for the cursor's pattern, OCT- the
@@ -94,6 +94,8 @@ UI_SMALL static uint32_t pats_keys_lit(uint32_t blink)
     uint32_t m = 1u << key_of_lane(t->pat % NPAT);
     if (t->pat_req && blink)
         m |= 1u << key_of_lane((t->pat_req - 1u) % NPAT);
+    if (pats_view() != PV_SCENES)
+        return m;                                /* (1.9.7) keys 9..16 the scenes on SCENES only */
     if (scn_cur < NSCENE)
         m |= 1u << key_of_lane(8u + scn_cur);
     if (scn_ask < NSCENE && blink)
@@ -128,7 +130,8 @@ UI_SMALL static void chain_add(track_t *t, uint32_t p)   /* pattern p after the 
     chain_put(t, at, CH_SLOT(p, 1u));
     chain_cursor = (uint8_t)(chain_cursor < n ? at : n + 1u);
 }
-/* a pad: white keys 1..8 the track's patterns (CHAIN: into the chain), 9..16 the scenes (seq.c lk_q, KB_PATS) */
+/* a pad: white keys 1..8 the track's patterns (CHAIN: into the chain), 9..16 the scenes on SCENES (seq.c lk_q,
+ * KB_PATS) */
 UI_SMALL static void pats_key(uint32_t k)
 {
     int32_t w = white_of_key(k);
@@ -136,6 +139,9 @@ UI_SMALL static void pats_key(uint32_t k)
     char b[20];
     if (w < 0 || w > 15)
         return;
+    if (w >= 8 && pats_view() != PV_SCENES)
+        return;                                  /* (1.9.7) PATTERNS, CHAIN: a scene launched by a stray key changed
+                                                  * every track from a page about one; SCENES shows what each holds */
     if (w >= 8) {
         scn_cursor = (uint8_t)(w - 8);
         scn_launch(scn_cursor);
@@ -232,34 +238,26 @@ UI_SMALL static void pats_foot(const char *const *L, char (*v)[8])
         cv_rect(120 - (int32_t)n * 3 + (int32_t)i * 6 + 1, 50, 3, 2, i + 1u == at ? C_WHITE : C_DIM);
     cv_blit(0, 188);
 }
-/* the keyboard: white keys 1..16 (F3 .. G5) and the black keys between, 1..8 the track's patterns, 9..16 the scenes;
- * each white key in what it does now (the pattern playing in the track's colour, one asked for white, one that holds
- * something dim; the scene playing light, one asked for white) */
+/* the keyboard (1.9.7): white keys 1..8 (F3 .. F4), twice as wide, and the black keys between: the track's patterns,
+ * each in what it does now (the pattern playing in the track's colour, one asked for white, one that holds something
+ * dim). Keys 9..16 are the scenes on SCENES only: not drawn here */
 UI_SMALL static void pats_keyboard(int32_t y, uint32_t blink)
 {
     uint32_t i, sel = song.sel % NTRK, used = pats_used(sel);
     const track_t *t = &trk[sel];
     char b[4];
-    for (i = 0; i < 16u; i++) {
-        int32_t x = (int32_t)i * 15;
-        uint16_t c, tc;
-        if (i < 8u) {
-            uint32_t asked = t->pat_req == i + 1u, has = (used >> i) & 1u;
-            c = i == t->pat ? UI_COL[sel] : asked && blink ? C_WHITE : has ? UI_DIM[sel] : UI_G1;
-            tc = i == t->pat || (asked && blink) ? C_BLACK : has ? C_WHITE : UI_G3;
-            fmt_int(b, (int32_t)i + 1);
-        } else {
-            uint32_t sc = i - 8u;
-            c = sc == scn_cur ? UI_G4 : sc == scn_ask && blink ? C_WHITE : UI_G2;
-            tc = sc == scn_cur || (sc == scn_ask && blink) ? C_BLACK : UI_G4;
-            fmt_int(b, (int32_t)sc + 1);
-        }
-        cv_rect(x, y, 14, 27, c);
-        cv_text(x + 7 - text_w(&FONT_S, b) / 2, y + 12, &FONT_S, b, tc);
+    for (i = 0; i < 8u; i++) {
+        int32_t x = (int32_t)i * 30;
+        uint32_t asked = t->pat_req == i + 1u, has = (used >> i) & 1u;
+        uint16_t c = i == t->pat ? UI_COL[sel] : asked && blink ? C_WHITE : has ? UI_DIM[sel] : UI_G1;
+        uint16_t tc = i == t->pat || (asked && blink) ? C_BLACK : has ? C_WHITE : UI_G3;
+        fmt_int(b, (int32_t)i + 1);
+        cv_rect(x, y, 29, 27, c);
+        cv_text(x + 15 - text_w(&FONT_S, b) / 2, y + 12, &FONT_S, b, tc);
     }
-    for (i = 0; i < 15u; i++)                    /* (from F: a black key after F, G, A, C and D) */
+    for (i = 0; i < 7u; i++)                     /* (from F: a black key after F, G, A, C and D) */
         if (i % 7u != 3u && i % 7u != 6u)
-            cv_rect((int32_t)i * 15 + 10, y, 9, 11, C_BLACK);
+            cv_rect((int32_t)i * 30 + 20, y, 18, 11, C_BLACK);
 }
 /* when the change asked for happens: "next in 3 beats", "at loop end" (playing), else "" */
 UI_SMALL static void pats_when(char *b)
@@ -315,8 +313,7 @@ UI_SMALL static void pads_draw(uint32_t blink)
     cv_blit(0, 42);
     cv_begin(240, 48, C_BLACK);                  /* the keys: what each does */
     pats_keyboard(0, blink);
-    cv_text(4, 28, &FONT_S, "keys: patterns", UI_G3);
-    ui_text_r(28, "scenes", UI_G3);
+    cv_text(4, 28, &FONT_S, "keys 1-8: patterns", UI_G3);
     cv_blit(0, 140);
     fmt_int(v[0], (int32_t)pats_cursor + 1);
     str_cpy(v[1], PQN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);

@@ -338,11 +338,11 @@ On all three pages, **the keys are pads**. They play no notes.
 | Keys | Function |
 | --- | --- |
 | White keys **1 … 8** (F3 … F4) | Patterns 1 … 8 of the selected track: requests that pattern. On CHAIN: adds it to the chain |
-| White keys **9 … 16** (G4 … G5) | Scenes 1 … 8: launches that scene on all tracks |
+| White keys **9 … 16** (G4 … G5) | On SCENES only: scenes 1 … 8, launches that scene on all tracks. On PATTERNS and CHAIN: no function (1.9.7) |
 | Black keys | No function |
 
-The key lights show what plays (on) and what you requested (blinking). The strip near the bottom of each page shows the
-same 16 pads. **ALGORITHM** selects the track. **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** operate as on
+The key lights show what plays (on) and what you requested (blinking). On PATTERNS, the strip under the tiles shows
+keys 1 … 8 (1.9.7: before, all 16 pads). **ALGORITHM** selects the track. **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** operate as on
 all pages.
 
 A pattern change that you request waits for its time. **PAT Q** (KNOB 2 on PATTERNS and SCENES) sets this time:
@@ -405,7 +405,7 @@ example *next in 3 beats* or *at loop end*. In a new project, scene N is pattern
 
 | Control | Function |
 | --- | --- |
-| A white key 9 … 16 (on all three pages) | Launches that scene: each track in the scene requests its pattern |
+| A white key 9 … 16 (on this page only, 1.9.7) | Launches that scene: each track in the scene requests its pattern |
 | **KNOB 1** | The scene |
 | **KNOB 2 QUANT** | PAT Q |
 | **KNOB 3 NAME** | The name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |

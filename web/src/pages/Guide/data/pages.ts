@@ -289,7 +289,7 @@ export const PAGES: PageGroup[] = [
         'PATTERNS',
         'pages/seq-patterns',
         ['PATTERN cursor', 'QUANT', 'COPY (twice)', 'CLEAR (twice)'],
-        'Eight patterns per track; keys 1–8 are pads, 9–16 launch scenes.',
+        'Eight patterns per track; keys 1–8 are pads.',
       ],
       [
         'CHAIN',

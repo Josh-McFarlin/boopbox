@@ -1089,7 +1089,7 @@ UI_SMALL static int tr_goal_in(const tr_card_t *c)
     case TG_SCNPLAY:
         if (scn_cur == c->p && scn_ask == SCN_NONE)
             return 1;
-        if (!on_pats_page()) {                   /* (any of the three: the keys 9..16 launch the scenes) */
+        if (!on_pats_page() || pats_view() != PV_SCENES) {   /* (1.9.7: SCENES only: there keys 9..16 launch them) */
             tr_to_view(PV_SCENES);
             return 0;
         }

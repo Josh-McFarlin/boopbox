@@ -515,7 +515,7 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while you record or
 
 **The DRUMS grid has the same sheet** (2.7.2). On the grid, **OCT+ held** opens it for the hit of the KNOB 1 sound on the KNOB 2 step. The rows are **RATCHET** (x1 … x4), **NUDGE** and **FILL** (of the step: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step) and **DELETE** (OCT+). OCT− closes the sheet. If you tap OCT+, it still turns the page of steps.
 
-The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes the **SONG** screen. On those three pages, the keys are pads: white keys 1–8 are the patterns of the track, and 9–16 are the scenes ([the details](docs/groovebox-controls.md#patterns)).
+The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes the **SONG** screen. On those three pages, the keys are pads: white keys 1–8 are the patterns of the track. On SCENES, keys 9–16 launch the scenes; on PATTERNS and CHAIN they do nothing (1.9.7) ([the details](docs/groovebox-controls.md#patterns)).
 
 To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
@@ -1438,7 +1438,8 @@ If the official firmware starts with strange settings or a scrambled display, it
 | tap SAVE | on TRACKS: SONG screen · on other screens: SAVE pages |
 | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
 | tap SEQ, then turn SELECT | PATTERNS, CHAIN, SCENES (the SEQ pages after PLAY) |
-| white keys 1–8 / 9–16, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) / launch scenes 1–8 |
+| white keys 1–8, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) |
+| white keys 9–16, on SCENES | launch scenes 1–8 |
 | tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS, CHAIN, SCENES) / kit (again: sound) |
 | OCT− / OCT+ | octave (both: 0) · drums: ghost / hard while held |
 | ALGORITHM | track (1–8) |
