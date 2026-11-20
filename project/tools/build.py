@@ -37,7 +37,10 @@ APP_SLOT = fm1pkg_make.APP_SLOT
 LOADER_LOAD = 0x01C0A800
 LOADER_NAME = b"usb_hid_ota.bin"    # the file name the SPL looks for
 DOCKER_IMAGE = os.environ.get("JIELI_DOCKER_IMAGE", "debian:bookworm-slim")
-CFLAGS = ["-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-function"]
+# -mcpu=r3 -mfprev1: the AC79's core and its single-precision FPU, as JieLi's AC79 SDK builds. The firmware is integer-only
+# today (the same code with or without them); a float added later runs on the FPU, in the general registers (the ISRs
+# save nothing more). A double still needs a library routine, and the link has none: it fails
+CFLAGS = ["-mcpu=r3", "-mfprev1", "-Os", "-ffunction-sections", "-fno-builtin", "-Wall", "-Wno-unused-function"]
 LINE = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
 
 # SDK files of AC79NN_SDK_V1.2.1_2023-12-13 (the tested version)
@@ -202,11 +205,12 @@ def build_app():
     elf = OUT / "felucca.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
        OUT / "fm1_cpu1.o", OUT / "felucca.o", "-o", elf)
-    for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin"):
+    for sect in ("text.bin", "data.bin", "ramtext.bin", "fasttext.bin", "c1text.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".data", elf, OUT / "data.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".ram_text", elf, OUT / "ramtext.bin"),
+                               ("common/bin/objcopy", "-O", "binary", "-j", ".fast_text", elf, OUT / "fasttext.bin"),
                                ("common/bin/objcopy", "-O", "binary", "-j", ".c1_text", elf, OUT / "c1text.bin"),
                                ("common/bin/objdump", "-t", elf),
                                ("common/bin/objdump", "-d", elf),
@@ -216,9 +220,10 @@ def build_app():
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
     img = bytearray((OUT / "text.bin").read_bytes())
-    # .ram_text, .c1_text (the second core's loop) and .data follow .text at their load addresses, in
-    # that order; main.c copies them by words at boot
-    for sect, lname in (("ramtext.bin", "_rt_load"), ("c1text.bin", "_c1_load"), ("data.bin", "_data_load")):
+    # .ram_text, .fast_text (the TIMER5 tick, hal/fm1_cc.h FM1_FAST), .c1_text (the second core's loop) and .data
+    # follow .text at their load addresses, in that order; main.c copies them by words at boot
+    for sect, lname in (("ramtext.bin", "_rt_load"), ("fasttext.bin", "_ft_load"), ("c1text.bin", "_c1_load"),
+                        ("data.bin", "_data_load")):
         load = symv(lname)
         if load % 4:
             raise SystemExit(f"{lname} {load:#x} is not word aligned")
@@ -245,6 +250,17 @@ def check(img, syms, dis, rt):
         errors.append(f".ram_text contains calls: {rt_calls[:3]}")
     else:
         notes.append(f".ram_text: {len([ln for ln in rt.splitlines() if LINE.match(ln)])} insns, no calls")
+    def addr(n):
+        mm = re.search(r"^([0-9a-f]+) .*\s" + n + r"$", syms, re.M)
+        return int(mm.group(1), 16) if mm else None
+    # main.c copies [_rt_start, _rt_end) from _rt_load in one run: .ram_text, .fast_text and .c1_text must sit at the
+    # same offsets in RAM as in the image
+    for start, load in (("_ft_start", "_ft_load"), ("_c1_start", "_c1_load")):
+        if None not in (addr(start), addr(load), addr("_rt_start"), addr("_rt_load")) and \
+                addr(start) - addr("_rt_start") != addr(load) - addr("_rt_load"):
+            errors.append(f"{start} is not at the same offset from _rt_start in RAM as {load} from _rt_load")
+    if addr("_ft_start") is not None:
+        notes.append(f".fast_text: {addr('_ft_end') - addr('_ft_start')} B, the TIMER5 tick in RAM")
     mc1 = [re.search(r"^([0-9a-f]+) .*\s" + n + r"$", syms, re.M) for n in ("_c1_start", "_c1_end")]
     if all(mc1):
         notes.append(f".c1_text: {int(mc1[1].group(1), 16) - int(mc1[0].group(1), 16)} B, the second core's loop in RAM")

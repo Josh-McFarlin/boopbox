@@ -60,7 +60,7 @@ static int32_t fm1_adc_read(uint32_t ch)
 }
 
 /* (1.8) one conversion, started on a scan tick and taken on the next */
-static void fm1_adc_start(uint32_t ch, uint32_t con)
+FM1_INLINE void fm1_adc_start(uint32_t ch, uint32_t con)
 {
     FM1_ADC_CON = 0;
     if (FM1_WLA_CON0 & (1u << 14))
@@ -69,22 +69,22 @@ static void fm1_adc_start(uint32_t ch, uint32_t con)
     FM1_ADC_CON |= 0x10u;
     FM1_ADC_CON |= 0x40u;
 }
-static inline int fm1_adc_done(void) { return (FM1_ADC_CON & 0x80u) != 0; }
-static inline uint32_t fm1_adc_take(void)
+FM1_INLINE int fm1_adc_done(void) { return (FM1_ADC_CON & 0x80u) != 0; }
+FM1_INLINE uint32_t fm1_adc_take(void)
 {
     uint32_t v = FM1_ADC_RES & 0x3FFu;
     FM1_ADC_CON = 0x40u;
     FM1_ADC_CON = 0;
     return v;
 }
-static inline void fm1_adc_abort(void)
+FM1_INLINE void fm1_adc_abort(void)
 {
     FM1_ADC_CON = 0x40u;
     FM1_ADC_CON = 0;
 }
 
 /* (1.8) a key sample's row driven high (rb 3 PA7, 4 PA8) at strength 0..3, and back to an input with its pull-up */
-static void fm1__row_drive(uint32_t rb, uint32_t strength)
+FM1_FAST static void fm1__row_drive(uint32_t rb, uint32_t strength)
 {
     uint32_t m = 1u << (rb == 3u ? 7 : 8);
     if (strength & 1u)
@@ -98,7 +98,7 @@ static void fm1__row_drive(uint32_t rb, uint32_t strength)
     FM1_PR(FM1_PA, FM1_OUT) |= m;
     FM1_PR(FM1_PA, FM1_DIR) &= ~m;
 }
-static void fm1__row_release(uint32_t rb)
+FM1_FAST static void fm1__row_release(uint32_t rb)
 {
     uint32_t m = 1u << (rb == 3u ? 7 : 8);
     FM1_PR(FM1_PA, FM1_DIR) |= m;                  /* an input with its pull-up again (as fm1_input_init left it) */
@@ -107,7 +107,7 @@ static void fm1__row_release(uint32_t rb)
     FM1_PR(FM1_PA, FM1_HD) &= ~m;
 }
 /* the conversion started last tick: its row an input again, its result; off once the main loop let go */
-static __attribute__((noinline)) void fm1__an_take(void)
+FM1_FAST static __attribute__((noinline)) void fm1__an_take(void)
 {
     uint32_t rb = fm1_an.rowbit, driven = fm1_an.driven;
     if (driven) {
@@ -133,7 +133,7 @@ static __attribute__((noinline)) void fm1__an_take(void)
         fm1_an.on = 0;                             /* (nothing pending, the rows inputs: the main loop's again) */
 }
 /* column n is latched: sample its PA7 / PA8 key (or the pot, the battery) until the next tick */
-static __attribute__((noinline)) void fm1__an_start(uint32_t n)
+FM1_FAST static __attribute__((noinline)) void fm1__an_start(uint32_t n)
 {
     uint32_t odd, ch, rb;
     if (n == 0u)

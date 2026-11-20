@@ -66,7 +66,7 @@ UI_SMALL static uint32_t stack_sp(void) { return fm1_sp(); }
  * access) and the consumer side of the audio ring, and usb_poll never runs nested, so the two never
  * interleave. The time spent nested is handed to the audio ISR: its load figures stay render-only.
  * (After Felucca 1.0.) */
-void fm1_timer5_irq(void)
+FM1_FAST void fm1_timer5_irq(void)
 {
     static uint32_t sub, owed;
     uint32_t t0 = fm1_ticks(), usb_due = sub % 5u == 0u;
@@ -94,16 +94,16 @@ void fm1_timer5_irq(void)
         felucca_dbg.nested++;
 #if FELUCCA_UAC
         if (usb_due)
-            uac_service();
+            FM1_FAR(uac_service)();             /* (in flash: hal/fm1_cc.h FM1_FAR) */
 #endif
         t5_nested_ticks += fm1_ticks() - t0;
         return;
     }
     if (owed & 1u)
-        usb_poll();
+        FM1_FAR(usb_poll)();
 #if FELUCCA_UART
     if (owed & 2u)
-        uart_midi_poll();
+        FM1_FAR(uart_midi_poll)();
 #endif
     owed = 0;
 }
@@ -190,7 +190,7 @@ UI_SMALL static void fm1_main(void)
     felucca_dbg.prev_home = felucca_dbg.home;
     felucca_dbg.prev_frames = felucca_dbg.ui_frames;
     felucca_dbg.prev_rst = fm1_boot.p3_rst;
-    fm1_input_init();
+    FM1_FAR(fm1_input_init)();                          /* (in RAM with the tick: hal/fm1_cc.h FM1_FAST) */
     fm1_adc_init();
     panel_init();
     felucca_init();
@@ -389,7 +389,8 @@ UI_SMALL void fm1_cstart(void)
     for (s = _data_load, d = _data_start; d < _data_end; s++, d++)
         *d = *s;
     for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++)
-        *d = *s;                                /* flash driver code that must run from RAM */
+        *d = *s;                                /* flash driver code that must run from RAM, and the TIMER5 tick's
+                                                 * (.fast_text; app.ld: the second core's loop follows) */
     for (s = _c1_load, d = _c1_start; d < _c1_end; s++, d++)
         *d = *s;                                /* the second core's waiting loop (fm1_cpu1.h) */
     sine_fill();                                /* SINE, into RAM (build/gen/felucca_tables.h): before anything reads it */

@@ -7,7 +7,7 @@
  * pull-ups (low = closed). LED lines PH6/PH9/PA9/PA10 light the LED on the
  * same column, row PA7/PA8/PA5/PA6 respectively.
  *
- *   fm1_input_init();
+ *   fm1_input_init();   (in RAM: called from flash code through FM1_FAR, hal/fm1_cc.h)
  *   polled:  for (;;) { fm1_input_scan(); ... }
  *   IRQ:     call fm1_input_tick() from a ~10 kHz timer ISR; it advances one
  *            column per call (rows are sampled one tick after the column was
@@ -136,7 +136,7 @@ static volatile struct {
 static void fm1__an_take(void);
 static void fm1__an_start(uint32_t n);
 /* (1.8) the note key (0..19, F3..C5) at (column, row bit) of the rows with a converter, 20 if none */
-static uint32_t fm1_an_note(uint32_t col, uint32_t rowbit)
+FM1_FAST static uint32_t fm1_an_note(uint32_t col, uint32_t rowbit)
 {
     int id = col < FM1_NCOL && rowbit < 6u ? FM1_KEYMAP[rowbit][col] : -1;
     return id >= 14 && id < 34 ? (uint32_t)id - 14u : 20u;
@@ -155,7 +155,7 @@ static volatile uint16_t fm1_led_bg_ns; /* the backlight pulse a frame (ns), 0 =
 #define FM1_PWM_N 64u
 static uint8_t fm1_led_pwm[2][FM1_NCOL];
 static volatile uint8_t fm1_led_pwm_lvl[2];
-static uint32_t fm1__lit(uint32_t p)               /* column p's lit lines this frame: lit, and the duty layers' turn */
+FM1_FAST static uint32_t fm1__lit(uint32_t p)               /* column p's lit lines this frame: lit, and the duty layers' turn */
 {
     uint32_t m = fm1_led[p], c;
     for (c = 0; c < 2u; c++) {
@@ -167,7 +167,7 @@ static uint32_t fm1__lit(uint32_t p)               /* column p's lit lines this 
 }
 static uint8_t fm1__lit_p;                         /* (fm1_input_tick) what column p was lit with */
 
-static void fm1__led_lines(uint32_t rowmask)
+FM1_FAST static void fm1__led_lines(uint32_t rowmask)
 {
     uint32_t r;
     for (r = 1; r < 5u; r++) {
@@ -178,7 +178,7 @@ static void fm1__led_lines(uint32_t rowmask)
     }
 }
 
-static void fm1__sr_bit(uint32_t w, uint32_t i)  /* bit i of w (msb first) into the 595 */
+FM1_FAST static void fm1__sr_bit(uint32_t w, uint32_t i)  /* bit i of w (msb first) into the 595 */
 {
     if (w & (0x8000u >> i))
         FM1_PR(FM1_PA, FM1_OUT) |= 1u << 4;
@@ -187,12 +187,12 @@ static void fm1__sr_bit(uint32_t w, uint32_t i)  /* bit i of w (msb first) into 
     FM1_PR(FM1_PA, FM1_OUT) |= 1u << 3;         /* read-modify-write per edge: each SFR write is */
     FM1_PR(FM1_PA, FM1_OUT) &= ~(1u << 3);      /* far slower than the 595 needs */
 }
-static void fm1__sr_latch(void)                 /* the outputs change here only */
+FM1_FAST static void fm1__sr_latch(void)                 /* the outputs change here only */
 {
     FM1_PR(FM1_PA, FM1_OUT) |= 1u << 1;
     FM1_PR(FM1_PA, FM1_OUT) &= ~(1u << 1);
 }
-static void fm1__sr_word(uint32_t w)
+FM1_FAST static void fm1__sr_word(uint32_t w)
 {
     uint32_t i;
     for (i = 0; i < 16u; i++)
@@ -200,20 +200,20 @@ static void fm1__sr_word(uint32_t w)
     fm1__sr_latch();
 }
 
-static uint32_t fm1__rows(void)
+FM1_FAST static uint32_t fm1__rows(void)
 {
     uint32_t a = FM1_PR(FM1_PA, FM1_IN), b = FM1_PR(FM1_PB, FM1_IN);
     return (~((a & 1u) | ((a >> 4) & 0x1Eu) | ((b >> 2) & 0x20u))) & 0x3Fu;
 }
 
-static void fm1__wait(uint32_t us)
+FM1_FAST static void fm1__wait(uint32_t us)
 {
     uint32_t t0 = fm1_ticks(), span = us * FM1_TICKS_PER_US;
     while ((uint32_t)(fm1_ticks() - t0) < span)
         FM1_INPUT_IDLE();
 }
 
-static void fm1_input_init(void)
+FM1_FAST static __attribute__((noinline)) void fm1_input_init(void)
 {
     static const uint8_t LEDP[4][2] = {{FM1_PH, 6}, {FM1_PH, 9}, {FM1_PA, 9}, {FM1_PA, 10}};
     const uint32_t rows_a = (1u << 0) | (1u << 5) | (1u << 6) | (1u << 7) | (1u << 8);
@@ -245,7 +245,7 @@ static void fm1_input_init(void)
         fm1_in.enc_prev[i] = fm1_in.enc_last[i] = 0xFF;   /* seeded by the first frame */
 }
 
-static void fm1__key(uint32_t id, uint32_t closed)
+FM1_FAST static void fm1__key(uint32_t id, uint32_t closed)
 {
     volatile uint8_t *c = &fm1_in.cnt[id];
     uint32_t note = id >= 14u, bit = note ? 1u << (id - 14u) : 1u << id;
@@ -274,7 +274,7 @@ static void fm1__key(uint32_t id, uint32_t closed)
     }
 }
 
-static void fm1__keys(uint32_t p)                  /* the keys of column p, just read */
+FM1_FAST static void fm1__keys(uint32_t p)                  /* the keys of column p, just read */
 {
     uint32_t r, raw = fm1_in.raw[p];
     for (r = 1; r < 5u; r++)
@@ -284,7 +284,7 @@ static void fm1__keys(uint32_t p)                  /* the keys of column p, just
 
 static void fm1__frame(void);
 
-static void fm1_input_scan(void)
+FM1_FAST static __attribute__((noinline)) void fm1_input_scan(void)
 {
     uint32_t p;
     for (p = 0; p < FM1_NCOL; p++) {
@@ -300,7 +300,7 @@ static void fm1_input_scan(void)
     fm1__frame();
 }
 
-static void fm1__frame(void)
+FM1_FAST static void fm1__frame(void)
 {
     uint32_t e;                                    /* (the keys: fm1__keys, as each column is read) */
     for (e = 0; e < FM1_NENC; e++) {               /* quadrature decoder + detents */
@@ -353,7 +353,7 @@ static void fm1__frame(void)
  * column n: the lines go lit | glow | backlight of p, each layer ends when its time is up (TIMER4,
  * checked after every bit), and the latch comes with the lines dark. */
 static uint8_t fm1__tick_col;
-static void fm1_input_tick(void)
+FM1_FAST static void fm1_input_tick(void)
 {
     uint32_t p = fm1__tick_col, n = p + 1u == FM1_NCOL ? 0u : p + 1u, i;
     uint32_t w = 0xFFFFu ^ (1u << n) ^ (n < 2u ? 1u << (11u + n) : 0u);

@@ -11,7 +11,7 @@ MEMORY
 SECTIONS
 {
     .text : {
-        KEEP(*(.text.crt0)) *(.text*) *(.ram_text*) *(.rodata*) *(.data*) *(.sdata*)
+        KEEP(*(.text.crt0)) *(.text*) *(.ram_text*) *(.fast_text*) *(.rodata*) *(.data*) *(.sdata*)
         . = ALIGN(4); _image_end = .;
     } > LDR
     .bss (NOLOAD) : { _bss_start = .; *(.bss*) *(.sbss*) *(COMMON) . = ALIGN(4); _bss_end = .; } > LDR
