@@ -7,7 +7,7 @@ lesson step asks for, the coach goes to the next lesson step.
 All other functions are as in BoopBox. Every screen, button, knob and key works the same. Thus, what you learn in the
 trainer also works in BoopBox.
 
-This page is correct for BoopBox Trainer 1.9.3.
+This page is correct for BoopBox Trainer 1.9.7.
 
 ## The levels
 
@@ -89,7 +89,8 @@ The coach uses the title area of the screen.
 
 - On the TRACKS, DRUMS, PATTERNS, SONG and CHORDS screens, REC, the visualizer, and while you hold a layer button, the
   coach has two lines. Line 1 shows the lesson step number and headline, or what is still wrong (in amber). Line 2 shows the
-  action.
+  action. The coach covers the title of these screens, so on SONG, PATTERNS, CHAIN, SCENES and CHORDS the name of the
+  screen shows in grey at the right of line 1 (1.9.7).
 - On the parameter pages and in the sound browser, the coach has one line. The headline, the action and the hint show
   in turn on this line.
 - The colored bar under the coach shows the progress in the level.
@@ -114,6 +115,14 @@ HOME screen and others) checks that you are on it. When you are not, the coach s
 step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP SAVE* or *TAP HOME, THEN TAP SAVE*.
 The button to press blinks. When you get to that screen, the card goes and the step shows again from its headline.
 The card does not count as a step: the step numbers and the progress bar stay the same.
+
+The way to PATTERNS, CHAIN and SCENES is *TAP SEQ, SELECT TO PATTERNS* (1.9.7): SEQ opens the SEQ pages, then SELECT
+turns through them (NOTES or the drum grid, TIMING, PLAY, PATTERNS, CHAIN, SCENES). On a SEQ page the card says only
+which way to turn SELECT, for example *TURN SELECT RIGHT: PATTERNS*. (Before 1.9.7 it said *HOLD SEQ + SAVE* first.)
+
+**A track change starts from HOME** (1.9.7). When a step needs another track, the coach first shows *GO TO THE HOME
+SCREEN* (*TAP HOME*) unless you are on it, then *TURN ALGORITHM TO TRACK 4*. Then the page card shows the way back to
+the step's screen. A step on PATTERNS or CHAIN for one track asks for that track before it asks for the page.
 
 The same kind of card shows when something else stops the step's controls from working (1.9.6):
 

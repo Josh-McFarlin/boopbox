@@ -203,6 +203,10 @@ class Level:
         for i, c in enumerate(self.cards):              # a track's page step (its grid, NOTES, TIMING): the track of the
             if c.goal == "TG_PAGE" and c.p in track_pages:   # step after it (another track: ALGORITHM first; its kind)
                 c.trk = next(d.trk for d in self.cards[i + 1:] if d.trk != 255)
+        pat_pages = {page_index("PATTERNS", "SEQ"), page_index("CHAIN", "SEQ")}
+        for c, d in zip(self.cards, self.cards[1:]):    # PATTERNS or CHAIN before one track's step: its track first
+            if c.goal == "TG_PAGE" and c.p in pat_pages and d.goal in ("TG_PATSEL", "TG_CHAIN"):
+                c.trk = d.trk                           # (the coach changes tracks from HOME only, then the way here)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -308,7 +312,7 @@ def level2():
     L.page("DLY", "FX", "THE ECHO'S TIMING", "TAP FX UNTIL YOU SEE DLY")
     L.glob("DTIME", 6, "THE ECHO'S TIMING", "TURN KNOB 1 (TIME) TO @")
     L.glob("DFDBK", 55, "MORE ECHOES", "TURN KNOB 2 (FDBK) TO @", tol=4)
-    L.page("PATTERNS", "SEQ", "THE CHORUS: PATTERNS", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "THE CHORUS: PATTERNS", "TAP SEQ, SELECT TO PATTERNS")
     L.pathas([1, 2, 4, 5], 2, "COPY 1 2 4 5 TO PAT 2", "EACH: KNOB 1 TO 2, KNOB 3 X2")
     L.patsel(4, 2, "DRUMS: PLAY PATTERN 2", "TRACK 4: PRESS WHITE KEY 2", filled=True)
     L.lanes(4, "OPEN HATS", "OFFBEAT HATS BECOME OPEN HATS", ["KICK", "SNARE", "CLAP", "HAT", "OHAT"], pat=ch[4])
@@ -326,7 +330,7 @@ def level2():
     L.param(3, "SGATE", 100, "SMOOTHER", "TURN KNOB 4 (GATE) TO @", tol=4)
     L.param(3, "DLY", 45, "AN ECHO", "TURN KNOB 3 (DLY) TO @", tol=4)
     L.param(3, "REV", 35, "A ROOM", "TURN KNOB 4 (REV) TO @", tol=4)
-    L.page("SCENES", "SEQ", "SCENES: VERSE, CHORUS", "HOLD SEQ, TAP SAVE")
+    L.page("SCENES", "SEQ", "SCENES: VERSE, CHORUS", "TAP SEQ, SELECT TO SCENES")
     L.scene(1, "VERSE", {1: 1, 2: 1, 3: 1, 4: 1, 5: 1}, "SCENE 1 IS THE VERSE", "KNOB 3 (NAME) TO VERSE")
     L.scene(2, "CHORUS", {1: 2, 2: 2, 3: 2, 4: 2, 5: 2}, "SCENE 2 IS THE CHORUS", "KNOB 1 TO 2, KNOB 3 TO CHORUS")
     L.scnplay(1, "BACK TO THE VERSE", "PRESS WHITE KEY 9")
@@ -416,15 +420,15 @@ def level3():
     L.glob("DTIME", 6, "THE ECHO'S TIMING", "TURN KNOB 1 (TIME) TO @")
     L.glob("DFDBK", 50, "FEEDBACK", "TURN KNOB 2 (FDBK) TO @", tol=4)
     # patterns for the other sections
-    L.page("PATTERNS", "SEQ", "PATTERNS FOR SECTIONS", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "PATTERNS FOR SECTIONS", "TAP SEQ, SELECT TO PATTERNS")
     L.patsel(4, 2, "THE BUILD'S BEAT", "TRACK 4: PRESS WHITE KEY 2")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     L.lanes(4, "KICK ON EVERY BEAT", None, ["KICK"], pat=B[4])
-    L.page("PATTERNS", "SEQ", "THE BREAK'S BEAT", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "THE BREAK'S BEAT", "TAP SEQ, SELECT TO PATTERNS")
     L.patsel(4, 3, "THE BREAK'S BEAT", "TRACK 4: PRESS WHITE KEY 3")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     L.lanes(4, "JUST THE HATS", None, ["HAT"], pat=D[4])
-    L.page("PATTERNS", "SEQ", "THE BUILD'S ROLL", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "THE BUILD'S ROLL", "TAP SEQ, SELECT TO PATTERNS")
     L.patsel(8, 2, "THE BUILD'S ROLL", "TRACK 8: PRESS WHITE KEY 2")
     L.page("DRUMS", "TRK", "THE DRUM GRID", "TAP SEQ TO OPEN THE DRUMS", btn="SEQ")
     roll = B[8]
@@ -434,14 +438,14 @@ def level3():
     L.add("BAR 4: EVERY STEP", "OCT+: STEPS 49-64, EVERY KEY", "TG_LANES", trk=7,
           data=("lanes", 64, [(S.LANES.index("SNARE"), [None if h is None else (h[0], 0) for h in roll.lanes["SNARE"]])]))
     L.lanes(8, "FASTER: RATCHETS", "KNOB 2 TO A STEP, HOLD OCT+", ["SNARE"], pat=roll)
-    L.page("PATTERNS", "SEQ", "THE BUILD'S PAD", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "THE BUILD'S PAD", "TAP SEQ, SELECT TO PATTERNS")
     L.patsel(5, 2, "THE BUILD'S PAD", "TRACK 5: COPY TO 2, KEY 2", filled=True)
     L.page("NOTES", "SEQ", "A LOCK ON STEP 1", "TAP SEQ UNTIL YOU SEE NOTES")
     L.lock(5, 1, "TFLT", 30, False, "OPEN THE FILTER", "ADD A FILT LOCK TO STEP 1")
     L.lock(5, 1, "TFLT", 30, True, "OVER THE WHOLE BAR", "IN ITS LOCK: KNOB 3 TO SLIDE")
     # the sections: the patterns and the mutes of each, saved
     L.play(False, "STOP TO SAVE", "PRESS PLAY TO STOP")
-    L.page("PATTERNS", "SEQ", "SECTION C: THE DROP", "HOLD SEQ+SAVE, SELECT LEFT X2")
+    L.page("PATTERNS", "SEQ", "SECTION C: THE DROP", "TAP SEQ, SELECT TO PATTERNS")
     L.pats({4: 1, 5: 1, 8: 1}, "SECTION C: THE DROP", "TRACKS 4, 5, 8 ON PATTERN 1")
     L.mutes(C["_mute"], "MUTE FOR THE DROP", "HOLD GLO: MUTE TRACKS 5 6 7")
     L.saved("C", "SAVE IT AS C", "HOLD SAVE, PRESS KEY 7")

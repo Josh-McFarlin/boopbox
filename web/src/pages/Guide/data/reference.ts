@@ -55,10 +55,7 @@ export const WHERE: [lookingFor: string, where: string][] = [
   ['fills', 'SEQ + step + OCT+ (condition) · GLO + key 9 / 10 (play a fill)'],
   ['drum mutes', 'EDIT + a black key, then the keys of the sounds'],
   ['a beat from the keys', 'drum track: SEQ → PLAY page, hold white keys'],
-  [
-    'patterns, chain, scenes',
-    'the SEQ pages after PLAY · hold SEQ + tap SAVE (SCENES)',
-  ],
+  ['patterns, chain, scenes', 'tap SEQ, then turn SELECT past PLAY'],
   ['a vinyl / tape / rain bed', 'GLO → TEXTURE'],
   ['tempo-synced envelope / LFO', 'ENV DEST → ESYNC · LFO 2 → SYNC'],
   ['the MIDI pages', 'hold HOME → SEQ → MIDI SETTINGS, OCT+'],

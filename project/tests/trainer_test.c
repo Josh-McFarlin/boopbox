@@ -44,7 +44,16 @@ static void knob_to(uint32_t role, volatile int16_t *v, int32_t w)
         slow(role, *v < w ? 1 : -1);
 }
 static void hold_layer(uint32_t b) { down(b); frames(25); }
-static void seq_save(void) { down(B_SEQ); frames(3); tap(B_SAVE); up(B_SEQ); frames(2); }   /* (1.7) PATTERNS */
+static void seq_save(void)                     /* (1.9.7) SCENES: SEQ, then SELECT (SEQ held + SAVE is gone) */
+{
+    uint32_t g;
+    tap(B_SEQ);
+    frames(2);
+    for (g = 0; g < 8u && !(on_pats_page() && pats_view() == PV_SCENES); g++) {
+        turn(EN_SELECT, 1);
+        frames(4);
+    }
+}
 static void let_go(uint32_t b) { up(b); frames(2); }
 /* the keys (bit k) that play these notes now, as the coach lights them */
 static uint32_t keys_for(const track_t *t, const uint8_t *c, uint32_t n)
@@ -488,8 +497,8 @@ static void follow_hints(const tr_card_t *c)
             h = act;
         }
         hint_steps++;
-        if (!strcmp(h, "HOLD SEQ, TAP SAVE"))
-            seq_save();
+        if (tr_prefix(h, "TAP SEQ, SELECT TO "))      /* (1.9.7) the SEQ pages from anywhere: SEQ, then SELECT */
+            tap(B_SEQ);
         else if (tr_prefix(h, "TAP HOME"))
             tap(B_HOME);
         else if ((n = hint_num(h, "ALGORITHM TO TRACK ")) > 0 || (n = hint_num(h, "ALGORITHM TO ")) > 0) {
@@ -566,8 +575,8 @@ static void do_card(const tr_card_t *c)
                 home();                                  /* (once: from a drum track's grid) */
                 algo_to(3);
                 tap(B_SEQ);
-                check(is_drum(TSEL) && on_drum_page() && !tr_goal(c) && (!tr.hint[0] || !strcmp(tr.hint, "HOLD SEQ, TAP SAVE")),
-                      "PATTERNS from a drum track's grid (1.7): HOLD SEQ, TAP SAVE");
+                check(is_drum(TSEL) && on_drum_page() && !tr_goal(c) && !strcmp(tr.hint, "TURN SELECT RIGHT: PATTERNS"),
+                      "PATTERNS from a drum track's grid (1.9.7): TURN SELECT RIGHT: PATTERNS");
             }
             follow_hints(c);
             break;
@@ -733,9 +742,7 @@ static int follow_go(const tr_card_t *c)
         if (c->goal == TG_LANES)
             grid_hints++;                                /* (to the grid by the page card's way) */
         const char *h = tr.hint;
-        if (!strcmp(h, "HOLD SEQ, TAP SAVE"))
-            seq_save();
-        else if (tr_prefix(h, "TURN SELECT LEFT"))
+        if (tr_prefix(h, "TURN SELECT LEFT"))
             slow(EN_SELECT, -1);
         else if (tr_prefix(h, "TURN SELECT RIGHT"))
             slow(EN_SELECT, 1);
@@ -1253,6 +1260,11 @@ static int play_level(uint32_t l, const char *shots)
             turn = !tr.go[0] && (tr_prefix(act, "TURN ALGORITHM") || tr_prefix(tr.hint, "TURN ALGORITHM"));
             if (turn) {
                 uint32_t was = song.sel;
+                if (!tr_home_ok()) {                     /* (1.9.7) the track changed from HOME's screen only */
+                    printf("trainer: level %u card %u: says TURN ALGORITHM off HOME's screen (%s)\n", l + 1u, at + 1u,
+                           cur_page()->title);
+                    fails++;
+                }
                 slow(EN_ALGO, song.sel < c->trk ? 1 : -1);
                 algo_said++;
                 if (song.sel == was) {
@@ -1336,6 +1348,27 @@ int main(int argc, char **argv)
                     bad += screen[y * 240 + x] != screen[y * 240];   /* (each row one colour: no text) */
         }
         check(!bad, "PATTERNS, SONG, CHORDS: nothing left over the list from the screen before (rows 40-41)");
+        home();
+    }
+    {   /* (1.9.7) SEL + KNOB 2 a detent at a time with a drum track selected: every scale in turn (it went from the drum
+         * track's own scale, never set: CHR or MAJ again each detent) */
+        uint32_t k, d, ok = 1;
+        int16_t was[NTRK];
+        for (k = 0; k < NTRK; k++)
+            was[k] = trk[k].p[P_SCALE];
+        algo_to(3);
+        down(B_SCL);
+        frames(3);
+        for (d = 1; d < 5u; d++) {
+            slow(EN_K2, 1);
+            for (k = 0; k < NTRK; k++)
+                ok &= is_drum(&trk[k]) || trk[k].p[P_SCALE] == (int16_t)d;
+        }
+        let_go(B_SCL);
+        check(is_drum(TSEL) && ok, "SEL + KNOB 2 on a drum track: each detent the next scale on every synth track");
+        for (k = 0; k < NTRK; k++)
+            trk[k].p[P_SCALE] = was[k];
+        algo_to(0);
         home();
     }
     {   /* the "why" pages: HOME held in a level opens the step's topic; SELECT its pages, then the level's page */

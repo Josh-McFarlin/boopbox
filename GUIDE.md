@@ -1,6 +1,6 @@
 <p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
 
-# BoopBox 1.9.6 — The Complete Guide
+# BoopBox 1.9.7 — The Complete Guide
 
 This guide gives all the functions of BoopBox in one place: every button, every combination and every page. Read it from the top the first time. Then use it as a reference. The [cheat sheet](#26-cheat-sheet) at the end gives every combination on one page.
 
@@ -175,7 +175,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEL** | SEL pages (SEL, SEL 2, HARMONY, FOLLOW, then the CHORDS screen) | key / chord layer |
 | **EDIT** | EDIT pages (EDIT 1, EDIT 2, FILTER on ANALOG, VOICE, VOICE 2) · with the drum track: the **DRUMS** screen's **kit** page. Tap again: kit ↔ **sound** · on the NOTES page: delete the note | erase layer |
 | **ARP** | ARP pages (ARP, ARP 2) | note-repeat layer |
-| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer · held + **SAVE** tapped: the **SCENES** page |
+| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer |
 | **GLO** | GLO pages (GLOBAL, MASTER, DRUMS, TEXTURE, TEXTURE 2) | mix layer (the bank of four shown: 1–4 or 5–8) |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select the track, on every screen except SONG (its loop start) and the sound browser (its sounds). On DRUMS, a synth track goes to its NOTES. On NOTES, a drum track goes to its DRUMS grid (1.4.2). Inside a layer, it waits. Not during a free take | — |
@@ -261,7 +261,7 @@ The DRUMS screen has three pages: grid, kit and (2.7) sound. The pages are in tw
 - When the drum track is selected, a tap on **EDIT** opens the **kit**. EDIT again (or **SELECT**) switches kit ↔ **sound**.
   SEQ from the kit page or the sound page goes back to the grid.
 
-The top right of the screen shows the name of the current page. It also shows where SEQ or EDIT goes next. To open the SCENES page from anywhere, hold **SEQ** and tap **SAVE**.
+The top right of the screen shows the name of the current page. It also shows where SEQ or EDIT goes next. To open PATTERNS, CHAIN or SCENES from anywhere, tap **SEQ**, then turn **SELECT** to the page.
 
 **Grid page** — the 16 sounds × 16 steps. Shades show the levels, and notches show the ratchets.
 
@@ -515,9 +515,11 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while you record or
 
 **The DRUMS grid has the same sheet** (2.7.2). On the grid, **OCT+ held** opens it for the hit of the KNOB 1 sound on the KNOB 2 step. The rows are **RATCHET** (x1 … x4), **NUDGE** and **FILL** (of the step: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step) and **DELETE** (OCT+). OCT− closes the sheet. If you tap OCT+, it still turns the page of steps.
 
-The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes the **SONG** screen. On those three pages, the keys are pads: white keys 1–8 are the patterns of the track, and 9–16 are the scenes ([the details](docs/groovebox-controls.md#patterns)).
+The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes the **SONG** screen. On those three pages, the keys are pads: white keys 1–8 are the patterns of the track. On SCENES, keys 9–16 launch the scenes; on PATTERNS and CHAIN they do nothing (1.9.7) ([the details](docs/groovebox-controls.md#patterns)).
 
-**SELECT** walks NOTES to SCENES in both directions. **SEQ held + SAVE** goes straight to SCENES. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
+To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
+
+As on the other pages, the bottom line of PATTERNS, CHAIN and SCENES shows the page in a box between the page before and the page after it (1.9.7). The top of the screen shows the track and what OCT+ and OCT− do there.
 
 ### Beats from the keys (1.9)
 
@@ -738,7 +740,7 @@ You can edit the settings of the song only while it is stopped (*STOP FIRST*). A
 | **SONG** | tap **SAVE** on TRACKS, or **SAVE + key 16** | the section chain. See [The SONG screen](#the-song-screen) |
 | **Pages** | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO, SAVE | four colour-coded values with a graph (ENV, LFO, ARP, SEL, FX, SLICER…), or the four values in large type, placed as the knobs are (1 2 / 3 4) |
 | **CHORDS** | tap **SEL** past SEL, SEL 2, HARMONY and FOLLOW | the chord and progression of the song. The keys play the chord live ([the groovebox controls](docs/groovebox-controls.md#the-chords-screen)) |
-| **PATTERNS / CHAIN / SCENES** | tap **SEQ** past PLAY, or hold **SEQ** + tap **SAVE** (SCENES) | the keys are pads: see [the SEQ pages](#10-the-step-sequencer-steps-nudge-locks-fills) |
+| **PATTERNS / CHAIN / SCENES** | tap **SEQ**, then turn **SELECT** past PLAY | the keys are pads: see [the SEQ pages](#10-the-step-sequencer-steps-nudge-locks-fills) |
 | **Menu** | hold **HOME** | the settings of the FM-1 in six sections. See [The HOME menu](#20-the-home-menu-and-the-lights) |
 
 The **title line** of every screen also shows short messages: *KEY D*, *ERASED*, *TURN AGAIN: SAVE*, *TRACK 3: LOFI FLUTE* (ALGORITHM on a page, 1.2.0), *NEXT: B*, *chain A B B C*, *lock flt 12*…
@@ -1273,7 +1275,7 @@ SLOOP 2.5: on the **Drum synth** tab of the editor's **Sample slots** page, you 
 
 Open the editor in **Chrome or Edge** with the FM-1 on USB. Open it from the [home page](https://boopbox.replit.app/), the [installer page](https://boopbox.replit.app/installer/), the [editor link](https://boopbox.replit.app/editor/), or **`project/scripts/OPEN-EDITOR.bat`**. Then press **Connect** (allow MIDI). The editor follows the device live: when you turn a knob on the FM-1, the editor moves. It looks like the FM-1: the colours of the tracks and the pixel font of the FM-1. The editor is for a computer: it needs a window at least 1000 px wide. In a narrower window, it shows a note.
 
-**Offline (2.6).** *Download for offline use* (at the bottom of the side bar, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html` (for example, `boopbox-editor-1.9.6.html`). This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it. It opens in Chrome or Edge without internet (Chrome asks one time to allow MIDI), and it works as the online editor does. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
+**Offline (2.6).** *Download for offline use* (at the bottom of the side bar, or on the installer page) saves the whole editor as one file for a computer: `boopbox-editor-<version>.html` (for example, `boopbox-editor-1.9.7.html`). This file is also attached to each [release](https://github.com/josh-mcfarlin/boopbox/releases). Double-click it. It opens in Chrome or Edge without internet (Chrome asks one time to allow MIDI), and it works as the online editor does. Its sound library (kept in the browser) is separate from the library of the online editor. To move sounds between them, use Export / Import, or a backup.
 
 **As an app, also on Android (2.6).** Open the [online editor](https://boopbox.replit.app/editor/) or the installer one time with internet. Then use *Install the app* (at the bottom of the side bar, or on the installer page, or Chrome's menu → *Install app* / *Add to Home screen*). After that, the BoopBox app opens the editor without internet. Its link to the installer also works offline (with the firmware that it installs).
 
@@ -1435,8 +1437,9 @@ If the official firmware starts with strange settings or a scrambled display, it
 | hold HOME | menu |
 | tap SAVE | on TRACKS: SONG screen · on other screens: SAVE pages |
 | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
-| hold SEQ + tap SAVE | SCENES page |
-| white keys 1–8 / 9–16, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) / launch scenes 1–8 |
+| tap SEQ, then turn SELECT | PATTERNS, CHAIN, SCENES (the SEQ pages after PLAY) |
+| white keys 1–8, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) |
+| white keys 9–16, on SCENES | launch scenes 1–8 |
 | tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS, CHAIN, SCENES) / kit (again: sound) |
 | OCT− / OCT+ | octave (both: 0) · drums: ghost / hard while held |
 | ALGORITHM | track (1–8) |
@@ -1510,7 +1513,7 @@ If the official firmware starts with strange settings or a scrambled display, it
 | the length of a note in steps | SEQ → NOTES page, KNOB 3 on the note (LEN) |
 | drum mutes | EDIT + a black key, then the keys of the sounds |
 | a beat from the keys | drum track: SEQ → PLAY page, hold white keys |
-| patterns, chain, scenes | SEQ pages after PLAY · hold SEQ + tap SAVE (SCENES) |
+| patterns, chain, scenes | tap SEQ, then turn SELECT past PLAY |
 | the key and chords of the song | SEL → HARMONY · the CHORDS screen |
 | synth ↔ drum track | SAVE → TOOLS → KIND · KNOB 1 in the sound browser |
 | key velocity, aftertouch, USB HOST | hold HOME → KEYS |

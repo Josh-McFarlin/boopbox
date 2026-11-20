@@ -630,11 +630,11 @@ UI_SMALL static int tr_lanes(const tr_card_t *c, track_t *t)
 /* ---------------------------------------------------------------- the goals --- */
 static uint8_t tr_quiet;                           /* checking a card done before (tr_resume): what is there, not where */
 UI_SMALL static int tr_browsing(void) { return !ui.home && !ui.menu && cur_page()->graph == GR_BROWSE; }
-/* ALGORITHM picks the track here (ui_input.c; the DRUMS screen too since 1.4.2): not on the SONG screen (its loop), not
- * in the sound browser (its sounds), not while a button is held, nor in a take; there HOME comes first */
+/* the coach changes the track from HOME's screen only (1.9.7): ALGORITHM picks it on most pages too (ui_input.c), but
+ * there the page can be hard to place after the change; from HOME, the way back to the step's page is its page card */
 UI_SMALL static int tr_algo_ok(void)
 {
-    return !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !ft_on && !rec_wait && !on_song_page() && !tr_browsing();
+    return tr_home_ok() && !ui.hold_kind;
 }
 UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 4", or HOME first (the page card) */
 {
@@ -648,26 +648,43 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     tr_say("TURN ALGORITHM TO TRACK ", "");
     tr_num((int32_t)k + 1);
 }
-/* the way to the PATTERNS page: SEQ held + SAVE (SCENES), from any page and track; then SELECT left to PATTERNS */
-UI_SMALL static int tr_to_pats(void)
+/* (1.9.7) the way to a page of the three (PV_*): TAP SEQ, then SELECT through the SEQ pages to it. On a SEQ page that
+ * SELECT walks (NOTES .. SCENES; the drum grid, NOTES' place) only SELECT, its way; elsewhere SEQ first (from another
+ * button its first page; on SONG, which SELECT does not walk, the next: the first again) */
+UI_SMALL static int tr_on_seq_walk(void)
 {
-    if (tr_quiet || (on_pats_page() && pats_view() == PV_PADS))
-        return 1;
-    if (on_pats_page())
-        return tr_goto("THE PATTERNS PAGE", "TURN SELECT LEFT: PATTERNS", NB);
-    return tr_goto("THE PATTERNS PAGE", "HOLD SEQ, TAP SAVE", B_SEQ);
+    const page_t *pg = cur_page();
+    return !ui.menu && ui.layer == LY_PLAY && !ui.home &&
+           ((pg->fam == FAM_SEQ && pg->scope != SC_SONG) || (on_drum_page() && !drum_page));
 }
+UI_SMALL static int tr_to_view(uint32_t view)
+{
+    static const char *const VN[3] = {"PATTERNS", "CHAIN", "SCENES"}, *const WN[3] = {"THE PATTERNS PAGE",
+                                      "THE CHAIN PAGE", "THE SCENES PAGE"};
+    uint32_t to = page_scope(SC_PATS) + view % 3u;
+    if (tr_quiet || (on_pats_page() && pats_view() == view))
+        return 1;
+    if (tr_on_seq_walk()) {
+        tr_goto(WN[view % 3u], on_drum_page() || ui.page < to ? "TURN SELECT RIGHT: " : "TURN SELECT LEFT: ", NB);
+        tr_cat(VN[view % 3u]);
+        return 0;
+    }
+    tr_goto(WN[view % 3u], "TAP SEQ, SELECT TO ", B_SEQ);
+    tr_cat(VN[view % 3u]);
+    return 0;
+}
+UI_SMALL static int tr_to_pats(void) { return tr_to_view(PV_PADS); }
 /* on the PATTERNS screen, the next press to put pattern p on track k (copy: the pattern playing copied into it) */
 UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
 {
     if (tr_quiet)
         return;
-    if (!tr_to_pats())
-        return;
-    if (song.sel != k) {
+    if (song.sel != k) {                            /* (the track first: from HOME, then the way to the page) */
         tr_algo_say(k);
         return;
     }
+    if (!tr_to_pats())
+        return;
     if (copy && pats_cursor != p) {
         tr_say("KNOB 1 TO PATTERN ", "");
         tr_num((int32_t)p + 1);
@@ -682,20 +699,6 @@ UI_SMALL static void tr_pat_way(uint32_t k, uint32_t p, int copy)
         tr_num((int32_t)p + 1);
         tr.keys = 1u << key_of_white(p);
     }
-}
-/* the way to a page of the three (PV_*): SEQ held + SAVE (SCENES), then SELECT left */
-UI_SMALL static int tr_to_view(uint32_t view)
-{
-    static const char *const VN[3] = {"PATTERNS", "CHAIN", "SCENES"}, *const WN[3] = {"THE PATTERNS PAGE",
-                                      "THE CHAIN PAGE", "THE SCENES PAGE"};
-    if (tr_quiet || (on_pats_page() && pats_view() == view))
-        return 1;
-    if (on_pats_page()) {
-        tr_goto(WN[view % 3u], pats_view() > view ? "TURN SELECT LEFT: " : "TURN SELECT RIGHT: ", NB);
-        tr_cat(VN[view % 3u]);
-        return 0;
-    }
-    return tr_goto(WN[view % 3u], "HOLD SEQ, TAP SAVE", B_SEQ);
 }
 UI_SMALL static int tr_sel(const tr_card_t *c)       /* the card's track selected (else: the hint says which) */
 {
@@ -1058,6 +1061,11 @@ UI_SMALL static int tr_goal_in(const tr_card_t *c)
         }
         if (bad == NTRK && (c->v < 0 || scn_name[s] == (uint32_t)c->v))
             return 1;
+        if (bad < NTRK && song.sel != bad && !store && scn_cursor == s &&
+            (c->v < 0 || scn_name[s] == (uint32_t)c->v)) {
+            tr_algo_say(bad);                    /* (the track first: from HOME, then the way back to SCENES) */
+            return 0;
+        }
         if (!tr_to_view(PV_SCENES))
             return 0;
         if (scn_cursor != s) {
@@ -1081,7 +1089,7 @@ UI_SMALL static int tr_goal_in(const tr_card_t *c)
     case TG_SCNPLAY:
         if (scn_cur == c->p && scn_ask == SCN_NONE)
             return 1;
-        if (!on_pats_page()) {                   /* (any of the three: the keys 9..16 launch the scenes) */
+        if (!on_pats_page() || pats_view() != PV_SCENES) {   /* (1.9.7: SCENES only: there keys 9..16 launch them) */
             tr_to_view(PV_SCENES);
             return 0;
         }
@@ -1100,7 +1108,7 @@ UI_SMALL static int tr_goal_in(const tr_card_t *c)
             ;
         if (i == n && t->pat_nchain == n && !t->pat_coff)
             return 1;
-        if (!tr_to_view(PV_CHAIN) || !tr_sel(c))
+        if (!tr_sel(c) || !tr_to_view(PV_CHAIN))   /* (the track first: from HOME, then the way to CHAIN) */
             return 0;
         if (i == n && t->pat_nchain == n) {      /* (the slots right: PLAY off) */
             tr_say("KNOB 4 RIGHT: PLAY ON", "");
@@ -1405,7 +1413,8 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 #define TR_MQ_W 236
 #define TR_MQ_HOLD 1200u
 #define TR_MQ_PX 25u
-UI_SMALL static int32_t tr_mq_over(const char *s) { return text_w(&FONT_S, s) + 2 - TR_MQ_W; }
+static int32_t tr_mq_w = TR_MQ_W;                  /* (the line's room: less beside the screen's name, trainer_draw) */
+UI_SMALL static int32_t tr_mq_over(const char *s) { return text_w(&FONT_S, s) + 2 - tr_mq_w; }
 UI_SMALL static uint32_t tr_mq_len(const char *s)
 {
     int32_t over = tr_mq_over(s);
@@ -1432,7 +1441,8 @@ UI_SMALL static void trainer_draw(void)
     const tr_card_t *c = tr_card();
     const tr_level_t *L;
     uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD, mel = 0, own = 0, go;
-    int32_t o1, o2;
+    int32_t o1, o2, tw;
+    const char *tag;
     char b[48], act[48];
     uint16_t col;
     if (!c || ui.menu == 3u || !h)
@@ -1493,12 +1503,18 @@ UI_SMALL static void trainer_draw(void)
         str_cpy(b, "NICE!", sizeof b);
         col = RGB(90, 240, 150);
     }
+    /* (1.9.7) the band covers the title of SONG, PATTERNS, CHAIN, SCENES and CHORDS: their name at the right of line 1 */
+    tag = two && !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !rec_wait && !ft_on && !vis_shown() &&
+          (on_pats_page() || on_song_page() || on_chords_page()) ? cur_page()->title : "";
+    tw = tag[0] ? text_w(&FONT_S, tag) + 12 : 0;
     sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, b);
     if (two)
-        sig = str_hash(sig, act);
+        sig = str_hash(str_hash(sig, act), tag);
     if (sig != tr.mq_sig)                           /* (other text: a scroll from its start) */
         tr.mq_sig = sig, tr.mq_t0 = fm1_ms;
+    tr_mq_w = TR_MQ_W - tw;
     o1 = tr_marquee(b, own ? mel : fm1_ms - tr.mq_t0);
+    tr_mq_w = TR_MQ_W;
     o2 = two ? tr_marquee(act, fm1_ms - tr.mq_t0) : 0;
     sig += (uint32_t)o1 * 2654435761u + (uint32_t)o2 * 40503u;
     if (sig == tr.sig)
@@ -1507,6 +1523,11 @@ UI_SMALL static void trainer_draw(void)
     lcd_clip_y = 0;
     cv_begin(240, h, C_BLACK);
     cv_text(2 - o1, 1, &FONT_S, b, col);
+    if (tw) {
+        cv_rect(240 - (int32_t)tw, 0, (int32_t)tw, 18, C_BLACK);
+        cv_rect(240 - (int32_t)tw + 3, 2, 1, 14, C_LINE);   /* (a rule: the name apart from the scrolling line) */
+        cv_text(240 - (int32_t)tw + 7, 1, &FONT_S, tag, UI_G4);
+    }
     if (two)
         cv_text(2 - o2, 19, &FONT_S, act, tr.ok ? C_DIM : C_HI);
     cv_rect(0, (int32_t)h - 2, 240, 2, C_LINE);
