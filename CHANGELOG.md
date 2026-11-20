@@ -36,7 +36,8 @@ Also fixed in BoopBox:
   between the page before and after it, and a dot for each page. What OCT+ and OCT- do is now at the top, under the
   track.
 - **White keys 9–16 launch scenes on the SCENES page only.** On PATTERNS and CHAIN they now do nothing, so a stray key
-  no longer changes every track from a page about one. The PATTERNS screen's keyboard shows keys 1–8, twice as wide.
+  no longer changes every track from a page about one. The PATTERNS screen no longer has a keyboard strip (it showed
+  the same as the tiles); its eight tiles are taller.
 - **SEQ held + SAVE no longer jumps to SCENES.** To get to PATTERNS, CHAIN and SCENES, tap SEQ, then turn SELECT
   through the SEQ pages. SEQ held + SAVE now does nothing (it opens neither SONG nor NOTES).
 

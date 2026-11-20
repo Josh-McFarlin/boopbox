@@ -238,27 +238,6 @@ UI_SMALL static void pats_foot(const char *const *L, char (*v)[8])
         cv_rect(120 - (int32_t)n * 3 + (int32_t)i * 6 + 1, 50, 3, 2, i + 1u == at ? C_WHITE : C_DIM);
     cv_blit(0, 188);
 }
-/* the keyboard (1.9.7): white keys 1..8 (F3 .. F4), twice as wide, and the black keys between: the track's patterns,
- * each in what it does now (the pattern playing in the track's colour, one asked for white, one that holds something
- * dim). Keys 9..16 are the scenes on SCENES only: not drawn here */
-UI_SMALL static void pats_keyboard(int32_t y, uint32_t blink)
-{
-    uint32_t i, sel = song.sel % NTRK, used = pats_used(sel);
-    const track_t *t = &trk[sel];
-    char b[4];
-    for (i = 0; i < 8u; i++) {
-        int32_t x = (int32_t)i * 30;
-        uint32_t asked = t->pat_req == i + 1u, has = (used >> i) & 1u;
-        uint16_t c = i == t->pat ? UI_COL[sel] : asked && blink ? C_WHITE : has ? UI_DIM[sel] : UI_G1;
-        uint16_t tc = i == t->pat || (asked && blink) ? C_BLACK : has ? C_WHITE : UI_G3;
-        fmt_int(b, (int32_t)i + 1);
-        cv_rect(x, y, 29, 27, c);
-        cv_text(x + 15 - text_w(&FONT_S, b) / 2, y + 12, &FONT_S, b, tc);
-    }
-    for (i = 0; i < 7u; i++)                     /* (from F: a black key after F, G, A, C and D) */
-        if (i % 7u != 3u && i % 7u != 6u)
-            cv_rect((int32_t)i * 30 + 20, y, 18, 11, C_BLACK);
-}
 /* when the change asked for happens: "next in 3 beats", "at loop end" (playing), else "" */
 UI_SMALL static void pats_when(char *b)
 {
@@ -279,7 +258,7 @@ UI_SMALL static void pats_when(char *b)
 }
 UI_SMALL static void pads_draw(uint32_t blink)
 {
-    uint32_t p, sel = song.sel % NTRK, used = pats_used(sel);
+    uint32_t p, r, sel = song.sel % NTRK, used = pats_used(sel);
     const track_t *t = &trk[sel];
     char b[20], q[12];
     static const char *const L[4] = {"pattern", "quant", "copy", "clear"};
@@ -289,32 +268,32 @@ UI_SMALL static void pads_draw(uint32_t blink)
     fmt_int(q, (int32_t)(pb_n * 100u / PB_SIZE));       /* (how full the pattern store is) */
     str_cpy(q + str_len(q), "% full", 8);
     pats_head(b, UI_COL[sel], q, pb_n * 10u > PB_SIZE * 9u ? UI_RED : UI_G3);
-    cv_begin(240, 98, C_BLACK);                  /* the eight tiles, two rows of four */
-    for (p = 0; p < NPAT; p++) {
-        int32_t x = 4 + (int32_t)(p % 4u) * 59, y = 2 + (int32_t)(p / 4u) * 50;
-        uint32_t playing = p == t->pat, asked = t->pat_req == p + 1u, has = (used >> p) & 1u, len = 0;
-        uint64_t m = has ? pats_map(sel, p, &len) : 0;
-        uint16_t bg = playing ? UI_COL[sel] : has ? UI_G2 : UI_G1, fg = playing ? C_BLACK : has ? C_WHITE : UI_G3;
-        pats_tile(x, y, 54, 44, bg);
-        if (asked && blink)
-            pats_frame(x, y, 54, 44, C_WHITE);
-        fmt_int(b, (int32_t)p + 1);
-        cv_text(x + 4, y + 2, &FONT_S, b, fg);
-        if (playing || asked)
-            cv_text(x + 50 - text_w(&FONT_S, playing ? "now" : "next"), y + 2, &FONT_S, playing ? "now" : "next",
-                    playing ? C_BLACK : C_WHITE);
-        if (has)
-            pats_pic(x + 5, y + 19, 45, 21, m, len, playing ? C_BLACK : UI_COL[sel]);
-        else
-            cv_text(x + 27 - text_w(&FONT_S, "empty") / 2, y + 22, &FONT_S, "empty", UI_G3);
-        if (p == pats_cursor)
-            cv_rect(x, y + 46, 54, 2, C_WHITE);
+    for (r = 0; r < 2u; r++) {                   /* the eight tiles, two rows of four, a band each (the canvas holds
+                                                  * 124 rows). 1.9.7: the keyboard strip under them is gone, its rows
+                                                  * theirs (the tiles are the keys 1..8) */
+        cv_begin(240, 73, C_BLACK);
+        for (p = r * 4u; p < r * 4u + 4u; p++) {
+            int32_t x = 4 + (int32_t)(p % 4u) * 59, y = 2;
+            uint32_t playing = p == t->pat, asked = t->pat_req == p + 1u, has = (used >> p) & 1u, len = 0;
+            uint64_t m = has ? pats_map(sel, p, &len) : 0;
+            uint16_t bg = playing ? UI_COL[sel] : has ? UI_G2 : UI_G1, fg = playing ? C_BLACK : has ? C_WHITE : UI_G3;
+            pats_tile(x, y, 54, 67, bg);
+            if (asked && blink)
+                pats_frame(x, y, 54, 67, C_WHITE);
+            fmt_int(b, (int32_t)p + 1);
+            cv_text(x + 4, y + 2, &FONT_S, b, fg);
+            if (playing || asked)
+                cv_text(x + 50 - text_w(&FONT_S, playing ? "now" : "next"), y + 2, &FONT_S, playing ? "now" : "next",
+                        playing ? C_BLACK : C_WHITE);
+            if (has)
+                pats_pic(x + 5, y + 20, 45, 42, m, len, playing ? C_BLACK : UI_COL[sel]);
+            else
+                cv_text(x + 27 - text_w(&FONT_S, "empty") / 2, y + 34, &FONT_S, "empty", UI_G3);
+            if (p == pats_cursor)
+                cv_rect(x, y + 69, 54, 2, C_WHITE);
+        }
+        cv_blit(0, 42 + (int32_t)r * 73);
     }
-    cv_blit(0, 42);
-    cv_begin(240, 48, C_BLACK);                  /* the keys: what each does */
-    pats_keyboard(0, blink);
-    cv_text(4, 28, &FONT_S, "keys 1-8: patterns", UI_G3);
-    cv_blit(0, 140);
     fmt_int(v[0], (int32_t)pats_cursor + 1);
     str_cpy(v[1], PQN[(uint32_t)clamp(song.g[G_PATQ], 0, 3)], 8);
     if (pats_arm == 1u) {
