@@ -44,7 +44,16 @@ static void knob_to(uint32_t role, volatile int16_t *v, int32_t w)
         slow(role, *v < w ? 1 : -1);
 }
 static void hold_layer(uint32_t b) { down(b); frames(25); }
-static void seq_save(void) { down(B_SEQ); frames(3); tap(B_SAVE); up(B_SEQ); frames(2); }   /* (1.7) PATTERNS */
+static void seq_save(void)                     /* (1.9.7) SCENES: SEQ, then SELECT (SEQ held + SAVE is gone) */
+{
+    uint32_t g;
+    tap(B_SEQ);
+    frames(2);
+    for (g = 0; g < 8u && !(on_pats_page() && pats_view() == PV_SCENES); g++) {
+        turn(EN_SELECT, 1);
+        frames(4);
+    }
+}
 static void let_go(uint32_t b) { up(b); frames(2); }
 /* the keys (bit k) that play these notes now, as the coach lights them */
 static uint32_t keys_for(const track_t *t, const uint8_t *c, uint32_t n)

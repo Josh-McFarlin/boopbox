@@ -327,8 +327,8 @@ To open these pages, push **SEQ** until they show. The sequence of the SEQ pages
 **CHAIN**, **SCENES**, SONG. On a drum track, the DRUMS grid replaces NOTES. You can also turn **SELECT** to the right
 from PLAY.
 
-To go to one of these pages from any page and track, push **SEQ**, then turn **SELECT** to the page. (To go to
-**SCENES**, you can also hold **SEQ** and push **SAVE**.)
+To go to one of these pages from any page and track, push **SEQ**, then turn **SELECT** to the page. (Before
+1.9.7, **SEQ** held + **SAVE** went to SCENES. Now that does nothing.)
 
 On all three pages, **the keys are pads**. They play no notes.
 

@@ -32,6 +32,9 @@ Also fixed in BoopBox:
   new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
   goes to the next scale.
 
+- **SEQ held + SAVE no longer jumps to SCENES.** To get to PATTERNS, CHAIN and SCENES, tap SEQ, then turn SELECT
+  through the SEQ pages. SEQ held + SAVE now does nothing (it opens neither SONG nor NOTES).
+
 Changed in BoopBox Trainer:
 
 - **The way to PATTERNS, CHAIN and SCENES** is now *TAP SEQ, SELECT TO PATTERNS* (SEQ, then turn SELECT through the

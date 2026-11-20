@@ -1353,7 +1353,7 @@ int main(int argc, char **argv)
     }
 
     {   /* 1.7: simpler ways around: a button from another group opens its first page; SEQ the same on every track
-         * (drum track: GRID, TIMING, PLAY, PATTERNS, SONG); EDIT the drum track's KIT and SOUND; SEQ held + SAVE: PATTERNS */
+         * (drum track: GRID, TIMING, PLAY, PATTERNS, SONG); EDIT the drum track's KIT and SOUND; SEQ, then SELECT: PATTERNS */
         #define PT() (PAGES[ui.page].title)
         uint32_t sel0 = song.sel, i;
         int ok;
@@ -1376,11 +1376,14 @@ int main(int argc, char **argv)
         tap(B_SEQ);
         check(!strcmp(PT(), "NOTES"), "SONG, SEQ again: round to NOTES");
         tap(B_FX);
-        press(B_SEQ); frames(3); tap(B_SAVE); frames(2);
-        ok = on_pats_page();
-        release(B_SEQ); frames(2);
-        check(ok && on_pats_page() && pats_view() == PV_SCENES && ui.layer == LY_PLAY,
-              "SEQ held + SAVE tapped: SCENES, from FX; SEQ let go: no SEQ tap");
+        {
+            const char *was = PT();
+            press(B_SEQ); frames(3); tap(B_SAVE); frames(2);
+            ok = !on_pats_page() && !on_song_page();
+            release(B_SEQ); frames(2);
+            check(ok && !strcmp(PT(), was) && !on_song_page() && ui.layer == LY_PLAY,
+                  "SEQ held + SAVE tapped (1.9.7): nothing, from FX; neither a tap (no SONG, no NOTES)");
+        }
         song.sel = TRK_DRUM; go_home(); frame();
         tap(B_SEQ);
         ok = on_drum_page() && drum_page == 0u && cur_btn() == B_SEQ;
@@ -1402,8 +1405,10 @@ int main(int argc, char **argv)
         ok &= on_drum_page() && drum_page == 0u;
         check(ok, "drum track, EDIT (1.7): KIT, SOUND, KIT (its light EDIT); SEQ: the grid");
         tap(B_EDIT);
-        press(B_SEQ); frames(3); tap(B_SAVE); release(B_SEQ); frames(2);
-        check(on_pats_page() && pats_view() == PV_SCENES, "drum track: SEQ held + SAVE tapped on KIT: SCENES");
+        tap(B_SEQ);
+        for (i = 0; i < 5u; i++) { encs[panel.enc[EN_SELECT]] = 1; frame(); }
+        check(on_pats_page() && pats_view() == PV_SCENES,
+              "drum track, KIT: SEQ, then SELECT right five times: TIMING, PLAY, PATTERNS, CHAIN, SCENES");
         for (i = 0; i < 3u; i++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
         check(!strcmp(PT(), "PLAY"), "drum track, SCENES: SELECT left three times: CHAIN, PATTERNS, PLAY");
         for (i = 0; i < 2u; i++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }

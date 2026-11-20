@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The PATTERNS, CHAIN and SCENES pages, and the CHORDS screen.
  * PATTERNS, CHAIN and SCENES are the last SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then SONG; SELECT
- * walks them, SEQ held + SAVE opens SCENES from anywhere). On all three the keys are pads (seq.c kb_pats, pats_key):
+ * walks them: from anywhere, SEQ, then SELECT). On all three the keys are pads (seq.c kb_pats, pats_key):
  * white keys 1..8 the selected track's patterns, white keys 9..16 the song's scenes 1..8; their lights show what plays
  * (lit) and what is asked for (blinking). ALGORITHM the track, ENV / LFO their pages, PLAY and HOME as everywhere.
  *   PATTERNS: the selected track's eight patterns as tiles (NOW playing, NEXT asked for, what each holds, empty). A key
