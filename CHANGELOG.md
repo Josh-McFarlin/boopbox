@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.9.7
 
 Fixed in BoopBox:
 

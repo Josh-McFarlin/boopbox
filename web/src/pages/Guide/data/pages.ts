@@ -301,7 +301,7 @@ export const PAGES: PageGroup[] = [
         'SCENES',
         'pages/seq-scenes',
         ['SCENE', 'QUANT', 'NAME', 'the PATTERN of the track'],
-        "Every track's pattern at once. Also: hold SEQ, tap SAVE.",
+        "Every track's pattern at once. Tap SEQ, then turn SELECT to SCENES.",
       ],
       [
         'SONG',
