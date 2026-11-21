@@ -1,5 +1,5 @@
 {
-  "what": "An eight-track groovebox you play live, for any style. Six synth tracks and two drum machines, 223 presets on thirteen engines, 37 drum kits, a 64-step sequencer with locks, song sections, 27 punch-in effects, your own samples, MIDI and USB audio.",
+  "what": "An eight-track groovebox you play live, for any style. Each track is a synth or a drum machine, with 223 presets on thirteen engines, 37 drum kits, a 64-step sequencer with locks, song sections, 27 punch-in effects, your own samples, MIDI and USB audio.",
   "author": "Josh McFarlin",
   "kinds": ["groove"],
   "play": "https://boopbox.replit.app/emu/",
