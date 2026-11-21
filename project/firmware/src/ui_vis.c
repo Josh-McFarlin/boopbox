@@ -323,25 +323,19 @@ UI_SMALL static void vis_stars(uint32_t n, uint32_t h, uint32_t s)
         f32 b = 0.35f + (f32)(k % 100u) * 0.0055f;
         f32 tw = 0.7f + 0.3f * vg_sin(t * (0.25f + (f32)(k % 7u) * 0.09f) + (f32)(k % 97u) * 0.0103f);
         vg_mode(VG_ADD);
-        vg_disc(x, y, k % 9u ? 0.5f : 0.85f, VC(225, 228, 255), b * tw);
-        if (!(k % 13u))
-            vg_glow(x, y, 4.5f, VC(150, 160, 255), 0.3f * tw);
+        vg_disc(x, y, k % 9u ? 0.5f : 0.9f, VC(225, 228, 255), b * tw);
         vg_mode(VG_PAINT);
     }
 }
-/* a filled ellipse, row by row (soft at the sides) */
+/* a filled ellipse, as an octagon */
 UI_SMALL static void vis_ellipse(f32 cx, f32 cy, f32 rx, f32 ry, uint32_t c, f32 a)
 {
-    int32_t y;
-    if (rx < 0.5f || ry < 0.5f)
-        return;
-    for (y = vg_ifloor(cy - ry); y <= (int32_t)(cy + ry) + 1; y++) {
-        f32 d = ((f32)y - cy) / ry, w2 = 1.0f - d * d;
-        if (w2 > 0.0f) {
-            f32 hw = rx * vg_sqrt(w2);
-            vg_rect(cx - hw + 0.5f, (f32)y, 2.0f * hw, 1.0f, c, a * (w2 < 0.15f ? w2 / 0.15f : 1.0f));
-        }
-    }
+    static const f32 O[8] = {1.0f, 0.7071f, 0.0f, -0.7071f, -1.0f, -0.7071f, 0.0f, 0.7071f};
+    f32 xy[16];
+    int32_t i;
+    for (i = 0; i < 8; i++)
+        xy[2 * i] = cx + O[i] * rx, xy[2 * i + 1] = cy + O[(i + 6) & 7] * ry;
+    vg_fill(xy, 8, c, a);
 }
 /* the sun, centre (cx, cy), radius r, above row clip: colour a at the top to b, the lower half striped; a haze around */
 UI_SMALL static void vis_sun(f32 cx, f32 cy, f32 r, int32_t clip, uint32_t a, uint32_t b, uint32_t haze)
@@ -434,29 +428,30 @@ UI_SMALL static void vis_neon(f32 x0, f32 y0, f32 x1, f32 y1, f32 w, uint32_t c)
 }
 
 /* ---- the styles (each draws the whole screen; called once per band) ---- */
-/* a palm: the trunk a tapered curve from (bx, 239) through (mx, 150) to its crown (tx, ty), leaning by sway; six fronds
- * that droop and swing a little more than the crown */
+/* a quadratic curve from (x0, y0) through the control (mx, my) to (x1, y1), w0 wide tapering to w1, in n strokes */
+UI_SMALL static void vis_curve(f32 x0, f32 y0, f32 mx, f32 my, f32 x1, f32 y1, f32 w0, f32 w1, int32_t n, uint32_t c)
+{
+    f32 px = x0, py = y0;
+    int32_t i;
+    for (i = 1; i <= n; i++) {
+        f32 t = (f32)i / (f32)n, u = 1.0f - t, qx = u * u * x0 + 2.0f * u * t * mx + t * t * x1;
+        f32 qy = u * u * y0 + 2.0f * u * t * my + t * t * y1;
+        vg_beam(px, py, qx, qy, w0 + (w1 - w0) * (t - 1.0f / (f32)n), w0 + (w1 - w0) * t, c, 1.0f, 1.0f, 0.0f);
+        px = qx, py = qy;
+    }
+}
+/* a palm: the trunk from (bx, 239) through (mx, 150) to its crown (tx, ty), leaning by sway; six fronds that droop
+ * and swing a little more than the crown */
 UI_SMALL static void vis_palm(f32 bx, f32 mx, f32 tx, f32 ty, f32 lean, f32 sway)
 {
     static const int8_t FROND[6][2] = {{-36, 6}, {-22, -6}, {-2, -10}, {20, -6}, {36, 4}, {40, 16}};
     const uint32_t dark = VC(10, 0, 15);
-    f32 px = bx, py = 239.0f, cx = tx + sway * 10.0f * lean, f;
+    f32 cx = tx + sway * 10.0f * lean;
     int32_t i;
-    for (i = 1; i <= 10; i++) {                     /* the trunk: a quadratic, 8 px wide at the root, 4 at the crown */
-        f32 t = (f32)i * 0.1f, u = 1.0f - t;
-        f32 qx = u * u * bx + 2.0f * u * t * mx + t * t * cx, qy = u * u * 239.0f + 2.0f * u * t * 150.0f + t * t * ty;
-        vg_beam(px, py, qx, qy, 8.0f - 4.0f * (t - 0.1f), 8.0f - 4.0f * t, dark, 1.0f, 1.0f, 0.0f);
-        px = qx, py = qy;
-    }
-    for (i = 0; i < 6; i++) {                       /* the fronds: curves out and down, tapering to a point */
-        f32 ex = cx + (f32)FROND[i][0] + sway * 14.0f * lean, ey = ty + (f32)FROND[i][1] + 6.0f;
-        f32 mxf = (cx + ex) * 0.5f, myf = ty + (f32)FROND[i][1] * 0.5f - 12.0f, ox = cx, oy = ty;
-        for (f = 0.125f; f <= 1.001f; f += 0.125f) {
-            f32 u = 1.0f - f, qx = u * u * cx + 2.0f * u * f * mxf + f * f * ex, qy = u * u * ty + 2.0f * u * f * myf + f * f * ey;
-            vg_beam(ox, oy, qx, qy, 5.0f * (1.125f - f), 5.0f * (1.0f - f) + 0.6f, dark, 1.0f, 1.0f, 0.0f);
-            ox = qx, oy = qy;
-        }
-    }
+    vis_curve(bx, 239.0f, mx, 150.0f, cx, ty, 8.0f, 4.0f, 10, dark);
+    for (i = 0; i < 6; i++)                         /* the fronds: out and down, tapering to a point */
+        vis_curve(cx, ty, cx + (f32)FROND[i][0] * 0.5f, ty + (f32)FROND[i][1] * 0.5f - 12.0f,
+                  cx + (f32)FROND[i][0] + sway * 14.0f * lean, ty + (f32)FROND[i][1] + 6.0f, 5.0f, 0.6f, 8, dark);
     vg_disc(cx, ty + 1.0f, 3.5f, dark, 1.0f);
 }
 /* PALMS: the mix's wave is the sea's front wave at sunset; the sun's reflection shimmers with the mix; the palms sway */
@@ -655,9 +650,6 @@ UI_SMALL static void vis_horizon(void)
         c = vis_tcol(t->trk);
         vg_quad(120.0f + (f32)t->col * w0, y0, 120.0f + (f32)(t->col + 1) * w0, y0, 120.0f + (f32)(t->col + 1) * w1, y1,
                 120.0f + (f32)t->col * w1, y1, c, fade * 0.85f);
-        vg_mode(VG_ADD);
-        vg_glow(120.0f + ((f32)t->col + 0.5f) * (w0 + w1) * 0.5f, (y0 + y1) * 0.5f, (w0 + w1) * 0.7f, c, fade * 0.35f);
-        vg_mode(VG_PAINT);
     }
     vis_grid(151.0f, (f32)(vs.drv & 255u) / 256.0f, 10, 40.0f, VC(200, 40, 160), 1.0f);
 }
@@ -798,8 +790,7 @@ UI_SMALL static void vis_city(void)
     for (k = 0; k < 2; k++) {                       /* the searchlights */
         f32 bx = k ? 170.0f : 70.0f, an = 0.75f + 0.078f * vg_sin((f32)vs.drv / 1024.0f + (f32)k * 0.255f);
         f32 ex = bx + 260.0f * vg_cos(an), ey = 144.0f + 260.0f * vg_sin(an);
-        vg_beam(bx, 144.0f, ex, ey, 4.0f, 34.0f, VC(255, 220, 255), 0.4f, 0.0f, 1.0f);
-        vg_beam(bx, 144.0f, ex, ey, 1.5f, 6.0f, VW, 0.35f, 0.0f, 1.0f);
+        vg_beam(bx, 144.0f, ex, ey, 3.0f, 34.0f, VC(255, 225, 255), 0.55f, 0.0f, 1.0f);
     }
     vg_beam(-20.0f, 104.0f, 260.0f, 104.0f, 14.0f, 14.0f, VC(255, 80, 170), 0.45f, 0.45f, 1.0f);
     vg_mode(VG_PAINT);
@@ -880,20 +871,17 @@ UI_SMALL static void vis_keytower(uint32_t k)
     if (!blk) {
         f32 sx = x + x1 < 240.0f ? x1 + 0.5f : x - 0.5f;
         vg_quad(sx, 200.0f, sx, top - 0.5f, VB(sx, 120.0f), VB(top - 0.5f, 96.0f), VB(sx, 120.0f), VB(200.0f, 96.0f), sd, 1.0f);
-        vg_mode(VG_ADD);
-        for (y = top + 6.0f; y < 196.0f; y += 7.0f)
-            vg_disc(sx + (120.0f - sx) * 0.1f, y + (96.0f - y) * 0.1f, 0.6f, lit ? vg_mix(c, VW, it * 0.3f) : VC(50, 20, 80), 0.8f);
-        vg_mode(VG_PAINT);
         if (top > 96.0f)
             vg_quad(x - 0.5f, top - 0.5f, x1 + 0.5f, top - 0.5f, VB(x1 + 0.5f, 120.0f), VB(top - 0.5f, 96.0f), VB(x - 0.5f, 120.0f),
                     VB(top - 0.5f, 96.0f), rf, 1.0f);
     }
     vg_rect(x, top, wd + 1.0f, 200.0f - top, fr, 1.0f);
-    vg_mode(VG_MAX);
-    vg_line(x, top, x1, top, 1.0f, blk ? rf : ed, 1.0f);
-    vg_line(x, top, x, 200.0f, 1.0f, ed, 1.0f);
-    vg_line(x1, top, x1, 200.0f, 1.0f, blk ? sd : ed, 1.0f);
-    vg_mode(VG_PAINT);
+    {
+        const f32 e[8] = {x, 200.0f, x, top, x1, top, x1, 200.0f};
+        vg_mode(VG_MAX);
+        vg_poly(e, 4, 1.0f, ed, 1.0f);
+        vg_mode(VG_PAINT);
+    }
     if (!blk) {
         uint32_t s = k * 131u;
         vg_mode(VG_ADD);

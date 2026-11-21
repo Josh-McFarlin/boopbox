@@ -44,6 +44,13 @@ jobs:
           for t in branch main; do
             d=.; [ $t = main ] && d=../main
             ( cd "$d/project" && sh scripts/build.sh ) > "build-$t.log" 2>&1; echo "exit $?" >> "build-$t.log"
+            if [ ! -f "$d/project/build/felucca.bin" ]; then
+              # over the slot: link again with 64 KB more room (here only), to measure how much and what
+              sed -i 's/LENGTH = 0x8DFBC/LENGTH = 0x9DFBC/' "$d/project/firmware/app.ld"
+              ( cd "$d/project" && sh scripts/build.sh ) > "build-$t-big.log" 2>&1
+              git -C "$d" checkout -- project/firmware/app.ld
+              echo "(measured with a 64 KB larger region: the real slot does not hold it)"
+            fi
             echo "== $t ($(git -C "$d" rev-parse --short HEAD))"
             grep -E 'image [0-9]+ B|RAM \.data|ram_text|error|Error|exceeds|slot|exit ' "build-$t.log" | tail -20
             echo "-- the end of the log:"; tail -40 "build-$t.log"
