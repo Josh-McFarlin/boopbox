@@ -327,19 +327,23 @@ To open these pages, push **SEQ** until they show. The sequence of the SEQ pages
 **CHAIN**, **SCENES**, SONG. On a drum track, the DRUMS grid replaces NOTES. You can also turn **SELECT** to the right
 from PLAY.
 
-To go to **SCENES** from any page and track, hold **SEQ** and push **SAVE**. To go back through CHAIN and PATTERNS,
-turn SELECT to the left.
+To go to one of these pages from any page and track, push **SEQ**, then turn **SELECT** to the page. (Before
+1.9.7, **SEQ** held + **SAVE** went to SCENES. Now that does nothing.)
+
+As on the other pages, the bottom line shows the page's name in a box between its neighbours, with a dot for each SEQ
+page (1.9.7). The top of the screen is the status bar of every page. The line under it shows what OCT+ and OCT- do
+on the page for 4 s after it opens, then what the page is about. CHAIN shows all 16 slots at once, two rows of eight.
 
 On all three pages, **the keys are pads**. They play no notes.
 
 | Keys | Function |
 | --- | --- |
 | White keys **1 … 8** (F3 … F4) | Patterns 1 … 8 of the selected track: requests that pattern. On CHAIN: adds it to the chain |
-| White keys **9 … 16** (G4 … G5) | Scenes 1 … 8: launches that scene on all tracks |
+| White keys **9 … 16** (G4 … G5) | On SCENES only: scenes 1 … 8, launches that scene on all tracks. On PATTERNS and CHAIN: no function (1.9.7) |
 | Black keys | No function |
 
-The key lights show what plays (on) and what you requested (blinking). The strip near the bottom of each page shows the
-same 16 pads. **ALGORITHM** selects the track. **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** operate as on
+The key lights show what plays (on) and what you requested (blinking). On PATTERNS, the eight tiles are keys 1 … 8
+(1.9.7: the strip of all 16 pads under them is gone, and the tiles are taller). **ALGORITHM** selects the track. **PLAY**, **ENV**, **LFO**, the layer buttons and **HOME** operate as on
 all pages.
 
 A pattern change that you request waits for its time. **PAT Q** (KNOB 2 on PATTERNS and SCENES) sets this time:
@@ -402,7 +406,7 @@ example *next in 3 beats* or *at loop end*. In a new project, scene N is pattern
 
 | Control | Function |
 | --- | --- |
-| A white key 9 … 16 (on all three pages) | Launches that scene: each track in the scene requests its pattern |
+| A white key 9 … 16 (on this page only, 1.9.7) | Launches that scene: each track in the scene requests its pattern |
 | **KNOB 1** | The scene |
 | **KNOB 2 QUANT** | PAT Q |
 | **KNOB 3 NAME** | The name: INTRO, VERSE, PRE, CHORUS, BRIDGE, BREAK, BUILD, DROP, OUTRO, FILL, HOOK, SOLO, ALT, A … D, END |

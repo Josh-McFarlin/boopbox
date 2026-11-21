@@ -1270,6 +1270,7 @@ UI_SMALL static void ui_draw(void)
     }
 #if FELUCCA_ARRANGER
     if (!ui.menu && on_song_page()) {
+        draw_head();                                   /* (1.9.7) the status bar, as on every page */
         song_screen_draw();
         ui_timers();
         ui.force = 0;
@@ -1277,12 +1278,14 @@ UI_SMALL static void ui_draw(void)
     }
 #endif
     if (!ui.menu && on_pats_page()) {
+        draw_head();                                   /* (1.9.7) the status bar, as on every page */
         pats_screen_draw();
         ui_timers();
         ui.force = 0;
         return;
     }
     if (!ui.menu && on_chords_page()) {
+        draw_head();                                   /* (1.9.7) the status bar, as on every page */
         chords_screen_draw();
         ui_timers();
         ui.force = 0;

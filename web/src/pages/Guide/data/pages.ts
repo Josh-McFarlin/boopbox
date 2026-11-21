@@ -149,7 +149,7 @@ export const PAGES: PageGroup[] = [
     pages: [
       [
         'SEL',
-        'pages/scl-sel',
+        'pages/sel-sel',
         [
           'ROOT: the key of the track',
           'SCL: the scale of the track',
@@ -160,13 +160,13 @@ export const PAGES: PageGroup[] = [
       ],
       [
         'SEL 2',
-        'pages/scl-sel-2',
+        'pages/sel-sel-2',
         ['TRN transpose ±24', 'STRUM ±60 ms', 'VLEAD voice leading', '—'],
         "STRUM plays a chord's notes one after the other; VLEAD voices each chord nearest the last.",
       ],
       [
         'HARMONY',
-        'pages/scl-harmony',
+        'pages/sel-harmony',
         [
           'KEY of the song',
           'SCALE (16)',
@@ -177,13 +177,13 @@ export const PAGES: PageGroup[] = [
       ],
       [
         'FOLLOW',
-        'pages/scl-follow',
+        'pages/sel-follow',
         ['FOLLOW: OFF, TRANS, SCALE', '—', '—', '—'],
         "How the track's sequenced notes follow the song's chord.",
       ],
       [
         'CHORDS',
-        'pages/scl-chords',
+        'pages/sel-chords',
         ['CHORD', 'DEGREE', 'BARS', 'COUNT'],
         'The chord and progression of the song; the keys play the chord live.',
       ],
@@ -289,7 +289,7 @@ export const PAGES: PageGroup[] = [
         'PATTERNS',
         'pages/seq-patterns',
         ['PATTERN cursor', 'QUANT', 'COPY (twice)', 'CLEAR (twice)'],
-        'Eight patterns per track; keys 1–8 are pads, 9–16 launch scenes.',
+        'Eight patterns per track; keys 1–8 are pads.',
       ],
       [
         'CHAIN',
@@ -301,7 +301,7 @@ export const PAGES: PageGroup[] = [
         'SCENES',
         'pages/seq-scenes',
         ['SCENE', 'QUANT', 'NAME', 'the PATTERN of the track'],
-        "Every track's pattern at once. Also: hold SEQ, tap SAVE.",
+        "Every track's pattern at once. Tap SEQ, then turn SELECT to SCENES.",
       ],
       [
         'SONG',

@@ -556,8 +556,12 @@ UI_SMALL static void layer_knobs(uint32_t layer)
                 if (!is_drum(t))
                     t->p[P_CHORD] = (int16_t)clamp(t->p[P_CHORD] + s, 0, 5);
             } else if (k == 1u) {
-                uint32_t i;
-                int16_t v = (int16_t)clamp(TSEL->p[P_SCALE] + s, 0, NSCALES - 1);
+                uint32_t i, b = song.sel % NTRK;
+                int16_t v;
+                for (i = 0; is_drum(&trk[b]) && i < NTRK; i++)
+                    b = i;                              /* (from a synth track's scale: a drum track's is never set,
+                                                         * and from it each detent gave CHR or MAJ again) */
+                v = (int16_t)clamp(trk[b].p[P_SCALE] + s, 0, NSCALES - 1);
                 for (i = 0; i < NTRK; i++)
                     if (!is_drum(&trk[i]))
                         trk[i].p[P_SCALE] = v;
