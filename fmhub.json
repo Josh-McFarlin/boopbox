@@ -1,0 +1,10 @@
+{
+  "what": "An eight-track groovebox you play live, for any style. Each track is a synth or a drum machine, with 223 presets on thirteen engines, 37 drum kits, a 64-step sequencer with locks, song sections, 27 punch-in effects, your own samples, MIDI and USB audio.",
+  "author": "Josh McFarlin",
+  "kinds": ["groove"],
+  "play": "https://boopbox.replit.app/emu/",
+  "editor": "https://boopbox.replit.app/editor/",
+  "image": "project/assets/screens/fm1/tracks-1-4.png",
+  "color": "#00E6FF",
+  "sounds": "licensed: Versilian Studios VSCO-2 CE and VCSL, Sonic Pi (CC0 1.0); Greg Sullivan's Wurlitzer EP200 samples, CC BY 3.0"
+}
