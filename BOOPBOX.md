@@ -504,7 +504,7 @@ USB AUDIO is a setting of the FM-1: it stays as you set it. **USB RATE** (AUDIO,
 
 ## The visualiser
 
-On the TRACKS screen, tap **HOME**. The whole screen becomes a visualiser of what BoopBox plays, in six scenes at sunset and in neon. **SELECT** steps through the scenes, and the name shows for a second. BoopBox keeps the last scene chosen with the settings. **HOME** again, or any page button, closes the visualiser.
+On the TRACKS screen, tap **HOME**. The whole screen becomes a visualiser of what BoopBox plays, in four scenes at sunset and in neon. **SELECT** steps through the scenes, and the name shows for a second. BoopBox keeps the last scene chosen with the settings. **HOME** again, or any page button, closes the visualiser.
 
 The keys, PLAY, REC and the layers work as usual (a held layer shows its screen, then the visualiser comes back). During this time, KNOB 1–4 do nothing, and GLO + SELECT sets the tempo.
 
@@ -512,10 +512,8 @@ The keys, PLAY, REC and the layers work as usual (a held layer shows its screen,
 | --- | --- | --- |
 | 1 | **PALMS** | the wave of the mix, sample for sample, as the front wave of the sea at sunset. The reflection of the sun shimmers with the mix |
 | 2 | **NIGHT DRIVE** | a car on the road at night: the buildings of the city are the spectrum, the road runs with the beat, the lights of the car flare on every kick. When stopped, the car slows down and parks |
-| 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid that runs down one line a beat. On each beat, tiles of the floor light up in the colours of the tracks that play |
-| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height. While the song plays, the ground always moves. After STOP, it moves on until the last peak is gone |
-| 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top), with the peak floor held white, as VU meters. Searchlights sweep with the beat |
-| 6 | **KEY CITY** | the skyline as two octaves of keys: a note lights the tower of its key in the colour of its track (a chord: all its keys · a note outside the two octaves: the same note in them). The drum tracks light the street lights |
+| 3 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top), with the peak floor held white, as VU meters. Searchlights sweep with the beat |
+| 4 | **KEY CITY** | the skyline as two octaves of keys: a note lights the tower of its key in the colour of its track (a chord: all its keys · a note outside the two octaves: the same note in them). The drum tracks light the street lights |
 
 The visualiser sees the mix as if **MASTER** is all the way up. Thus the picture does not follow the volume knob. With MASTER turned down, even to 0, it moves as at full volume. It only reads what the audio already gives to the screen (that mix, the levels and notes of the tracks, the clock). Thus it takes nothing from the sound.
 

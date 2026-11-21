@@ -8,7 +8,7 @@ Builds and runs tools/screens_demo.c (the host tests' harness, a demo project on
 the generated headers in build/gen: scripts/build.sh, or HOST_ONLY=1 tests/run_tests.sh), then lays the screens out at 2x
 with a title and a line under each:
   boopbox-screens.png      the main screens
-  boopbox-visualiser.png   the boot screen, a sound page, the menu and the visualiser's six styles
+  boopbox-visualiser.png   the boot screen, a sound page, the menu and the visualiser's four styles
 in SYNTHWAVE, the screen palette the FM-1 starts with (MENU > SCREEN > COLOR).
 Also each screen alone, at its own 240x240 pixels: fm1/<name>.png (the website's home page shows them, drawn
 pixelated).
@@ -39,8 +39,6 @@ MORE = [
     ("menu", "MENU (HOME held)", "screen, lights, audio, sequencer, system"),
     ("vis-palms", "PALMS", "the visualiser: tap HOME on TRACKS"),
     ("vis-night-drive", "NIGHT DRIVE", "the city is the spectrum, the road the beat"),
-    ("vis-horizon", "HORIZON", "the spectrum; tiles light up on the beat"),
-    ("vis-flyover", "FLYOVER", "the spectrum over time, bass in the middle"),
     ("vis-dense-city", "DENSE CITY", "the eight tracks and the mix, peaks held"),
     ("vis-key-city", "KEY CITY", "a tower a key, lit in its track's colour"),
 ]

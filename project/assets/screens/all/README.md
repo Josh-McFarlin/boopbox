@@ -4,7 +4,7 @@ Drawn by the firmware's own code on the host (`python3 tools/make_all_screens.py
 of `tools/screens_demo.c` on the eight tracks playing. Each screen is 240 × 240 on the FM-1, 2x here.
 MENU → SCREEN → COLOR: **SYNTHWAVE** (`python3 tools/make_all_screens.py --palette 5`).
 
-114 screens in 8 groups.
+112 screens in 8 groups.
 
 ## Home (2)
 
@@ -177,17 +177,15 @@ The boot screen, the menu's five sections (HOME held) and ABOUT
 | MENU: SYSTEM | [`system/menu-system.png`](system/menu-system.png) | HOME held; SELECT the section |
 | ABOUT | [`system/menu-about.png`](system/menu-about.png) | the version, the credits |
 
-## Visualiser (6)
+## Visualiser (4)
 
-The visualiser's six styles (tap HOME on TRACKS)
+The visualiser's four styles (tap HOME on TRACKS)
 
 ![visualiser](visualiser.png)
 
 | Screen | File | |
 |---|---|---|
-| PALMS | [`visualiser/vis-palms.png`](visualiser/vis-palms.png) | the visualiser, style 1 of 6 |
-| NIGHT DRIVE | [`visualiser/vis-night-drive.png`](visualiser/vis-night-drive.png) | the visualiser, style 2 of 6 |
-| HORIZON | [`visualiser/vis-horizon.png`](visualiser/vis-horizon.png) | the visualiser, style 3 of 6 |
-| FLYOVER | [`visualiser/vis-flyover.png`](visualiser/vis-flyover.png) | the visualiser, style 4 of 6 |
-| DENSE CITY | [`visualiser/vis-dense-city.png`](visualiser/vis-dense-city.png) | the visualiser, style 5 of 6 |
-| KEY CITY | [`visualiser/vis-key-city.png`](visualiser/vis-key-city.png) | the visualiser, style 6 of 6 |
+| PALMS | [`visualiser/vis-palms.png`](visualiser/vis-palms.png) | the visualiser, style 1 of 4 |
+| NIGHT DRIVE | [`visualiser/vis-night-drive.png`](visualiser/vis-night-drive.png) | the visualiser, style 2 of 4 |
+| DENSE CITY | [`visualiser/vis-dense-city.png`](visualiser/vis-dense-city.png) | the visualiser, style 3 of 4 |
+| KEY CITY | [`visualiser/vis-key-city.png`](visualiser/vis-key-city.png) | the visualiser, style 4 of 4 |

@@ -69,8 +69,8 @@ Build options (environment, `0` or `1`). The defaults are in `project/firmware/s
 | `FELUCCA_UAC` | 1 | USB audio input: the master output, 44.1 kHz stereo (after Felucca 1.0) |
 | `FELUCCA_UART` | 1 | TRS MIDI IN (the 3.5 mm jack) |
 | `FELUCCA_LOGO_TEXT` | 1 | the boot logo as the wordmark alone ("boopbox" in Pixelify Sans Bold, 1 bit a pixel). It uses over 4 KB less flash than the bitmap logo (0), the pixel boombox over the wordmark. |
-| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME). It uses about 10.8 KB with its six styles. 0 leaves it out. |
-| `FELUCCA_VIS_STYLES` | 0x3F | with `FELUCCA_VIS=1`: the styles that the build includes, one bit for each style (bit 0 PALMS, NIGHT DRIVE, HORIZON, FLYOVER, DENSE CITY, bit 5 KEY CITY). SELECT skips the other styles. |
+| `FELUCCA_VIS` | 1 | the full-screen visualiser (HOME on HOME). It uses over 10 KB of flash with its four styles. 0 leaves it out. |
+| `FELUCCA_VIS_STYLES` | 0x33 | with `FELUCCA_VIS=1`: the styles that the build includes, one bit for each style (bit 0 PALMS, bit 1 NIGHT DRIVE, bit 4 DENSE CITY, bit 5 KEY CITY). SELECT skips the other styles. Bits 2 and 3 were HORIZON and FLYOVER, which are no longer in the firmware: they must stay 0 (the build stops otherwise). |
 | `FELUCCA_EDITOR` | 1 | the SysEx of the web editor (14 KB). With 0, the editor gets no reply. Updates and USB rescue stay. |
 
 The flash is almost full. The default build of 1.9.3 leaves 2,364 B of the app slot free. Version 1.9.0 left 320 B free, and version 1.8 left 2,032 B free. Two changes made room for key velocity in 1.8: the firmware reads the font in place, and it computes the display curves (`docs/memory-savings-analysis.md` F4, F9). To make room, the firmware also builds two tables in RAM: the sine table at power-on and the 2^x table of FM6 at first use (see `docs/groovebox-performance.md`). The bitmap logo fits back in place of the

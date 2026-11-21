@@ -88,9 +88,9 @@ static void demo_pats(int on)
 
 int main(int argc, char **argv)
 {
-    static const struct { uint8_t style; const char *name, *title; } VIS[6] = {
-        {0, "vis-palms", "PALMS"}, {1, "vis-night-drive", "NIGHT DRIVE"}, {2, "vis-horizon", "HORIZON"},
-        {3, "vis-flyover", "FLYOVER"}, {4, "vis-dense-city", "DENSE CITY"}, {5, "vis-key-city", "KEY CITY"}};
+    static const struct { uint8_t style; const char *name, *title; } VIS[4] = {
+        {0, "vis-palms", "PALMS"}, {1, "vis-night-drive", "NIGHT DRIVE"}, {4, "vis-dense-city", "DENSE CITY"},
+        {5, "vis-key-city", "KEY CITY"}};
     char path[512], name[64], title[64], line[96];
     uint32_t i, j, k;
     outdir = argc > 1 ? argv[1] : "/tmp";
@@ -265,12 +265,12 @@ int main(int argc, char **argv)
 
     /* the visualiser */
     song.sel = 0; go_home(); frames(4);
-    for (i = 0; i < 6u; i++) {
+    for (i = 0; i < 4u; i++) {
         vis_style = VIS[i].style;
         vis_open();
         frames(40);
         vis_name_t = 0;
-        snprintf(line, sizeof line, "the visualiser, style %u of 6", (unsigned)i + 1u);
+        snprintf(line, sizeof line, "the visualiser, style %u of 4", (unsigned)i + 1u);
         put("visualiser", VIS[i].name, VIS[i].title, line);
         go_home();
         frames(2);

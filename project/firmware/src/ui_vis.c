@@ -1,13 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The full-screen visualiser (SLOOP 2.4; BoopBox: six scenes). On HOME (the TRACKS screen), HOME tapped opens it; HOME
+/* The full-screen visualiser (SLOOP 2.4; BoopBox: four scenes). On HOME (the TRACKS screen), HOME tapped opens it; HOME
  * again or any page closes it; SELECT steps through the styles (the name shows a second); a layer held shows its screen
  * as ever, then the visualiser comes back. The keys, PLAY and REC work as always.
  *   1 PALMS        the mix's wave, sample for sample, as the sea's front wave at sunset
  *   2 NIGHT DRIVE  a car on the road at night: the city is the spectrum, the road runs with the beat, the lights flare
  *                  on a kick; stopped, the car slows down and parks
- *   3 HORIZON      the spectrum as a neon range (caps that fall) over a grid; tiles light up on the beat in the colours
- *                  of the tracks playing
- *   4 FLYOVER      the spectrum over time as a terrain, bass in the middle, the newest in front
+ *   (3 HORIZON and 4 FLYOVER: removed after 1.9.8, for the flash; their numbers stay taken, as the settings keep a
+ *    style's number: a FELUCCA set to one of them opens on the next style)
  *   5 DENSE CITY   the eight tracks and the master as towers of 24 floors (VU meters, peaks held); searchlights on the beat
  *   6 KEY CITY     the skyline as two octaves of keys: a note lights its tower in its track's colour; drums light the street
  * The designs: tools/vis-mockups (assets/screens/visualiser-final-six.png). It reads what the audio already leaves for
@@ -20,36 +19,27 @@
 #include "vg.c"                                     /* anti-aliased drawing (after h1's gfx.c, MIT) */
 #define VIS_N 6u
 #ifndef FELUCCA_VIS_STYLES
-#define FELUCCA_VIS_STYLES 0x3Fu                    /* the styles built in, a bit each (bit 0: PALMS); SELECT steps over
+#define FELUCCA_VIS_STYLES 0x33u                    /* the styles built in, a bit each (bit 0: PALMS); SELECT steps over
                                                      * the others */
 #endif
+_Static_assert(!(FELUCCA_VIS_STYLES & 0x0Cu), "HORIZON (bit 2) and FLYOVER (bit 3) are no longer in the firmware");
 #define VIS_HAS(s) ((FELUCCA_VIS_STYLES >> (s)) & 1u)
-static const char *const VIS_NAME[VIS_N] = {"PALMS", "NIGHT DRIVE", "HORIZON", "FLYOVER", "DENSE CITY", "KEY CITY"};
+static const char *const VIS_NAME[VIS_N] = {"PALMS", "NIGHT DRIVE", "", "", "DENSE CITY", "KEY CITY"};
 /* vis_on, vis_shown_last, vis_name_t: ui_draw.c; vis_style: panel.c (kept with the settings, taken modulo VIS_N) */
 #define VIS_FFT 512u
-#define VIS_FLY 16u                                 /* FLYOVER: the spectrum's last 16 rows */
-#define VIS_FLY_QUIET 64                            /* FLYOVER: the mix's peak under this (of 32767): silent, it stops */
 static int16_t vis_re[VIS_FFT] __attribute__((section(".pool"))), vis_im[VIS_FFT] __attribute__((section(".pool")));
 #include "scratch.h"                                /* sloop-lab: this frame's scope snapshot, in the shared scratch */
 #define vis_l (main_scratch.vis[0])
 #define vis_r (main_scratch.vis[1])
 _Static_assert(sizeof main_scratch.vis[0] == VIS_FFT * sizeof(int16_t), "the scratch holds the snapshot");
-static uint8_t vis_fly[VIS_FLY][32] __attribute__((section(".pool")));
-typedef struct {
-    uint32_t born;                                  /* HORIZON: a tile of the dance floor, lit on a beat (vs.drv) */
-    uint8_t row, trk;                               /* its row from the horizon, its track (NTRK: none, pink) */
-    int8_t col;
-} vis_tile_t;
 static struct {
     int32_t scale, peak;                            /* the wave's auto-scale (a smoothed peak), this frame's peak */
     int16_t bar[32], cap[32], capv[32];             /* the spectrum: bars, caps and their fall speed (0..1000) */
     int16_t vu[NTRK + 1], pk[NTRK + 1], pkt[NTRK + 1];   /* DENSE CITY: the tracks and the master (NTRK), peak holds */
     int16_t tlv[NTRK], mlv;                         /* each track's level, the master's (0..1000) this frame */
-    uint8_t kick, key[24], keyt[24], drum[2], drumt[2], fly0, flyh, flyq, tn;   /* a kick, KEY CITY's keys and drums,
-                                                     * FLYOVER (flyq: flat rows in front, VIS_FLY: the screen flat) */
+    uint8_t kick, key[24], keyt[24], drum[2], drumt[2];   /* a kick, KEY CITY's keys and drums */
     uint32_t free_q8, last_ms, ms;                  /* beats (1/256) when stopped; the clock (ms) */
-    uint32_t drv, spd, lastb;                       /* the drive: beats (1/256) that slow to a stop; its speed (256: on) */
-    vis_tile_t tile[24];
+    uint32_t drv, spd;                              /* the drive: beats (1/256) that slow to a stop; its speed (256: on) */
     f32 dt;                                         /* this frame's time (s), for the springs */
     f32 barf[32], barv[32];                         /* the spectrum on springs (0..1000) */
     f32 sway, swayv;                                /* PALMS: the palms' lean, pushed by the mix */
@@ -253,28 +243,13 @@ UI_SMALL static void vis_update(void)
         vs.spd = vs.spd * 15u / 16u;
         vs.drv += dq * vs.spd >> 8;
     }
-    if (song.playing && vs.drv >> 8 != vs.lastb) {  /* HORIZON: a beat: seven tiles, the colours of the tracks playing */
-        uint32_t s = vs.drv >> 8, n = 0, on[NTRK];
-        vs.lastb = s;
-        for (i = 0; i < NTRK; i++)
-            if (vs.tlv[i] > 300)
-                on[n++] = i;
-        for (i = 0; i < 7u; i++) {
-            vis_tile_t *t = &vs.tile[vs.tn];
-            vs.tn = (uint8_t)((vs.tn + 1u) % 24u);
-            t->born = vs.drv;
-            t->row = (uint8_t)(3u + vis_rnd(&s) % 5u);
-            t->col = (int8_t)(vis_rnd(&s) % 12u - 6u);
-            t->trk = (uint8_t)(n ? on[vis_rnd(&s) % n] : NTRK);
-        }
-    }
     vs.peak = mpk;
     vg_spring(&vs.sway, &vs.swayv, (f32)vs.mlv * 0.001f * vg_sin((f32)vs.drv * (1.0f / 512.0f)), 4.0f, vs.dt);
     {                                               /* the wave's scale follows the peak */
         int32_t target = mpk < 1600 ? 1600 : mpk;
         vs.scale += (target - vs.scale) / 5;
     }
-    if (st - 1u < 3u) {                             /* NIGHT DRIVE, HORIZON, FLYOVER: the spectrum */
+    if (st == 1u) {                                 /* NIGHT DRIVE: the spectrum */
         int16_t b[32];
         vis_fft();
         vis_bands(b);
@@ -289,18 +264,6 @@ UI_SMALL static void vis_update(void)
                 vs.cap[i] = (int16_t)(vs.cap[i] > vs.capv[i] ? vs.cap[i] - vs.capv[i] : 0);
             }
             vg_spring(&vs.barf[i], &vs.barv[i], (f32)vs.bar[i], 38.0f, vs.dt);
-        }
-        /* FLYOVER: a row every other frame, the newest in front. Playing, the ground always moves (silent bars: flat
-         * rows); stopped, it moves on while a note sounds and until the last peak has gone off the back, then holds */
-        if (st == 3u && (song.playing || mpk >= VIS_FLY_QUIET || vs.flyq < VIS_FLY) && (vs.flyh ^= 1u) == 0u) {
-            uint32_t top = 0;
-            vs.fly0 = (uint8_t)((vs.fly0 + VIS_FLY - 1u) % VIS_FLY);
-            for (i = 0; i < 32u; i++) {             /* (under VIS_FLY_QUIET: flat ground, not the noise floor) */
-                uint32_t v = mpk >= VIS_FLY_QUIET ? (uint32_t)(vs.bar[i] * 255 / 1000) : 0u;
-                vis_fly[vs.fly0][i] = (uint8_t)v;
-                top = v > top ? v : top;
-            }
-            vs.flyq = top ? 0u : (uint8_t)(vs.flyq < VIS_FLY ? vs.flyq + 1u : VIS_FLY);
         }
     }
 }
@@ -370,24 +333,6 @@ UI_SMALL static void vis_grid(f32 hz, f32 ph, int32_t n, f32 fan, uint32_t c, f3
         vg_line(-2.0f, y, 242.0f, y, 0.5f + 1.3f * p, c, (0.15f + 0.85f * p) * a);
     }
     vg_mode(VG_PAINT);
-}
-/* a smooth curve through n points (Catmull-Rom, sub steps a span) into out: the points written */
-UI_SMALL static int32_t vis_smooth(const f32 *xy, int32_t n, int32_t sub, f32 *out)
-{
-    int32_t i, j, m = 0;
-    for (i = 0; i + 1 < n; i++) {
-        const f32 *p0 = xy + 2 * (i ? i - 1 : i), *p1 = xy + 2 * i, *p2 = xy + 2 * (i + 1), *p3 = xy + 2 * (i + 2 < n ? i + 2 : i + 1);
-        for (j = 0; j < sub; j++) {
-            f32 t = (f32)j / (f32)sub, t2 = t * t, t3 = t2 * t;
-            out[m * 2] = 0.5f * (2.0f * p1[0] + (p2[0] - p0[0]) * t + (2.0f * p0[0] - 5.0f * p1[0] + 4.0f * p2[0] - p3[0]) * t2 +
-                                 (3.0f * p1[0] - p0[0] - 3.0f * p2[0] + p3[0]) * t3);
-            out[m * 2 + 1] = 0.5f * (2.0f * p1[1] + (p2[1] - p0[1]) * t + (2.0f * p0[1] - 5.0f * p1[1] + 4.0f * p2[1] - p3[1]) * t2 +
-                                     (3.0f * p1[1] - p0[1] - 3.0f * p2[1] + p3[1]) * t3);
-            m++;
-        }
-    }
-    out[m * 2] = xy[2 * (n - 1)], out[m * 2 + 1] = xy[2 * (n - 1) + 1];
-    return m + 1;
 }
 /* a neon polyline: a halo, the tube, a white-hot core */
 UI_SMALL static void vis_neon_poly(const f32 *xy, int32_t n, f32 w, uint32_t c, f32 a)
@@ -600,129 +545,6 @@ UI_SMALL static void vis_drive(void)
         }
     }
     vis_car(120.0f, 226.0f, (f32)vs.kick / 255.0f);
-}
-/* HORIZON: the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat
- * tiles light up in the colours of the tracks playing and ride the grid towards you */
-UI_SMALL static void vis_horizon(void)
-{
-    f32 pt[2 * 32], ridge[2 * 94], sh[2 * 94];
-    int32_t x, k, n;
-    uint32_t i;
-    vg_vgrad(0, 151, VC(6, 0, 22), VC(70, 14, 80));
-    vis_stars(60u, 110u, 10u);
-    vg_mode(VG_ADD);
-    vg_glow(120.0f, 158.0f, 120.0f, VC(140, 20, 110), 0.5f);
-    vg_mode(VG_PAINT);
-    for (k = 0; k < 32; k++)
-        pt[k * 2] = 4.0f + (f32)k * 7.5f, pt[k * 2 + 1] = 147.0f - vg_clampf(vs.barf[k], 0.0f, 1000.0f) * 0.118f;
-    pt[0] = -6.0f, pt[62] = 246.0f;                 /* (out to the edges) */
-    n = vis_smooth(pt, 32, 3, ridge);
-    vis_under(ridge, n, 151.0f, VC(34, 10, 64), VC(14, 2, 30));                /* the range */
-    for (k = 1; k < 6; k++) {                       /* contours inside */
-        for (x = 0; x < n; x++)
-            sh[x * 2] = ridge[x * 2], sh[x * 2 + 1] = vg_minf(ridge[x * 2 + 1] + (f32)(k * 7), 152.0f);
-        vg_mode(VG_MAX);
-        vg_poly(sh, n, 0.9f, VC(150, 40, 170), 0.55f - (f32)k * 0.09f);
-    }
-    vg_mode(VG_PAINT);
-    vis_neon_poly(ridge, n, 2.4f, VCYAN, 1.0f);
-    vg_mode(VG_ADD);
-    for (k = 0; k < 32; k++) {                      /* the caps */
-        f32 cx = 4.0f + (f32)k * 7.5f, cy = 144.5f - (f32)vs.cap[k] * 0.118f;
-        vg_glow(cx, cy, 6.0f, VCYAN, 0.35f);
-        vg_rect(cx - 2.0f, cy - 0.5f, 5.0f, 2.0f, VW, 1.0f);
-    }
-    vg_mode(VG_PAINT);
-    vg_vgrad(151, 240, VC(10, 0, 22), VFLOOR);
-    for (i = 0; i < 24u; i++) {                     /* the dance floor */
-        const vis_tile_t *t = &vs.tile[i];
-        int32_t age = (int32_t)(vs.drv - t->born);
-        f32 p0, p1, y0, y1, w0, w1, fade;
-        uint32_t c;
-        if (!t->born || age < 0 || age >= 640)
-            continue;
-        p0 = ((f32)(t->row * 256 + age) / 10.0f) / 256.0f, p1 = vg_minf(p0 + 0.1f, 1.0f);
-        if (p0 >= 1.0f)
-            continue;
-        y0 = vis_floor(151.0f, p0), y1 = vis_floor(151.0f, p1);
-        w0 = 6.0f + 34.0f * (y0 - 151.0f) / 89.0f, w1 = 6.0f + 34.0f * (y1 - 151.0f) / 89.0f;
-        fade = 1.0f - (f32)age / 640.0f;
-        c = vis_tcol(t->trk);
-        vg_quad(120.0f + (f32)t->col * w0, y0, 120.0f + (f32)(t->col + 1) * w0, y0, 120.0f + (f32)(t->col + 1) * w1, y1,
-                120.0f + (f32)t->col * w1, y1, c, fade * 0.85f);
-    }
-    vis_grid(151.0f, (f32)(vs.drv & 255u) / 256.0f, 10, 40.0f, VC(200, 40, 160), 1.0f);
-}
-/* FLYOVER: a column of the terrain, colour by height (cyan, pink, gold) */
-UI_SMALL static uint32_t vis_fly_col(int32_t v)
-{
-    return v < 128 ? vg_mix(VCYAN, VPINK, (f32)v / 128.0f) : vg_mix(VPINK, VGOLD, (f32)(v - 128) / 128.0f);
-}
-/* FLYOVER: the spectrum over time as a terrain, mirrored (bass in the middle), flat ground out to the edges; the
- * newest row in front. Hidden lines: drawn front to back, each pixel only above what is already in front (hor);
- * fainter with distance */
-UI_SMALL static void vis_flyover(void)
-{
-    int16_t hor[240], ry[240], px[81], py[81], pv[81], qx[81], qy[81];
-    int32_t a, c, x, z, n = 0;
-    vg_vgrad(0, 71, VC(0, 0, 10), VC(30, 0, 50));
-    vis_stars(70u, 64u, 21u);
-    vg_mode(VG_ADD);
-    vg_beam(-20.0f, 70.0f, 260.0f, 70.0f, 16.0f, 16.0f, VC(60, 180, 255), 0.55f, 0.55f, 1.0f);
-    vg_mode(VG_PAINT);
-    vg_vgrad(71, 240, VC(4, 0, 14), VC(2, 0, 8));
-    vg_level(1.0f);
-    for (x = 0; x < 240; x++)
-        hor[x] = 240;
-    for (a = 0; a < 15; a++) {                      /* the rows, front (the newest) to back */
-        f32 fog;
-        z = 256 - (a * 256 + (vs.flyh ? 0 : 128)) / 14;
-        if (z <= 10)
-            break;
-        fog = 0.3f + 0.7f * (f32)z / 256.0f;
-        for (c = 0; c < 81; c++) {
-            int32_t u = (c - 40) * 256 / 24, au = u < 0 ? -u : u, v = au <= 256 ? vis_fly[(vs.fly0 + a) % VIS_FLY][au * 32 / 257] : 0;
-            pv[c] = (int16_t)v;
-            px[c] = (int16_t)(120 + u * (84 + z * 44 / 256) / 256);
-            py[c] = (int16_t)(76 + 160 * z / 256 * z / 256 - v * (v + 256) / 512 * (6 + 64 * z / 256) / 256);
-        }
-        for (x = 0; x < 240; x++)
-            ry[x] = 240;
-        for (c = 0; c < 81; c++) {
-            if (n) {                                /* the line to the row in front, under what hides it */
-                int32_t y, y0 = py[c], y1 = qy[c], dy = y1 - y0;
-                vg_rgb(vg_scale(vis_fly_col(pv[c]), 0.6f * fog));
-                for (y = y0; y <= y1; y++) {
-                    x = dy ? px[c] + (qx[c] - px[c]) * (y - y0) / dy : px[c];
-                    if ((uint32_t)x < 240u && y < hor[x])
-                        vg_put(x, y, 256);
-                }
-            }
-            if (c) {                                /* the row itself (the front one white, on its colour) */
-                int32_t x0 = px[c - 1], x1 = px[c];
-                uint32_t rc = vg_scale(vis_fly_col((pv[c - 1] + pv[c]) / 2), a ? fog : 1.0f);
-                for (x = x0 < 0 ? 0 : x0; x <= x1 && x < 240; x++) {
-                    int32_t y = x1 > x0 ? py[c - 1] + (py[c] - py[c - 1]) * (x - x0) / (x1 - x0) : py[c];
-                    if (y < hor[x]) {
-                        vg_rgb(a ? rc : VW);
-                        vg_put(x, y, 256);
-                        if (!a) {
-                            vg_rgb(rc);
-                            vg_put(x, y + 1, 256);
-                        }
-                    }
-                    if (y < ry[x])
-                        ry[x] = (int16_t)y;
-                }
-            }
-        }
-        for (x = 0; x < 240; x++)
-            if (ry[x] < hor[x])
-                hor[x] = ry[x];
-        for (c = 0; c < 81; c++)
-            qx[c] = px[c], qy[c] = py[c];
-        n = 1;
-    }
 }
 /* DENSE CITY: an isometric box on the ground diamond centred (cx, cy), half-width w, h high: two faces, the roof, its
  * edges lit in e */
@@ -986,8 +808,6 @@ __attribute__((noinline)) UI_SMALL static void vis_draw(void)
         switch (vis_style % VIS_N) {
         case 0: if (VIS_HAS(0)) vis_palms(); break;
         case 1: if (VIS_HAS(1)) vis_drive(); break;
-        case 2: if (VIS_HAS(2)) vis_horizon(); break;
-        case 3: if (VIS_HAS(3)) vis_flyover(); break;
         case 4: if (VIS_HAS(4)) vis_city(); break;
         default: if (VIS_HAS(5)) vis_keycity(); break;
         }

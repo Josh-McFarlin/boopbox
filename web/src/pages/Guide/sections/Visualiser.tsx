@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// 13 · The visualiser's six styles.
+// 13 · The visualiser's four styles.
 import { Screen } from '../components/ui.tsx'
 import { shot } from '../data/screens.ts'
 import type { Accent } from '../data/theme.ts'

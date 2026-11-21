@@ -732,7 +732,7 @@ You can edit the settings of the song only while it is stopped (*STOP FIRST*). A
 | Screen | How to get there | What it shows · what the knobs do |
 | --- | --- | --- |
 | **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat. Each track shows its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** A coloured **A–D** badge next to the title shows which section plays. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track, and on a muted track it unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
-| **Visualiser** | tap **HOME** on TRACKS | full-screen visualiser, six styles. See [The visualiser](#19-the-visualiser) |
+| **Visualiser** | tap **HOME** on TRACKS | full-screen visualiser, four styles. See [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the colour of the layer |
 | **DRUMS** (grid / kit / sound) | tap **SEQ** (grid) or **EDIT** (kit) with the drum track | see [The DRUMS screen](#the-drums-screen) |
 | **REC READY / FREE TAKE / COUNT-IN** | **REC** while stopped | the tracks, then **mode · length · start · quant** on KNOB 1–4 (4-3-2-1 during a count-in). In a free take: the seconds and the loop that the take makes |
@@ -1001,7 +1001,7 @@ The project saves the texture, and each song section (A–D) has its own texture
 
 ## 19. The visualiser
 
-On the TRACKS screen, **tap HOME**. The whole screen becomes a visualiser of what BoopBox plays, in six scenes at
+On the TRACKS screen, **tap HOME**. The whole screen becomes a visualiser of what BoopBox plays, in four scenes at
 sunset and in neon.
 
 | Control | Does |
@@ -1015,12 +1015,10 @@ sunset and in neon.
 | --- | --- | --- |
 | 1 | **PALMS** | the wave of the mix, sample for sample, as the front wave of the sea at sunset. The reflection of the sun shimmers with the mix |
 | 2 | **NIGHT DRIVE** | a car on the road at night. The buildings of the city are the spectrum. The road moves with the beat (three lane stripes go past each beat). The lights of the car flare on every kick. When the transport stops, the car slows down and parks |
-| 3 | **HORIZON** | the spectrum as a neon range (32 bands, caps that fall) over a grid that runs down one line a beat. On each beat, tiles of the floor light up in the colours of the tracks that play |
-| 4 | **FLYOVER** | the spectrum over time as a terrain, bass in the middle: the newest in front, the older behind, coloured by height. While the song plays, the ground always moves (flat in silent bars). When the transport stops, it moves on until the last peak goes off the back, then holds still |
-| 5 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top), with the peak floor held white, as VU meters. Searchlights sweep with the beat |
-| 6 | **KEY CITY** | the skyline as two octaves of keys. A note lights the tower of its key in the colour of its track (a chord: all its keys. A note outside the two octaves: the same note in them). The drum tracks light the street lights |
+| 3 | **DENSE CITY** | the eight tracks and the mix as towers of 24 floors, lit to their level (yellow, then red at the top), with the peak floor held white, as VU meters. Searchlights sweep with the beat |
+| 4 | **KEY CITY** | the skyline as two octaves of keys. A note lights the tower of its key in the colour of its track (a chord: all its keys. A note outside the two octaves: the same note in them). The drum tracks light the street lights |
 
-DENSE CITY and KEY CITY show each of the eight tracks separately. PALMS, NIGHT DRIVE, HORIZON and FLYOVER show the mix.
+DENSE CITY and KEY CITY show each of the eight tracks separately. PALMS and NIGHT DRIVE show the mix.
 
 The visualiser sees the mix **as if MASTER is all the way up**. When MASTER is turned down, even to 0, the visualiser still moves at full size. It costs the sound nothing.
 

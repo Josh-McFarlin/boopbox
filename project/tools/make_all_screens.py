@@ -33,7 +33,7 @@ GROUPS = {
     "layers": "Each function button held: the layer the keys and knobs become",
     "rec": "REC: armed, the free take's screens, the clear ring",
     "system": "The boot screen, the menu's five sections (HOME held) and ABOUT",
-    "visualiser": "The visualiser's six styles (tap HOME on TRACKS)",
+    "visualiser": "The visualiser's four styles (tap HOME on TRACKS)",
 }
 
 

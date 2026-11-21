@@ -84,9 +84,8 @@ static void demo_project(void)
 #ifndef SCREENS_DEMO_NO_MAIN                        /* (tools/screens_all.c: its helpers, its own main) */
 int main(int argc, char **argv)
 {
-    static const struct { uint8_t style; const char *name; } VIS[6] = {
-        {0, "vis-palms"}, {1, "vis-night-drive"}, {2, "vis-horizon"}, {3, "vis-flyover"}, {4, "vis-dense-city"},
-        {5, "vis-key-city"}};
+    static const struct { uint8_t style; const char *name; } VIS[4] = {
+        {0, "vis-palms"}, {1, "vis-night-drive"}, {4, "vis-dense-city"}, {5, "vis-key-city"}};
     uint32_t i;
     outdir = argc > 1 ? argv[1] : "/tmp";
     panel = PANEL_DEFAULT;
@@ -144,9 +143,9 @@ int main(int argc, char **argv)
     press(B_HOME); frames(60); release(B_HOME); frames(30); ppm("menu");   /* (the menu draws a row a frame) */
     press(B_HOME); frames(60); release(B_HOME); frames(2);
 
-    /* the visualiser: its six styles */
+    /* the visualiser: its four styles */
     song.sel = 0; go_home(); frames(4);
-    for (i = 0; i < 6u; i++) {
+    for (i = 0; i < 4u; i++) {
         vis_style = VIS[i].style;
         vis_open();
         frames(40);
