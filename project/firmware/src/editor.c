@@ -35,7 +35,10 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
 /* v11 (SLOOP 2.7): backup object 11 = your theme (gfx.c theme_t), the editor's Theme page */
 /* v12 (SLOOP 2.7): LIVE = 77, editor_live.c: the LIVE page (transport, sections, mix keys, punch-in FX, REC, undo) */
 /* v13 (BoopBox 1.1): LIVE's state ends with tracks 5..8; LIVE op 13 solos any track */
-#define ED_PROTO 13u                                   /* the protocol version INFO ends with */
+/* v14 (BoopBox 1.9.8): PATS = 78, pushed while WATCH bit 2 is on: per track the pattern playing and the one asked for,
+ * the scene asked for and the one playing, PAT Q (the jam rooms make a change at the same moment) */
+#define ED_PROTO 14u                                   /* the protocol version INFO ends with */
+#define ED_PATS 78u
 
 static uint8_t ed_out[600];
 static uint32_t ed_n;
@@ -167,6 +170,8 @@ static const uint8_t ED_TIDS[3] = {P_LEVEL, P_PAN, P_MUTE};
 static struct {
     uint8_t on, eng, preset, sel;
     uint8_t v4;                                          /* WATCH bit 1: TRACK_CHANGED pushes too */
+    uint8_t v14;                                         /* WATCH bit 2: PATS pushes too */
+    uint8_t pp[NTRK + 3u];                               /* v14: the PATS last pushed (ed_pats_now) */
     uint32_t pos, last_ms, run_ms, resets;
     int16_t v[ED_NV];                                    /* TSEL->p[], then song.g[] */
     uint16_t t[ED_NV];                                   /* ms (low 16 bits) of the last push */
@@ -272,9 +277,22 @@ UI_SMALL static void ed_step_in(track_t *t, uint32_t i, const uint8_t *a, uint32
         }
     }
 }
+/* v14: PATS as it is now. A byte a track: the pattern playing (bits 0..2) and the one asked for (bits 3..6: pat_req,
+ * 0 none, else pattern + 1; a scene launch asks each of its tracks); then the scene asked for and the one playing
+ * (127: none), and PAT Q (G_PATQ: when a change asked for is made) */
+UI_SMALL static void ed_pats_now(uint8_t *b)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++)
+        b[k] = (uint8_t)((trk[k].pat & 7u) | (trk[k].pat_req <= NPAT ? trk[k].pat_req : 0u) << 3);
+    b[NTRK] = scn_ask < NSCENE ? scn_ask : 127u;
+    b[NTRK + 1u] = scn_cur < NSCENE ? scn_cur : 127u;
+    b[NTRK + 2u] = (uint8_t)(song.g[G_PATQ] & 3);
+}
 UI_SMALL static void ed_shadow(void)                              /* the editor is in sync */
 {
     uint32_t i;
+    ed_pats_now(ed_w.pp);
     for (i = 0; i < ED_NV; i++)
         ed_w.v[i] = *ed_val(i);
     for (i = 0; i < NSTEP; i++)
@@ -308,6 +326,23 @@ UI_SMALL static void ed_sync(void)                                /* main loop *
     if (!usb.config || usb.resets != ed_w.resets || now - ed_w.last_ms > 3000u) {
         ed_w.on = 0;                                     /* no host, USB reset, or 3 s without a request */
         return;
+    }
+    if (ed_w.v14) {                                      /* v14: before RELOAD, whose shadow would take it in */
+        uint8_t b[NTRK + 3u];
+        ed_pats_now(b);
+        for (i = 0; i < NTRK + 3u && b[i] == ed_w.pp[i]; i++)
+            ;
+        if (i < NTRK + 3u) {
+            if (!ed_room())
+                return;
+            ed_begin(ED_PATS);
+            for (i = 0; i < NTRK + 3u; i++) {
+                ed_w.pp[i] = b[i];
+                ed_b(b[i]);
+            }
+            ed_send();
+            n++;
+        }
     }
     if (sync_reload || ed_eng(TSEL) != ed_w.eng || TSEL->preset != ed_w.preset || song.sel != ed_w.sel) {
         if (!ed_room())
@@ -954,10 +989,11 @@ UI_SMALL static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes b
             return;
         ed_w.on = a[0] & 1u;
         ed_w.v4 = (uint8_t)(ed_w.on && (a[0] & 2u));     /* v4: also TRACK_CHANGED; the reply says it is known */
+        ed_w.v14 = (uint8_t)(ed_w.on && (a[0] & 4u));    /* v14: also PATS */
         ed_w.resets = usb.resets;
         if (ed_w.on)
             ed_shadow();
-        ed_b(ed_w.on | ed_w.v4 << 1);
+        ed_b(ed_w.on | ed_w.v4 << 1 | ed_w.v14 << 2);
         break;
     case ED_PING:
         ed_b(0);

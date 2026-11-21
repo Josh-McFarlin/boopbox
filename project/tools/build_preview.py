@@ -27,7 +27,7 @@ def main():
                            ('gen_obv.py', 'felucca_obv.h')]:
         subprocess.run([sys.executable, str(ROOT / 'tools' / script), str(GEN / header)], cwd=ROOT, check=True)
     exports = ['init', 'buffer', 'frames', 'rate', 'track', 'param', 'global', 'select', 'step', 'locks',
-               'sequence_reset', 'pattern', 'chain', 'scene', 'scene_launch', 'phase',
+               'sequence_reset', 'pattern', 'chain', 'scene', 'scene_launch', 'pattern_ask', 'current', 'phase',
                'fm6', 'sample', 'kit', 'hit', 'note', 'play', 'position', 'panic', 'render', 'preset']
     if not emcc:                                     # clang + wasm-ld, freestanding, with tools/wasm_shim
         shim = ROOT / 'tools' / 'wasm_shim'

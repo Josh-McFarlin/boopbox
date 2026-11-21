@@ -335,7 +335,7 @@ test("FM-1 connection snapshots all factory tracks and routes keyboard notes", a
     mock.state.tracks[0].engine = 9;
     mock.state.tracks[0].preset = 0;
     mock.state.tracks[0].p[70] = 8;
-    await assert.rejects(device.getSelectedVoice(), /built-in synth preset/);
+    await assert.rejects(device.getSelectedVoice(), /patch from your FM6 bank/);
     mock.state.tracks[0].engine = 0;
     device.input.onmidimessage({ data: Uint8Array.from([0x90, 60, 100]) });
     device.input.onmidimessage({ data: Uint8Array.from([0xb0, 1, 127]) });
@@ -573,6 +573,51 @@ test("room firmware renders all eight tracks and sequenced patterns for eight me
     const expectedWithoutMutedMember = 32 * 0.25 / Math.sqrt(7);
     assert.ok(Math.abs(isolatedLeft[0] - expectedWithoutMutedMember) < 1e-6,
       "mute removes one member from this listener's local mix");
+  } finally {
+    await audio?.close();
+    if (originalDocument === undefined) delete global.document;
+    else global.document = originalDocument;
+  }
+});
+
+test("room firmware plays every SAMPLE factory preset and the newest presets of the other engines", async () => {
+  const originalDocument = global.document;
+  global.document = { baseURI: "http://localhost/rooms/" };
+  let audio;
+  try {
+    const [{ RoomAudio }, { FirmwareAudio }] = await Promise.all([
+      import("../../web/src/pages/Rooms/audio.ts"),
+      import("../../web/site/public/editor/preview-worklet.js"),
+    ]);
+    const module = await WebAssembly.compile(await readFile(resolve(__dirname, "../build/preview/boopbox-preview.wasm")));
+    const voices = [
+      ...Array.from({ length: roomConfig.presetCounts[4] }, (_, preset) => ({ engine: 4, preset, params: {} })),
+      { engine: 4, preset: 0, params: { 63: 5 } },     /* GRAND PNO switched to another factory set (FLUTE) */
+      { engine: 8, preset: 0, params: { 63: 2 } },     /* GRAIN on a factory set */
+      ...[0, 1, 2, 3, 5, 6, 7, 8].map((engine) => ({ engine, preset: roomConfig.presetCounts[engine] - 1, params: {} })),
+    ];
+    for (const voice of voices) {
+      audio = new RoomAudio(() => {});
+      const messages = [];
+      audio.node = { port: { postMessage: (message) => messages.push(message) }, disconnect() {} };
+      const performance = roomPerformance(false);
+      performance.tracks[0].voice = voice;
+      await audio.setPerformance(0, performance);
+      const state = messages.find((message) => message.type === "state" && message.slot === 0 && message.group === 0).state;
+      const single = new FirmwareAudio(module);
+      single.sync(state);
+      single.w.preview_note(0, voice.engine === 4 && voice.preset === 7 ? 36 : 60, 1);   /* GM KIT: a kick on C2 */
+      let peak = 0;
+      const left = new Float32Array(128);
+      const right = new Float32Array(128);
+      for (let block = 0; block < 40; block += 1) {
+        single.render(left, right);
+        for (let frame = 0; frame < left.length; frame += 1) peak = Math.max(peak, Math.abs(left[frame]), Math.abs(right[frame]));
+      }
+      assert.ok(peak > 0.001, `expected ${JSON.stringify(voice)} to render sound, peak was ${peak}`);
+      await audio.close();
+      audio = null;
+    }
   } finally {
     await audio?.close();
     if (originalDocument === undefined) delete global.document;

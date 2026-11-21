@@ -314,6 +314,14 @@ export interface DsynGet {
   sounds?: Uint8Array[]
 }
 /** the reply parsers by command (parse[CMD.X](a)) */
+/** v14 PATS push (firmware editor.c ed_pats_now): per track the pattern playing and the one asked for (-1: none), the
+ * scene asked for and the one playing (-1: none), PAT Q */
+export interface PatsPush {
+  tracks: { playing: number; asked: number }[]
+  sceneAsked: number
+  scene: number
+  quantize: number
+}
 export interface Parsers {
   [k: number]: (a: number[], info?: any) => unknown
   1(a: number[]): DevInfo
@@ -368,6 +376,7 @@ export interface Parsers {
   75(a: number[]): { rc: number }
   76(a: number[]): { k: number; lane: number; rc: number }
   77(a: number[]): LiveState
+  78(a: number[]): PatsPush
 }
 /** a parameter's values by id (a sparse record) */
 export type IdValues = Record<number, number>
@@ -471,6 +480,7 @@ const CMD = {
   DSYN_STORE: 75,
   DSYN_PLAY: 76 /* v10 (SLOOP 2.5): the SYN drum kits */,
   LIVE: 77,
+  PATS: 78 /* v14 (BoopBox 1.9.8): pushed with WATCH bit 2: the patterns playing and asked for */,
 } as const /* v12 (SLOOP 2.7): the LIVE page (firmware editor_live.c) */
 /* v12: LIVE ops (firmware editor_live.c) and the layers its keys reach (seq.c LY_*: 5 SEL, 6 GLO, 7 SAVE) */
 const LIVE = {
@@ -762,6 +772,7 @@ const PUSH = new Set<number>([
   CMD.RELOAD,
   CMD.STEP_CHANGED,
   CMD.TRACK_CHANGED,
+  CMD.PATS,
 ])
 /* user preset bank: name 1..12 printable ASCII, a 16-step pattern of (note, flags 1 acc 2 slide 4 tie) */
 const UP = { NAME_MAX: 12, PAT: 16, LIST_MAX: 16 }
@@ -1209,6 +1220,22 @@ const parse: Parsers = {
   [CMD.TRACK_CHANGED](a) {
     return parse[CMD.TRACK_PARAM](a)
   },
+  /* v14: per track the pattern playing and the one asked for (-1: none), the scene asked for and playing (-1: none),
+     PAT Q (0 the track's loop end, 1, 2, 3 on 1, 2, 4 bars): firmware editor.c ed_pats_now */
+  [CMD.PATS](a) {
+    const track = (k: number): { playing: number; asked: number } => ({
+      playing: (a[k] ?? 0) & 7,
+      asked: (((a[k] ?? 0) >> 3) & 15) - 1,
+    })
+    const scene = (v: number | undefined): number =>
+      v !== undefined && v < 8 ? v : -1
+    return {
+      tracks: Array.from({ length: 8 }, (_, k) => track(k)),
+      sceneAsked: scene(a[8]),
+      scene: scene(a[9]),
+      quantize: (a[10] ?? 0) & 3,
+    }
+  },
   /* v7: a track's parameter locks: n x {step, param, value}; a set: rc (0 ok, 1 arguments, 2 not lockable, 3 full) */
   [CMD.LOCK_GET](a) {
     const r = new Reader(a),
@@ -1436,9 +1463,10 @@ const req = {
   upLoad: (s: number): Req => [CMD.UP_LOAD, [s & 0x7f]],
   upErase: (s: number): Req => [CMD.UP_ERASE, [s & 0x7f]],
   /* on: 1 = pushes; 3 = also TRACK_CHANGED (v4 firmware answers 3, older firmware 1) */
+  /* on: 1 (or true), 3 (v4: TRACK_CHANGED too), 7 (protocol 14: PATS too), 0 off */
   watch: (on: number | boolean): Req => [
     CMD.WATCH,
-    [on === 3 ? 3 : on ? 1 : 0],
+    [on === 3 || on === 7 ? on : on ? 1 : 0],
   ],
   ping: (): Req => [CMD.PING, []],
   /* v3: tracks 0..3 (3 = drums) */
@@ -4312,6 +4340,7 @@ export interface MockState {
   } | null
   watch: boolean
   v4: boolean
+  v14: boolean
   lastReq: number
   playing: boolean
   live: MockLive
@@ -4706,7 +4735,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
               ? 11
               : opt.v12
                 ? 12
-                : 13 /* INFO's protocol */
+                : 14 /* INFO's protocol (14: the PATS push) */
   /* the drum step as an old (v1..v4) step: its first 4 lanes as GM notes, ACC when one is hard (editor.c ed_dstep_old) */
   const dOld = (d: DrumStep): MockStep => {
     const notes: number[] = []
@@ -5483,6 +5512,7 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
     bkPut: null,
     watch: false,
     v4: false,
+    v14: false,
     lastReq: 0,
     playing: false,
     /* v12 (LIVE): the transport's start, the sections (A..D: playing, asked for at a time), song mode, SONG REC, fills,
@@ -6026,7 +6056,8 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
         st.watch = !!(a[0] & 1)
         st.v4 =
           st.watch && !opt.v3 && !!(a[0] & 2) /* v4: TRACK_CHANGED pushes too */
-        b((st.watch ? 1 : 0) | (st.v4 ? 2 : 0))
+        st.v14 = st.watch && !opt.v3 && !!(a[0] & 4) /* v14: PATS pushes too */
+        b((st.watch ? 1 : 0) | (st.v4 ? 2 : 0) | (st.v14 ? 4 : 0))
         break
       case CMD.PING:
         b(0)
@@ -7176,6 +7207,21 @@ function makeMockDevice(opt: MockOpt = {}): MockDevice {
       if (i === st.sel) push(CMD.CHANGED, [0, id, ...v14enc(t.p[id])])
       else if (st.v4) push(CMD.TRACK_CHANGED, [i, id, ...v14enc(t.p[id])])
       return t.p[id]
+    },
+    /* v14: patterns asked for on the device (PATTERNS, a scene): the firmware pushes PATS while WATCH bit 2 is on.
+       asks: per track the pattern asked for (-1: none); playing: the patterns playing */
+    pats(asks: number[], quantize = 0, playing: number[] = Array(8).fill(0)) {
+      if (!st.v14) return false
+      push(CMD.PATS, [
+        ...Array.from(
+          { length: 8 },
+          (_, k) => (playing[k] & 7) | (((asks[k] ?? -1) + 1) << 3),
+        ),
+        127,
+        127,
+        quantize & 3,
+      ])
+      return true
     },
     /* SEQ + a step held + KNOB 4 / PRESETS on the device: a nudge or a lock; the firmware pushes STEP_CHANGED for it */
     nudge(i = 4, m = -8) {
