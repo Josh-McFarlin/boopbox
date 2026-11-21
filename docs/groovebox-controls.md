@@ -331,7 +331,8 @@ To go to one of these pages from any page and track, push **SEQ**, then turn **S
 1.9.7, **SEQ** held + **SAVE** went to SCENES. Now that does nothing.)
 
 As on the other pages, the bottom line shows the page's name in a box between its neighbours, with a dot for each SEQ
-page (1.9.7). The top of the screen shows the track and what OCT+ and OCT- do on the page.
+page (1.9.7). The top of the screen is the status bar of every page. The line under it shows what OCT+ and OCT- do
+on the page for 4 s after it opens, then what the page is about. CHAIN shows all 16 slots at once, two rows of eight.
 
 On all three pages, **the keys are pads**. They play no notes.
 

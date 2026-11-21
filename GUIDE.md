@@ -261,7 +261,7 @@ The DRUMS screen has three pages: grid, kit and (2.7) sound. The pages are in tw
 - When the drum track is selected, a tap on **EDIT** opens the **kit**. EDIT again (or **SELECT**) switches kit ↔ **sound**.
   SEQ from the kit page or the sound page goes back to the grid.
 
-The top right of the screen shows the name of the current page. It also shows where SEQ or EDIT goes next. To open PATTERNS, CHAIN or SCENES from anywhere, tap **SEQ**, then turn **SELECT** to the page.
+The bottom line of the screen shows the page in a box between the page before and the page after it, as on every page (1.9.7: before, the top right named the page and where SEQ or EDIT went next). The line under the header shows the kit. To open PATTERNS, CHAIN or SCENES from anywhere, tap **SEQ**, then turn **SELECT** to the page.
 
 **Grid page** — the 16 sounds × 16 steps. Shades show the levels, and notches show the ratchets.
 
@@ -519,7 +519,7 @@ The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of 
 
 To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
-As on the other pages, the bottom line of PATTERNS, CHAIN, SCENES and SONG (and of CHORDS, on SEL) shows the page in a box between the page before and the page after it (1.9.7). The top of the screen shows the track (SONG: the mode and the tempo; CHORDS: the key) and what OCT+ and OCT− do there.
+As on the other pages, the bottom line of PATTERNS, CHAIN, SCENES and SONG (and of CHORDS, on SEL) shows the page in a box between the page before and the page after it (1.9.7). The top of the screen is the status bar of every page (play, tempo, the track's sound and number, battery). The line under it shows what OCT+ and OCT− do there for 4 seconds after the page opens, then what the page is about: how full the pattern store is, whether the chain plays, the scenes' quantize, SONG's mode and loop, the key on CHORDS. CHAIN shows all 16 slots at once.
 
 ### Beats from the keys (1.9)
 

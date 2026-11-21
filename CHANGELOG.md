@@ -32,9 +32,14 @@ Also fixed in BoopBox:
   new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
   goes to the next scale.
 
-- **SONG, PATTERNS, CHAIN, SCENES and CHORDS show their page tabs at the bottom**, as the other pages do: the page in a
-  box between the page before and after it, and a dot for each page of its button. Their name in large type at the top
-  is gone. What OCT+ and OCT- do is now at the top, under the track (SONG: the mode and the tempo; CHORDS: the key).
+- **SONG, PATTERNS, CHAIN, SCENES, CHORDS and the DRUMS screen show their page tabs at the bottom**, as the other
+  pages do: the page in a box between the page before and after it, and a dot for each page of its button. Their name
+  in large type is gone (on DRUMS: the page names at the top right).
+- **SONG, PATTERNS, CHAIN, SCENES and CHORDS have the status bar of every page** at the top (play, tempo, the track's
+  sound and number, battery). The line under it shows what OCT+ and OCT- do there for 4 seconds after the page opens,
+  then what the page is about. Messages show in the status bar, as on every page, not over the knobs.
+- **CHAIN shows all 16 slots at once**, two rows of eight. The row of keys 1–8 under them is gone (the keys add
+  patterns as before).
 - **White keys 9–16 launch scenes on the SCENES page only.** On PATTERNS and CHAIN they now do nothing, so a stray key
   no longer changes every track from a page about one. The PATTERNS screen no longer has a keyboard strip (it showed
   the same as the tiles); its eight tiles are taller.

@@ -149,7 +149,7 @@ export const PAGES: PageGroup[] = [
     pages: [
       [
         'SEL',
-        'pages/scl-sel',
+        'pages/sel-sel',
         [
           'ROOT: the key of the track',
           'SCL: the scale of the track',
@@ -160,13 +160,13 @@ export const PAGES: PageGroup[] = [
       ],
       [
         'SEL 2',
-        'pages/scl-sel-2',
+        'pages/sel-sel-2',
         ['TRN transpose ±24', 'STRUM ±60 ms', 'VLEAD voice leading', '—'],
         "STRUM plays a chord's notes one after the other; VLEAD voices each chord nearest the last.",
       ],
       [
         'HARMONY',
-        'pages/scl-harmony',
+        'pages/sel-harmony',
         [
           'KEY of the song',
           'SCALE (16)',
@@ -177,13 +177,13 @@ export const PAGES: PageGroup[] = [
       ],
       [
         'FOLLOW',
-        'pages/scl-follow',
+        'pages/sel-follow',
         ['FOLLOW: OFF, TRANS, SCALE', '—', '—', '—'],
         "How the track's sequenced notes follow the song's chord.",
       ],
       [
         'CHORDS',
-        'pages/scl-chords',
+        'pages/sel-chords',
         ['CHORD', 'DEGREE', 'BARS', 'COUNT'],
         'The chord and progression of the song; the keys play the chord live.',
       ],

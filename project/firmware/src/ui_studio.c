@@ -409,7 +409,7 @@ UI_SMALL static void pads_tick(void)                             /* once a frame
 
 UI_SMALL static void drum_screen_draw(void)
 {
-    static uint32_t head, title_sig, body_sig, footer;
+    static uint32_t head, title_sig, body_sig, footer, tabs;
     uint32_t i, j, len = (uint32_t)clamp(DFOC->p[P_SLEN], 1, 64), kit = drum_kit(DFOC), sig, bank;
     if (drum_cursor >= len) drum_cursor = (uint8_t)(len - 1u);
     bank = drum_cursor / 16u;
@@ -430,21 +430,14 @@ UI_SMALL static void drum_screen_draw(void)
     if (ui.force || sig != title_sig) {
         char b[8];
         title_sig = sig;
-        cv_begin(240, 44, C_BLACK);
-        cv_rect(2, 4, 34, 34, UI_DRUM);
+        cv_begin(240, 26, C_BLACK);                     /* (1.9.7) the kit, one line (before: its name in large type and,
+                                                         * at the right, the page and its neighbours: now the tabs at the
+                                                         * bottom, as on every page) */
+        cv_rect(2, 3, 24, 19, UI_DRUM);
         fmt_int(b, (int32_t)kit + 1);
-        cv_text(19 - text_w(&FONT_S, b) / 2, 13, &FONT_S, b, C_BLACK);
-        cv_text(44, 6, &FONT_L, DRUM_KIT_NAMES[kit], C_WHITE);
-        {   /* (1.7) the page and its neighbours: GRID is SEQ's (SEQ again or SELECT right: TIMING), KIT and SOUND EDIT's */
-            static const char *const R[2][3] = {{"grid", "> timing", "edit: kit"}, {"kit", "sound", "seq: grid"}};
-            uint32_t g = drum_page != 0u, lit = drum_page == 2u ? 1u : 0u, r;
-            for (r = 0; r < 3u; r++) {
-                int32_t x = 236 - text_w(&FONT_S, R[g][r]);
-                cv_text(x, 1 + (int32_t)r * 14, &FONT_S, R[g][r], r == lit ? C_WHITE : UI_G3);
-                if (r == lit)
-                    cv_rect(x - 6, 5 + (int32_t)r * 14, 3, 9, UI_DRUM);
-            }
-        }
+        cv_text(14 - text_w(&FONT_S, b) / 2, 4, &FONT_S, b, C_BLACK);
+        cv_text(32, 4, &FONT_S, DRUM_KIT_NAMES[kit], C_WHITE);
+        ui_text_r(4, "kit", UI_G3);
         cv_blit(0, 40);
     }
     sig = drum_page + drum_lane * 7u + drum_cursor * 101u + song.playing * 71u + len * 3u + ui.sheet * 7919u +
@@ -525,7 +518,7 @@ UI_SMALL static void drum_screen_draw(void)
                 ui_text_c(x + 28, y + 4, LANE_SHORT[i], pad_lit[i] ? C_BLACK : i == drum_lane ? C_WHITE : UI_G3);
             }
         }
-        cv_blit(0, 84);
+        cv_blit(0, 66);
     }
     {
         static char v[4][12];
@@ -544,7 +537,7 @@ UI_SMALL static void drum_screen_draw(void)
             ratio[2] = v[2][0] == 'o' ? 1000 : 0;
             ratio[3] = dstep_has(s, drum_lane) ? (int32_t)lvl_rank(dstep_lvl(s, drum_lane)) * 333 : 0;   /* ghost left ..
                                                                      * hard right (2.5: it followed the stored order) */
-            ui_dials(184, LG, val, ratio, 1u, &footer);
+            ui_dials(166, LG, val, ratio, 1u, &footer);
         } else if (drum_page == 2u) {                  /* SOUND (2.7): the sound, its TUNE and DECAY, the drums' level */
             str_cpy(v[0], LANE_SHORT[drum_lane], 8);
             fmt_int(v[1], drum_tune[dfi()][drum_lane]);
@@ -556,7 +549,7 @@ UI_SMALL static void drum_screen_draw(void)
             ratio[1] = (drum_tune[dfi()][drum_lane] - DRUM_TUNE_MIN) * 1000 / (DRUM_TUNE_MAX - DRUM_TUNE_MIN);
             ratio[2] = (drum_dec[dfi()][drum_lane] - DRUM_DEC_MIN) * 1000 / (DRUM_DEC_MAX - DRUM_DEC_MIN);
             ratio[3] = DFOC->p[P_LEVEL] * 1000 / 127;
-            ui_dials(184, LS, val, ratio, 3u, &footer);
+            ui_dials(166, LS, val, ratio, 3u, &footer);
         } else {
             fmt_int(v[0], (int32_t)kit + 1);
             mix_value(v[1], DFOC, P_LEVEL);
@@ -566,9 +559,25 @@ UI_SMALL static void drum_screen_draw(void)
             ratio[1] = DFOC->p[P_LEVEL] * 1000 / 127;
             ratio[2] = DFOC->p[P_REV] * 1000 / 127;
             ratio[3] = (DFOC->p[P_PAN] + 64) * 1000 / 127;
-            ui_dials(184, LK, val, ratio, 2u, &footer);
+            ui_dials(166, LK, val, ratio, 2u, &footer);
         }
     }
+    sig = drum_page * 3u + (ui.msg_t != 0) * 7u + song.sel * 11u;   /* (1.9.7) the page's tabs, as on every page: GRID
+                                                         * is SEQ's first (NOTES' place), KIT and SOUND are EDIT's */
+    if (!ui.msg_t && (ui.force || sig != tabs)) {
+        cv_begin(240, 18, C_BLACK);
+        if (!drum_page) {
+            uint8_t pg = ui.page;
+            ui.page = (uint8_t)page_scope(SC_STEP);
+            page_tabs(0);
+            ui.page = pg;
+        } else {
+            page_tabs_of(0, drum_page == 2u ? "kit" : 0, drum_page == 2u ? "sound" : "kit", drum_page == 1u ? "sound" : 0,
+                         2u, drum_page);
+        }
+        cv_blit(0, 222);
+    }
+    tabs = ui.msg_t ? ~0u : sig;
 }
 
 /* the level order of the knobs: ghost < soft < norm < hard */
