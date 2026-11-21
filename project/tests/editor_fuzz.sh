@@ -25,6 +25,10 @@ S=${2:-1}
 ${CC:-cc} -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift-base,signed-integer-overflow -fno-sanitize-recover=all \
     -I"$OUT/gen" -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/editor_repro" tests/editor_repro.c -lm
 for r in 1 2 3; do "$OUT/editor_repro" $r; done
+# (protocol 14) the PATS push: a pattern or a scene asked for, at once, with PAT Q
+${CC:-cc} -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift-base,signed-integer-overflow -fno-sanitize-recover=all \
+    -I"$OUT/gen" -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/editor_pats_test" tests/editor_pats_test.c -lm
+"$OUT/editor_pats_test"
 # (2.8.4) power-on after an install: the parts sound as their sounds, a working project Clipper left: default sounds
 ${CC:-cc} -O1 -g -w -fsanitize=address,undefined -fno-sanitize=shift-base,signed-integer-overflow -fno-sanitize-recover=all \
     -I"$OUT/gen" -Ibuild/gen -Ifirmware/src -Ifirmware/hal -o "$OUT/boot_sound_test" tests/boot_sound_test.c -lm

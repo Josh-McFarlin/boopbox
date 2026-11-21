@@ -13,6 +13,18 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask
+for a pattern on PATTERNS or launch a scene, the FM-1 now tells the room at once, and every listener makes the change
+at the moment your PAT Q says (the loop's end, or 1, 2 or 4 bars) on the room's beat, as your FM-1 does. They used to
+hear it up to 2.5 seconds later, in the middle of a bar.
+
+Changed for the web editor and other tools: the editor protocol is version 14. `WATCH` with bit 2 also pushes
+`PATS` (78): per track the pattern playing and the one asked for, the scenes and PAT Q
+([web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md#v14-pattern-changes-as-they-are-asked-for-boopbox-198)). Nothing
+changes without bit 2.
+
 ## 1.9.7
 
 **An install that is cut off no longer leaves a dead FM-1.** If the cable came out or the battery ran flat during an

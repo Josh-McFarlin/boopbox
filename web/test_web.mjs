@@ -1350,7 +1350,7 @@ async function editorV9() {
   const { m, rq, done } = attachMock({})
   const info = E.parse[C.INFO](await rq(E.req.info()))
   ok(
-    info.proto === 13 && info.nengines === 13 && info.engines[9] === 'FM6',
+    info.proto === 14 && info.nengines === 13 && info.engines[9] === 'FM6',
     'v9: INFO ends with 13 (v13 includes v9), FM6 is engine 9',
   )
   const L = E.parse[C.FM6_LIST](await rq(E.req.fm6List()))
@@ -1515,7 +1515,7 @@ async function editorV5() {
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 })
   const info = E.parse[C.INFO](await rq(E.req.info()))
   ok(
-    info.proto === 13 &&
+    info.proto === 14 &&
       info.ntrk === 8 &&
       /BOOPBOX/.test(info.version) &&
       info.pcount === 71 &&
@@ -1552,7 +1552,9 @@ async function editorV5() {
       /ED_FM6_GET = 68, ED_FM6_PUT, ED_FM6_LIST, ED_FM6_ERASE/.test(ec) &&
       C.FM6_GET === 68 &&
       C.FM6_ERASE === 71 &&
-      /#define ED_PROTO 13u/.test(ec) &&
+      /#define ED_PROTO 14u/.test(ec) &&
+      /#define ED_PATS 78u/.test(ec) &&
+      C.PATS === 78 &&
       /ed_b\(ED_PROTO\);/.test(ec) &&
       /enum \{ ED_DSYN_LIST = 72, ED_DSYN_GET, ED_DSYN_PUT, ED_DSYN_STORE, ED_DSYN_PLAY \};/.test(
         readFileSync(
@@ -1562,7 +1564,7 @@ async function editorV5() {
       ) &&
       C.DSYN_LIST === 72 &&
       C.DSYN_PLAY === 76,
-    'v5..v13: command numbers and INFO == editor.c / editor_dsyn.c',
+    'v5..v14: command numbers and INFO == editor.c / editor_dsyn.c',
   )
   const enumNames = (id) =>
     (new RegExp(`${id}\\[\\] = \\{([^}]*)\\}`).exec(pc) || [])[1]
@@ -1752,7 +1754,7 @@ async function editorV7() {
   const C = E.CMD
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 })
   const info = E.parse[C.INFO](await rq(E.req.info()))
-  ok(info.proto === 13, 'v7: INFO ends with 13 (v13 includes v7)')
+  ok(info.proto === 14, 'v7: INFO ends with 14 (v14 includes v7)')
   /* the lockable set == seq.c p_lockable (the ids as core.h names them) */
   const sc = readFileSync(join(HERE, '../project/firmware/src/seq.c'), 'utf8'),
     ch = readFileSync(join(HERE, '../project/firmware/src/core.h'), 'utf8')
@@ -1901,7 +1903,7 @@ async function editorV8() {
   const C = E.CMD
   const { m, rq, ev, done } = attachMock({ watchMs: 1000 })
   const info = E.parse[C.INFO](await rq(E.req.info()))
-  ok(info.proto === 13, 'v8: INFO ends with 13 (v13 includes v8)')
+  ok(info.proto === 14, 'v8: INFO ends with 14 (v14 includes v8)')
   /* the condition codes == core.h FC_*; the bit layout of a 2-bit step field */
   const ch = readFileSync(join(HERE, '../project/firmware/src/core.h'), 'utf8'),
     sc = readFileSync(join(HERE, '../project/firmware/src/seq.c'), 'utf8')
@@ -3245,7 +3247,7 @@ async function editorLivePage() {
   let s = await live(L.STATE)
   const raw = await rq(E.req.live(L.STATE))
   ok(
-    info.proto === 13 &&
+    info.proto === 14 &&
       raw.length === 65 &&
       s.pro &&
       s.master === -1 &&

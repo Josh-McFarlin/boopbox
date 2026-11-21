@@ -59,6 +59,7 @@ export interface EmulatorSyncState {
   performanceKey: string
   transportKey: string | null
   hasPerformance: boolean
+  unshared?: UnsharedTrack[]
 }
 
 /* a connected FM-1 (connectFm1) */
@@ -71,28 +72,48 @@ export interface Fm1Connection {
   getPerformanceSnapshot(): Promise<RoomPerformance | null>
 }
 
-function cleanVoice(dump: VoiceDump): RoomVoice | null {
+/* a track the room plays muted, and why (shown on the room page) */
+export interface UnsharedTrack {
+  track: number
+  reason: string
+}
+
+/* why a track's sound can't be shared ("it uses ..."), or null when it can */
+function voiceProblem(dump: VoiceDump): string | null {
   if (dump.engine === config.engineNames.length) {
-    const kit = dump.p[63]
-    return config.shareableDrumKits.includes(kit)
-      ? { engine: dump.engine, kit }
-      : null
+    return config.shareableDrumKits.includes(dump.p[63])
+      ? null
+      : 'your own drum kit (USR or SYN)'
   }
   if (
     dump.engine < 0 ||
     dump.engine >= config.presetCounts.length ||
-    dump.engine === 4
+    !SHAREABLE[dump.engine]
   )
-    return null
-  if (dump.preset < 0 || dump.preset >= config.presetCounts[dump.engine])
-    return null
+    return "an engine rooms can't play"
+  /* SAMPLE's SET and GRAIN's SRC: a factory sample set, or one of your USR slots */
+  const source = SHAREABLE[dump.engine]![63]
+  if (
+    config.sampleSourceEngines.includes(dump.engine) &&
+    source &&
+    !(dump.p[63] >= source[0] && dump.p[63] <= source[1])
+  )
+    return 'your own sample (USR)'
   if (
     dump.engine === 9 &&
     (dump.p[70] < 0 || dump.p[70] >= config.presetCounts[9])
   )
-    return null
-  const allowlist = SHAREABLE[dump.engine]
-  if (!allowlist) return null
+    return 'a patch from your FM6 bank'
+  if (dump.preset < 0 || dump.preset >= config.presetCounts[dump.engine])
+    return "a preset rooms don't know yet"
+  return null
+}
+
+function cleanVoice(dump: VoiceDump): RoomVoice | null {
+  if (voiceProblem(dump)) return null
+  if (dump.engine === config.engineNames.length)
+    return { engine: dump.engine, kit: dump.p[63] }
+  const allowlist = SHAREABLE[dump.engine]!
   const params: Record<string, number> = {}
   for (const [id, [min, max]] of Object.entries(allowlist)) {
     const value = dump.p[Number(id)]
@@ -240,6 +261,14 @@ function buildRoomPerformance(
   }
 }
 
+/* the tracks the room will play muted (their sound can't be shared), and why */
+export function unsharedTracks(dumps: VoiceDump[]): UnsharedTrack[] {
+  return dumps.flatMap((dump, track) => {
+    const reason = voiceProblem(dump)
+    return reason ? [{ track, reason }] : []
+  })
+}
+
 export function buildEmulatorPerformance(
   projectBytes: unknown,
   tracks: unknown,
@@ -321,16 +350,33 @@ export function syncEmulatorSnapshot(
       tempo: performance.tempo,
     })
   }
-  return { performanceKey, transportKey, hasPerformance }
+  return {
+    performanceKey,
+    transportKey,
+    hasPerformance,
+    /* (buildEmulatorPerformance checked every track's dump) */
+    unshared: unsharedTracks(message.tracks),
+  }
 }
 
 export async function connectFm1(
   onNote: (note: number, on: boolean, velocity: number, track: number) => void,
   onState: (state: 'connected' | 'disconnected') => void,
   onParameter: (track: number, param: number, value: number) => void = () => {},
-  onPerformance: (performance: RoomPerformance) => void = () => {},
+  onPerformance: (
+    performance: RoomPerformance,
+    unshared: UnsharedTrack[],
+  ) => void = () => {},
   onTransport: (transport: RoomTransport) => void = () => {},
   onPerformanceError: (error: unknown) => void = () => {},
+  /* a track setting (P_LEVEL, P_PAN, P_MUTE, ... id < 63) changed on the FM-1, as it changed */
+  onTrackParam: (
+    track: number,
+    param: number,
+    value: number,
+  ) => void = () => {},
+  /* patterns asked for on the FM-1 (PATTERNS, a scene; firmware protocol 14): per track the pattern, or -1, and PAT Q */
+  onPatternAsk: (asks: number[], quantize: number) => void = () => {},
 ): Promise<Fm1Connection> {
   if (!navigator.requestMIDIAccess)
     throw new Error('This browser does not support USB MIDI access.')
@@ -363,7 +409,29 @@ export async function connectFm1(
       () => {}
     let performanceErrorReported = false
     let lastTransport: RoomTransport | null = null
+    let lastPats: { playing: number; asked: number }[] | null = null
     link.onPush = (frame): void => {
+      if (frame.cmd === CMD.PATS) {
+        const pats = parse[CMD.PATS](frame.a)
+        /* a request new since the last PATS goes to the room now, before the FM-1 makes it at its quantized moment */
+        const asks = pats.tracks.map(({ asked }, k) =>
+          asked >= 0 && asked !== lastPats?.[k].asked ? asked : -1,
+        )
+        if (asks.some((ask) => ask >= 0)) onPatternAsk(asks, pats.quantize)
+        /* a change made: the performance (currentPattern) follows */
+        if (
+          !lastPats ||
+          pats.tracks.some(({ playing }, k) => playing !== lastPats![k].playing)
+        ) {
+          globalThis.clearTimeout(refreshTimer)
+          refreshTimer = globalThis.setTimeout(
+            async () => refreshPerformance(),
+            300,
+          )
+        }
+        lastPats = pats.tracks
+        return
+      }
       if (frame.cmd === CMD.RELOAD) {
         const reload = parse[CMD.RELOAD](frame.a)
         sharedVoices.delete(reload.track)
@@ -390,6 +458,11 @@ export async function connectFm1(
       } else if (frame.cmd === CMD.TRACK_CHANGED) {
         change = parse[CMD.TRACK_CHANGED](frame.a)
       } else {
+        return
+      }
+      if (change.id < 63) {
+        if (Number.isSafeInteger(change.value))
+          onTrackParam(change.track, change.id, change.value)
         return
       }
       const sharedVoice = sharedVoices.get(change.track)
@@ -439,8 +512,9 @@ export async function connectFm1(
           'This room needs current BoopBox firmware with eight tracks and supported sound controls.',
         )
       }
+      /* bit 2: PATS (protocol 14); older firmware answers 3 and the room follows its patterns by the performance */
       const watch = parse[CMD.WATCH](
-        await link.request(req.watch(3), { retries: 1 }),
+        await link.request(req.watch(7), { retries: 1 }),
       )
       if ((watch.on & 3) !== 3) {
         throw new Error(
@@ -511,7 +585,7 @@ export async function connectFm1(
               playing: performance.playing,
             }
             performanceErrorReported = false
-            onPerformance(performance)
+            onPerformance(performance, unsharedTracks(dumps))
             return performance
           } catch (error) {
             if (!performanceErrorReported) onPerformanceError(error)
@@ -599,7 +673,7 @@ export async function connectFm1(
           const voice = cleanVoice(dump)
           if (!voice) {
             throw new Error(
-              'Choose a built-in synth preset or a factory drum kit. User samples and custom presets cannot be shared.',
+              `This track can't be shared: it uses ${voiceProblem(dump) || 'a sound rooms cannot play'}. Choose a factory preset or a factory drum kit.`,
             )
           }
           if (voice.engine !== config.engineNames.length) {

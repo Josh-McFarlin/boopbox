@@ -201,6 +201,17 @@ void preview_scene_launch(uint32_t scene)
 {
     if (scene < NSCENE) scn_launch(scene);
 }
+/* (the jam rooms) a pattern asked for, as the PATTERNS page asks, made at the moment quantize says (the player's PAT Q,
+ * G_PATQ: 0 the track's loop end, 1, 2, 3 on 1, 2, 4 bars) on the room's beat; asking for the pattern playing drops a
+ * change asked for before */
+void preview_pattern_ask(uint32_t k, uint32_t pat, uint32_t quantize)
+{
+    if (k >= NTRK || pat >= NPAT || quantize > 3u) return;
+    song.g[G_PATQ] = (int16_t)quantize;
+    trk[k].pat_req = pat != trk[k].pat || trk[k].pat_req ? (uint8_t)(pat + 1u) : 0u;
+}
+/* track k's patterns: the one playing (bits 0..3) and the one asked for (bits 4..7: 0 none, else pattern + 1) */
+int32_t preview_current(uint32_t k) { return k < NTRK ? (int32_t)(trk[k].pat | trk[k].pat_req << 4) : -1; }
 void preview_fm6(uint32_t k)
 {
     if (k < NPART) {
