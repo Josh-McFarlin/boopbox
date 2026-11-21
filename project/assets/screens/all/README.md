@@ -37,11 +37,11 @@ Every page of the page table (params.c PAGES), on track 1 (ANALOG); DRUMS on the
 | FX > DLY | [`pages/fx-dly.png`](pages/fx-dly.png) | page 10 of 47 |
 | FX > REV/CHO | [`pages/fx-rev-cho.png`](pages/fx-rev-cho.png) | page 11 of 47 |
 | FX > PERF | [`pages/fx-perf.png`](pages/fx-perf.png) | page 12 of 47 |
-| SCL > SEL | [`pages/scl-sel.png`](pages/scl-sel.png) | page 13 of 47 |
-| SCL > SEL 2 | [`pages/scl-sel-2.png`](pages/scl-sel-2.png) | page 14 of 47 |
-| SCL > HARMONY | [`pages/scl-harmony.png`](pages/scl-harmony.png) | page 15 of 47 |
-| SCL > FOLLOW | [`pages/scl-follow.png`](pages/scl-follow.png) | page 16 of 47 |
-| SCL > CHORDS | [`pages/scl-chords.png`](pages/scl-chords.png) | page 17 of 47 |
+| SEL > SEL | [`pages/sel-sel.png`](pages/sel-sel.png) | page 13 of 47 |
+| SEL > SEL 2 | [`pages/sel-sel-2.png`](pages/sel-sel-2.png) | page 14 of 47 |
+| SEL > HARMONY | [`pages/sel-harmony.png`](pages/sel-harmony.png) | page 15 of 47 |
+| SEL > FOLLOW | [`pages/sel-follow.png`](pages/sel-follow.png) | page 16 of 47 |
+| SEL > CHORDS | [`pages/sel-chords.png`](pages/sel-chords.png) | page 17 of 47 |
 | EDIT > EDIT 1 | [`pages/edit-edit-1.png`](pages/edit-edit-1.png) | page 18 of 47 |
 | EDIT > EDIT 2 | [`pages/edit-edit-2.png`](pages/edit-edit-2.png) | page 19 of 47 |
 | EDIT > FILTER | [`pages/edit-filter.png`](pages/edit-filter.png) | page 20 of 47 |
@@ -89,7 +89,7 @@ The drum track: the grid's KIT and SOUND views, a hit's sheet, and the pages it 
 | FX > FILTER (drum track) | [`drums/drum-fx-filter.png`](drums/drum-fx-filter.png) | a page the drum track shares |
 | FX > SLICER (drum track) | [`drums/drum-fx-slicer.png`](drums/drum-fx-slicer.png) | a page the drum track shares |
 | FX > INSERT (drum track) | [`drums/drum-fx-insert.png`](drums/drum-fx-insert.png) | a page the drum track shares |
-| SCL > FOLLOW (drum track) | [`drums/drum-scl-follow.png`](drums/drum-scl-follow.png) | a page the drum track shares |
+| SEL > FOLLOW (drum track) | [`drums/drum-sel-follow.png`](drums/drum-sel-follow.png) | a page the drum track shares |
 | SEQ > TIMING (drum track) | [`drums/drum-seq-timing.png`](drums/drum-seq-timing.png) | a page the drum track shares |
 | SEQ > PLAY (drum track) | [`drums/drum-seq-play.png`](drums/drum-seq-play.png) | a page the drum track shares |
 | ENV (drum track) | [`drums/drum-env-no-sound.png`](drums/drum-env-no-sound.png) | a page of a synth sound: DRUM TRACK |
@@ -141,7 +141,7 @@ Each function button held: the layer the keys and knobs become
 | SEQ held: STEPS | [`layers/layer-seq.png`](layers/layer-seq.png) | the steps on the white keys |
 | EDIT held: ERASE | [`layers/layer-edit.png`](layers/layer-edit.png) | a key erases; OCT- / OCT+ undo / redo |
 | ARP held: ROLL | [`layers/layer-arp.png`](layers/layer-arp.png) | a key rolls; KNOB 1 the rate |
-| SEL held: KEY | [`layers/layer-scl.png`](layers/layer-scl.png) | a key sets the song's key |
+| SEL held: KEY | [`layers/layer-sel.png`](layers/layer-sel.png) | a key sets the song's key |
 | GLO held: MIX | [`layers/layer-glo.png`](layers/layer-glo.png) | mute, solo, fill, tap tempo |
 | SAVE held: SONG | [`layers/layer-save.png`](layers/layer-save.png) | sections A-D: play / store |
 | SEQ held (drum track) | [`layers/layer-seq-drum.png`](layers/layer-seq-drum.png) | the sound played last on the keys |

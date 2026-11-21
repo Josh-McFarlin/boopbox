@@ -452,13 +452,13 @@ const Home: React.FC = () => {
                   src={song}
                   width="240"
                   height="240"
-                  alt="The SONG screen: sections A and B of four bars, C and D empty, playing in loop mode"
+                  alt="The SONG screen: sections A and B of four bars, C and D empty"
                 />
                 <img
                   src={patterns}
                   width="240"
                   height="240"
-                  alt="The PATTERNS screen: eight patterns for track 1 and the scenes"
+                  alt="The PATTERNS screen: the eight patterns of track 1, pattern 1 playing"
                 />
                 <img
                   src={mix}

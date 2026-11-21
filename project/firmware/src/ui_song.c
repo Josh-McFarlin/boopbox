@@ -4,6 +4,56 @@
 static uint8_t song_cursor, song_store_armed, song_load_armed;
 static uint32_t song_store_t;   /* when REC or OCT+ asked for its confirmation (ms) */
 UI_SMALL static int on_song_page(void) { return !ui.home && cur_page()->scope == SC_SONG; }
+UI_SMALL static uint32_t page_pos(uint32_t *n);      /* (ui_draw.c) */
+UI_SMALL static int32_t page_nb(int32_t d);
+UI_SMALL static const char *page_name(uint32_t i);
+/* (1.9.7) the page's tab between its neighbours (what SELECT brings), and a dot a page of the family, this one lit, at
+ * row y of the canvas (18 rows): the bottom line of SONG, PATTERNS, CHAIN, SCENES and CHORDS, as ui_draw.c draw_foot's */
+UI_SMALL static void page_tabs_of(int32_t y, const char *pv, const char *nm, const char *nx, uint32_t n, uint32_t at)
+{
+    uint32_t i;
+    int32_t w = text_w(&FONT_S, nm) + 12, x = 120 - w / 2;
+    cv_rect(x, y, w, 16, UI_G1);
+    cv_text(x + 6, y, &FONT_S, nm, C_WHITE);
+    if (pv)
+        cv_text(4, y, &FONT_S, pv, UI_G3);
+    if (nx)
+        ui_text_r(y, nx, UI_G3);
+    for (i = 0; n > 1u && i < n; i++)
+        cv_rect(120 - (int32_t)n * 3 + (int32_t)i * 6 + 1, y + 16, 3, 2, i + 1u == at ? C_WHITE : C_DIM);
+}
+UI_SMALL static void page_tabs(int32_t y)            /* the page shown (ui.page), between its neighbours */
+{
+    uint32_t n, at = page_pos(&n);
+    int32_t pv = page_nb(-1), nx = page_nb(1);
+    page_tabs_of(y, pv >= 0 ? page_name((uint32_t)pv) : 0, page_name(ui.page), nx >= 0 ? page_name((uint32_t)nx) : 0,
+                 n, at);
+}
+/* (1.9.7) SONG, PATTERNS, CHAIN, SCENES and CHORDS: under the status bar (ui_draw.c draw_head, as on every page) a
+ * line of their own. For 4 s after the page opens it says what OCT- and OCT+ do there, then what the page is about */
+static uint8_t l2_page = 0xFFu;
+static uint32_t l2_t0, l2_seen;
+UI_SMALL static int line2_help(void)
+{
+    if (ui.page != l2_page || fm1_ms - l2_seen > 300u) {   /* (another page, or back to it: the help again) */
+        l2_page = ui.page;
+        l2_t0 = fm1_ms;
+    }
+    l2_seen = fm1_ms;
+    return fm1_ms - l2_t0 < 4000u;
+}
+UI_SMALL static void page_line2(const char *l, uint16_t cl, const char *r, uint16_t cr, const char *help)
+{
+    cv_begin(240, 22, C_BLACK);
+    if (line2_help()) {
+        cv_text(4, 1, &FONT_S, help, UI_G4);
+    } else {
+        cv_text(4, 1, &FONT_S, l, cl);
+        ui_text_r(1, r, cr);
+    }
+    cv_rule(0, 19, 240, UI_G1);
+    cv_blit(0, H_HEAD);
+}
 UI_SMALL static void song_sane(void)                         /* a bad chain (blank / damaged settings): defaults */
 {
     uint32_t i, ok = arrangement.count >= 1u && arrangement.count <= ARR_STEPS;
@@ -30,27 +80,21 @@ UI_SMALL static void song_screen_draw(void)
     for (i = 0; i < arrangement.count; i++)
         sig = sig * 31u + arrangement.entry[i].scene + 7u * arrangement.entry[i].bars;
     for (i = 0; i < ARR_SCENES; i++) sig = sig * 3u + (uint32_t)project_used(i);
+    sig += (uint32_t)line2_help() * 65537u;
     if (!ui.force && !ui.msg_t && sig == previous) return;
     previous = ui.msg_t ? ~sig : sig;               /* redraw after a message expires */
-    /* Draw one small band at a time: never exceed the 124-row canvas. */
-    cv_begin(240, 42, C_BLACK);                     /* (42: the two rows over the list too, never left from another screen) */
-    cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
-    cv_text(4, 4, &FONT_L, "SONG", C_WHITE);
-    cv_text(76, 20, &FONT_S, arrangement_enabled ? "song mode" : "loop mode", arrangement_enabled ? SC[3] : UI_G3);
-    if (arrangement.loop) {                         /* (groovebox) the song's loop region: entries a..b */
+    /* Draw one small band at a time: never exceed the 124-row canvas. (1.9.7) The status bar over it is ui_draw.c
+     * draw_head's, as on every page; under it the mode and the song's loop region (entries a..b), or for 4 s after
+     * the page opens what OCT- and OCT+ do. The page's tabs are at the bottom (before: SONG in large type, the tempo) */
+    b[0] = 0;
+    if (arrangement.loop) {
         str_cpy(b, "loop ", 6);
         fmt_int(b + str_len(b), (int32_t)arr_loop_first(&arrangement) + 1);
         str_cpy(b + str_len(b), "-", 2);
         fmt_int(b + str_len(b), (int32_t)arr_loop_end(&arrangement));
-        cv_text(76, 4, &FONT_S, b, SC[2]);
     }
-    fmt_int(b, song.g[G_BPM]);
-    cv_text(236 - text_w(&FONT_S, b) - 28, 4, &FONT_S, b, C_WHITE);
-    cv_text(236 - 24, 4, &FONT_S, "bpm", UI_G3);
-    cv_text(236 - text_w(&FONT_S, song.playing ? "playing" : "stopped"), 20, &FONT_S,
-            song.playing ? "playing" : "stopped", song.playing ? SC[1] : UI_G3);
-    cv_rule(0, 39, 240, UI_G1);
-    cv_blit(0, 0);
+    page_line2(arrangement_enabled ? "song mode" : "loop mode", arrangement_enabled ? SC[3] : UI_G3, b, SC[2],
+               "oct- loop/song  oct+ x2 load");
     for (i = 0; i < 5u; i++) {
         uint32_t pos = start + i;
         cv_begin(240, 26, C_BLACK);
@@ -82,19 +126,16 @@ UI_SMALL static void song_screen_draw(void)
         }
         cv_blit(0, 42 + 26u * i);
     }
-    cv_begin(240, 68, C_BLACK);
-    if (ui.msg_t) {
-        cv_rect(0, 4, 240, 30, C_WHITE);
-        ui_text_mid(11, ui.msg, C_BLACK);
-    } else {
+    cv_begin(240, 68, C_BLACK);                     /* (1.9.7: a message is in the status bar, as on every page) */
+    {
         static const char *const L[4] = {"entry", "section", "bars", "length"};
         for (i = 0; i < 4u; i++) {
             cv_rect((int32_t)i * 60 + 4, 6, 52, 3, SC[i]);
             cv_text((int32_t)i * 60 + 30 - text_w(&FONT_S, L[i]) / 2, 12, &FONT_S, L[i], UI_G3);
         }
     }
-    cv_text(4, 34, &FONT_S, "rec: store   save: chain", UI_G4);
-    cv_text(4, 50, &FONT_S, "oct-: loop/song  oct+ x2: load", UI_G3);
+    cv_text(4, 32, &FONT_S, "rec: store   save: chain", UI_G4);
+    page_tabs(50);
     cv_blit(0, 172);
 }
 

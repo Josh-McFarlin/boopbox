@@ -15,20 +15,6 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## Unreleased
 
-**An install that is cut off no longer leaves a dead FM-1.** If the cable came out or the battery ran flat during an
-install, the FM-1 could start the half-written firmware and show a black screen, with no USB to install again. The
-update loader now clears the start of the firmware first and writes it back last, after the whole package has been
-checked. A cut install leaves nothing to start, so the FM-1 comes up in update mode and you can run the install
-again. This works from the first install of this version: the loader comes in the package. Keep the battery charged
-anyway.
-
-Fixed:
-
-- On battery, with no USB cable, BoopBox looked for a computer once a second and stopped the screen and the handling
-  of keys and MIDI for about 30–40 ms each time. It now looks without stopping anything.
-- The key and LED scan, which runs 10,000 times a second, now runs from RAM instead of flash, so it no longer competes
-  with the sound for the flash.
-
 Fixed in the [jam rooms](https://boopbox.replit.app/rooms/):
 
 - Tracks went silent for the other players although they played factory sounds. The rooms knew only the presets of
@@ -44,7 +30,49 @@ Fixed in the [jam rooms](https://boopbox.replit.app/rooms/):
 - The room's shared beat now follows the room server's clock, not each computer's own clock. A computer whose clock
   was a little off heard the others' patterns early or late.
 
-Projects, presets and settings from 1.9.6 open as before.
+## 1.9.7
+
+**An install that is cut off no longer leaves a dead FM-1.** If the cable came out or the battery ran flat during an
+install, the FM-1 could start the half-written firmware and show a black screen, with no USB to install again. The
+update loader now clears the start of the firmware first and writes it back last, after the whole package has been
+checked. A cut install leaves nothing to start, so the FM-1 comes up in update mode and you can run the install
+again. This works from the first install of this version: the loader comes in the package. Keep the battery charged
+anyway.
+
+Also fixed in BoopBox:
+
+- On battery, with no USB cable, BoopBox looked for a computer once a second and stopped the screen and the handling
+  of keys and MIDI for about 30–40 ms each time. It now looks without stopping anything.
+- The key and LED scan, which runs 10,000 times a second, now runs from RAM instead of flash, so it no longer competes
+  with the sound for the flash.
+- **SEL + KNOB 2 (SCALE) with a drum track selected** went only between CHR and MAJ when turned slowly. It took the
+  new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
+  goes to the next scale.
+
+- **SONG, PATTERNS, CHAIN, SCENES, CHORDS and the DRUMS screen show their page tabs at the bottom**, as the other
+  pages do: the page in a box between the page before and after it, and a dot for each page of its button. Their name
+  in large type is gone (on DRUMS: the page names at the top right).
+- **SONG, PATTERNS, CHAIN, SCENES and CHORDS have the status bar of every page** at the top (play, tempo, the track's
+  sound and number, battery). The line under it shows what OCT+ and OCT- do there for 4 seconds after the page opens,
+  then what the page is about. Messages show in the status bar, as on every page, not over the knobs.
+- **CHAIN shows all 16 slots at once**, two rows of eight. The row of keys 1–8 under them is gone (the keys add
+  patterns as before).
+- **White keys 9–16 launch scenes on the SCENES page only.** On PATTERNS and CHAIN they now do nothing, so a stray key
+  no longer changes every track from a page about one. The PATTERNS screen no longer has a keyboard strip (it showed
+  the same as the tiles); its eight tiles are taller.
+- **SEQ held + SAVE no longer jumps to SCENES.** To get to PATTERNS, CHAIN and SCENES, tap SEQ, then turn SELECT
+  through the SEQ pages. SEQ held + SAVE now does nothing (it opens neither SONG nor NOTES).
+
+Changed in BoopBox Trainer:
+
+- **The way to PATTERNS, CHAIN and SCENES** is now *TAP SEQ, SELECT TO PATTERNS* (SEQ, then turn SELECT through the
+  SEQ pages), not *HOLD SEQ + SAVE, SELECT LEFT ×2*.
+- **The coach changes tracks from the HOME screen only.** When a step needs another track, it says *TAP HOME* first,
+  then *TURN ALGORITHM TO TRACK 4*, then the way back to the step's screen.
+- **The screen's name shows on SONG, PATTERNS, CHAIN, SCENES and CHORDS.** The coach covers their header, but their
+  name is now in the page tabs at the bottom of the screen.
+
+Projects, presets, settings and the trainer's progress from 1.9.6 open as before.
 
 ## 1.9.6
 

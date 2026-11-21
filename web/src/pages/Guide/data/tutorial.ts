@@ -29,7 +29,7 @@ export const FIRST_BEAT: [title: string, text: string, shot: string][] = [
   [
     'Chords with one finger',
     'Hold SEL and press the key of your song. Select track 2, hold SEL and turn KNOB 1 to 7TH: each white key now plays a chord of the key.',
-    'layers/layer-scl',
+    'layers/layer-sel',
   ],
   [
     'Punch in',

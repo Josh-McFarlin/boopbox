@@ -17,7 +17,7 @@ static void put(const char *group, const char *name, const char *title, const ch
     fprintf(idx, "%s\t%s\t%s\t%s\n", group, name, title, line);
 }
 
-static const char *const FAM_NAME[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SCL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
+static const char *const FAM_NAME[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SEL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
                                                 "TRK", "MIDI"};
 
 static void show_page(uint32_t j)                   /* page j of PAGES, as the buttons open it */
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     layer(B_SEQ, "layer-seq", "SEQ held: STEPS", "the steps on the white keys");
     layer(B_EDIT, "layer-edit", "EDIT held: ERASE", "a key erases; OCT- / OCT+ undo / redo");
     layer(B_ARP, "layer-arp", "ARP held: ROLL", "a key rolls; KNOB 1 the rate");
-    layer(B_SCL, "layer-scl", "SEL held: KEY", "a key sets the song's key");
+    layer(B_SCL, "layer-sel", "SEL held: KEY", "a key sets the song's key");
     layer(B_GLO, "layer-glo", "GLO held: MIX", "mute, solo, fill, tap tempo");
     layer(B_SAVE, "layer-save", "SAVE held: SONG", "sections A-D: play / store");
     song.sel = 3; go_home(); frames(4);

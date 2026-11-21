@@ -197,8 +197,8 @@ TOPICS = {
     "SCENES": ("SCENES", [
         "A scene is one moment of the song: a pattern for every track, played together. Scene 1 is the verse "
         "(every track on pattern 1), scene 2 the chorus (every track on pattern 2).",
-        "White keys 9 to 16 launch scenes 1 to 8 on any of the three pages: every track changes at once, on the "
-        "bar. That is how you play a song live: verse, chorus, verse.",
+        "On the SCENES page, white keys 9 to 16 launch scenes 1 to 8: every track changes at once, on the bar. "
+        "That is how you play a song live: verse, chorus, verse.",
     ]),
     "CHAINS": ("CHAINS", [
         "A chain plays a track's patterns in order, each for its repeats, then starts again. Verse beat x3, then "

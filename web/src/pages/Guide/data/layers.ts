@@ -179,7 +179,7 @@ export const LAYERS: Layer[] = [
     name: 'Hold SEL',
     title: 'KEY',
     color: 'green',
-    shot: 'layers/layer-scl',
+    shot: 'layers/layer-sel',
     blurb:
       'Any key sets the key of the song: the root of every synth track. The knobs set the chord mode, the scale and how the keys follow it.',
     white: WHITE.map((n) => `KEY ${n.slice(0, -1)}`),
