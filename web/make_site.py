@@ -29,8 +29,8 @@
 The Replit build writes OUT_DIR as project/build/replit-site/. Release checks and GitHub releases use a temporary OUT_DIR.
 Needs Node.js: the pages are built with npm (npm ci in web/ the first time).
 
-The package identity (FM-1_9xx) is read from the package; the device reports it
-after the install.
+The package identity is read from the package; the device reports it after the install:
+FM-1_2667 + build + version (project/tools/build.py identity()), or FM-1_9xx for packages built before 1.9.8.
 """
 import hashlib
 import json
@@ -160,8 +160,8 @@ def product_of(raw):
 def check_pkg(pkg):
     raw = Path(pkg).read_bytes()
     product = product_of(raw)
-    if not re.fullmatch(r"FM-1_9\d\d", product):
-        raise SystemExit(f"{pkg}: identity {product!r} is not a Felucca package (FM-1_9xx)")
+    if not re.fullmatch(r"FM-1_2667[01]\d{6}|FM-1_9\d\d", product):
+        raise SystemExit(f"{pkg}: identity {product!r} is not a BoopBox package (FM-1_2667..., or FM-1_9xx before 1.9.8)")
     if b"FELUCCA-LOADER-1" not in raw:              # marker of firmware/loader
         raise SystemExit(f"{pkg}: no Felucca update loader in it")
     return raw, product
