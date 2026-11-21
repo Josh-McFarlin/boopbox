@@ -18,6 +18,7 @@ Needs Python 3 with Pillow and NumPy; the videos need `ffmpeg`. Run from this fo
 | `sheets.py` | the notes-and-pitch, isometric and dense-city sheets, and the final six (stills from `anim.py`) |
 | `picker.py OUT.png` | the picker: a row per kind of data |
 | `drive_gif.py` | NIGHT DRIVE in motion (a GIF) |
+| `instrument.py OUT.png` | the instrument home screen, a picture an engine (`instrument-home.png`; run `tests/emu_test.c` first for the real header and TRACKS) |
 
 The analysis in `anim.py` follows `ui_vis.c`: the scope's rising zero crossing and auto-scale, the 32 bands of a
 512-point Hann FFT over 60 dB, the tracks' peaks over 48 dB with the VU fall (3 % a frame) and the one-second
