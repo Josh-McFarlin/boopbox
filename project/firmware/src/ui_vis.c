@@ -426,6 +426,12 @@ UI_SMALL static void vis_under(const f32 *xy, int32_t n, f32 yb, uint32_t ca, ui
         }
     }
 }
+/* a neon line */
+UI_SMALL static void vis_neon(f32 x0, f32 y0, f32 x1, f32 y1, f32 w, uint32_t c)
+{
+    const f32 xy[4] = {x0, y0, x1, y1};
+    vis_neon_poly(xy, 2, w, c, 1.0f);
+}
 
 /* ---- the styles (each draws the whole screen; called once per band) ---- */
 /* a palm: the trunk a tapered curve from (bx, 239) through (mx, 150) to its crown (tx, ty), leaning by sway; six fronds
@@ -574,8 +580,8 @@ UI_SMALL static void vis_drive(void)
         const f32 road[8] = {110.0f, 120.0f, 130.0f, 120.0f, 240.0f, 240.0f, 0.0f, 240.0f};
         vg_fillg(road, 4, VC(20, 12, 34), 120.0f, VC(34, 20, 52), 240.0f, 1.0f);
     }
-    vg_neon(110.0f, 120.0f, 0.0f, 240.0f, 1.8f, VPINK, 1.0f);
-    vg_neon(130.0f, 120.0f, 240.0f, 240.0f, 1.8f, VPINK, 1.0f);
+    vis_neon(110.0f, 120.0f, 0.0f, 240.0f, 1.8f, VPINK);
+    vis_neon(130.0f, 120.0f, 240.0f, 240.0f, 1.8f, VPINK);
     for (i = -1; i < 6; i++) {                      /* the lane stripes */
         f32 s0 = ((f32)i + ph) / 6.0f, s1 = s0 + 0.082f, y0, y1;
         if (s1 <= 0.0f || s0 >= 1.0f)
@@ -660,20 +666,12 @@ UI_SMALL static uint32_t vis_fly_col(int32_t v)
 {
     return v < 128 ? vg_mix(VCYAN, VPINK, (f32)v / 128.0f) : vg_mix(VPINK, VGOLD, (f32)(v - 128) / 128.0f);
 }
-/* FLYOVER: a pixel of a line at (x, y) with cover a (0..1), only above what is in front (hor) */
-UI_SMALL static void vis_fly_px(const int16_t *hor, int32_t x, int32_t y, f32 a)
-{
-    if ((uint32_t)x < 240u && y < hor[x])
-        vg_put(x, y, vg_cov(a));
-}
 /* FLYOVER: the spectrum over time as a terrain, mirrored (bass in the middle), flat ground out to the edges; the
- * newest row in front. Hidden lines: drawn front to back, each pixel only above what is already in front (hor); the
- * lines anti-aliased across their direction, fainter with distance */
+ * newest row in front. Hidden lines: drawn front to back, each pixel only above what is already in front (hor);
+ * fainter with distance */
 UI_SMALL static void vis_flyover(void)
 {
-    int16_t hor[240], ry[240];
-    f32 px[81], py[81], qx[81], qy[81];
-    int16_t pv[81];
+    int16_t hor[240], ry[240], px[81], py[81], pv[81], qx[81], qy[81];
     int32_t a, c, x, z, n = 0;
     vg_vgrad(0, 71, VC(0, 0, 10), VC(30, 0, 50));
     vis_stars(70u, 64u, 21u);
@@ -681,6 +679,7 @@ UI_SMALL static void vis_flyover(void)
     vg_beam(-20.0f, 70.0f, 260.0f, 70.0f, 16.0f, 16.0f, VC(60, 180, 255), 0.55f, 0.55f, 1.0f);
     vg_mode(VG_PAINT);
     vg_vgrad(71, 240, VC(4, 0, 14), VC(2, 0, 8));
+    vg_level(1.0f);
     for (x = 0; x < 240; x++)
         hor[x] = 240;
     for (a = 0; a < 15; a++) {                      /* the rows, front (the newest) to back */
@@ -692,43 +691,36 @@ UI_SMALL static void vis_flyover(void)
         for (c = 0; c < 81; c++) {
             int32_t u = (c - 40) * 256 / 24, au = u < 0 ? -u : u, v = au <= 256 ? vis_fly[(vs.fly0 + a) % VIS_FLY][au * 32 / 257] : 0;
             pv[c] = (int16_t)v;
-            px[c] = 120.0f + (f32)u * (84.0f + (f32)z * 44.0f / 256.0f) / 256.0f;
-            py[c] = 76.0f + 160.0f * (f32)(z * z) / 65536.0f - (f32)(v * (v + 256)) / 512.0f * (6.0f + 64.0f * (f32)z / 256.0f) / 256.0f;
+            px[c] = (int16_t)(120 + u * (84 + z * 44 / 256) / 256);
+            py[c] = (int16_t)(76 + 160 * z / 256 * z / 256 - v * (v + 256) / 512 * (6 + 64 * z / 256) / 256);
         }
         for (x = 0; x < 240; x++)
             ry[x] = 240;
         for (c = 0; c < 81; c++) {
             if (n) {                                /* the line to the row in front, under what hides it */
-                f32 dy = qy[c] - py[c];
-                int32_t y, y0 = vg_ifloor(py[c]), y1 = (int32_t)qy[c];
-                vg_rgb(vis_fly_col(pv[c]));
-                vg_level(0.6f * fog);
+                int32_t y, y0 = py[c], y1 = qy[c], dy = y1 - y0;
+                vg_rgb(vg_scale(vis_fly_col(pv[c]), 0.6f * fog));
                 for (y = y0; y <= y1; y++) {
-                    f32 xf = dy > 0.5f ? px[c] + (qx[c] - px[c]) * ((f32)y - py[c]) / dy : px[c], fr;
-                    int32_t xi = vg_ifloor(xf);
-                    fr = xf - (f32)xi;
-                    vis_fly_px(hor, xi, y, 1.0f - fr);
-                    vis_fly_px(hor, xi + 1, y, fr);
+                    x = dy ? px[c] + (qx[c] - px[c]) * (y - y0) / dy : px[c];
+                    if ((uint32_t)x < 240u && y < hor[x])
+                        vg_put(x, y, 256);
                 }
             }
-            if (c) {                                /* the row itself */
-                f32 x0 = px[c - 1], x1 = px[c];
-                int32_t xa = vg_ifloor(x0), xb = (int32_t)x1;
-                vg_rgb(a ? vis_fly_col((pv[c - 1] + pv[c]) / 2) : VW);
-                vg_level(a ? fog : 1.0f);
-                for (x = xa < 0 ? 0 : xa; x <= xb && x < 240; x++) {
-                    f32 yf = x1 > x0 ? py[c - 1] + (py[c] - py[c - 1]) * ((f32)x - x0) / (x1 - x0) : py[c], fr;
-                    int32_t yi = vg_ifloor(yf);
-                    fr = yf - (f32)yi;
-                    vis_fly_px(hor, x, yi, 1.0f - fr);
-                    vis_fly_px(hor, x, yi + 1, a ? fr : 1.0f);
-                    if (!a) {                       /* the front row: a white crest on its colour */
-                        vg_rgb(vis_fly_col((pv[c - 1] + pv[c]) / 2));
-                        vis_fly_px(hor, x, yi + 2, fr + 0.5f);
-                        vg_rgb(VW);
+            if (c) {                                /* the row itself (the front one white, on its colour) */
+                int32_t x0 = px[c - 1], x1 = px[c];
+                uint32_t rc = vg_scale(vis_fly_col((pv[c - 1] + pv[c]) / 2), a ? fog : 1.0f);
+                for (x = x0 < 0 ? 0 : x0; x <= x1 && x < 240; x++) {
+                    int32_t y = x1 > x0 ? py[c - 1] + (py[c] - py[c - 1]) * (x - x0) / (x1 - x0) : py[c];
+                    if (y < hor[x]) {
+                        vg_rgb(a ? rc : VW);
+                        vg_put(x, y, 256);
+                        if (!a) {
+                            vg_rgb(rc);
+                            vg_put(x, y + 1, 256);
+                        }
                     }
-                    if (yi < ry[x])
-                        ry[x] = (int16_t)yi;
+                    if (y < ry[x])
+                        ry[x] = (int16_t)y;
                 }
             }
         }
@@ -848,8 +840,8 @@ UI_SMALL static void vis_city(void)
                 h = 5 + (int32_t)(vis_rnd(&r) % 6u);
                 vis_box(cx, cy, 12.0f, (f32)h, VC(26, 8, 48), VC(16, 4, 32), VC(36, 12, 62), VC(80, 30, 110));
                 if (vis_rnd(&r) & 1u)
-                    vg_neon(cx - 10.0f, cy + 1.0f - (f32)h * 0.5f, cx - 3.0f, cy + 4.5f - (f32)h * 0.5f, 1.0f,
-                            vis_rnd(&r) & 1u ? VPINK : VCYAN, 1.0f);
+                    vis_neon(cx - 10.0f, cy + 1.0f - (f32)h * 0.5f, cx - 3.0f, cy + 4.5f - (f32)h * 0.5f, 1.0f,
+                             vis_rnd(&r) & 1u ? VPINK : VCYAN);
             }
         }
     for (k = 0; k < 9; k++) {                       /* the labels */

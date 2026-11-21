@@ -169,52 +169,6 @@ static inline int32_t vg_cov(f32 c) { return c <= 0.0f ? 0 : (c >= 1.0f ? 256 : 
 #define VG_Y0 ((f32)(-vg.oy) - 0.5f)
 #define VG_Y1 ((f32)(vg.h - vg.oy) - 0.5f)
 
-/* a horizontal run from xa to xb (edges), row y (screen), weighted by cy 0..256 */
-UI_SMALL static void vg_hspan(int32_t y, f32 xa, f32 xb, int32_t cy)
-{
-    int32_t x0, x1, x;
-    if (xb <= xa || cy <= 0)
-        return;
-    if (xa < -0.5f) xa = -0.5f;
-    if (xb > (f32)VG_W - 0.5f) xb = (f32)VG_W - 0.5f;
-    if (xb <= xa)
-        return;
-    x0 = vg_ifloor(xa + 0.5f);
-    x1 = vg_ifloor(xb + 0.5f);
-    if (x0 == x1) {
-        vg_put(x0, y, (vg_cov(xb - xa) * cy) >> 8);
-        return;
-    }
-    vg_put(x0, y, (vg_cov((f32)x0 + 0.5f - xa) * cy) >> 8);
-    for (x = x0 + 1; x < x1; x++)
-        vg_put(x, y, cy);
-    vg_put(x1, y, (vg_cov(xb - ((f32)x1 - 0.5f)) * cy) >> 8);
-}
-/* a filled rectangle, (x, y) its top-left pixel; soft edges at fractions */
-UI_SMALL static void vg_rect(f32 x, f32 y, f32 w, f32 h, uint32_t c, f32 a)
-{
-    f32 ya = y - 0.5f, yb = y + h - 0.5f;
-    int32_t y0, y1, yy;
-    if (w <= 0.0f || h <= 0.0f)
-        return;
-    vg_rgb(c);
-    vg_level(a);
-    x -= 0.5f;
-    if (ya < VG_Y0) ya = VG_Y0;
-    if (yb > VG_Y1) yb = VG_Y1;
-    if (yb <= ya)
-        return;
-    y0 = vg_ifloor(ya + 0.5f);
-    y1 = vg_ifloor(yb + 0.5f);
-    if (y0 == y1) {
-        vg_hspan(y0, x, x + w, vg_cov(yb - ya));
-        return;
-    }
-    vg_hspan(y0, x, x + w, vg_cov((f32)y0 + 0.5f - ya));
-    for (yy = y0 + 1; yy < y1; yy++)
-        vg_hspan(yy, x, x + w, 256);
-    vg_hspan(y1, x, x + w, vg_cov(yb - ((f32)y1 - 0.5f)));
-}
 /* rows y0..y1-1 (screen) from colour a to b, dithered: a sky */
 UI_SMALL static void vg_vgrad(int32_t y0, int32_t y1, uint32_t a, uint32_t b)
 {
@@ -231,36 +185,6 @@ UI_SMALL static void vg_vgrad(int32_t y0, int32_t y1, uint32_t a, uint32_t b)
             p[x] = q[x & 3];
     }
     vg.mode = m;
-}
-
-UI_SMALL static void vg_disc(f32 cx, f32 cy, f32 r, uint32_t c, f32 a)
-{
-    int32_t y0, y1, y, x, xa, xb;
-    f32 ro, ri2, ro2;
-    if (r <= 0.0f)
-        return;
-    vg_rgb(c);
-    vg_level(a);
-    ro = r + 0.5f;
-    ro2 = ro * ro;
-    ri2 = r > 0.5f ? (r - 0.5f) * (r - 0.5f) : 0.0f;
-    y0 = vg_imax(-vg.oy, vg_ifloor(cy - ro));
-    y1 = vg_imin(vg.h - vg.oy - 1, vg_ifloor(cy + ro) + 1);
-    for (y = y0; y <= y1; y++) {
-        f32 dy = (f32)y - cy, dy2 = dy * dy, hw;
-        if (dy2 >= ro2)
-            continue;
-        hw = vg_sqrt(ro2 - dy2);
-        xa = vg_imax(0, vg_ifloor(cx - hw));
-        xb = vg_imin(VG_W - 1, vg_ifloor(cx + hw) + 1);
-        for (x = xa; x <= xb; x++) {
-            f32 dx = (f32)x - cx, d2 = dx * dx + dy2;
-            if (d2 <= ri2)
-                vg_put(x, y, 256);
-            else if (d2 < ro2)
-                vg_put(x, y, vg_cov(ro - vg_sqrt(d2)));
-        }
-    }
 }
 
 /* A line as the pixels within R of it, a column at a time along its major axis m, down each column over the pixels it
@@ -374,12 +298,12 @@ UI_SMALL static void vg_line(f32 x0, f32 y0, f32 x1, f32 y1, f32 w, uint32_t c, 
 {
     vg_rgb(c);
     vg_level(a);
-    if ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) < 1e-4f) {
-        vg_disc(x0, y0, w * 0.5f, c, a);
-        return;
-    }
+    if ((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) < 1e-4f)
+        x0 -= 0.01f, x1 = x0 + 0.02f;               /* (a dot: the round caps of a line too short to see) */
     vg_seg(x0, y0, x1, y1, w, 0);
 }
+/* a dot of radius r (soft edge): a line too short to see, all round caps */
+UI_SMALL static void vg_disc(f32 cx, f32 cy, f32 r, uint32_t c, f32 a) { vg_line(cx, cy, cx, cy, 2.0f * r, c, a); }
 /* a polyline (xy: n points), joined: each stroke's round start left out under the one before (VG_MAX only) */
 UI_SMALL static void vg_poly(const f32 *xy, int32_t n, f32 w, uint32_t c, f32 a)
 {
@@ -489,6 +413,13 @@ UI_SMALL static void vg_quad(f32 x0, f32 y0, f32 x1, f32 y1, f32 x2, f32 y2, f32
     vg_fill(xy, 4, c, a);
 }
 
+/* a filled rectangle, (x, y) its top-left pixel (a quad: edges on the pixels' edges are crisp, fractions soft) */
+UI_SMALL static void vg_rect(f32 x, f32 y, f32 w, f32 h, uint32_t c, f32 a)
+{
+    if (w > 0.0f && h > 0.0f)
+        vg_quad(x - 0.5f, y - 0.5f, x + w - 0.5f, y - 0.5f, x + w - 0.5f, y + h - 0.5f, x - 0.5f, y + h - 0.5f, c, a);
+}
+
 /* ---- soft things: light, not line. Their alpha changes from pixel to pixel (16 bits, dithered down) ---- */
 __attribute__((noinline)) UI_SMALL static void vg_soft(int32_t x, int32_t y, int32_t v)   /* screen (x, y), v 0..65535 */
 {
@@ -577,15 +508,4 @@ UI_SMALL static void vg_beam(f32 x0, f32 y0, f32 x1, f32 y1, f32 w0, f32 w1, uin
             vg_soft(x, y, (int32_t)(cv * (a0 + (a1 - a0) * t) * 65535.0f));
         }
     }
-}
-/* neon: a soft halo, then the tube, then its white-hot core */
-UI_SMALL static void vg_neon(f32 x0, f32 y0, f32 x1, f32 y1, f32 w, uint32_t c, f32 a)
-{
-    int32_t m = vg.mode;
-    vg_mode(VG_ADD);
-    vg_beam(x0, y0, x1, y1, w * 4.0f, w * 4.0f, c, a * 0.35f, a * 0.35f, 1.0f);
-    vg_mode(VG_MAX);
-    vg_line(x0, y0, x1, y1, w, c, a);
-    vg_line(x0, y0, x1, y1, w * 0.4f, vg_mix(c, VC(255, 255, 255), 0.7f), a);
-    vg_mode(m);
 }
