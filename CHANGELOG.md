@@ -47,8 +47,8 @@ Changed in BoopBox Trainer:
   SEQ pages), not *HOLD SEQ + SAVE, SELECT LEFT ×2*.
 - **The coach changes tracks from the HOME screen only.** When a step needs another track, it says *TAP HOME* first,
   then *TURN ALGORITHM TO TRACK 4*, then the way back to the step's screen.
-- **The screen's name shows on SONG, PATTERNS, CHAIN, SCENES and CHORDS.** The coach covers their title, so their name
-  now shows in grey at the right of the coach's first line.
+- **The screen's name shows on SONG and CHORDS.** The coach covers their title, so their name now shows in grey at
+  the right of the coach's first line. PATTERNS, CHAIN and SCENES show theirs in the page tabs at the bottom.
 
 Projects, presets, settings and the trainer's progress from 1.9.6 open as before.
 

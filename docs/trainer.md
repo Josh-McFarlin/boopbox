@@ -89,8 +89,8 @@ The coach uses the title area of the screen.
 
 - On the TRACKS, DRUMS, PATTERNS, SONG and CHORDS screens, REC, the visualizer, and while you hold a layer button, the
   coach has two lines. Line 1 shows the lesson step number and headline, or what is still wrong (in amber). Line 2 shows the
-  action. The coach covers the title of these screens, so on SONG, PATTERNS, CHAIN, SCENES and CHORDS the name of the
-  screen shows in grey at the right of line 1 (1.9.7).
+  action. The coach covers the title of these screens, so on SONG and CHORDS the name of the screen shows in grey at
+  the right of line 1 (1.9.7). PATTERNS, CHAIN and SCENES show their name in the page tabs at the bottom.
 - On the parameter pages and in the sound browser, the coach has one line. The headline, the action and the hint show
   in turn on this line.
 - The colored bar under the coach shows the progress in the level.

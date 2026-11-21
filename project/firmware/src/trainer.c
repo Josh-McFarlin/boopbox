@@ -1503,9 +1503,10 @@ UI_SMALL static void trainer_draw(void)
         str_cpy(b, "NICE!", sizeof b);
         col = RGB(90, 240, 150);
     }
-    /* (1.9.7) the band covers the title of SONG, PATTERNS, CHAIN, SCENES and CHORDS: their name at the right of line 1 */
+    /* (1.9.7) the band covers the title of SONG and CHORDS: their name at the right of line 1 (PATTERNS, CHAIN and
+     * SCENES show theirs in their tabs at the bottom) */
     tag = two && !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !rec_wait && !ft_on && !vis_shown() &&
-          (on_pats_page() || on_song_page() || on_chords_page()) ? cur_page()->title : "";
+          (on_song_page() || on_chords_page()) ? cur_page()->title : "";
     tw = tag[0] ? text_w(&FONT_S, tag) + 12 : 0;
     sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, b);
     if (two)
