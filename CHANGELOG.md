@@ -15,27 +15,10 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## Unreleased
 
-Fixed in the [jam rooms](https://boopbox.replit.app/rooms/):
-
-- Tracks went silent for the other players although they played factory sounds. The rooms knew only the presets of
-  an older BoopBox: a track on one of the newer factory presets of ANALOG, DIGITAL, PHASE, LOFI, VOICE, TRIO, WHEEL or
-  GRAIN was played muted, and so was every track on the SAMPLE engine (GRAND PNO, UP BASS, VIBES and the others). They
-  all play now, with their factory sample sets. LOFI's fifth wave and GRAIN's sample source are shared too.
-- When a track can't be shared, the room page now says which one and why (*Track 5: it uses your own sample (USR)*),
-  where it used to mute it without a word. Your own samples, drum kits (USR, SYN) and FM6 bank patches stay on your
-  FM-1.
-- The notes the others play now come in steadily. Each note used to play the moment its message arrived, so the
-  internet's ups and downs made the timing uneven. Now each note carries the time it was played, and every listener
-  plays it 150 ms after that time. The delay is the same for every note, so a part stays in time with itself.
-- The room's shared beat now follows the room server's clock, not each computer's own clock. A computer whose clock
-  was a little off heard the others' patterns early or late.
-- **Level, pan, mute and the other track settings reach the room as you move them.** The room used to pick them up
-  every 2.5 seconds, so a fade came out in steps.
-- **Pattern changes and scenes land on the beat.** When you ask for a pattern on PATTERNS or launch a scene, the FM-1
-  now tells the room at once, and every listener makes the change at the moment your PAT Q says (the loop's end, or
-  1, 2 or 4 bars) on the room's beat, as your FM-1 does. They used to hear it up to 2.5 seconds later, in the middle
-  of a bar. This needs the BoopBox firmware that comes with this change; with an older one, the room follows your
-  patterns as before.
+**Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask
+for a pattern on PATTERNS or launch a scene, the FM-1 now tells the room at once, and every listener makes the change
+at the moment your PAT Q says (the loop's end, or 1, 2 or 4 bars) on the room's beat, as your FM-1 does. They used to
+hear it up to 2.5 seconds later, in the middle of a bar.
 
 Changed for the web editor and other tools: the editor protocol is version 14. `WATCH` with bit 2 also pushes
 `PATS` (78): per track the pattern playing and the one asked for, the scenes and PAT Q
