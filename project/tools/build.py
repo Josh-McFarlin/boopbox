@@ -50,8 +50,20 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_900"                # package identity; release builds are FM-1_9XY
+PRODUCT = None                      # package identity (identity(): FM-1_2667 + build + version), set in main()
 VERSION = None                      # FELUCCA_VERSION for release builds (default: firmware/src/ui.c)
+
+
+def identity(version, trainer=False):
+    """the package identity for BoopBox X.Y.Z: FM-1_2667 (BOOP on a phone keypad, BoopBox's own prefix, used by no
+    other firmware on The Firmware Hub), one digit for the build (0 BoopBox, 1 BoopBox Trainer), then X, Y and Z, two
+    digits each: 1.9.7 -> FM-1_26670010907, its Trainer FM-1_26671010907. A suffix (-beta) is not part of it. The
+    update loader keeps its own name (ota-FM-1_900, firmware/loader/loader.c), so hosts that resume an interrupted
+    update of a Felucca-family loader (ota-FM-1_9NN) still resume ours"""
+    m = re.fullmatch(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{1,2}))?(?:-[A-Za-z0-9.]+)?", version.strip().lower())
+    if not m:
+        raise SystemExit(f"version {version!r}: use X.Y.Z or X.Y.Z-suffix (X, Y and Z up to two digits each)")
+    return "FM-1_2667%d%02d%02d%02d" % (1 if trainer else 0, int(m[1]), int(m[2]), int(m[3] or 0))
 
 
 def toolchain():
@@ -337,18 +349,16 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION, OUT, GEN, LDR
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y.Z", help="release build: identity FM-1_9XY, version string BOOPBOX X.Y.Z")
+    ap.add_argument("--release", metavar="X.Y.Z", help="release build: version string BOOPBOX X.Y.Z, identity "
+                                                       "FM-1_2667 + build + XXYYZZ (identity())")
     ap.add_argument("--trainer", action="store_true",
                     help="the TRAINER build (FELUCCA_TRAINER=1: the lessons; no web editor, three sample sets fewer), "
                          "into build/trainer-fw/, its package felucca-trainer[-X.Y.Z].fwsc")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "felucca.fwsc"
-    if a.release:                   # X and Y one digit each: the identity has room for two (Z: the version string only)
-        m = re.fullmatch(r"(\d)\.(\d)(\.\d+)?(-[A-Za-z0-9]+)?", a.release)
-        if not m:
-            raise SystemExit(f"--release {a.release}: use X.Y.Z or X.Y.Z-suffix (X and Y one digit each)")
-        PRODUCT = "FM-1_9" + m[1] + m[2]
+    if a.release:
+        identity(a.release)         # (checks the version's form)
         VERSION = "BOOPBOX " + a.release.upper()    # (the splash shows what follows "BOOPBOX ")
         name = f"felucca-{a.release}.fwsc"
     if a.trainer:                   # its own folder, generated headers included: the normal build and its tests untouched
@@ -360,6 +370,9 @@ def main():
                                                 (FW / "src" / "ui.c").read_text())[1]
         VERSION = ver.replace("BOOPBOX ", "BOOPBOX TRAINER ", 1)
         name = name.replace("felucca", "felucca-trainer", 1)
+    PRODUCT = identity((VERSION or "BOOPBOX " + re.search(r'#define FELUCCA_VERSION "BOOPBOX ([^"]+)"',
+                                                          (FW / "src" / "ui.c").read_text())[1])
+                       .split()[-1], trainer=a.trainer)
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:

@@ -7,4 +7,4 @@ Replit is the canonical public website host. The user approved retiring the gene
 
 **Why:** The user chose Replit hosting and confirmed the migration rather than keeping a second generated website in sync.
 
-**How to apply:** Keep source documentation and versioned firmware packages under `docs/`; generate deployable pages during the Replit build instead of committing generated website output there.
+**How to apply:** Keep source documentation under `docs/` and versioned firmware packages under `project/firmware/releases/`; generate deployable pages during the Replit build (into `project/build/replit-site/`) instead of committing generated website output.

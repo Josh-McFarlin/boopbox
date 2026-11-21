@@ -49,9 +49,15 @@ project/scripts/build.sh
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`project/scripts/build.sh --release 1.2.0` makes a release build. In this build, the package identity becomes `FM-1_912`. The version
-string becomes `BOOPBOX 1.2.0`. The package is `project/build/felucca-1.2.0.fwsc`. The build keeps a suffix: `--release 1.2.0-beta`
+`project/scripts/build.sh --release 1.2.0` makes a release build. The version string becomes `BOOPBOX 1.2.0`. The package is `project/build/felucca-1.2.0.fwsc`. The build keeps a suffix: `--release 1.2.0-beta`
 gives `BOOPBOX 1.2.0-BETA`.
+
+**The package identity** is the name the FM-1 reports over USB and the first bytes of the `.fwsc` carry. BoopBox's is
+`FM-1_2667` (BOOP on a phone keypad, used by no other firmware on [The Firmware Hub](https://thefirmwarehub.com)),
+then one digit for the build (`0` BoopBox, `1` BoopBox Trainer), then the version, two digits each: 1.2.0 is
+`FM-1_26670010200`, its Trainer `FM-1_26671010200`. A suffix such as `-beta` is not part of it
+(`identity()` in `project/tools/build.py`). The update loader keeps the name `ota-FM-1_900`, so installers that resume an
+interrupted update of a Felucca-family loader resume BoopBox's too. Releases before 1.9.8 used `FM-1_9XY`.
 
 Build options (environment, `0` or `1`). The defaults are in `project/firmware/src/felucca.c`:
 

@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.9.8
 
 **Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask
 for a pattern on PATTERNS or launch a scene, the FM-1 now tells the room at once, and every listener makes the change
@@ -24,6 +24,16 @@ Changed for the web editor and other tools: the editor protocol is version 14. `
 `PATS` (78): per track the pattern playing and the one asked for, the scenes and PAT Q
 ([web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md#v14-pattern-changes-as-they-are-asked-for-boopbox-198)). Nothing
 changes without bit 2.
+
+**BoopBox has its own identity.** The identity is the name an FM-1 reports over USB, and installers use it to tell
+which firmware is on it. BoopBox used `FM-1_9` and two digits of its version (1.9.7 was `FM-1_919`). Other firmwares
+use the same numbers, and BoopBox 2.0 would have reported ChoralRoot's. From this version, BoopBox reports
+`FM-1_26670010908` and BoopBox Trainer `FM-1_26671010908` (`FM-1_2667`, then the firmware, then the version: see
+[BUILDING.md](BUILDING.md#build)). Installing, updating and going back work as before, and an interrupted update still
+resumes. BoopBox is getting ready for [The Firmware Hub](https://thefirmwarehub.com), which asks each firmware for an
+identity of its own.
+
+Projects, presets, samples and settings from 1.9.7 open unchanged.
 
 ## 1.9.7
 
