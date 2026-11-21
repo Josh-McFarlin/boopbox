@@ -38,6 +38,7 @@ jobs:
           test -d ~/fw-AC79_AIoT_SDK
           echo "AC79_SDK=$HOME/fw-AC79_AIoT_SDK" >> "$GITHUB_ENV"
       - name: Build this branch and main
+        shell: bash {0}
         run: |
           git worktree add ../main origin/main
           for t in branch main; do
@@ -45,6 +46,7 @@ jobs:
             ( cd "$d/project" && sh scripts/build.sh ) > "build-$t.log" 2>&1; echo "exit $?" >> "build-$t.log"
             echo "== $t ($(git -C "$d" rev-parse --short HEAD))"
             grep -E 'image [0-9]+ B|RAM \.data|ram_text|error|Error|exceeds|slot|exit ' "build-$t.log" | tail -20
+            echo "-- the end of the log:"; tail -40 "build-$t.log"
             if [ -f "$d/project/build/felucca.bin" ]; then
               n=$(stat -c %s "$d/project/build/felucca.bin")
               echo "::notice title=$t::app $n B, $((581564 - n)) B free of the 581,564 B slot"
@@ -55,6 +57,23 @@ jobs:
               echo "::error title=$t::no felucca.bin (see build-$t.log)"
             fi
           done
+          if [ -f nm-branch.txt ] && [ -f nm-main.txt ]; then
+            echo "== the largest functions and objects that grew (B), branch vs main"
+            python3 - <<'PY'
+          def load(f):
+              d = {}
+              for l in open(f):
+                  p = l.split()
+                  if len(p) == 4:
+                      d[p[3]] = d.get(p[3], 0) + int(p[1], 16)
+              return d
+          a, b = load("nm-main.txt"), load("nm-branch.txt")
+          diff = sorted(((b.get(k, 0) - a.get(k, 0), k) for k in set(a) | set(b)), reverse=True)
+          for d, k in diff[:30] + [(0, "...")] + diff[-15:]:
+              print(f"{d:+7d} {k}")
+          PY
+          fi
+          true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
