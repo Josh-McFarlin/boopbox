@@ -1,0 +1,65 @@
+# The firmware built with JieLi's toolchain, this branch beside main, to measure the app against its slot (581,564 B).
+# The toolchain and the SDK come from the same places as tools/get_toolchain.sh and BUILDING.md.
+name: firmware size
+on:
+  push:
+    branches: [visualizer-aa]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python packages
+        run: python3 -m pip install Pillow
+      - name: JieLi Linux toolchain (pkgman.jieliapp.com)
+        run: |
+          mkdir -p ~/.jieli
+          curl -fL --retry 3 https://pkgman.jieliapp.com/s/linux-toolchain | tar -xJ -C ~/.jieli
+          TC="$(ls -d ~/.jieli/jieli-linux-toolchains-* | sort | tail -1)"
+          ln -sfn "$(basename "$TC")" ~/.jieli/toolchain
+          echo "JIELI_TOOLCHAIN=$HOME/.jieli/toolchain" >> "$GITHUB_ENV"
+          echo "toolchain: $(basename "$TC")"
+      - name: JieLi AC79 SDK (gitee.com, a fixed tag)
+        run: |
+          for i in 1 2 3; do
+            git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+                https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK && break
+            rm -rf ~/fw-AC79_AIoT_SDK
+            sleep 20
+          done
+          test -d ~/fw-AC79_AIoT_SDK
+          echo "AC79_SDK=$HOME/fw-AC79_AIoT_SDK" >> "$GITHUB_ENV"
+      - name: Build this branch and main
+        run: |
+          git worktree add ../main origin/main
+          for t in branch main; do
+            d=.; [ $t = main ] && d=../main
+            ( cd "$d/project" && sh scripts/build.sh ) > "build-$t.log" 2>&1; echo "exit $?" >> "build-$t.log"
+            echo "== $t ($(git -C "$d" rev-parse --short HEAD))"
+            grep -E 'image [0-9]+ B|RAM \.data|ram_text|error|Error|exceeds|slot|exit ' "build-$t.log" | tail -20
+            if [ -f "$d/project/build/felucca.bin" ]; then
+              n=$(stat -c %s "$d/project/build/felucca.bin")
+              echo "::notice title=$t::app $n B, $((581564 - n)) B free of the 581,564 B slot"
+              echo "$t: app $n B, $((581564 - n)) B free" >> "$GITHUB_STEP_SUMMARY"
+              "$JIELI_TOOLCHAIN/common/bin/objdump" -h "$d/project/build/felucca.elf" > "sections-$t.txt" 2>&1 || true
+              "$JIELI_TOOLCHAIN/common/bin/nm" -S --size-sort "$d/project/build/felucca.elf" > "nm-$t.txt" 2>&1 || true
+            else
+              echo "::error title=$t::no felucca.bin (see build-$t.log)"
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-size
+          path: |
+            build-*.log
+            sections-*.txt
+            nm-*.txt
