@@ -38,7 +38,12 @@ static void open_family(uint32_t f) {(void)f;ui.home=1;}
 static int32_t panel_enc(uint32_t i) {int32_t s=enc[i];enc[i]=0;return s;}
 static int song_backup(void) { return 1; }
 static void song_restore(void) {}
+#define H_HEAD 20                                    /* (ui.c: the status bar's rows, over the page's own line) */
 #include "../firmware/src/ui_song.c"
+/* (ui_draw.c) the page's tabs: its name, its neighbours, its place among its button's pages */
+static uint32_t page_pos(uint32_t *n) { *n = 1; return 1; }
+static int32_t page_nb(int32_t d) { (void)d; return -1; }
+static const char *page_name(uint32_t i) { return PAGES[i].title; }
 static void press(uint32_t b) {song_screen_input(1u<<panel.btn[b],0);}
 int main(void)
 {

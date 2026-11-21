@@ -87,10 +87,10 @@ loops are not in the new project.
 
 The coach uses the title area of the screen.
 
-- On the TRACKS, DRUMS, PATTERNS, SONG and CHORDS screens, REC, the visualizer, and while you hold a layer button, the
-  coach has two lines. Line 1 shows the lesson step number and headline, or what is still wrong (in amber). Line 2 shows the
-  action. The coach covers the header of these screens. On SONG, PATTERNS, CHAIN, SCENES and CHORDS, the name of the
-  screen is in the page tabs at the bottom (1.9.7).
+- On the TRACKS, DRUMS, PATTERNS, CHAIN, SCENES, SONG and CHORDS screens, REC, the visualizer, and while you hold a
+  layer button, the coach has two lines. Line 1 shows the lesson step number and headline, or what is still wrong (in
+  amber). Line 2 shows the action. The coach covers the status bar of these screens and the line under it. Their name is
+  in the page tabs at the bottom, as on every page (1.9.7; TRACKS is the home screen and has none).
 - On the parameter pages and in the sound browser, the coach has one line. The headline, the action and the hint show
   in turn on this line.
 - The colored bar under the coach shows the progress in the level.
