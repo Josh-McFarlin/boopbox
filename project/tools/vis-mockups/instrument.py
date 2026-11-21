@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """The instrument home screen: one picture a sound engine (and the drum kit), for approval before the firmware.
 
-HOME shows the selected track's instrument; HOME again opens TRACKS. KNOB 1-4 are the engine's EDIT 1 values, and
-each knob's colour (cyan, pink, orange, violet: UI_COL in the default SYNTHWAVE theme) paints the part of the picture
-that it moves. The header is the real one (build/host/emu-env.ppm, from tests/emu_test.c); the text is Terminus Bold 16,
-as on the FM-1.
+HOME shows the selected track's instrument; HOME again opens TRACKS. KNOB 1-4 are the engine's EDIT 1 values. Each
+picture is one bold object on black, in flat colours; each knob's colour (the built-in UI_COL: blue, green, yellow,
+orange) paints the part of the object that it moves. Text is Terminus Bold 16, as on the FM-1.
 
-  python3 instrument.py OUT.png      (run tests/emu_test.c first, for the header and the TRACKS screen)
+  python3 instrument.py OUT.png      (run tests/emu_test.c first, for the TRACKS screen)
 """
 import math, random, sys, os
 from pathlib import Path
@@ -22,429 +21,381 @@ FONT = ImageFont.load(str(WORK / 'ter16b.pil'))
 EMU = PROJ / 'build/host'
 
 W = 240
-BG = (16, 4, 40)
-K = [(0, 228, 248), (248, 44, 208), (248, 140, 56), (160, 96, 248)]          # KNOB 1-4 (and tracks 1-4)
-T2 = [(110, 140, 255), (255, 112, 168), (255, 214, 90), (224, 128, 255)]     # tracks 5-8
-TRK = K + T2
-G = [(36, 18, 70), (70, 38, 122), (150, 118, 210), (214, 196, 244)]          # SYNTH_G: tiles .. light text
-HI = (128, 252, 255)
-WHITE = (240, 236, 255)
-SCENE = (42, 200)                                                              # the picture's rows
+BG = (0, 0, 0)
+BL, GR, YE, OR = (40, 124, 255), (30, 204, 112), (255, 198, 24), (255, 98, 26)   # KNOB 1-4 (gfx.c UI_COL_DEF)
+K = [BL, GR, YE, OR]
+TRK = K + [(137, 183, 255), (131, 227, 176), (255, 224, 128), (255, 169, 129)]
+WH = (236, 236, 236)
+G1, G2, G3 = (30, 30, 34), (64, 64, 70), (120, 120, 128)
 
 def mix(a, b, k): return tuple(int(a[i] + (b[i] - a[i]) * k) for i in range(3))
 def dim(c, k): return mix(BG, c, k)
-def text(d, x, y, s, c): d.text((x, y - 1), s, font=FONT, fill=c)            # y: the top of the 16-row cell
+def text(d, x, y, s, c): d.text((x, y - 1), s, font=FONT, fill=c)
 def ctext(d, cx, y, s, c): text(d, cx - 4 * len(s), y, s, c)
+def circ(d, cx, cy, r, **kw): d.ellipse([cx - r, cy - r, cx + r, cy + r], **kw)
 
-def frame(track, sound, engine, knobs, playing=True, active=(0,)):
-    """the screen: the real header (sound and track repainted), the engine line, and the four knobs at the bottom"""
+def frame(track, sound, knobs, beat=1, playing=True):
+    """a quiet top line (the track, its sound, the beat, the tempo) and the four knobs at the bottom"""
     im = Image.new('RGB', (W, W), BG); d = ImageDraw.Draw(im)
-    hdr = Image.open(EMU / 'emu-env.ppm').crop((0, 0, W, 22))
-    im.paste(hdr, (0, 0))
-    for x in range(64, 154):                                                   # clear the sound's name
-        for y in range(22): im.putpixel((x, y), hdr.getpixel((150, y)))
-    for x in range(0, 14):
-        for y in range(22): im.putpixel((x, y), hdr.getpixel((150, y)))
     tc = TRK[track]
-    text(d, 72, 2, sound[:10], tc if track < 4 else tc)
-    d.rectangle([171, 1, 182, 18], fill=tc)
-    text(d, 173, 2, str(track + 1), BG)
-    if playing: d.polygon([(4, 4), (4, 13), (12, 8)], fill=HI)                 # (the real header's play mark)
-    else: d.rectangle([4, 5, 11, 12], fill=K[1])
-    # the engine line: its name, and the eight tracks (lit: playing; framed: this one)
-    text(d, 4, 25, engine, G[2])
-    for k in range(8):
-        x = 150 + k * 11
-        c = TRK[k]
-        d.rectangle([x, 29, x + 7, 36], fill=c if k in active else dim(c, .28))
-        if k == track: d.rectangle([x - 2, 27, x + 9, 38], outline=WHITE)
-    # the knobs: a bar in the knob's colour, the name, the value
+    d.rectangle([0, 0, 15, 15], fill=tc); text(d, 4, 0, str(track + 1), BG)
+    text(d, 22, 0, sound, WH)
+    for b in range(4):                                                         # the beat, a square each
+        x = 168 + b * 8
+        d.rectangle([x, 5, x + 5, 10], fill=WH if (playing and b == beat) else G2)
+    text(d, 208, 0, '90', G3)
     for i, (lab, val) in enumerate(knobs):
         x0 = i * 60
-        d.rectangle([x0 + 4, 203, x0 + 55, 204], fill=K[i])
-        ctext(d, x0 + 30, 207, lab, K[i])
-        ctext(d, x0 + 30, 223, val, G[3])
+        circ(d, x0 + 8, 214, 4, fill=K[i])
+        text(d, x0 + 16, 206, lab, G3)
+        text(d, x0 + 4, 223, val, WH)
     return im, d
 
-def floor(d, y0=172, y1=200, c=None):                                          # the synthwave floor under a picture
-    c = c or dim(K[1], .35)
-    for j in range(7):
-        t = j / 6
-        y = int(y0 + (y1 - y0) * t * t)
-        d.line([(0, y), (W, y)], fill=mix(BG, c, .35 + .65 * t))
-    for i in range(-8, 9):
-        d.line([(120 + i * 6, y0), (120 + i * 34, y1)], fill=mix(BG, c, .6))
+def arc(d, cx, cy, r, a0, a1, c, w):                                          # degrees, 0 = right, clockwise
+    d.arc([cx - r, cy - r, cx + r, cy + r], a0, a1, fill=c, width=w)
 
-def stars(d, n=26, y0=44, y1=120, seed=3):
-    r = random.Random(seed)
-    for _ in range(n):
-        d.point((r.randrange(W), r.randrange(y0, y1)), fill=mix(BG, G[3], r.random() * .7 + .2))
+def polar(cx, cy, r, a): return (cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a)))
 
-def wline(d, pts, c, w=2):
-    for i in range(w):
-        d.line([(x, y + i) for x, y in pts], fill=c)
-
-# ---------------------------------------------------------------------------------------------------------- engines
+# ------------------------------------------------------------------------------------------------------------ engines
 def analog():
-    im, d = frame(0, 'SUPERSAW', 'ANALOG  OSC', [('WAVE', 'SAW'), ('DTN', '14'), ('MIX', '60'), ('NOIS', '12')])
-    floor(d)
-    r = random.Random(1)
-    saw = lambda p: 2 * (p % 1) - 1
-    for x in range(8, 232):                                                    # noise: dust around the wave
-        if r.random() < .55:
-            y = 108 + int(28 * saw(x / 56)) + r.randint(-14, 14)
-            d.point((x, y), fill=mix(BG, K[3], .45 + .5 * r.random()))
-    o2 = [(x, 108 + int(30 * saw(x / 56 + .09 + x / 900))) for x in range(8, 232)]   # OSC 2, detuned: drifts away
-    wline(d, o2, K[1], 2)
-    o1 = [(x, 108 + int(34 * saw(x / 56))) for x in range(8, 232)]
-    wline(d, o1, K[0], 3)
-    # the mix: a crossfader OSC 1 <-> OSC 2
-    d.rectangle([62, 182, 178, 185], fill=G[1])
-    d.rectangle([62, 182, 62 + int(116 * .6), 185], fill=K[2])
-    d.rectangle([62 + int(116 * .6) - 3, 178, 62 + int(116 * .6) + 3, 189], fill=K[2])
-    text(d, 40, 176, '1', K[0]); text(d, 188, 176, '2', K[1])
+    """two gears whose teeth are the wave (OSC 1, OSC 2 a little turned: the detune), a seesaw between them (MIX),
+    sparks off the teeth (NOISE)"""
+    im, d = frame(0, 'SUPERSAW', [('WAVE', 'SAW'), ('DTN', '14'), ('MIX', '60'), ('NOIS', '12')])
+    def gear(cx, cy, r, rot, c):
+        pts = []
+        n = 12
+        for i in range(n * 8):
+            t = i / (n * 8)
+            saw = (t * n) % 1                                                  # the tooth: a ramp, then a drop
+            rr = r + 13 * saw
+            pts.append(polar(cx, cy, rr, t * 360 + rot))
+        d.polygon(pts, fill=c)
+        circ(d, cx, cy, r - 16, fill=BG)
+        circ(d, cx, cy, 7, fill=c)
+    gear(70, 96, 40, 0, BL)
+    gear(170, 96, 40, 11, GR)
+    # the seesaw: MIX tips it toward OSC 2
+    tilt = (0.6 - .5) * 30
+    a = math.radians(tilt)
+    x0, y0 = 120 - 92 * math.cos(a), 168 - 92 * math.sin(a)
+    x1, y1 = 120 + 92 * math.cos(a), 168 + 92 * math.sin(a)
+    d.line([(x0, y0), (x1, y1)], fill=YE, width=7)
+    d.polygon([(120, 168), (108, 192), (132, 192)], fill=YE)
+    circ(d, x0, y0 - 11, 8, fill=BL); circ(d, x1, y1 - 13, 10, fill=GR)
+    r = random.Random(2)
+    for _ in range(26):                                                        # the noise: sparks
+        ang = r.uniform(0, 360); cx = r.choice([70, 170])
+        p = polar(cx, 96, r.uniform(56, 70), ang)
+        d.rectangle([p[0], p[1], p[0] + 2, p[1] + 2], fill=OR)
     return im
 
 def digital():
-    im, d = frame(1, 'RHODES', 'DIGITAL  FM', [('ALG', '5'), ('R2', '14.0'), ('R3', '1.00'), ('R4', '3.00')],
-                  active=(0, 1, 3))
-    stars(d, 18)
-    # algorithm 5: 4 -> 3 -> 1, 2 -> 1; operator 1 the carrier
-    ops = {4: (52, 64), 3: (52, 112), 2: (164, 88), 1: (108, 158)}
-    col = {1: WHITE, 2: K[1], 3: K[2], 4: K[3]}
-    cyc = {1: 1, 2: 14, 3: 1, 4: 3}
-    def box(n):
-        x, y = ops[n]
-        d.rectangle([x - 26, y - 17, x + 26, y + 17], fill=G[0], outline=col[n])
-        pts = [(x - 22 + i, y + 2 - int(9 * math.sin(i / 44 * cyc[n] * 2 * math.pi))) for i in range(45)]
-        d.line(pts, fill=col[n])
-        text(d, x - 24, y - 16, str(n), col[n])
-    for a, b in [(4, 3), (3, 1), (2, 1)]:                                      # the wiring: KNOB 1's algorithm
-        (xa, ya), (xb, yb) = ops[a], ops[b]
-        wline(d, [(xa, ya + 17), (xa, (ya + yb) // 2 + 4), (xb + (xa - xb) // 3, (ya + yb) // 2 + 4),
-                  (xb + (xa - xb) // 3, yb - 17)], K[0], 2)
-    for n in ops: box(n)
-    d.line([(108, 175), (108, 196)], fill=WHITE); d.polygon([(104, 192), (112, 192), (108, 198)], fill=WHITE)
-    text(d, 176, 150, 'ALG', K[0]); text(d, 208, 150, '5', K[0])
-    return im
-
-def phase():
-    im, d = frame(2, 'CZ BRASS', 'PHASE  CZ', [('WAVE', 'SAW'), ('WAVE2', 'RES'), ('DCW', '72'), ('ENV', '40')])
-    # left: the phase map, a straight line bent at DCW's knee
-    x0, y0, s = 12, 54, 84
-    d.rectangle([x0, y0, x0 + s, y0 + s], outline=G[1])
-    kx = .5 - .42 * .72
-    knee = (x0 + int(s * kx), y0 + s - int(s * .5))
-    d.line([(x0, y0 + s), (x0 + s, y0)], fill=G[1])
-    wline(d, [(x0, y0 + s), knee, (x0 + s, y0)], K[2], 2)
-    d.ellipse([knee[0] - 4, knee[1] - 4, knee[0] + 4, knee[1] + 4], fill=K[2])
-    text(d, x0, y0 + s + 4, 'PHASE', G[2])
-    # right: the bent sine, one cycle WAVE, the next WAVE2
-    def cz(p):
-        p %= 1
-        q = p / kx * .5 if p < kx else .5 + (p - kx) / (1 - kx) * .5
-        return math.cos(2 * math.pi * q)
-    for c in range(2):
-        pts = []
-        for i in range(60):
-            p = i / 60
-            v = cz(p) if c == 0 else math.cos(2 * math.pi * p * 3.4) * (1 - p)
-            pts.append((108 + c * 62 + i, 96 - int(30 * v)))
-        wline(d, pts, K[c], 2)
-    d.line([(108, 96), (230, 96)], fill=G[0])
-    # the DCW envelope under it
-    env = [(108 + i, 192 - int(36 * (min(1, i / 10) * math.exp(-max(0, i - 10) / 40)))) for i in range(122)]
-    d.polygon(env + [(229, 192), (108, 192)], fill=dim(K[3], .35))
-    d.line(env, fill=K[3])
-    text(d, 12, 176, 'DCW ENV', K[3])
-    return im
-
-def lofi():
-    im, d = frame(4, 'GAMEBOY', 'LOFI  CHIP', [('CHIP', '8BIT'), ('WAVE', 'PLS'), ('DUTY', '25%'), ('CRSH', '3')],
-                  active=(0, 4))
-    # a chip on a board, its name in KNOB 1's colour
-    d.rectangle([60, 48, 180, 80], fill=(24, 14, 46), outline=G[1])
-    for i in range(8):
-        d.rectangle([66 + i * 15, 44, 72 + i * 15, 47], fill=G[2]); d.rectangle([66 + i * 15, 81, 72 + i * 15, 84], fill=G[2])
-    d.ellipse([64, 60, 70, 66], fill=G[1])
-    ctext(d, 124, 56, '8BIT', K[0])
-    # the wave in fat pixels (CRSH: the size of the pixels), its duty marked
-    px = 6
-    for i in range(0, 216, px):
-        p = (i / 72) % 1
-        y = 112 if p < .25 else 160
-        for yy in range(min(112, y), 161, px):
-            if yy == y or (p < .25 and yy == 160):
-                pass
-        d.rectangle([12 + i, y, 12 + i + px - 2, y + px - 2], fill=K[1])
-        if i > 0:
-            pp = ((i - px) / 72) % 1
-            if (pp < .25) != (p < .25):
-                for yy in range(112, 161, px):
-                    d.rectangle([12 + i, yy, 12 + i + px - 2, yy + px - 2], fill=K[1])
-    for c in range(3):                                                         # the duty: 25 % of each cycle
-        x = 12 + c * 72
-        d.line([(x, 104), (x + 17, 104)], fill=K[2]); d.line([(x, 101), (x, 107)], fill=K[2])
-        d.line([(x + 17, 101), (x + 17, 107)], fill=K[2])
-    text(d, 12, 176, 'CRUSH', K[3])
-    for i in range(3):
-        d.rectangle([60 + i * 9, 180, 60 + i * 9 + 6, 186], fill=K[3])
-    return im
-
-def sample():
-    im, d = frame(2, 'GRAND PNO', 'SAMPLE', [('SET', 'PIANO'), ('TUNE', '+0'), ('BITS', '12'), ('LOOP', 'OFF')])
-    r = random.Random(4)
-    ctext(d, 120, 46, 'PIANO', K[0])
-    # the sample: a struck note that fades, in steps (BITS)
-    mid, x0 = 118, 10
-    for i in range(220):
-        a = math.exp(-i / 70) * (min(1, i / 3))
-        v = a * (0.6 + 0.4 * r.random())
-        h = int(46 * v / 4) * 4                                                # the bit steps
-        c = K[0] if i < 96 else dim(K[0], .45)
-        d.line([(x0 + i, mid - h), (x0 + i, mid + h)], fill=c)
-    for k in range(-3, 4):
-        d.line([(x0, mid + k * 12), (x0 + 220, mid + k * 12)], fill=dim(K[2], .5))
-    d.line([(x0 + 96, 64), (x0 + 96, 170)], fill=WHITE)                       # the playhead
-    d.polygon([(x0 + 92, 64), (x0 + 100, 64), (x0 + 96, 69)], fill=WHITE)
-    # TUNE: the key it plays, as a little keyboard; LOOP off: the loop's bracket dim
-    for i in range(14):
-        x = 50 + i * 10
-        d.rectangle([x, 178, x + 8, 196], fill=G[3] if i != 7 else K[1])
-    for i in [0, 1, 3, 4, 5, 7, 8, 10, 11, 12]:
-        d.rectangle([56 + i * 10, 178, 61 + i * 10, 188], fill=G[0])
-    d.line([(160, 172), (226, 172)], fill=dim(K[3], .5))
-    d.line([(160, 168), (160, 172)], fill=dim(K[3], .5)); d.line([(226, 168), (226, 172)], fill=dim(K[3], .5))
-    return im
-
-def voice():
-    im, d = frame(5, 'CHOIR AH', 'VOICE', [('VOWL', 'A'), ('VOWL2', 'O'), ('TALK', '45'), ('SHIFT', '+2')],
-                  active=(1, 3, 5))
-    # the mouth between A (open, wide) and O (round), TALK of the way
-    t = .45
-    cx, cy = 120, 98
-    rx = int(58 * (1 - t) + 30 * t); ry = int(28 * (1 - t) + 34 * t)
-    d.ellipse([cx - 58, cy - 28, cx + 58, cy + 28], outline=dim(K[0], .45))
-    d.ellipse([cx - 30, cy - 34, cx + 30, cy + 34], outline=dim(K[1], .45))
-    d.ellipse([cx - rx - 4, cy - ry - 4, cx + rx + 4, cy + ry + 4], fill=(120, 30, 110))
-    d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=(30, 4, 30))
-    d.chord([cx - rx + 6, cy - ry + 4, cx + rx - 6, cy + ry], 200, 340, fill=WHITE)
-    d.ellipse([cx - rx // 2, cy + ry // 3, cx + rx // 2, cy + ry - 2], fill=(150, 40, 90))
-    text(d, 20, 90, 'A', K[0]); text(d, 212, 90, 'O', K[1])
-    d.rectangle([40, 140, 200, 141], fill=G[1]); d.rectangle([40, 140, 40 + int(160 * t), 141], fill=K[2])
-    d.ellipse([36 + int(160 * t), 136, 44 + int(160 * t), 145], fill=K[2])
-    # the three formants, moved by SHIFT
-    pts = []
-    for i in range(220):
-        f = i / 220
-        v = sum(a * math.exp(-((f - c - .03) ** 2) / .0012) for a, c in [(1, .12), (.7, .30), (.45, .55)])
-        pts.append((10 + i, 196 - int(40 * v)))
-    d.polygon(pts + [(229, 196), (10, 196)], fill=dim(K[3], .3))
-    d.line(pts, fill=K[3])
-    return im
-
-def trio():
-    im, d = frame(6, 'POWER LEAD', 'TRIO  3 OSC', [('WAVE', 'SAW'), ('INT2', '+7'), ('INT3', '+12'), ('DTN', '8')],
-                  active=(0, 6))
-    # three waves, stacked, at their intervals
-    for k, (semi, c) in enumerate([(0, K[0]), (7, K[1]), (12, K[2])]):
-        f = 2 ** (semi / 12)
-        y0 = 62 + k * 30
-        pts = [(10 + i, y0 - int(11 * (2 * ((i / 44 * f + k * .07) % 1) - 1))) for i in range(220)]
-        if k: d.line([(x, y + 2) for x, y in pts], fill=dim(K[3], .6))       # DTN: a ghost each
-        wline(d, pts, c, 2)
-    # where they sit: two octaves of keys, a dot a note
-    x0, y0 = 22, 150
-    white = [0, 2, 4, 5, 7, 9, 11]
-    for i in range(14):
-        d.rectangle([x0 + i * 14, y0, x0 + i * 14 + 12, y0 + 44], fill=G[3])
-    for o in range(2):
-        for j, s in enumerate([1, 3, 6, 8, 10]):
-            wi = [1, 2, 4, 5, 6][j]
-            x = x0 + (o * 7 + wi) * 14 - 5
-            d.rectangle([x, y0, x + 8, y0 + 26], fill=G[0])
-    for semi, c in [(0, K[0]), (7, K[1]), (12, K[2])]:
-        o, s = divmod(semi, 12)
-        wi = white.index(s)
-        x = x0 + (o * 7 + wi) * 14 + 6
-        d.ellipse([x - 4, y0 + 34, x + 4, y0 + 42], fill=c)
-    return im
-
-def wheel():
-    im, d = frame(1, 'GOSPEL B3', 'WHEEL  ORGAN', [('REG', 'GOSPL'), ('SUB', '+2'), ('BODY', '+0'), ('TOP', '-3')],
-                  active=(1, 3))
-    # the nine drawbars, pulled out; SUB (16', 5 1/3'), BODY (8', 4', 2 2/3'), TOP (2', 1 3/5', 1 1/3', 1')
-    pulls = [8, 8, 8, 6, 4, 2, 3, 1, 4]
-    grp = [1, 1, 2, 2, 2, 3, 3, 3, 3]
-    names = ["16", "5", "8", "4", "2", "2", "1", "1", "1"]
-    for i, (p, g) in enumerate(zip(pulls, grp)):
-        x = 18 + i * 23
-        d.rectangle([x, 46, x + 14, 52], fill=G[1])
-        h = 12 + p * 13
-        d.rectangle([x + 3, 52, x + 11, 52 + h], fill=dim(K[g], .5))
-        for m in range(1, p + 1):
-            d.line([(x + 3, 52 + 12 + m * 13 - 13), (x + 11, 52 + 12 + m * 13 - 13)], fill=dim(K[g], .8))
-        d.rectangle([x, 52 + h, x + 14, 52 + h + 12], fill=K[g])
-    # REG: the registration, in KNOB 1's colour, and the rotary speaker (ROTR SLOW) as a little Leslie
-    text(d, 150, 166, 'GOSPL', K[0])
-    d.rectangle([200, 160, 230, 196], outline=G[2])
-    d.ellipse([205, 166, 225, 186], outline=G[2]); d.line([(208, 176), (222, 176)], fill=WHITE)
-    return im
-
-def grain():
-    im, d = frame(0, 'CLOUDS', 'GRAIN', [('SRC', 'STRGS'), ('POS', '38'), ('SIZE', '60'), ('DENS', '72')],
-                  active=(0, 2))
-    r = random.Random(9)
-    # the source at the bottom, the position on it; grains rise from there
-    y = 178
-    for i in range(220):
-        a = .4 + .6 * abs(math.sin(i / 30)) * (.6 + .4 * r.random())
-        d.line([(10 + i, y - int(14 * a)), (10 + i, y + int(14 * a))], fill=dim(K[0], .75))
-    px = 10 + int(220 * .38)
-    d.rectangle([px - 1, 52, px + 1, 196], fill=K[1])
-    for g in range(46):                                                        # DENS: how many; SIZE: how big
-        t = r.random()
-        gx = px + r.gauss(0, 10 + 40 * t)
-        gy = 160 - t * 108
-        s = 2 + r.random() * 4.5
-        c = mix(K[2], K[3], t)
-        d.ellipse([gx - s, gy - s * .7, gx + s, gy + s * .7], fill=mix(BG, c, 1 - .55 * t))
+    """the carrier a planet, the modulators moons on orbits (ALG: who orbits whom), each moon's speed its ratio"""
+    im, d = frame(1, 'RHODES', [('ALG', '5'), ('R2', '14.0'), ('R3', '1.00'), ('R4', '3.00')], beat=2)
+    cx, cy = 104, 112
+    circ(d, cx, cy, 30, fill=WH)
+    d.chord([cx - 30, cy - 30, cx + 30, cy + 30], 20, 160, fill=(200, 200, 200))
+    # algorithm 5: 2 -> 1, 4 -> 3 -> 1: moon 3 circles the planet, moon 4 circles moon 3, moon 2 on its own orbit
+    for r, c in [(58, BL), (86, BL)]:
+        d.ellipse([cx - r, cy - r * .42, cx + r, cy + r * .42], outline=c, width=2)
+    m2 = (cx + 86 * math.cos(2.2), cy + 86 * .42 * math.sin(2.2))
+    m3 = (cx + 58 * math.cos(-.6), cy + 58 * .42 * math.sin(-.6))
+    circ(d, *m2, 9, fill=GR)
+    circ(d, m3[0], m3[1], 26, outline=BL, width=2)
+    circ(d, *m3, 11, fill=YE)
+    m4 = (m3[0] + 26 * math.cos(-2.2), m3[1] + 26 * math.sin(-2.2))
+    circ(d, *m4, 6, fill=OR)
+    for k, (m, c) in enumerate([(m2, GR)]):                                    # speed lines: the ratio
+        for j in range(5):
+            a = 2.2 + .07 * (j + 1)
+            p = (cx + 86 * math.cos(a), cy + 86 * .42 * math.sin(a))
+            d.point(p, fill=dim(GR, .8 - j * .14))
     return im
 
 def fm6():
-    im, d = frame(4, 'E.PIANO 1', 'FM6  DX7', [('ALG', '5'), ('FB', '6'), ('MLVL', '+0'), ('MRAT', '+0')],
-                  active=(0, 4, 3))
-    # DX7 algorithm 5: three stacks of two, the feedback on 6
-    cols = [52, 120, 188]
-    for k, x in enumerate(cols):
-        top, bot = 2 * k + 2, 2 * k + 1
-        for n, y in [(top, 70), (bot, 128)]:
-            car = n % 2 == 1
-            c = WHITE if car else K[2]
-            d.rectangle([x - 20, y - 15, x + 20, y + 15], fill=G[0] if car else dim(K[2], .3), outline=c)
-            ctext(d, x, y - 8, str(n), c)
-            if not car:                                                        # MRAT: the modulator's ratio
-                text(d, x + 22, y - 16, '1' if n != 6 else '14', K[3])
-        d.line([(x, 85), (x, 112)], fill=K[0]); d.line([(x + 1, 85), (x + 1, 112)], fill=K[0])
-        d.line([(x, 143), (x, 166)], fill=K[0]); d.line([(x + 1, 143), (x + 1, 166)], fill=K[0])
-    d.line([(cols[0], 166), (cols[2], 166)], fill=K[0]); d.line([(120, 166), (120, 188)], fill=K[0])
-    d.polygon([(116, 184), (124, 184), (120, 190)], fill=K[0])
-    # the feedback loop on 6
-    x = cols[2]
-    wline(d, [(x + 6, 55), (x + 6, 48), (x + 34, 48), (x + 34, 92), (x + 20, 92)], K[1], 2)
-    text(d, 8, 176, 'ALG 5', K[0]); text(d, 176, 176, 'FB 6', K[1])
+    """six blocks stacked as the algorithm builds them: carriers on the floor, modulators on them (MRAT: their
+    stripes, MLVL: how tall), the feedback a spring on the top one"""
+    im, d = frame(4, 'E.PIANO 1', [('ALG', '5'), ('FB', '6'), ('MLVL', '+0'), ('MRAT', '+0')], beat=3)
+    d.line([(14, 186), (226, 186)], fill=BL, width=3)                         # the floor: the algorithm's output
+    for k, x in enumerate([48, 120, 192]):
+        d.rectangle([x - 28, 140, x + 28, 184], fill=WH)                      # the carrier
+        ctext(d, x, 154, str(2 * k + 1), BG)
+        h = 46
+        d.rectangle([x - 22, 140 - h, x + 22, 138], fill=YE)                  # the modulator
+        n = [1, 1, 14][k]
+        for s in range(min(n, 7)):
+            y = 140 - h + 5 + s * 6
+            d.rectangle([x - 22, y, x + 22, y + 2], fill=OR)
+        ctext(d, x, 100, str(2 * k + 2), BG)
+        d.rectangle([x - 22, 138, x + 22, 139], fill=BL)
+    # the feedback on 6: a spring on top
+    x, y = 192, 92
+    pts = [(x + 12 * math.sin(i / 3), y - i * 1.4) for i in range(0, 36)]
+    d.line(pts, fill=GR, width=3)
+    circ(d, x, y - 52, 6, fill=GR)
+    return im
+
+def phase():
+    """a ring that a clamp squeezes (DCW): the hand speeds through the pinch; out of it, the wave (WAVE, then WAVE2)
+    and the envelope as an arc round the ring"""
+    im, d = frame(2, 'CZ BRASS', [('WAVE', 'SAW'), ('WAVE2', 'RES'), ('DCW', '72'), ('ENV', '40')])
+    cx, cy = 76, 104
+    d.ellipse([cx - 52, cy - 44, cx + 40, cy + 44], outline=WH, width=8)       # the ring, pinched on the right
+    d.rectangle([cx + 34, cy - 30, cx + 54, cy + 30], fill=YE)                 # the clamp
+    d.rectangle([cx + 54, cy - 6, cx + 70, cy + 6], fill=YE)
+    p = polar(cx - 6, cy, 34, -40)
+    d.line([(cx - 6, cy), p], fill=WH, width=4); circ(d, cx - 6, cy, 5, fill=WH)
+    arc(d, cx - 6, cy, 62, 150, 330, dim(OR, .35), 5)
+    arc(d, cx - 6, cy, 62, 150, 250, OR, 5)
+    # the wave out: one cycle WAVE (blue), the next WAVE2 (green)
+    kx = .5 - .42 * .72
+    def cz(t):
+        t %= 1
+        q = t / kx * .5 if t < kx else .5 + (t - kx) / (1 - kx) * .5
+        return math.cos(2 * math.pi * q)
+    for c in range(2):
+        pts = []
+        for i in range(44):
+            t = i / 44
+            v = cz(t) if c == 0 else math.cos(2 * math.pi * t * 3) * (1 - t)
+            pts.append((140 + c * 46 + i, 104 - 30 * v))
+        d.line(pts, fill=[BL, GR][c], width=4)
+    return im
+
+def lofi():
+    """a chip that walks along its own wave, a wave of blocks (CRSH: how big), the duty a yellow span"""
+    im, d = frame(4, 'GAMEBOY', [('CHIP', '8BIT'), ('WAVE', 'PLS'), ('DUTY', '25%'), ('CRSH', '3')])
+    b = 10
+    for i in range(0, 220, b):                                                 # the pulse, in blocks
+        p = (i / 80) % 1
+        y = 120 if p < .25 else 170
+        d.rectangle([10 + i, y, 10 + i + b - 2, y + b - 2], fill=GR)
+        if i and ((((i - b) / 80) % 1) < .25) != (p < .25):
+            for yy in range(120, 171, b):
+                d.rectangle([10 + i, yy, 10 + i + b - 2, yy + b - 2], fill=GR)
+    for c in range(3):
+        x = 10 + c * 80
+        d.rectangle([x, 108, x + 18, 112], fill=YE)
+    d.rectangle([180, 188, 186, 194], fill=OR); d.rectangle([190, 186, 198, 194], fill=OR); d.rectangle([202, 184, 212, 194], fill=OR)
+    # the chip: a body, legs, two eyes, its name
+    x, y = 96, 46
+    d.rectangle([x, y, x + 62, y + 40], fill=BL)
+    for k in range(5):
+        lx = x + 4 + k * 12
+        d.rectangle([lx, y + 40, lx + 4, y + 52 + (3 if k % 2 else 0)], fill=BL)
+    d.rectangle([x + 10, y + 8, x + 18, y + 16], fill=WH); d.rectangle([x + 44, y + 8, x + 52, y + 16], fill=WH)
+    d.rectangle([x + 13, y + 11, x + 17, y + 15], fill=BG); d.rectangle([x + 47, y + 11, x + 51, y + 15], fill=BG)
+    ctext(d, x + 31, y + 22, '8BIT', WH)
+    return im
+
+def sample():
+    """a record: the sample is its groove (BITS: in steps), its label the set, the loop an arc, TUNE the speed"""
+    im, d = frame(2, 'GRAND PNO', [('SET', 'PIANO'), ('TUNE', '+0'), ('BITS', '12'), ('LOOP', 'OFF')])
+    cx, cy, R = 104, 116, 80
+    circ(d, cx, cy, R, fill=(22, 22, 26))
+    r = random.Random(3)
+    for ring in range(9):                                                      # the groove: the note's wave, round
+        rr = R - 6 - ring * 6
+        pts = []
+        for a in range(0, 361, 3):
+            amp = math.exp(-(ring * 360 + a) / 1500) * 3
+            v = round(amp * math.sin(a * .7 + ring) * 1.0)                     # stepped: BITS
+            pts.append(polar(cx, cy, rr + v, a))
+        d.line(pts, fill=mix(G2, YE, .55 if ring < 3 else .25), width=1)
+    circ(d, cx, cy, 24, fill=BL)
+    ctext(d, cx, cy - 8, 'PNO', WH)
+    arc(d, cx, cy, R + 6, 300, 30, dim(OR, .35), 4)                           # the loop (off: dim)
+    # the tone arm, and TUNE: the speed
+    d.line([(214, 44), (206, 120), (160, 150)], fill=WH, width=5)
+    circ(d, 214, 44, 9, fill=WH)
+    d.rectangle([152, 144, 166, 156], fill=WH)
+    for k in range(3):
+        arc(d, cx, cy, R + 14, 200 + k * 14, 208 + k * 14, GR, 3)
+    return im
+
+def voice():
+    """a head that sings: its mouth from A to O (TALK), the two vowels in bubbles, SHIFT the throat"""
+    im, d = frame(5, 'CHOIR AH', [('VOWL', 'A'), ('VOWL2', 'O'), ('TALK', '45'), ('SHIFT', '+2')], beat=0)
+    cx, cy = 104, 112
+    d.rounded_rectangle([cx - 56, cy - 66, cx + 56, cy + 54], 22, fill=WH)
+    circ(d, cx - 22, cy - 26, 9, fill=BG); circ(d, cx + 22, cy - 26, 9, fill=BG)
+    circ(d, cx - 19, cy - 29, 3, fill=WH); circ(d, cx + 25, cy - 29, 3, fill=WH)
+    t = .45
+    rx = 30 * (1 - t) + 16 * t; ry = 14 * (1 - t) + 20 * t
+    d.ellipse([cx - rx, cy + 14 - ry, cx + rx, cy + 14 + ry], fill=BG)
+    d.ellipse([cx - rx * .6, cy + 14 + ry * .2, cx + rx * .6, cy + 14 + ry * .9], fill=OR)
+    for k in range(4):                                                         # SHIFT: the throat, its rings
+        d.rectangle([cx - 30 + k * 2, cy + 56 + k * 8, cx + 30 - k * 2, cy + 60 + k * 8], fill=OR if k < 3 else dim(OR, .4))
+    # the bubbles: A (VOWL), O (VOWL2), the yellow arc from one to the other (TALK)
+    d.rounded_rectangle([172, 40, 222, 76], 10, fill=BL); ctext(d, 197, 50, 'A', WH)
+    d.polygon([(176, 70), (166, 84), (190, 74)], fill=BL)
+    d.rounded_rectangle([172, 120, 222, 156], 10, fill=GR); ctext(d, 197, 130, 'O', WH)
+    d.polygon([(176, 150), (166, 164), (190, 154)], fill=GR)
+    arc(d, 197, 98, 30, -80, 80, dim(YE, .35), 4); arc(d, 197, 98, 30, -80, -8, YE, 4)
+    return im
+
+def trio():
+    """a staircase of semitones; three blocks stand on it at their intervals (the root, INT2, INT3), shaped as the
+    wave, each shaking with the detune"""
+    im, d = frame(6, 'POWER LEAD', [('WAVE', 'SAW'), ('INT2', '+7'), ('INT3', '+12'), ('DTN', '8')], beat=3)
+    x0, y0, sw, sh = 12, 192, 8, 6
+    for s in range(26):
+        d.rectangle([x0 + s * sw, y0 - s * sh, x0 + s * sw + sw - 1, y0], fill=G1 if s % 12 else G2)
+    for semi, c in [(0, BL), (7, GR), (12, YE)]:
+        sx = x0 + (semi + 2) * sw + 4
+        sy = y0 - (semi + 2) * sh
+        d.polygon([(sx - 15, sy), (sx + 15, sy), (sx + 15, sy - 34)], fill=c)  # a saw: a ramp
+        d.line([(sx - 19, sy - 6), (sx - 19, sy - 26)], fill=OR, width=2)      # DTN: it shakes
+        d.line([(sx + 19, sy - 14), (sx + 19, sy - 34)], fill=OR, width=2)
+    return im
+
+def wheel():
+    """nine thick drawbars (SUB, BODY, TOP: their tips' colours), and the spinning horn of the rotary speaker"""
+    im, d = frame(1, 'GOSPEL B3', [('REG', 'GOSPL'), ('SUB', '+2'), ('BODY', '+0'), ('TOP', '-3')], beat=2)
+    pulls = [8, 8, 8, 6, 4, 2, 3, 1, 4]
+    grp = [GR, GR, YE, YE, YE, OR, OR, OR, OR]
+    for i, (p, c) in enumerate(zip(pulls, grp)):
+        x = 12 + i * 16
+        h = 18 + p * 16
+        d.rectangle([x + 4, 30, x + 8, 30 + h], fill=G2)
+        d.rectangle([x, 30 + h, x + 12, 30 + h + 20], fill=c)
+        d.rectangle([x, 30 + h + 20, x + 12, 30 + h + 22], fill=dim(c, .5))
+    # the horn: two bells on a spinning bar
+    cx, cy = 196, 92
+    circ(d, cx, cy, 34, outline=G2, width=2)
+    a = 25
+    p0, p1 = polar(cx, cy, 30, a), polar(cx, cy, 30, a + 180)
+    d.line([p0, p1], fill=WH, width=5)
+    for p, s in [(p0, 1), (p1, -1)]:
+        circ(d, *p, 8, fill=WH)
+    circ(d, cx, cy, 5, fill=BG)
+    d.rounded_rectangle([168, 152, 224, 174], 6, fill=BL)
+    ctext(d, 196, 155, 'GOSPL', WH)
+    return im
+
+def grain():
+    """the sample a hill; a nozzle at the position sprays grains (SIZE: how big, DENS: how many)"""
+    im, d = frame(0, 'CLOUDS', [('SRC', 'STRGS'), ('POS', '38'), ('SIZE', '60'), ('DENS', '72')], beat=1)
+    pts = [(x, 182 - 22 * (.5 + .5 * math.sin(x / 26)) * (.6 + .4 * math.sin(x / 9))) for x in range(0, 241, 2)]
+    d.polygon(pts + [(240, 196), (0, 196)], fill=BL)
+    px = int(240 * .38)
+    d.rectangle([px - 8, 150, px + 8, 172], fill=GR)
+    d.polygon([(px - 12, 150), (px + 12, 150), (px + 5, 138), (px - 5, 138)], fill=GR)
+    r = random.Random(11)
+    for _ in range(34):                                                        # DENS: the count
+        t = r.random()
+        y = 134 - t * 100
+        x = px + r.gauss(0, 6 + 46 * t)
+        s = 3 + 5 * r.random() * (1 - .4 * t)                                  # SIZE
+        circ(d, x, y, s, fill=YE if r.random() < .7 else OR)
     return im
 
 def phys():
-    im, d = frame(2, 'NYLON GTR', 'PHYS  STRNG', [('MODEL', 'STRNG'), ('STRC', '40'), ('BRIT', '55'), ('DAMP', '30')],
-                  active=(2, 3))
-    # the four models, STRNG chosen
-    for i, m in enumerate(['MODAL', 'STRNG', 'MEMB', 'SYMP']):
-        x = 6 + i * 58
-        on = m == 'STRNG'
-        d.rectangle([x, 44, x + 54, 60], fill=dim(K[0], .35) if on else G[0], outline=K[0] if on else G[1])
-        ctext(d, x + 27, 45, m, WHITE if on else G[2])
-    # the string between its bridges, its modes; BRIT: the high ones glow
-    x0, x1, y = 16, 224, 116
-    d.rectangle([x0 - 6, y - 22, x0, y + 22], fill=G[2]); d.rectangle([x1, y - 22, x1 + 6, y + 22], fill=G[2])
-    for m, (a, c) in enumerate([(26, K[1]), (12, mix(K[1], K[2], .5)), (8, K[2]), (5, K[2])]):
-        pts = [(x, y - int(a * math.sin(math.pi * (m + 1) * (x - x0) / (x1 - x0)))) for x in range(x0, x1 + 1)]
-        d.line(pts, fill=mix(BG, c, 1 - m * .12))
-    d.line([(x0, y), (x1, y)], fill=WHITE)
-    # where it is plucked (STRC), and DAMP: how fast it dies
-    px = x0 + int((x1 - x0) * .4)
-    d.polygon([(px - 5, y - 36), (px + 5, y - 36), (px, y - 28)], fill=K[1])
-    env = [(16 + i, 196 - int(30 * math.exp(-i / 70))) for i in range(208)]
-    d.polygon(env + [(223, 196), (16, 196)], fill=dim(K[3], .3)); d.line(env, fill=K[3])
+    """the model as an object, struck: MODAL a bell, its rings the modes (STRC: their spacing), sparks of the bright
+    partials (BRIT), the rings fading (DAMP)"""
+    im, d = frame(2, 'BELLS', [('MODEL', 'MODAL'), ('STRC', '40'), ('BRIT', '55'), ('DAMP', '30')], beat=0)
+    cx = 104
+    for k, rr in enumerate([48, 60, 72]):                                      # the rings out of the bell
+        arc(d, cx, 104, rr, 205, 335, dim(GR, .9 - k * .25), 3)
+    for k in range(4):                                                         # DAMP: how long they last
+        d.rectangle([20 + k * 14, 186, 30 + k * 14, 190], fill=OR if k < 2 else dim(OR, .3))
+    d.polygon([(cx - 22, 52), (cx + 22, 52), (cx + 30, 110), (cx + 50, 148), (cx - 50, 148), (cx - 30, 110)], fill=BL)
+    d.rectangle([cx - 54, 146, cx + 54, 154], fill=BL)
+    d.rounded_rectangle([cx - 8, 40, cx + 8, 54], 4, fill=BL)
+    circ(d, cx, 160, 9, fill=WH)
+    d.line([(204, 70), (cx + 46, 132)], fill=WH, width=5)                      # the mallet
+    circ(d, cx + 46, 132, 10, fill=WH)
+    r = random.Random(4)
+    for _ in range(12):
+        p = polar(cx + 46, 132, r.uniform(16, 30), r.uniform(-80, 40))
+        d.line([p, (p[0] + 3, p[1] - 3)], fill=YE, width=2)
     return im
 
 def noise():
-    im, d = frame(3, 'OCEAN', 'NOISE  ANLG', [('MODE', 'ANLG'), ('COLR', 'PINK'), ('FREQ', '2.4K'), ('RES', '58')],
-                  active=(3, 0))
-    r = random.Random(5)
-    # the noise as a field of static, thinner up high (pink: falls 3 dB an octave)
-    for x in range(0, 240, 2):
-        for y in range(44, 196, 2):
-            f = x / 240
-            peak = math.exp(-((f - .62) ** 2) / .003) * .58
-            lvl = (1 - .55 * f) * .7 + peak
-            top = 196 - lvl * 110
-            if y > top and r.random() < .55:
-                c = K[2] if peak > .12 and y < top + 20 else K[1]
-                d.rectangle([x, y, x, y], fill=mix(BG, c, .35 + .6 * r.random()))
-    d.line([(0, 196 - .7 * 110), (240, 196 - .7 * .45 * 110 - 0)], fill=K[1])
-    fx = int(240 * .62)
-    d.line([(fx, 52), (fx, 196)], fill=K[2])
-    d.rectangle([fx - 3, 196 - int(1.28 * 110) - 3, fx + 3, 196 - int(1.28 * 110) + 3], outline=K[3])
-    ctext(d, 50, 46, 'ANLG', K[0])
+    """a cloud that rains the noise (COLR: the drops from fine to fat), a cup that catches the filter's band (FREQ)
+    and splashes (RES)"""
+    im, d = frame(3, 'OCEAN', [('MODE', 'ANLG'), ('COLR', 'PINK'), ('FREQ', '2.4K'), ('RES', '58')], beat=2)
+    for cx, cy, rr in [(70, 66, 26), (104, 54, 32), (146, 60, 30), (176, 72, 22), (120, 78, 26), (84, 82, 18)]:
+        circ(d, cx, cy, rr, fill=BL)
+    d.rectangle([48, 80, 196, 96], fill=BL)
+    r = random.Random(8)
+    for _ in range(90):
+        x = r.uniform(52, 194); y = r.uniform(102, 186)
+        f = (x - 52) / 142                                                     # pink: drops get fatter to the left
+        s = 1 + int(2.5 * (1 - f) * r.random())
+        d.rectangle([x, y, x + s - 1, y + s + 1], fill=GR)
+    fx = 52 + int(142 * .62)
+    d.polygon([(fx - 18, 160), (fx + 18, 160), (fx + 11, 190), (fx - 11, 190)], fill=YE)
+    for k in range(5):
+        a = -150 + k * 30
+        p0, p1 = polar(fx, 158, 6, a), polar(fx, 158, 24, a)
+        d.line([p0, p1], fill=OR, width=3)
+    d.line([(10, 194), (230, 194)], fill=G2, width=2)
     return im
 
 def obervave():
-    im, d = frame(0, 'OB BRASS', 'OBERVAVE', [('PROG', '12'), ('TYPE', 'LP24'), ('XMOD', '20'), ('DTN', '6')],
-                  active=(0, 2))
-    # eight voice modules, the ones sounding lit, each with two oscillators (XMOD between) and its filter
+    """eight lamps hanging from a rail, one a voice: lit when it plays, swaying with the drift (DTN); in each, the
+    filter's shape (TYPE); the cross-mod a spark between the two playing next to each other"""
+    im, d = frame(0, 'OB BRASS', [('PROG', '12'), ('TYPE', 'LP24'), ('XMOD', '20'), ('DTN', '6')], beat=1)
+    d.rectangle([4, 30, 236, 35], fill=BL)
+    on = {0, 2, 3, 5}
     for v in range(8):
-        x = 6 + v * 29
-        on = v in (0, 2, 3, 5)
-        d.rectangle([x, 46, x + 25, 160], fill=(26, 10, 52), outline=G[2] if on else G[1])
-        for k in range(2):
-            cy = 64 + k * 26
-            d.ellipse([x + 5, cy - 8, x + 21, cy + 8], outline=WHITE if on else G[1])
-            ang = -2.4 + (v * 37 % 7) * .2 + (k * .5)
-            d.line([(x + 13, cy), (x + 13 + int(6 * math.cos(ang)), cy + int(6 * math.sin(ang)))], fill=WHITE if on else G[1])
-        if on:
-            d.line([(x + 23, 64), (x + 23, 90)], fill=K[2]); d.line([(x + 21, 64), (x + 23, 64)], fill=K[2])
-        # the filter: its curve in TYPE's colour
-        pts = [(x + 3 + i, 132 - (12 if i < 11 else int(12 - (i - 11) ** 1.4))) for i in range(20)]
-        d.line(pts, fill=K[1] if on else dim(K[1], .3))
-        lv = .8 if on else .1
-        d.rectangle([x + 4, 150 - int(10 * lv), x + 21, 150], fill=K[0] if on else G[1])
-        ctext(d, x + 13, 162, str(v + 1), WHITE if on else G[2])
-    text(d, 8, 182, 'PROG 12  OB BRASS', K[0])
+        x = 18 + v * 29
+        sway = [3, -2, 4, -3, 2, -4, 3, -1][v]
+        bx = x + sway
+        d.line([(x, 35), (bx, 96)], fill=OR if v in on else G2, width=2)
+        lit = v in on
+        c = WH if lit else G2
+        d.rectangle([bx - 4, 96, bx + 4, 102], fill=G3)
+        if lit:
+            d.polygon([(bx - 10, 122), (bx + 10, 122), (bx + 13, 186), (bx - 13, 186)], fill=(44, 38, 12))
+        d.pieslice([bx - 11, 100, bx + 11, 142], 180, 360, fill=c)
+        d.rectangle([bx - 11, 118, bx + 11, 121], fill=c)
+        if lit:
+            pts = [(bx - 7 + i, 112 - (0 if i < 7 else min(9, (i - 7) ** 1.5 / 2))) for i in range(15)]
+            d.line(pts, fill=GR, width=2)
+    d.line([(76, 146), (84, 156), (90, 146), (98, 158)], fill=YE, width=3)
     return im
 
 def drums():
-    im, d = frame(3, '808 DRUMS', 'DRUMS  KIT', [('KIT', '808'), ('LEVEL', '104'), ('VERB', '20'), ('PAN', '0%')],
-                  active=(0, 3))
-    tc = K[3]
-    hit = {'KICK', 'HAT'}
-    def drum(cx, cy, rx, ry, name, shell=G[2]):
-        on = name in hit
-        d.ellipse([cx - rx, cy - ry + 4, cx + rx, cy + ry + 4], fill=G[0])
-        d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=mix(BG, tc, .9) if on else (40, 22, 74), outline=WHITE if on else shell)
-        if on:
-            d.ellipse([cx - rx - 4, cy - ry - 4, cx + rx + 4, cy + ry + 4], outline=dim(tc, .6))
-    # the kit from the drummer's seat: cymbals, toms, snare, kick, hats
-    drum(46, 66, 26, 9, 'CRASH', (200, 170, 60)); drum(196, 70, 28, 9, 'RIDE', (200, 170, 60))
-    drum(96, 84, 20, 11, 'TOM1'); drum(146, 84, 20, 11, 'TOM2')
-    drum(120, 150, 34, 30, 'KICK')
-    drum(66, 128, 22, 12, 'SNARE'); drum(194, 136, 24, 13, 'FLOOR')
-    drum(30, 110, 20, 7, 'HAT', (200, 170, 60))
-    # the 16 pads as a strip: those that played this beat lit
-    for i in range(16):
-        x = 8 + i * 14
-        on = i in (0, 4, 8)
-        d.rectangle([x, 186, x + 11, 196], fill=tc if on else G[1])
+    """the kit from above, flat: the kick in the middle; the drums that hit this beat flash, with rings round them
+    (VERB: how far they go)"""
+    im, d = frame(3, '808 DRUMS', [('KIT', '808'), ('LEVEL', '104'), ('VERB', '20'), ('PAN', '0%')], beat=0)
+    def drum(cx, cy, r, c, hit=False, rim=G2):
+        if hit:
+            for k in range(2):
+                circ(d, cx, cy, r + 6 + k * 7, outline=dim(YE, .8 - k * .35), width=2)
+        circ(d, cx, cy, r, fill=rim)
+        circ(d, cx, cy, r - 4, fill=c)
+    drum(120, 124, 36, WH, hit=True)
+    circ(d, 120, 124, 12, fill=G2)
+    drum(54, 166, 20, G3)                                                      # snare
+    drum(84, 64, 17, G3); drum(156, 64, 17, G3)                                # toms
+    drum(194, 164, 22, G3)                                                     # floor
+    drum(34, 106, 18, YE, hit=True, rim=(120, 92, 10))                         # hat
+    drum(210, 96, 20, (150, 116, 14), rim=(120, 92, 10))                       # ride
+    d.rounded_rectangle([12, 38, 52, 56], 5, fill=BL); ctext(d, 32, 39, '808', WH)
+    d.rectangle([110, 192, 130, 196], fill=G2); d.rectangle([118, 190, 122, 198], fill=OR)   # PAN
     return im
 
 def tracks():
     return Image.open(EMU / 'emu-tracks.ppm').convert('RGB')
 
 ITEMS = [
-    (analog, 'ANALOG', 'OSC 1 and the detuned OSC 2; noise as dust'),
-    (digital, 'DIGITAL', 'the four operators in their algorithm'),
-    (phase, 'PHASE', 'the phase bent at DCW; WAVE then WAVE2'),
-    (lofi, 'LOFI', 'the chip, its wave in fat pixels, the duty'),
-    (sample, 'SAMPLE', 'the sample in bit steps, the playhead, the key'),
-    (voice, 'VOICE', 'the mouth from A to O; the formants below'),
-    (trio, 'TRIO', 'three oscillators and where they sit on the keys'),
-    (wheel, 'WHEEL', 'the nine drawbars, coloured by SUB, BODY, TOP'),
-    (grain, 'GRAIN', 'grains rise from the position on the sample'),
-    (fm6, 'FM6', 'the DX7 algorithm; feedback, modulator ratios'),
-    (phys, 'PHYS', 'the string, where it is plucked, how it dies'),
-    (noise, 'NOISE', 'the noise by pitch; colour slope, filter peak'),
-    (obervave, 'OBERVAVE', 'the eight voice modules, lit as they play'),
-    (drums, 'DRUMS', 'the kit; drums flash on their hits'),
+    (analog, 'ANALOG', 'two gears: teeth = the wave, turned = detune'),
+    (digital, 'DIGITAL', 'a planet and its moons: who circles whom'),
+    (fm6, 'FM6', 'six blocks stacked as the algorithm builds'),
+    (phase, 'PHASE', 'a ring the DCW clamp squeezes'),
+    (lofi, 'LOFI', 'a chip that walks on its wave of blocks'),
+    (sample, 'SAMPLE', 'a record: the sample is the groove'),
+    (voice, 'VOICE', 'a head that sings from A to O'),
+    (trio, 'TRIO', 'three blocks on a staircase of semitones'),
+    (wheel, 'WHEEL', 'nine drawbars and the spinning horn'),
+    (grain, 'GRAIN', 'a nozzle on the sample sprays grains'),
+    (phys, 'PHYS', 'the model, struck: here MODAL, a bell'),
+    (noise, 'NOISE', 'a cloud rains the noise; the cup is the filter'),
+    (obervave, 'OBERVAVE', 'eight lamps, one a voice, lit as they play'),
+    (drums, 'DRUMS', 'the kit from above; hits flash and ring'),
     (tracks, 'HOME again: TRACKS', 'the real TRACKS screen, as today'),
 ]
 
