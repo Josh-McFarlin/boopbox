@@ -622,6 +622,45 @@ function createRoomService(server, options = {}) {
         });
         break;
       }
+      case "track_param": {
+        /* a track setting changed on the player's FM-1 (P_LEVEL, P_PAN, P_MUTE, ...: the performance's parameters),
+         * as it changed: the performance a second later would be late for a fader */
+        if (!validEnvelope(message, ["track", "param", "value"]) || !isIntegerInRange(message.track, 0, 7)
+          || !isIntegerInRange(message.param, 0, config.sequenceLengthParameter + 33)
+          || !isIntegerInRange(message.value, -128, 127)) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        if (!player.performance) return sendError(player, "voice_not_set");
+        const parameters = player.performance.tracks[message.track].parameters;
+        const known = parameters.find(([id]) => id === message.param);
+        if (known) known[1] = message.value;
+        else parameters.push([message.param, message.value]);
+        broadcast(player.room, {
+          type: "track_param",
+          playerId: player.id,
+          slot: player.slot,
+          track: message.track,
+          param: message.param,
+          value: message.value,
+        });
+        break;
+      }
+      case "pattern_ask": {
+        /* patterns asked for on the player's FM-1 (asks: per track the pattern, or -1), made by every listener at the
+         * moment PAT Q (quantize) says on the room's beat */
+        if (!validEnvelope(message, ["asks", "quantize"]) || !Array.isArray(message.asks) || message.asks.length !== 8
+          || !message.asks.every((ask) => isIntegerInRange(ask, -1, 7))
+          || !isIntegerInRange(message.quantize, 0, 3)) return protocolError(player);
+        if (!player.room) return sendError(player, "not_in_room");
+        if (!player.performance) return sendError(player, "voice_not_set");
+        broadcast(player.room, {
+          type: "pattern_ask",
+          playerId: player.id,
+          slot: player.slot,
+          asks: [...message.asks],
+          quantize: message.quantize,
+        });
+        break;
+      }
       case "sound_edit_sharing": {
         if (!validEnvelope(message, ["paused"]) || typeof message.paused !== "boolean") {
           return protocolError(player);

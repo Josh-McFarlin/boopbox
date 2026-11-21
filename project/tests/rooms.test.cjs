@@ -690,6 +690,59 @@ test("the server answers the clock sync and stamps every note with the time it w
   }
 });
 
+test("a player's track settings and pattern requests reach the room as they happen", async () => {
+  const app = await startRoomServer();
+  const clients = [];
+  try {
+    const owner = createClient(app.url);
+    const guest = createClient(app.url);
+    clients.push(owner, guest);
+    await Promise.all([owner.ready, guest.ready]);
+    const created = await createRoom(owner);
+    guest.send({ type: "join", roomId: created.room.id });
+    await guest.next("room_state");
+
+    owner.send({ type: "track_param", track: 2, param: 0, value: 90 });
+    assert.equal((await owner.next("error")).code, "voice_not_set");   /* no performance yet */
+    owner.send({ type: "performance", performance: roomPerformance() });
+    await guest.next("performance");
+
+    owner.send({ type: "track_param", track: 2, param: 0, value: 90 });   /* LEVEL of track 3 */
+    const level = await guest.next("track_param");
+    assert.deepEqual([level.slot, level.track, level.param, level.value],
+      [created.players[0].slot, 2, 0, 90]);
+    owner.send({ type: "track_param", track: 2, param: 40, value: 1 });   /* MUTE */
+    assert.equal((await guest.next("track_param")).param, 40);
+    for (const bad of [{ track: 8, param: 0, value: 1 }, { track: 0, param: 63, value: 1 },
+      { track: 0, param: 0, value: 128 }, { track: 0, param: 0, value: 1.5 }]) {
+      owner.send({ type: "track_param", ...bad });
+      assert.equal((await owner.next("error")).code, "invalid_message");
+    }
+
+    owner.send({ type: "pattern_ask", asks: [-1, -1, 3, -1, -1, -1, -1, -1], quantize: 2 });
+    const ask = await guest.next("pattern_ask");
+    assert.deepEqual([ask.slot, ask.asks, ask.quantize], [created.players[0].slot, [-1, -1, 3, -1, -1, -1, -1, -1], 2]);
+    for (const bad of [{ asks: [0, 0], quantize: 0 }, { asks: Array(8).fill(8), quantize: 0 },
+      { asks: Array(8).fill(-1), quantize: 4 }]) {
+      guest.send({ type: "pattern_ask", ...bad });   /* (the guest: five bad messages close a connection) */
+      assert.equal((await guest.next("error")).code, "invalid_message");
+    }
+
+    /* a player who joins later gets the settings in the performance */
+    const late = createClient(app.url);
+    clients.push(late);
+    await late.ready;
+    late.send({ type: "join", roomId: created.room.id });
+    await late.next("room_state");
+    const restored = await late.next("performance");
+    const params = Object.fromEntries(restored.performance.tracks[2].parameters);
+    assert.equal(params[0], 90);
+    assert.equal(params[40], 1);
+  } finally {
+    await app.close(clients);
+  }
+});
+
 test("the server caps the browser at 50 rooms", async () => {
   const app = await startRoomServer();
   const clients = [];

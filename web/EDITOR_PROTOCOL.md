@@ -73,7 +73,7 @@ An absent status byte retains the original reply format.
 | 19 UP_STORE | slot, name | slot, rc (3: stop the song first). Stores the current sound: engine, parameters, the first 16 sequencer steps as the pattern (TIE steps → flag 4) |
 | 20 UP_LOAD | slot | slot, rc (0 ok, 1 empty/invalid). Applies it |
 | 21 UP_ERASE | slot | slot, rc (3: stop the song first) |
-| 22 WATCH | on (0/1; v4: 3 = also `TRACK_CHANGED`) | on (0/1; v4 firmware: 3 when 3 was asked for). While on, the device pushes cmds 23, 24, 26 (and 32 with bit 1) |
+| 22 WATCH | on (0/1; v4: 3 = also `TRACK_CHANGED`; protocol 14: bit 2 = also `PATS`) | on (0/1; v4 firmware: 3 when 3 was asked for; protocol 14: bit 2 when asked for). While on, the device pushes cmds 23, 24, 26 (and 32 with bit 1, 78 with bit 2) |
 | 23 CHANGED (push) | — | scope, id, v14 |
 | 24 RELOAD (push) | — | engine, preset, then (v3) the selected track |
 | 25 PING | — | 0 |
@@ -90,6 +90,7 @@ An absent status byte retains the original reply format.
 | --- | --- | --- |
 | 31 TRACK_PARAM | track, id (get), or track, id, v14 (set); id = `P_*` (0..P_COUNT−1) | track, id, v14 (the value after clamping, as `SET`). The selection does not change; no push about the editor's own write |
 | 32 TRACK_CHANGED (push) | — | track, id, v14: `P_LEVEL`, `P_PAN` or `P_MUTE` of a track that is not selected changed on the device (only while `WATCH` was sent with bit 1) |
+| 78 PATS (push) | — | (protocol 14) per track the pattern playing and the one asked for, the scenes, PAT Q (only while `WATCH` was sent with bit 2; see v14) |
 
 | cmd (v5) | Request args | Reply args |
 | --- | --- | --- |
@@ -493,6 +494,24 @@ backup object 0 (the working project, format 7: `docs/groovebox-storage.md`), ch
 `BK_PUT` (rc 3 while the song plays; the commit loads it at once, as `project.c project_restore`). Its codec
 (`web/src/pages/Editor/lib/proto.ts` PROJ7) writes the bytes the firmware writes: `tests/proj7_tool.c` captures and loads with the
 firmware's own code and `web/test_web.mjs` compares them.
+
+## v14: pattern changes as they are asked for (BoopBox 1.9.8)
+
+`INFO` ends with 14. `WATCH` with bit 2 (`WATCH 7`: with v4's `TRACK_CHANGED` too) also pushes command **78**,
+`PATS`, whenever one of its bytes changes; the reply sets bit 2 when the firmware knows it (v13 firmware answers 3 and
+never pushes it). Without bit 2 nothing changes. `PATS` is 11 bytes:
+
+| bytes | holds |
+| --- | --- |
+| 0..7 | per track: the pattern playing (bits 0..2) and the one asked for (bits 3..6: `pat_req`, 0 = none, else pattern + 1) |
+| 8 | the scene asked for, 0..7 (127: none) |
+| 9 | the scene playing, 0..7 (127: none) |
+| 10 | PAT Q (`G_PATQ`): when a change asked for is made: 0 at the track's loop end, 1, 2, 3 on 1, 2, 4 bars |
+
+A pattern asked for on the PATTERNS page, a scene launched (it asks each of its tracks) and a chain's next slot all
+show here. It is pushed when asked, before the change is made at its quantized moment, and again when it is made.
+The jam rooms use it to make the same change on every listener at the same point of the room's beat. It goes out
+before a `RELOAD` of the same pass.
 
 ## Notes for the editor
 

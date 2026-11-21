@@ -535,6 +535,70 @@ export class RoomAudio {
     return this.queue
   }
 
+  /* a track setting of a room player's performance (P_LEVEL, P_PAN, P_MUTE, ... id < 63), as it changed on their FM-1 */
+  async setTrackParameter(
+    slot: number,
+    trackIndex: number,
+    param: number,
+    value: number,
+  ): Promise<void> {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= PLAYERS)
+      return Promise.reject(new Error('Invalid player slot.'))
+    const next = this.queue.then(async () => {
+      if (
+        !Number.isInteger(trackIndex) ||
+        trackIndex < 0 ||
+        trackIndex >= 8 ||
+        !Number.isInteger(param) ||
+        param < 0 ||
+        param > 62 ||
+        !Number.isInteger(value) ||
+        value < -128 ||
+        value > 127
+      )
+        throw new Error("That track setting isn't available to share.")
+      const performance = this.performances[slot]
+      const source = performance?.tracks[trackIndex]
+      if (!source) return
+      const known = source.parameters.find(([id]) => id === param)
+      if (known) known[1] = value
+      else source.parameters.push([param, value])
+      const player = this.players[slot][Math.floor(trackIndex / 4)]
+      await player.ready
+      const track = player.mock.state.tracks[trackIndex % 4]
+      track.p[param] = value
+      if (!source.voice)
+        track.p[40] = 1 /* (a track the room can't play stays muted) */
+      this.syncPerformance(slot)
+    })
+    this.queue = next.catch(() => {})
+    return next
+  }
+
+  /* patterns a room player asked for on their FM-1 (asks: per track the pattern, or -1): this browser's engine makes
+     the change at the moment quantize (their PAT Q) says, on the room's beat */
+  askPatterns(slot: number, asks: number[], quantize: number): void {
+    if (
+      !Number.isInteger(slot) ||
+      slot < 0 ||
+      slot >= PLAYERS ||
+      !this.performances[slot] ||
+      !Array.isArray(asks) ||
+      asks.length !== 8 ||
+      !asks.every((ask) => Number.isInteger(ask) && ask >= -1 && ask <= 7) ||
+      !Number.isInteger(quantize) ||
+      quantize < 0 ||
+      quantize > 3
+    )
+      return
+    this.node?.port.postMessage({
+      type: 'ask',
+      slot,
+      asks: [...asks],
+      quantize,
+    })
+  }
+
   serverNow(): number {
     return this.clock ? this.clock.serverNow() : Date.now()
   }

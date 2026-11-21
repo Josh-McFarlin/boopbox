@@ -47,9 +47,16 @@ export class FirmwareAudio {
         t.locks.slice(0, 32).forEach((l, i) => data.set([l.step, l.param, l.value & 255, (l.value >> 8) & 255], i * 4));
         this.write(data); this.w.preview_locks(k, t.locks.length);
       }
-      const sequenceChanged = !before || t.currentPattern !== before.currentPattern
-        || t.chainEnabled !== before.chainEnabled || JSON.stringify(t.chain) !== JSON.stringify(before.chain)
+      const patternsChanged = !before || t.chainEnabled !== before.chainEnabled
+        || JSON.stringify(t.chain) !== JSON.stringify(before.chain)
         || JSON.stringify(t.roomPatterns) !== JSON.stringify(before.roomPatterns);
+      /* only the pattern playing changed (a room's player switched it): no reset when this engine already plays it or
+         was asked for it (askPattern: it changes at its quantized moment of the room's beat, not now, mid-bar) */
+      let sequenceChanged = patternsChanged || t.currentPattern !== before.currentPattern;
+      if (!patternsChanged && sequenceChanged && t.roomPatterns && this.w.preview_current) {
+        const now = this.w.preview_current(k);
+        if ((now & 15) === t.currentPattern || (now >> 4) === t.currentPattern + 1) sequenceChanged = false;
+      }
       if (sequenceChanged && t.roomPatterns) {
         this.w.preview_sequence_reset(k, t.currentPattern);
         const patterns = [...t.roomPatterns].sort((a, b) => (
@@ -138,6 +145,16 @@ export class RoomFirmwareAudio {
   play(slot, track, note, on) {
     const group = Math.floor(track / 4);
     this.players[slot][group].w.preview_note(track % 4, note, on ? 1 : 0);
+  }
+  // a room player's pattern change asked for (asks: per track -1 or the pattern), made at the moment quantize says on
+  // the room's beat, as the player's FM-1 makes it on its own
+  askPatterns(slot, asks, quantize) {
+    if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
+    if (!Array.isArray(asks) || asks.length !== 8 || !Number.isInteger(quantize) || quantize < 0 || quantize > 3) return;
+    asks.forEach((pattern, track) => {
+      if (!Number.isInteger(pattern) || pattern < 0 || pattern > 7) return;
+      this.players[slot][Math.floor(track / 4)].w.preview_pattern_ask(track % 4, pattern, quantize);
+    });
   }
   transport(slot, tempo, playing, beat) {
     if (!Number.isInteger(slot) || slot < 0 || slot >= this.players.length) return;
@@ -243,6 +260,7 @@ if (typeof registerProcessor === 'function') {
           if (data.type === 'state') this.dsp.sync(data.slot, data.group, data.state);
           else if (data.type === 'note') this.dsp.note(data.slot, data.track, data.note, data.on, data.delayFrames);
           else if (data.type === 'transport') this.dsp.transport(data.slot, data.tempo, data.playing, data.beat);
+          else if (data.type === 'ask') this.dsp.askPatterns(data.slot, data.asks, data.quantize);
           else if (data.type === 'panic') this.dsp.panic(data.slot);
           else if (data.type === 'drop') this.dsp.drop(data.slot);
           else if (data.type === 'mix') this.dsp.setMix(data.mutedSlots, data.soloSlot);

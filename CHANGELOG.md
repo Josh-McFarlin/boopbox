@@ -29,6 +29,18 @@ Fixed in the [jam rooms](https://boopbox.replit.app/rooms/):
   plays it 150 ms after that time. The delay is the same for every note, so a part stays in time with itself.
 - The room's shared beat now follows the room server's clock, not each computer's own clock. A computer whose clock
   was a little off heard the others' patterns early or late.
+- **Level, pan, mute and the other track settings reach the room as you move them.** The room used to pick them up
+  every 2.5 seconds, so a fade came out in steps.
+- **Pattern changes and scenes land on the beat.** When you ask for a pattern on PATTERNS or launch a scene, the FM-1
+  now tells the room at once, and every listener makes the change at the moment your PAT Q says (the loop's end, or
+  1, 2 or 4 bars) on the room's beat, as your FM-1 does. They used to hear it up to 2.5 seconds later, in the middle
+  of a bar. This needs the BoopBox firmware that comes with this change; with an older one, the room follows your
+  patterns as before.
+
+Changed for the web editor and other tools: the editor protocol is version 14. `WATCH` with bit 2 also pushes
+`PATS` (78): per track the pattern playing and the one asked for, the scenes and PAT Q
+([web/EDITOR_PROTOCOL.md](web/EDITOR_PROTOCOL.md#v14-pattern-changes-as-they-are-asked-for-boopbox-198)). Nothing
+changes without bit 2.
 
 ## 1.9.7
 

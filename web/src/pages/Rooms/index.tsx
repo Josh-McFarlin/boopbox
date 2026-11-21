@@ -128,8 +128,26 @@ type ServerMessage =
       at?: number
     }
   | { type: 'time'; t: number; serverAt: number }
+  | {
+      type: 'track_param'
+      playerId: string
+      slot: number
+      track: number
+      param: number
+      value: number
+    }
+  | {
+      type: 'pattern_ask'
+      playerId: string
+      slot: number
+      asks: number[]
+      quantize: number
+    }
   | { type: 'error'; code: string }
   | { type: 'server_closing' }
+
+/* a track setting's moves (a fader) go to the room at most this often: the latest value each time */
+const TRACK_PARAM_MS = 60
 
 /* when a room note sounds, on the server's clock: config.noteDelayMs after the time it was played (its "at"); a
    note without one (an older server) at once */
@@ -204,6 +222,17 @@ const Rooms: React.FC = () => {
   /* the room server's clock (clock.ts): notes carry the time they were played and sound noteDelayMs after it */
   const clockRef = useRef(new ServerClock())
   const clockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /* track settings to send (a fader's moves: the latest of each, at most every TRACK_PARAM_MS) */
+  const trackParamRef = useRef(
+    new Map<
+      string,
+      {
+        value: number
+        timer: ReturnType<typeof setTimeout> | null
+        sentAt: number
+      }
+    >(),
+  )
   const roomRef = useRef(room)
   const voiceStateRef = useRef(new Map<string, string>())
   const performanceStateRef = useRef(new Map<string, PerformanceState>())
@@ -233,6 +262,31 @@ const Rooms: React.FC = () => {
   const stopAllNotes = useCallback(() => {
     stopRoomNotes(heldRef.current, send)
   }, [send])
+
+  /* a track setting changed on the FM-1: to the room at once, then at most every TRACK_PARAM_MS while it moves (the
+     latest value; the server's limit is a few dozen messages a second) */
+  const sendTrackParam = useCallback(
+    (track: number, param: number, value: number) => {
+      if (!roomRef.current) return
+      const key = `${track}:${param}`
+      const pending = trackParamRef.current.get(key) || {
+        value,
+        timer: null,
+        sentAt: 0,
+      }
+      pending.value = value
+      trackParamRef.current.set(key, pending)
+      const flush = (): void => {
+        pending.timer = null
+        pending.sentAt = Date.now()
+        send({ type: 'track_param', track, param, value: pending.value })
+      }
+      const wait = TRACK_PARAM_MS - (Date.now() - pending.sentAt)
+      if (wait <= 0 && !pending.timer) flush()
+      else if (!pending.timer) pending.timer = setTimeout(flush, wait)
+    },
+    [send],
+  )
 
   const playNote = useCallback(
     (note: number, on: boolean, velocity = 96, track = 0) => {
@@ -512,6 +566,23 @@ const Rooms: React.FC = () => {
           } else {
             setError(errorText || 'The room server rejected that request.')
           }
+        } else if (message.type === 'track_param') {
+          if (message.playerId !== selfPlayerIdRef.current)
+            audioRef.current
+              ?.setTrackParameter(
+                message.slot,
+                message.track,
+                message.param,
+                message.value,
+              )
+              .catch(() => {})
+        } else if (message.type === 'pattern_ask') {
+          if (message.playerId !== selfPlayerIdRef.current)
+            audioRef.current?.askPatterns(
+              message.slot,
+              message.asks,
+              message.quantize,
+            )
         } else if (message.type === 'time') {
           clockRef.current.sample(message.t, message.serverAt)
         } else if (message.type === 'server_closing') {
@@ -624,6 +695,10 @@ const Rooms: React.FC = () => {
           setError(
             'The FM-1 performance could not be synced. Check the USB connection and try again.',
           )
+        },
+        (track, param, value) => sendTrackParam(track, param, value),
+        (asks, quantize) => {
+          if (roomRef.current) send({ type: 'pattern_ask', asks, quantize })
         },
       )
       soundEditSharingRef.current.attachDevice(fm1Ref.current)

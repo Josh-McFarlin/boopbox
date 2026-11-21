@@ -369,6 +369,14 @@ export async function connectFm1(
   ) => void = () => {},
   onTransport: (transport: RoomTransport) => void = () => {},
   onPerformanceError: (error: unknown) => void = () => {},
+  /* a track setting (P_LEVEL, P_PAN, P_MUTE, ... id < 63) changed on the FM-1, as it changed */
+  onTrackParam: (
+    track: number,
+    param: number,
+    value: number,
+  ) => void = () => {},
+  /* patterns asked for on the FM-1 (PATTERNS, a scene; firmware protocol 14): per track the pattern, or -1, and PAT Q */
+  onPatternAsk: (asks: number[], quantize: number) => void = () => {},
 ): Promise<Fm1Connection> {
   if (!navigator.requestMIDIAccess)
     throw new Error('This browser does not support USB MIDI access.')
@@ -401,7 +409,29 @@ export async function connectFm1(
       () => {}
     let performanceErrorReported = false
     let lastTransport: RoomTransport | null = null
+    let lastPats: { playing: number; asked: number }[] | null = null
     link.onPush = (frame): void => {
+      if (frame.cmd === CMD.PATS) {
+        const pats = parse[CMD.PATS](frame.a)
+        /* a request new since the last PATS goes to the room now, before the FM-1 makes it at its quantized moment */
+        const asks = pats.tracks.map(({ asked }, k) =>
+          asked >= 0 && asked !== lastPats?.[k].asked ? asked : -1,
+        )
+        if (asks.some((ask) => ask >= 0)) onPatternAsk(asks, pats.quantize)
+        /* a change made: the performance (currentPattern) follows */
+        if (
+          !lastPats ||
+          pats.tracks.some(({ playing }, k) => playing !== lastPats![k].playing)
+        ) {
+          globalThis.clearTimeout(refreshTimer)
+          refreshTimer = globalThis.setTimeout(
+            async () => refreshPerformance(),
+            300,
+          )
+        }
+        lastPats = pats.tracks
+        return
+      }
       if (frame.cmd === CMD.RELOAD) {
         const reload = parse[CMD.RELOAD](frame.a)
         sharedVoices.delete(reload.track)
@@ -428,6 +458,11 @@ export async function connectFm1(
       } else if (frame.cmd === CMD.TRACK_CHANGED) {
         change = parse[CMD.TRACK_CHANGED](frame.a)
       } else {
+        return
+      }
+      if (change.id < 63) {
+        if (Number.isSafeInteger(change.value))
+          onTrackParam(change.track, change.id, change.value)
         return
       }
       const sharedVoice = sharedVoices.get(change.track)
@@ -477,8 +512,9 @@ export async function connectFm1(
           'This room needs current BoopBox firmware with eight tracks and supported sound controls.',
         )
       }
+      /* bit 2: PATS (protocol 14); older firmware answers 3 and the room follows its patterns by the performance */
       const watch = parse[CMD.WATCH](
-        await link.request(req.watch(3), { retries: 1 }),
+        await link.request(req.watch(7), { retries: 1 }),
       )
       if ((watch.on & 3) !== 3) {
         throw new Error(
