@@ -14,7 +14,10 @@
  * the UI: the scope buffers (audio.c, the mix at 22 kHz, as if MASTER were all the way up: the picture does not follow
  * the volume knob), the tracks' peaks (fx.c / drums.c, as the TRACKS meters read them), the notes that started (voice.c
  * vis_hit, vis_keys) and the transport clock. Drawn in the main loop, every other frame, in two bands of 120 rows (the
- * canvas holds 124): no cost to the audio. */
+ * canvas holds 124): no cost to the audio. Drawn anti-aliased (vg.c, after h1's gfx.c: soft edges, glows, light beams,
+ * dithered gradients), the motion on springs that follow the real frame time; each band is sent to the panel only in
+ * the strips of 8 rows that changed since the last frame (vis_send). */
+#include "vg.c"                                     /* anti-aliased drawing (after h1's gfx.c, MIT) */
 #define VIS_N 6u
 #ifndef FELUCCA_VIS_STYLES
 #define FELUCCA_VIS_STYLES 0x3Fu                    /* the styles built in, a bit each (bit 0: PALMS); SELECT steps over
@@ -47,7 +50,11 @@ static struct {
     uint32_t free_q8, last_ms, ms;                  /* beats (1/256) when stopped; the clock (ms) */
     uint32_t drv, spd, lastb;                       /* the drive: beats (1/256) that slow to a stop; its speed (256: on) */
     vis_tile_t tile[24];
+    f32 dt;                                         /* this frame's time (s), for the springs */
+    f32 barf[32], barv[32];                         /* the spectrum on springs (0..1000) */
+    f32 sway, swayv;                                /* PALMS: the palms' lean, pushed by the mix */
 } vs;
+static uint32_t vis_sum[30];                        /* vis_send: each strip of 8 rows as the panel shows it (0: unknown) */
 /* the spectrum's 32 bands: bins of the 512-point FFT at 22 050 Hz (43 Hz each), 40 Hz .. 10 kHz */
 static const uint8_t VIS_EDGE[33] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 25, 29, 35,
                                      41, 49, 58, 69, 82, 98, 116, 138, 164, 195, 232};
@@ -104,101 +111,6 @@ UI_SMALL static uint32_t vis_rnd(uint32_t *s)                /* the same numbers
     return *s >> 16;
 }
 
-/* ---- drawing helpers (canvas coordinates; cv_oy picks the band) ---- */
-UI_SMALL static void vis_ellipse(int32_t cx, int32_t cy, int32_t rx, int32_t ry, uint16_t c)
-{
-    int32_t y;
-    if (rx < 1 || ry < 1)
-        return;
-    for (y = -ry; y <= ry; y++) {
-        int32_t w = 0;
-        while (w <= rx && (w * w) * (ry * ry) + (y * y) * (rx * rx) <= (rx * rx) * (ry * ry))
-            w++;
-        if (w)
-            cv_rect(cx - w + 1, cy + y, 2 * w - 1, 1, c);
-    }
-}
-/* a line w px wide (the extra width across the line's main direction) */
-UI_SMALL static void vis_wline(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t w, uint16_t c)
-{
-    int32_t i, v = (y1 > y0 ? y1 - y0 : y0 - y1) > (x1 > x0 ? x1 - x0 : x0 - x1);
-    for (i = -w / 2; i < w - w / 2; i++)
-        cv_line(x0 + (v ? i : 0), y0 + (v ? 0 : i), x1 + (v ? i : 0), y1 + (v ? 0 : i), c);
-}
-/* a polygon, points in 1/16 px (n <= 8), filled by scan lines (even-odd) inside the band */
-UI_SMALL static void vis_poly(const int32_t *px, const int32_t *py, uint32_t n, uint16_t c)
-{
-    int32_t y0 = 0x7FFFFFFF, y1 = -0x7FFFFFFF, y;
-    uint32_t i;
-    for (i = 0; i < n; i++) {
-        if (py[i] < y0) y0 = py[i];
-        if (py[i] > y1) y1 = py[i];
-    }
-    y0 = y0 >> 4;
-    y1 = (y1 + 15) >> 4;
-    if (y0 < -cv_oy) y0 = -cv_oy;
-    if (y1 > (int32_t)cv_h - cv_oy) y1 = (int32_t)cv_h - cv_oy;
-    for (y = y0; y < y1; y++) {
-        int32_t xs[8], m = 0, sy = y * 16 + 8, a, b;
-        for (i = 0; i < n && m < 8; i++) {
-            uint32_t j = (i + 1u) % n;
-            if ((py[i] <= sy && py[j] > sy) || (py[j] <= sy && py[i] > sy))
-                xs[m++] = px[i] + (sy - py[i]) * (px[j] - px[i]) / (py[j] - py[i]);
-        }
-        for (a = 1; a < m; a++)                     /* (a few points: insertion sort) */
-            for (b = a; b > 0 && xs[b - 1] > xs[b]; b--) {
-                int32_t t = xs[b]; xs[b] = xs[b - 1]; xs[b - 1] = t;
-            }
-        for (a = 0; a + 1 < m; a += 2)
-            cv_rect((xs[a] + 8) >> 4, y, ((xs[a + 1] + 8) >> 4) - ((xs[a] + 8) >> 4), 1, c);
-    }
-}
-/* a four-sided polygon, points in 1/16 px */
-UI_SMALL static void vis_quad(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3,
-                     uint16_t c)
-{
-    const int32_t px[4] = {x0, x1, x2, x3}, py[4] = {y0, y1, y2, y3};
-    vis_poly(px, py, 4u, c);
-}
-#define VQ(v) ((v) * 16)
-/* the sky: rows y0..y1, colour a to b */
-UI_SMALL static void vis_sky(int32_t y0, int32_t y1, uint32_t a, uint32_t b)
-{
-    int32_t y;
-    for (y = y0; y < y1; y++)
-        cv_rect(0, y, 240, 1, vis_mix(a, b, (y - y0) * 256 / (y1 - y0)));
-}
-UI_SMALL static void vis_stars(uint32_t n, uint32_t h, uint32_t s)
-{
-    while (n--) {
-        uint32_t x = vis_rnd(&s) % 240u, y = vis_rnd(&s) % h, g = 120u + vis_rnd(&s) % 110u;
-        cv_pset((int32_t)x, (int32_t)y, RGB(g, g, g));
-    }
-}
-/* the sun, centre (cx, cy), radius r, above row clip: colour a at the top to b, the lower half striped */
-UI_SMALL static void vis_sun(int32_t cx, int32_t cy, int32_t r, int32_t clip, uint32_t a, uint32_t b)
-{
-    int32_t y;
-    for (y = cy - r; y < cy + r && y < clip; y++) {
-        int32_t d = y - cy, q = d + r / 4, w = 0;
-        if (q > 0 && q % 8 < q / 9 + 1)
-            continue;                               /* the stripes, wider lower down */
-        while ((w + 1) * (w + 1) <= r * r - d * d)
-            w++;
-        cv_rect(cx - w, y, 2 * w + 1, 1, vis_mix(a, b, (d + r) * 128 / r));
-    }
-}
-/* the floor's rows in perspective: p 0 (the horizon hz) .. 256 (the bottom) */
-UI_SMALL static int32_t vis_floor_y(int32_t hz, int32_t p) { return hz + (239 - hz) * p * p / 65536; }
-/* the grid: 25 lines to the horizon (fan: their spread at the bottom), n across it, moving down with ph (0..255) */
-UI_SMALL static void vis_grid(int32_t hz, uint32_t ph, int32_t n, int32_t fan, uint16_t c)
-{
-    int32_t k;
-    for (k = -12; k <= 12; k++)
-        cv_line(120 + k * 6, hz, 120 + k * fan, 239, c);
-    for (k = 0; k < n; k++)
-        cv_rect(0, vis_floor_y(hz, (k * 256 + (int32_t)ph) / n), 240, 1, c);
-}
 /* the scope snapshot from a rising zero crossing: the wave stands still */
 UI_SMALL static uint32_t vis_trig(void)
 {
@@ -331,6 +243,7 @@ UI_SMALL static void vis_update(void)
     if (dt > 200u)
         dt = 200u;
     vs.ms += dt;
+    vs.dt = (f32)(dt ? dt : 1u) * 0.001f;
     dq = dt * (uint32_t)song.g[G_BPM] * 256u / 60000u;
     vs.free_q8 += dq;
     if (song.playing) {
@@ -356,6 +269,7 @@ UI_SMALL static void vis_update(void)
         }
     }
     vs.peak = mpk;
+    vg_spring(&vs.sway, &vs.swayv, (f32)vs.mlv * 0.001f * vg_sin((f32)vs.drv * (1.0f / 512.0f)), 4.0f, vs.dt);
     {                                               /* the wave's scale follows the peak */
         int32_t target = mpk < 1600 ? 1600 : mpk;
         vs.scale += (target - vs.scale) / 5;
@@ -374,6 +288,7 @@ UI_SMALL static void vis_update(void)
                 vs.capv[i] = (int16_t)(vs.capv[i] + 4);
                 vs.cap[i] = (int16_t)(vs.cap[i] > vs.capv[i] ? vs.cap[i] - vs.capv[i] : 0);
             }
+            vg_spring(&vs.barf[i], &vs.barv[i], (f32)vs.bar[i], 38.0f, vs.dt);
         }
         /* FLYOVER: a row every other frame, the newest in front. Playing, the ground always moves (silent bars: flat
          * rows); stopped, it moves on while a note sounds and until the last peak has gone off the back, then holds */
@@ -390,68 +305,217 @@ UI_SMALL static void vis_update(void)
     }
 }
 
+/* ---- drawing helpers (screen coordinates; vg.c clips to the band) ---- */
+#define VW VC(255, 255, 255)
+#define VCYAN VC(40, 220, 255)
+#define VPINK VC(230, 50, 170)
+#define VGOLD VC(255, 220, 70)
+#define VFLOOR VC(8, 0, 18)
+UI_SMALL static f32 vis_t(void) { return (f32)vs.ms * 0.001f; }
+UI_SMALL static uint32_t vis_tcol(uint32_t t) { return t < NTRK ? vg_565(UI_COL[t]) : VPINK; }
+/* stars, twinkling; a few with a halo */
+UI_SMALL static void vis_stars(uint32_t n, uint32_t h, uint32_t s)
+{
+    f32 t = vis_t();
+    while (n--) {
+        f32 x = (f32)(vis_rnd(&s) % 2400u) * 0.1f, y = (f32)(vis_rnd(&s) % (h * 10u)) * 0.1f;
+        uint32_t k = vis_rnd(&s);
+        f32 b = 0.35f + (f32)(k % 100u) * 0.0055f;
+        f32 tw = 0.7f + 0.3f * vg_sin(t * (0.25f + (f32)(k % 7u) * 0.09f) + (f32)(k % 97u) * 0.0103f);
+        vg_mode(VG_ADD);
+        vg_disc(x, y, k % 9u ? 0.5f : 0.85f, VC(225, 228, 255), b * tw);
+        if (!(k % 13u))
+            vg_glow(x, y, 4.5f, VC(150, 160, 255), 0.3f * tw);
+        vg_mode(VG_PAINT);
+    }
+}
+/* a filled ellipse, row by row (soft at the sides) */
+UI_SMALL static void vis_ellipse(f32 cx, f32 cy, f32 rx, f32 ry, uint32_t c, f32 a)
+{
+    int32_t y;
+    if (rx < 0.5f || ry < 0.5f)
+        return;
+    for (y = vg_ifloor(cy - ry); y <= (int32_t)(cy + ry) + 1; y++) {
+        f32 d = ((f32)y - cy) / ry, w2 = 1.0f - d * d;
+        if (w2 > 0.0f) {
+            f32 hw = rx * vg_sqrt(w2);
+            vg_rect(cx - hw + 0.5f, (f32)y, 2.0f * hw, 1.0f, c, a * (w2 < 0.15f ? w2 / 0.15f : 1.0f));
+        }
+    }
+}
+/* the sun, centre (cx, cy), radius r, above row clip: colour a at the top to b, the lower half striped; a haze around */
+UI_SMALL static void vis_sun(f32 cx, f32 cy, f32 r, int32_t clip, uint32_t a, uint32_t b, uint32_t haze)
+{
+    int32_t y;
+    vg_mode(VG_ADD);
+    vg_glow(cx, cy, r * 2.1f, haze, 0.42f);
+    vg_mode(VG_PAINT);
+    for (y = vg_ifloor(cy - r); y <= (int32_t)(cy + r) && y < clip; y++) {
+        f32 d = (f32)y - cy, w2 = r * r - d * d, q = d + r * 0.25f, hw;
+        if (w2 <= 0.0f)
+            continue;
+        if (q > 0.0f && q - 8.0f * (f32)vg_ifloor(q * 0.125f) < q / 9.0f + 1.0f)
+            continue;                               /* the stripes, wider lower down */
+        hw = vg_sqrt(w2);
+        vg_rect(cx - hw + 0.5f, (f32)y, 2.0f * hw, 1.0f, vg_mix(a, b, (d + r) / (2.0f * r)), 1.0f);
+    }
+}
+/* the floor's rows in perspective: p 0 (the horizon hz) .. 1 (the bottom) */
+UI_SMALL static f32 vis_floor(f32 hz, f32 p) { return hz + (239.0f - hz) * p * p; }
+/* the grid: 25 lines to the horizon (fan: their spread at the bottom), n across it moving down with ph (0..1); fainter
+ * with distance, a glow on the horizon */
+UI_SMALL static void vis_grid(f32 hz, f32 ph, int32_t n, f32 fan, uint32_t c, f32 a)
+{
+    int32_t k;
+    vg_mode(VG_ADD);
+    vg_beam(-20.0f, hz, 260.0f, hz, 10.0f, 10.0f, c, 0.45f * a, 0.45f * a, 1.0f);
+    for (k = -12; k <= 12; k++)
+        vg_beam(120.0f + (f32)k * 6.0f, hz, 120.0f + (f32)k * fan, 240.0f, 0.9f, 1.8f, c, 0.12f * a, 0.95f * a, 0.0f);
+    for (k = 0; k < n; k++) {
+        f32 p = ((f32)k + ph) / (f32)n, y = vis_floor(hz, p);
+        vg_line(-2.0f, y, 242.0f, y, 0.5f + 1.3f * p, c, (0.15f + 0.85f * p) * a);
+    }
+    vg_mode(VG_PAINT);
+}
+/* a smooth curve through n points (Catmull-Rom, sub steps a span) into out: the points written */
+UI_SMALL static int32_t vis_smooth(const f32 *xy, int32_t n, int32_t sub, f32 *out)
+{
+    int32_t i, j, m = 0;
+    for (i = 0; i + 1 < n; i++) {
+        const f32 *p0 = xy + 2 * (i ? i - 1 : i), *p1 = xy + 2 * i, *p2 = xy + 2 * (i + 1), *p3 = xy + 2 * (i + 2 < n ? i + 2 : i + 1);
+        for (j = 0; j < sub; j++) {
+            f32 t = (f32)j / (f32)sub, t2 = t * t, t3 = t2 * t;
+            out[m * 2] = 0.5f * (2.0f * p1[0] + (p2[0] - p0[0]) * t + (2.0f * p0[0] - 5.0f * p1[0] + 4.0f * p2[0] - p3[0]) * t2 +
+                                 (3.0f * p1[0] - p0[0] - 3.0f * p2[0] + p3[0]) * t3);
+            out[m * 2 + 1] = 0.5f * (2.0f * p1[1] + (p2[1] - p0[1]) * t + (2.0f * p0[1] - 5.0f * p1[1] + 4.0f * p2[1] - p3[1]) * t2 +
+                                     (3.0f * p1[1] - p0[1] - 3.0f * p2[1] + p3[1]) * t3);
+            m++;
+        }
+    }
+    out[m * 2] = xy[2 * (n - 1)], out[m * 2 + 1] = xy[2 * (n - 1) + 1];
+    return m + 1;
+}
+/* a neon polyline: a halo, the tube, a white-hot core */
+UI_SMALL static void vis_neon_poly(const f32 *xy, int32_t n, f32 w, uint32_t c, f32 a)
+{
+    vg_mode(VG_ADD);
+    vg_poly(xy, n, w * 2.6f, vg_scale(c, 0.22f), a);
+    vg_mode(VG_MAX);
+    vg_poly(xy, n, w, c, a);
+    vg_poly(xy, n, w * 0.4f, vg_mix(c, VW, 0.75f), a);
+    vg_mode(VG_PAINT);
+}
+
+/* the ground under a curve (xy: n points, x rising), down to row yb: a column at a time (no seams), its top edge soft,
+ * the colour from ca at the curve to cb at yb */
+UI_SMALL static void vis_under(const f32 *xy, int32_t n, f32 yb, uint32_t ca, uint32_t cb)
+{
+    int32_t x, i = 0, y;
+    for (x = vg_imax(0, (int32_t)xy[0]); x < 240 && (f32)x <= xy[2 * (n - 1)]; x++) {
+        f32 yt, fr;
+        while (i + 2 < n && xy[2 * (i + 1)] < (f32)x)
+            i++;
+        fr = xy[2 * i + 2] > xy[2 * i] ? ((f32)x - xy[2 * i]) / (xy[2 * i + 2] - xy[2 * i]) : 0.0f;
+        yt = xy[2 * i + 1] + (xy[2 * i + 3] - xy[2 * i + 1]) * vg_sat(fr);
+        vg_level(1.0f);
+        vg_rgb(ca);
+        vg_put(x, vg_ifloor(yt + 0.5f), vg_cov((f32)vg_ifloor(yt + 0.5f) + 0.5f - yt));
+        for (y = vg_imax(vg_ifloor(yt + 0.5f) + 1, -vg.oy); (f32)y < yb && y < vg.h - vg.oy; y++) {
+            vg_rgb(vg_mix(ca, cb, ((f32)y - yt) / (yb - yt)));
+            vg_put(x, y, 256);
+        }
+    }
+}
+
 /* ---- the styles (each draws the whole screen; called once per band) ---- */
-/* PALMS: the mix's wave is the sea's front wave at sunset; the sun's reflection shimmers with the mix */
+/* a palm: the trunk a tapered curve from (bx, 239) through (mx, 150) to its crown (tx, ty), leaning by sway; six fronds
+ * that droop and swing a little more than the crown */
+UI_SMALL static void vis_palm(f32 bx, f32 mx, f32 tx, f32 ty, f32 lean, f32 sway)
+{
+    static const int8_t FROND[6][2] = {{-36, 6}, {-22, -6}, {-2, -10}, {20, -6}, {36, 4}, {40, 16}};
+    const uint32_t dark = VC(10, 0, 15);
+    f32 px = bx, py = 239.0f, cx = tx + sway * 10.0f * lean, f;
+    int32_t i;
+    for (i = 1; i <= 10; i++) {                     /* the trunk: a quadratic, 8 px wide at the root, 4 at the crown */
+        f32 t = (f32)i * 0.1f, u = 1.0f - t;
+        f32 qx = u * u * bx + 2.0f * u * t * mx + t * t * cx, qy = u * u * 239.0f + 2.0f * u * t * 150.0f + t * t * ty;
+        vg_beam(px, py, qx, qy, 8.0f - 4.0f * (t - 0.1f), 8.0f - 4.0f * t, dark, 1.0f, 1.0f, 0.0f);
+        px = qx, py = qy;
+    }
+    for (i = 0; i < 6; i++) {                       /* the fronds: curves out and down, tapering to a point */
+        f32 ex = cx + (f32)FROND[i][0] + sway * 14.0f * lean, ey = ty + (f32)FROND[i][1] + 6.0f;
+        f32 mxf = (cx + ex) * 0.5f, myf = ty + (f32)FROND[i][1] * 0.5f - 12.0f, ox = cx, oy = ty;
+        for (f = 0.125f; f <= 1.001f; f += 0.125f) {
+            f32 u = 1.0f - f, qx = u * u * cx + 2.0f * u * f * mxf + f * f * ex, qy = u * u * ty + 2.0f * u * f * myf + f * f * ey;
+            vg_beam(ox, oy, qx, qy, 5.0f * (1.125f - f), 5.0f * (1.0f - f) + 0.6f, dark, 1.0f, 1.0f, 0.0f);
+            ox = qx, oy = qy;
+        }
+    }
+    vg_disc(cx, ty + 1.0f, 3.5f, dark, 1.0f);
+}
+/* PALMS: the mix's wave is the sea's front wave at sunset; the sun's reflection shimmers with the mix; the palms sway */
 UI_SMALL static void vis_palms(void)
 {
-    static const int8_t FROND[6][2] = {{-33, 0}, {-19, -8}, {0, -11}, {19, -8}, {33, 0}, {38, 10}};
-    int32_t x, k, y, py = 0, i0 = (int32_t)vis_trig(), sc = vs.scale > 1600 ? vs.scale : 1600;
-    vis_sky(0, 126, RGB(40, 0, 60), RGB(255, 110, 80));
-    vis_sun(120, 112, 48, 126, RGB(255, 240, 140), RGB(255, 80, 90));
-    vis_sky(126, 240, RGB(60, 20, 90), RGB(10, 0, 30));
-    for (k = 0; k < 10; k++) {
-        int32_t w = 44 - k * 16 / 5, xo = (isin(vs.ms * 3u / 2u + (uint32_t)k * 277u) * (vs.mlv * 6 / 1000)) >> 15;
-        cv_rect(120 - w + xo, 129 + k * k / 2, 2 * w, 2, vis_mix(RGB(255, 220, 120), RGB(255, 80, 110), k * 26));
+    f32 xy[2 * 121], t = vis_t();
+    int32_t x, k, i0 = (int32_t)vis_trig(), sc = vs.scale > 1600 ? vs.scale : 1600;
+    vg_vgrad(0, 126, VC(40, 0, 60), VC(255, 110, 80));
+    vis_stars(24u, 50u, 7u);
+    vis_sun(120.0f, 112.0f, 48.0f, 126, VC(255, 240, 140), VC(255, 80, 90), VC(255, 120, 80));
+    vg_vgrad(126, 240, VC(60, 20, 90), VC(10, 0, 30));
+    vg_mode(VG_ADD);
+    vg_beam(-10.0f, 126.0f, 250.0f, 126.0f, 5.0f, 5.0f, VC(255, 120, 90), 0.5f, 0.5f, 1.0f);
+    for (k = 0; k < 10; k++) {                      /* the reflection: streaks that shimmer with the mix */
+        f32 w = 44.0f - (f32)k * 3.2f, xo = vg_sin(t * 0.24f + (f32)k * 0.27f) * (f32)vs.mlv * 0.006f;
+        f32 y = 129.0f + (f32)(k * k) * 0.5f;
+        vg_beam(120.0f - w + xo, y, 120.0f + w + xo, y, 2.2f, 2.2f, vg_mix(VC(255, 220, 120), VC(255, 80, 110), (f32)k * 0.1f),
+                0.75f - (f32)k * 0.05f, 0.75f - (f32)k * 0.05f, 0.4f);
     }
-    for (k = 0; k < 3; k++)                         /* the swells behind */
-        for (x = 0; x < 240; x += 3) {
-            y = 140 + k * 10 + ((isin((uint32_t)(x * 15 + k * 163) + vs.ms / 4u) * 2) >> 15);
-            if (x)
-                cv_line(x - 3, py, x, y, vis_mix(RGB(70, 40, 130), RGB(40, 30, 100), k * 85));
-            py = y;
+    vg_mode(VG_PAINT);
+    for (k = 0; k < 3; k++) {                       /* the swells behind */
+        for (x = 0; x <= 80; x++) {
+            xy[x * 2] = (f32)(x * 3);
+            xy[x * 2 + 1] = 140.0f + (f32)(k * 10) + 2.0f * vg_sin((f32)(x * 45 + k * 163) / 1024.0f + t * 0.25f);
         }
-    for (x = 0; x < 240; x++) {                     /* the front wave: the mix, sample for sample */
-        y = clamp(190 - vis_l[i0 + x] * 40 / sc, 140, 236);
-        cv_rect(x, y, 1, 240 - y, RGB(20, 4, 44));
-        if (x) {
-            for (k = 1; k < 5; k++)
-                cv_line(x - 1, py + k * 8, x, y + k * 8, vis_mix(0, V_CYAN, 108 - k * 20));
-            vis_wline(x - 1, py + 1, x, y + 1, 2, V_CYAN);
-            cv_line(x - 1, py - 1, x, y - 1, RGB(220, 250, 255));
-        }
-        py = y;
+        vg_mode(VG_MAX);
+        vg_poly(xy, 81, 1.2f, vg_mix(VC(90, 50, 160), VC(50, 36, 120), (f32)k * 0.33f), 1.0f);
     }
-    for (k = 0; k < 2; k++) {                       /* two palms leaning in */
-        int32_t bx = k ? 218 : 22, mx = k ? 192 : 50, tx = k ? 189 : 53, f;
-        vis_wline(bx, 239, mx, 150, 6, RGB(10, 0, 15));
-        vis_wline(mx, 150, tx, 46, 6, RGB(10, 0, 15));
-        for (f = 0; f < 6; f++) {
-            int32_t ex = tx + FROND[f][0], ey = 46 + FROND[f][1], fx = (tx + ex) / 2, fy = (46 + ey) / 2 - 8;
-            vis_wline(tx, 46, fx, fy, 4, RGB(10, 0, 15));
-            vis_wline(fx, fy, ex, ey, 4, RGB(10, 0, 15));
-        }
+    vg_mode(VG_PAINT);
+    for (x = 0; x <= 120; x++) {                    /* the front wave: the mix, sample for sample */
+        f32 y = 190.0f - (f32)vis_l[i0 + x * 2] * 40.0f / (f32)sc;
+        xy[x * 2] = (f32)(x * 2);
+        xy[x * 2 + 1] = vg_clampf(y, 140.0f, 236.0f);
     }
+    vis_under(xy, 121, 240.0f, VC(26, 8, 56), VC(10, 0, 28));                 /* the water under it */
+    for (k = 4; k >= 1; k--) {                      /* the foam lines under the crest */
+        f32 sh[2 * 121];
+        for (x = 0; x <= 120; x++)
+            sh[x * 2] = xy[x * 2], sh[x * 2 + 1] = xy[x * 2 + 1] + (f32)(k * 8);
+        vg_mode(VG_MAX);
+        vg_poly(sh, 121, 1.0f, VCYAN, 0.5f - (f32)k * 0.09f);
+    }
+    vis_neon_poly(xy, 121, 2.2f, VCYAN, 1.0f);
+    vis_palm(22.0f, 50.0f, 53.0f, 46.0f, -1.0f, vs.sway);
+    vis_palm(218.0f, 192.0f, 189.0f, 46.0f, 1.0f, vs.sway);
 }
 /* shapes from a table, around (ox, oy): {op << 4 | colour, then coordinates}: op 0 a rect (x, y, w, h), 1 a quad (four
  * points), 2 an ellipse (cx, cy, rx, ry); the colours from pal */
-UI_SMALL static void vis_shapes(const int8_t (*p)[9], uint32_t n, int32_t ox, int32_t oy, const uint16_t *pal)
+UI_SMALL static void vis_shapes(const int8_t (*p)[9], uint32_t n, f32 ox, f32 oy, const uint32_t *pal)
 {
     for (; n--; p++) {
         const int8_t *s = *p;
-        uint16_t c = pal[s[0] & 15];
+        uint32_t c = pal[s[0] & 15];
         if (s[0] >> 4 == 0)
-            cv_rect(ox + s[1], oy + s[2], s[3], s[4], c);
+            vg_rect(ox + s[1], oy + s[2], s[3], s[4], c, 1.0f);
         else if (s[0] >> 4 == 2)
-            vis_ellipse(ox + s[1], oy + s[2], s[3], s[4], c);
+            vis_ellipse(ox + s[1], oy + s[2], s[3], s[4], c, 1.0f);
         else
-            vis_quad(VQ(ox + s[1]), VQ(oy + s[2]), VQ(ox + s[3]), VQ(oy + s[4]), VQ(ox + s[5]), VQ(oy + s[6]),
-                     VQ(ox + s[7]), VQ(oy + s[8]), c);
+            vg_quad(ox + s[1], oy + s[2], ox + s[3], oy + s[4], ox + s[5], oy + s[6], ox + s[7], oy + s[8], c, 1.0f);
     }
 }
 /* NIGHT DRIVE's car from behind, at (cx, by): the body, then its lights and window, then the wing */
-static const uint16_t VIS_CARPAL[11] = {RGB(6, 0, 12), RGB(10, 6, 14), RGB(46, 16, 72), RGB(28, 8, 46), V_CYAN,
-                                        RGB(230, 230, 240), RGB(20, 10, 30), RGB(70, 70, 80), RGB(30, 10, 50),
-                                        RGB(36, 12, 58), RGB(28, 155, 179)};
+static const uint32_t VIS_CARPAL[11] = {VC(6, 0, 12), VC(10, 6, 14), VC(46, 16, 72), VC(28, 8, 46), VC(40, 220, 255),
+                                        VC(230, 230, 240), VC(20, 10, 30), VC(70, 70, 80), VC(30, 10, 50),
+                                        VC(36, 12, 58), VC(28, 155, 179)};
 static const int8_t VIS_CAR[16][9] = {
     {0x20, 0, 0, 56, 6}, {0x01, -56, -12, 12, 12}, {0x01, 44, -12, 12, 12},                  /* shadow, tyres */
     {0x12, -50, -30, 50, -30, 48, -10, -48, -10}, {0x13, -48, -10, 48, -10, 44, -4, -44, -4},  /* body, bumper */
@@ -459,22 +523,27 @@ static const int8_t VIS_CAR[16][9] = {
     {0x27, -24, -7, 3, 2}, {0x27, 24, -7, 3, 2}, {0x18, -38, -31, 38, -31, 26, -46, -26, -46}, /* exhausts, cabin */
     {0x04, -26, -46, 53, 1}, {0x09, -54, -36, 109, 4}, {0x0A, -54, -36, 109, 1},             /* roof, the wing */
     {0x09, -37, -32, 3, 2}, {0x09, 35, -32, 3, 2}};                                          /* its posts */
-/* the car; a kick flares its lights onto the road */
-UI_SMALL static void vis_car(int32_t cx, int32_t by, int kick)
+/* the car; the kick (0..1) flares its lights onto the road */
+UI_SMALL static void vis_car(f32 cx, f32 by, f32 kick)
 {
-    uint16_t red = kick ? RGB(255, 50, 60) : RGB(190, 20, 40);
+    uint32_t red = vg_mix(VC(190, 20, 40), VC(255, 60, 70), kick);
     int32_t i;
-    for (i = 0; kick && i < 6; i++)
-        cv_rect(cx - 46 - i * 4, by + 2 + i * 2, 93 + i * 8, 1, vis_mix(RGB(25, 15, 40), RGB(150, 20, 40), 154 - i * 26));
+    vg_mode(VG_ADD);                                /* the lights on the road */
+    vg_beam(cx, by + 2.0f, cx, by + 14.0f, 96.0f, 130.0f, VC(160, 20, 50), 0.25f + 0.5f * kick, 0.0f, 1.0f);
+    vg_mode(VG_PAINT);
     vis_shapes(VIS_CAR, 11u, cx, by, VIS_CARPAL);
     for (i = 0; i < 10; i++) {                      /* the light bar, louvred */
-        cv_rect(cx - 44 + i * 9, by - 26, 8, 7, red);
-        cv_rect(cx - 44 + i * 9, by - 23, 8, 1, vis_mix(0, red, 154));
+        vg_rect(cx - 44.0f + (f32)(i * 9), by - 26.0f, 8.0f, 7.0f, red, 1.0f);
+        vg_rect(cx - 44.0f + (f32)(i * 9), by - 23.0f, 8.0f, 1.0f, vg_scale(red, 0.6f), 1.0f);
     }
-    for (i = 0; kick && i < 9; i += 8)
-        cv_rect(cx - 46, by - 27 + i, 93, 1, RGB(255, 120, 130));
-    for (i = 0; i < 13; i++)                        /* the rear window: the sunset in it */
-        cv_rect(cx - 24 - i * 6 / 7, by - 44 + i, 49 + i * 12 / 7, 1, vis_mix(RGB(255, 190, 80), RGB(200, 40, 150), i * 20));
+    vg_mode(VG_ADD);
+    vg_beam(cx - 46.0f, by - 23.0f, cx + 46.0f, by - 23.0f, 12.0f + 10.0f * kick, 12.0f + 10.0f * kick, VC(255, 40, 60),
+            0.35f + 0.5f * kick, 0.35f + 0.5f * kick, 1.0f);
+    vg_mode(VG_PAINT);
+    {                                               /* the rear window: the sunset in it */
+        const f32 q[8] = {cx - 24.0f, by - 44.5f, cx + 25.0f, by - 44.5f, cx + 36.0f, by - 31.5f, cx - 35.0f, by - 31.5f};
+        vg_fillg(q, 4, VC(255, 190, 80), by - 44.0f, VC(200, 40, 150), by - 32.0f, 1.0f);
+    }
     vis_shapes(VIS_CAR + 11, 5u, cx, by, VIS_CARPAL);
 }
 /* NIGHT DRIVE: the city is the spectrum (a cap light on each roof), the road runs with the beat (three lane stripes and
@@ -482,140 +551,184 @@ UI_SMALL static void vis_car(int32_t cx, int32_t by, int kick)
 #define VIS_DRIVE_SPD 3u
 UI_SMALL static void vis_drive(void)
 {
-    uint32_t ph = (vs.drv * VIS_DRIVE_SPD) & 255u, ph2 = (vs.drv * VIS_DRIVE_SPD / 2u) & 255u;
+    f32 ph = (f32)((vs.drv * VIS_DRIVE_SPD) & 255u) / 256.0f, ph2 = (f32)((vs.drv * VIS_DRIVE_SPD / 2u) & 255u) / 256.0f;
     int32_t i, j;
-    vis_sky(0, 120, RGB(5, 0, 25), RGB(70, 10, 70));
+    vg_vgrad(0, 121, VC(5, 0, 25), VC(70, 10, 70));
     vis_stars(40u, 80u, 2u);
-    vis_sun(120, 104, 40, 120, V_GOLD, RGB(255, 50, 130));
+    vis_sun(120.0f, 104.0f, 40.0f, 120, VGOLD, VC(255, 50, 130), VC(255, 70, 140));
     for (i = 0; i < 30; i++) {                      /* a building a band */
-        int32_t k = i * 32 / 30, h = 6 + vs.bar[k] * 62 / 1000, ch = 6 + vs.cap[k] * 62 / 1000, x = i * 8;
+        int32_t k = i * 32 / 30;
+        f32 h = 6.0f + vs.barf[k] * 0.062f, ch = 6.0f + (f32)vs.cap[k] * 0.062f, x = (f32)(i * 8);
         uint32_t s = (uint32_t)i * 977u;
-        cv_rect(x, 120 - h, 8, h, RGB(15, 5, 30));
-        for (j = 0; 120 - h + 3 + j * 5 < 118; j++)
+        vg_rect(x, 120.0f - h, 8.0f, h, VC(15, 5, 30), 1.0f);
+        vg_mode(VG_ADD);
+        for (j = 0; 120.0f - h + 3.0f + (f32)(j * 5) < 118.0f; j++)
             if (vis_rnd(&s) % 5u < 2u)
-                cv_pset(x + 3, 120 - h + 3 + j * 5, (i + j) & 1 ? V_CYAN : V_PINK);
-        cv_rect(x + 2, 120 - ch - 2, 4, 2, RGB(255, 90, 160));
+                vg_rect(x + 3.0f, 120.0f - h + 3.0f + (f32)(j * 5), 1.0f, 1.0f, (i + j) & 1 ? VCYAN : VPINK, 0.9f);
+        vg_rect(x + 2.0f, 120.0f - ch - 2.0f, 4.0f, 2.0f, VC(255, 90, 160), 1.0f);
+        vg_glow(x + 4.0f, 120.0f - ch - 1.0f, 5.0f, VC(255, 60, 150), 0.35f);
+        vg_mode(VG_PAINT);
     }
-    cv_rect(0, 120, 240, 120, RGB(10, 0, 20));
-    vis_quad(VQ(110), VQ(120), VQ(130), VQ(120), VQ(239), VQ(239), VQ(0), VQ(239), RGB(25, 15, 40));
-    vis_wline(110, 120, 0, 239, 2, V_PINK);
-    vis_wline(130, 120, 239, 239, 2, V_PINK);
+    vg_vgrad(120, 240, VC(10, 0, 20), VC(16, 2, 30));
+    {
+        const f32 road[8] = {110.0f, 120.0f, 130.0f, 120.0f, 240.0f, 240.0f, 0.0f, 240.0f};
+        vg_fillg(road, 4, VC(20, 12, 34), 120.0f, VC(34, 20, 52), 240.0f, 1.0f);
+    }
+    vg_neon(110.0f, 120.0f, 0.0f, 240.0f, 1.8f, VPINK, 1.0f);
+    vg_neon(130.0f, 120.0f, 240.0f, 240.0f, 1.8f, VPINK, 1.0f);
     for (i = -1; i < 6; i++) {                      /* the lane stripes */
-        int32_t s0 = (i * 256 + (int32_t)ph) / 6, s1 = s0 + 21, y0, y1;
-        if (s1 <= 0 || s0 >= 256)
+        f32 s0 = ((f32)i + ph) / 6.0f, s1 = s0 + 0.082f, y0, y1;
+        if (s1 <= 0.0f || s0 >= 1.0f)
             continue;
-        s0 = s0 < 0 ? 0 : s0, s1 = s1 > 256 ? 256 : s1;
-        y0 = vis_floor_y(120, s0), y1 = vis_floor_y(120, s1);
-        vis_quad(VQ(120) - 16 - s0 / 4, VQ(y0), VQ(120) + 16 + s0 / 4, VQ(y0), VQ(120) + 16 + s1 / 4, VQ(y1),
-                 VQ(120) - 16 - s1 / 4, VQ(y1), V_GOLD);
+        s0 = vg_maxf(s0, 0.0f), s1 = vg_minf(s1, 1.0f);
+        y0 = vis_floor(120.0f, s0), y1 = vis_floor(120.0f, s1);
+        vg_quad(119.0f - s0 * 4.0f, y0, 121.0f + s0 * 4.0f, y0, 121.0f + s1 * 4.0f, y1, 119.0f - s1 * 4.0f, y1, VGOLD, 1.0f);
     }
     for (i = -1; i < 4; i++) {                      /* the posts along the road, at half the stripes' pace */
-        int32_t s = (i * 256 + (int32_t)ph2) / 4, y, sp, h, r;
-        if (s <= 0 || s >= 256)
+        f32 s = ((f32)i + ph2) / 4.0f, y, sp, h, r;
+        if (s <= 0.0f || s >= 1.0f)
             continue;
-        y = vis_floor_y(120, s), sp = 10 + s * 130 / 256, h = 3 + s * 28 / 256, r = 1 + s * 2 / 256;
+        y = vis_floor(120.0f, s), sp = 10.0f + s * 130.0f, h = 3.0f + s * 28.0f, r = 0.8f + s * 2.2f;
         for (j = -1; j <= 1; j += 2) {
-            vis_wline(120 + j * sp, y, 120 + j * sp, y - h, 1 + s * 3 / 256, RGB(90, 40, 110));
-            vis_ellipse(120 + j * sp, y - h, r, r, V_CYAN);
+            f32 px = 120.0f + (f32)j * sp;
+            vg_line(px, y, px, y - h, 0.8f + s * 2.5f, VC(90, 40, 110), 1.0f);
+            vg_mode(VG_ADD);
+            vg_glow(px, y - h, r * 5.0f, VCYAN, 0.5f);
+            vg_disc(px, y - h, r, VC(190, 250, 255), 1.0f);
+            vg_mode(VG_PAINT);
         }
     }
-    vis_car(120, 226, vs.kick > 100);
+    vis_car(120.0f, 226.0f, (f32)vs.kick / 255.0f);
 }
 /* HORIZON: the spectrum as a neon range (32 bands, caps that fall) over a grid running down a line a beat; on each beat
  * tiles light up in the colours of the tracks playing and ride the grid towards you */
 UI_SMALL static void vis_horizon(void)
 {
-    int32_t x, k, top[32];
+    f32 pt[2 * 32], ridge[2 * 94], sh[2 * 94];
+    int32_t x, k, n;
     uint32_t i;
-    vis_sky(0, 150, RGB(6, 0, 22), RGB(70, 14, 80));
+    vg_vgrad(0, 151, VC(6, 0, 22), VC(70, 14, 80));
     vis_stars(60u, 110u, 10u);
-    for (k = 0; k < 10; k++)                        /* the haze on the horizon */
-        cv_rect(0, 150 - k, 240, 1, vis_mix(RGB(70, 14, 80), RGB(255, 70, 170), (10 - k) * 13));
+    vg_mode(VG_ADD);
+    vg_glow(120.0f, 158.0f, 120.0f, VC(140, 20, 110), 0.5f);
+    vg_mode(VG_PAINT);
     for (k = 0; k < 32; k++)
-        top[k] = 147 - vs.bar[k] * 118 / 1000;
-    for (x = 0; x < 240; x++) {                     /* the range: filled, with contours inside */
-        int32_t u = clamp((x - 4) * 2, 0, 31 * 15), b = u / 15, y = b < 31 ? top[b] + (top[b + 1] - top[b]) * (u % 15) / 15 : top[31];
-        cv_rect(x, y, 1, 150 - y, RGB(16, 4, 34));
-        for (k = 1; k < 6 && y + k * 7 < 150; k++)
-            cv_pset(x, y + k * 7, vis_mix(RGB(16, 4, 34), RGB(150, 40, 170), 128 - k * 20));
+        pt[k * 2] = 4.0f + (f32)k * 7.5f, pt[k * 2 + 1] = 147.0f - vg_clampf(vs.barf[k], 0.0f, 1000.0f) * 0.118f;
+    pt[0] = -6.0f, pt[62] = 246.0f;                 /* (out to the edges) */
+    n = vis_smooth(pt, 32, 3, ridge);
+    vis_under(ridge, n, 151.0f, VC(34, 10, 64), VC(14, 2, 30));                /* the range */
+    for (k = 1; k < 6; k++) {                       /* contours inside */
+        for (x = 0; x < n; x++)
+            sh[x * 2] = ridge[x * 2], sh[x * 2 + 1] = vg_minf(ridge[x * 2 + 1] + (f32)(k * 7), 152.0f);
+        vg_mode(VG_MAX);
+        vg_poly(sh, n, 0.9f, VC(150, 40, 170), 0.55f - (f32)k * 0.09f);
     }
-    for (k = 0; k < 31; k++) {                      /* its edge, neon */
-        int32_t x0 = 4 + k * 15 / 2, x1 = 4 + (k + 1) * 15 / 2;
-        vis_wline(x0, top[k] + 1, x1, top[k + 1] + 1, 4, vis_mix(0, V_CYAN, 115));
-        vis_wline(x0, top[k], x1, top[k + 1], 2, V_CYAN);
-        cv_line(x0, top[k], x1, top[k + 1], RGB(210, 250, 255));
+    vg_mode(VG_PAINT);
+    vis_neon_poly(ridge, n, 2.4f, VCYAN, 1.0f);
+    vg_mode(VG_ADD);
+    for (k = 0; k < 32; k++) {                      /* the caps */
+        f32 cx = 4.0f + (f32)k * 7.5f, cy = 144.5f - (f32)vs.cap[k] * 0.118f;
+        vg_glow(cx, cy, 6.0f, VCYAN, 0.35f);
+        vg_rect(cx - 2.0f, cy - 0.5f, 5.0f, 2.0f, VW, 1.0f);
     }
-    for (k = 0; k < 32; k++)
-        cv_rect(2 + k * 15 / 2, 144 - vs.cap[k] * 118 / 1000, 5, 2, 0xFFFFu);
-    cv_rect(0, 150, 240, 90, V_FLOOR);
+    vg_mode(VG_PAINT);
+    vg_vgrad(151, 240, VC(10, 0, 22), VFLOOR);
     for (i = 0; i < 24u; i++) {                     /* the dance floor */
         const vis_tile_t *t = &vs.tile[i];
-        int32_t age = (int32_t)(vs.drv - t->born), p0, p1, y0, y1, w0, w1;
+        int32_t age = (int32_t)(vs.drv - t->born);
+        f32 p0, p1, y0, y1, w0, w1, fade;
+        uint32_t c;
         if (!t->born || age < 0 || age >= 640)
             continue;
-        p0 = (t->row * 256 + age) / 10, p1 = p0 + 26;
-        if (p0 >= 256)
+        p0 = ((f32)(t->row * 256 + age) / 10.0f) / 256.0f, p1 = vg_minf(p0 + 0.1f, 1.0f);
+        if (p0 >= 1.0f)
             continue;
-        y0 = vis_floor_y(150, p0), y1 = vis_floor_y(150, p1 > 256 ? 256 : p1);
-        w0 = 6 + 34 * (y0 - 150) / 89, w1 = 6 + 34 * (y1 - 150) / 89;
-        vis_quad(VQ(120 + t->col * w0), VQ(y0), VQ(120 + (t->col + 1) * w0), VQ(y0), VQ(120 + (t->col + 1) * w1), VQ(y1),
-                 VQ(120 + t->col * w1), VQ(y1), vis_mix(V_FLOOR, t->trk < NTRK ? UI_COL[t->trk] : V_PINK, 256 - age * 256 / 640));
+        y0 = vis_floor(151.0f, p0), y1 = vis_floor(151.0f, p1);
+        w0 = 6.0f + 34.0f * (y0 - 151.0f) / 89.0f, w1 = 6.0f + 34.0f * (y1 - 151.0f) / 89.0f;
+        fade = 1.0f - (f32)age / 640.0f;
+        c = vis_tcol(t->trk);
+        vg_quad(120.0f + (f32)t->col * w0, y0, 120.0f + (f32)(t->col + 1) * w0, y0, 120.0f + (f32)(t->col + 1) * w1, y1,
+                120.0f + (f32)t->col * w1, y1, c, fade * 0.85f);
+        vg_mode(VG_ADD);
+        vg_glow(120.0f + ((f32)t->col + 0.5f) * (w0 + w1) * 0.5f, (y0 + y1) * 0.5f, (w0 + w1) * 0.7f, c, fade * 0.35f);
+        vg_mode(VG_PAINT);
     }
-    vis_grid(150, vs.drv & 255u, 10, 40, RGB(200, 40, 160));
+    vis_grid(151.0f, (f32)(vs.drv & 255u) / 256.0f, 10, 40.0f, VC(200, 40, 160), 1.0f);
 }
-/* FLYOVER: a column of the terrain, colour by height (cyan, pink, gold), dimmer further back */
-UI_SMALL static uint16_t vis_fly_col(int32_t v, int32_t z)
+/* FLYOVER: a column of the terrain, colour by height (cyan, pink, gold) */
+UI_SMALL static uint32_t vis_fly_col(int32_t v)
 {
-    uint16_t c = v < 128 ? vis_mix(V_CYAN, V_PINK, v * 2) : vis_mix(V_PINK, V_GOLD, (v - 128) * 2);
-    return vis_mix(0, c, 64 + z * 3 / 4);
+    return v < 128 ? vg_mix(VCYAN, VPINK, (f32)v / 128.0f) : vg_mix(VPINK, VGOLD, (f32)(v - 128) / 128.0f);
+}
+/* FLYOVER: a pixel of a line at (x, y) with cover a (0..1), only above what is in front (hor) */
+UI_SMALL static void vis_fly_px(const int16_t *hor, int32_t x, int32_t y, f32 a)
+{
+    if ((uint32_t)x < 240u && y < hor[x])
+        vg_put(x, y, vg_cov(a));
 }
 /* FLYOVER: the spectrum over time as a terrain, mirrored (bass in the middle), flat ground out to the edges; the
- * newest row in front. Hidden lines: drawn front to back, each pixel only above what is already in front (hor) */
+ * newest row in front. Hidden lines: drawn front to back, each pixel only above what is already in front (hor); the
+ * lines anti-aliased across their direction, fainter with distance */
 UI_SMALL static void vis_flyover(void)
 {
-    int16_t hor[240], ry[240], px[81], py[81], pv[81], qx[81], qy[81];
-    int32_t a, c, x, k, z, n = 0;
-    vis_sky(0, 70, RGB(0, 0, 10), RGB(30, 0, 50));
+    int16_t hor[240], ry[240];
+    f32 px[81], py[81], qx[81], qy[81];
+    int16_t pv[81];
+    int32_t a, c, x, z, n = 0;
+    vg_vgrad(0, 71, VC(0, 0, 10), VC(30, 0, 50));
     vis_stars(70u, 64u, 21u);
-    for (k = 0; k < 8; k++)
-        cv_rect(0, 70 - k, 240, 1, vis_mix(RGB(30, 0, 50), RGB(60, 180, 255), (8 - k) * 11));
-    cv_rect(0, 70, 240, 170, RGB(4, 0, 12));
+    vg_mode(VG_ADD);
+    vg_beam(-20.0f, 70.0f, 260.0f, 70.0f, 16.0f, 16.0f, VC(60, 180, 255), 0.55f, 0.55f, 1.0f);
+    vg_mode(VG_PAINT);
+    vg_vgrad(71, 240, VC(4, 0, 14), VC(2, 0, 8));
     for (x = 0; x < 240; x++)
         hor[x] = 240;
     for (a = 0; a < 15; a++) {                      /* the rows, front (the newest) to back */
+        f32 fog;
         z = 256 - (a * 256 + (vs.flyh ? 0 : 128)) / 14;
         if (z <= 10)
             break;
+        fog = 0.3f + 0.7f * (f32)z / 256.0f;
         for (c = 0; c < 81; c++) {
             int32_t u = (c - 40) * 256 / 24, au = u < 0 ? -u : u, v = au <= 256 ? vis_fly[(vs.fly0 + a) % VIS_FLY][au * 32 / 257] : 0;
             pv[c] = (int16_t)v;
-            px[c] = (int16_t)(120 + u * (84 + z * 44 / 256) / 256);
-            py[c] = (int16_t)(76 + 160 * z / 256 * z / 256 - v * (v + 256) / 512 * (6 + 64 * z / 256) / 256);
+            px[c] = 120.0f + (f32)u * (84.0f + (f32)z * 44.0f / 256.0f) / 256.0f;
+            py[c] = 76.0f + 160.0f * (f32)(z * z) / 65536.0f - (f32)(v * (v + 256)) / 512.0f * (6.0f + 64.0f * (f32)z / 256.0f) / 256.0f;
         }
         for (x = 0; x < 240; x++)
             ry[x] = 240;
-        for (c = 0; c < 81; c++) {                  /* the lines to the row in front, under what hides them */
-            if (n) {                                /* (only this band's rows of it; its colour once) */
-                int32_t y0 = py[c], y1 = qy[c], dy = y1 - y0, y = y0 > -cv_oy ? y0 : -cv_oy;
-                uint16_t lc = vis_mix(0, vis_fly_col(pv[c], z), 154);
-                for (; y <= y1 && y < 120 - cv_oy; y++) {
-                    x = dy ? px[c] + (qx[c] - px[c]) * (y - y0) / dy : px[c];
-                    if ((uint32_t)x < 240u && y < hor[x])
-                        cv_pset(x, y, lc);
+        for (c = 0; c < 81; c++) {
+            if (n) {                                /* the line to the row in front, under what hides it */
+                f32 dy = qy[c] - py[c];
+                int32_t y, y0 = vg_ifloor(py[c]), y1 = (int32_t)qy[c];
+                vg_rgb(vis_fly_col(pv[c]));
+                vg_level(0.6f * fog);
+                for (y = y0; y <= y1; y++) {
+                    f32 xf = dy > 0.5f ? px[c] + (qx[c] - px[c]) * ((f32)y - py[c]) / dy : px[c], fr;
+                    int32_t xi = vg_ifloor(xf);
+                    fr = xf - (f32)xi;
+                    vis_fly_px(hor, xi, y, 1.0f - fr);
+                    vis_fly_px(hor, xi + 1, y, fr);
                 }
             }
             if (c) {                                /* the row itself */
-                int32_t x0 = px[c - 1], x1 = px[c];
-                uint16_t rc = vis_fly_col((pv[c - 1] + pv[c]) / 2, z);
-                for (x = x0 < 0 ? 0 : x0; x <= x1 && x < 240; x++) {
-                    int32_t y = x1 > x0 ? py[c - 1] + (py[c] - py[c - 1]) * (x - x0) / (x1 - x0) : py[c];
-                    if (y < hor[x]) {
-                        cv_pset(x, y, a ? rc : 0xFFFFu);
-                        if (!a)
-                            cv_pset(x, y + 1, rc);
+                f32 x0 = px[c - 1], x1 = px[c];
+                int32_t xa = vg_ifloor(x0), xb = (int32_t)x1;
+                vg_rgb(a ? vis_fly_col((pv[c - 1] + pv[c]) / 2) : VW);
+                vg_level(a ? fog : 1.0f);
+                for (x = xa < 0 ? 0 : xa; x <= xb && x < 240; x++) {
+                    f32 yf = x1 > x0 ? py[c - 1] + (py[c] - py[c - 1]) * ((f32)x - x0) / (x1 - x0) : py[c], fr;
+                    int32_t yi = vg_ifloor(yf);
+                    fr = yf - (f32)yi;
+                    vis_fly_px(hor, x, yi, 1.0f - fr);
+                    vis_fly_px(hor, x, yi + 1, a ? fr : 1.0f);
+                    if (!a) {                       /* the front row: a white crest on its colour */
+                        vg_rgb(vis_fly_col((pv[c - 1] + pv[c]) / 2));
+                        vis_fly_px(hor, x, yi + 2, fr + 0.5f);
+                        vg_rgb(VW);
                     }
-                    if (y < ry[x])
-                        ry[x] = (int16_t)y;
+                    if (yi < ry[x])
+                        ry[x] = (int16_t)yi;
                 }
             }
         }
@@ -627,63 +740,58 @@ UI_SMALL static void vis_flyover(void)
         n = 1;
     }
 }
-/* DENSE CITY: an isometric box on the ground diamond centred (cx, cy), half-width w, h high: two faces and the roof */
-UI_SMALL static void vis_box(int32_t cx, int32_t cy, int32_t w, int32_t h, uint16_t l, uint16_t r, uint16_t t, uint16_t e)
+/* DENSE CITY: an isometric box on the ground diamond centred (cx, cy), half-width w, h high: two faces, the roof, its
+ * edges lit in e */
+UI_SMALL static void vis_box(f32 cx, f32 cy, f32 w, f32 h, uint32_t l, uint32_t r, uint32_t t, uint32_t e)
 {
-    int32_t i;
-    if (cy + w / 2 < -cv_oy || cy - h - w / 2 >= 120 - cv_oy)
+    if (cy + w * 0.5f < (f32)(-vg.oy) - 2.0f || cy - h - w * 0.5f >= (f32)(vg.h - vg.oy) + 2.0f)
         return;                                     /* (not in this band) */
-    for (i = 0; i < w; i++) {                       /* a column at a time, from the sides in: the faces, the roof */
-        int32_t d = i / 2;
-        cv_rect(cx - w + i, cy - h + d, 1, h + 1, l);
-        cv_rect(cx + w - 1 - i, cy - h + d, 1, h + 1, r);
-        cv_rect(cx - w + i, cy - h - d, 1, 2 * d + 1, t);
-        cv_rect(cx + w - 1 - i, cy - h - d, 1, 2 * d + 1, t);
-    }
-    cv_line(cx - w, cy - h, cx, cy - w / 2 - h, e);
-    cv_line(cx, cy - w / 2 - h, cx + w, cy - h, e);
-    cv_line(cx + w, cy - h, cx, cy + w / 2 - h, e);
-    cv_line(cx, cy + w / 2 - h, cx - w, cy - h, e);
-    cv_rect(cx - w, cy - h, 1, h + 1, vis_mix(0, e, 154));
-    cv_rect(cx, cy + w / 2 - h, 1, h + 1, e);
-    cv_rect(cx + w, cy - h, 1, h + 1, vis_mix(0, e, 154));
+    vg_quad(cx - w, cy - h, cx, cy + w * 0.5f - h, cx, cy + w * 0.5f, cx - w, cy, l, 1.0f);
+    vg_quad(cx, cy + w * 0.5f - h, cx + w, cy - h, cx + w, cy, cx, cy + w * 0.5f, r, 1.0f);
+    vg_quad(cx - w, cy - h, cx, cy - w * 0.5f - h, cx + w, cy - h, cx, cy + w * 0.5f - h, t, 1.0f);
+    vg_mode(VG_MAX);
+    vg_line(cx - w, cy - h, cx, cy - w * 0.5f - h, 1.0f, e, 1.0f);
+    vg_line(cx, cy - w * 0.5f - h, cx + w, cy - h, 1.0f, e, 1.0f);
+    vg_line(cx + w, cy - h, cx, cy + w * 0.5f - h, 1.0f, e, 1.0f);
+    vg_line(cx, cy + w * 0.5f - h, cx - w, cy - h, 1.0f, e, 1.0f);
+    vg_line(cx - w, cy - h, cx - w, cy, 1.0f, e, 0.6f);
+    vg_line(cx, cy + w * 0.5f - h, cx, cy + w * 0.5f, 1.0f, e, 1.0f);
+    vg_line(cx + w, cy - h, cx + w, cy, 1.0f, e, 0.6f);
+    vg_mode(VG_PAINT);
 }
 /* DENSE CITY: track t's tower (NTRK: the master), 24 floors lit to its level, yellow then red at the top as VU METERS,
- * the peak floor white */
-UI_SMALL static void vis_tower(int32_t cx, int32_t cy, uint32_t t)
+ * the peak floor white, a glow on its roof as loud as it is */
+UI_SMALL static void vis_tower(f32 cx, f32 cy, uint32_t t)
 {
-    uint16_t c = t < NTRK ? UI_COL[t] : RGB(235, 235, 255);
+    uint32_t c = t < NTRK ? vg_565(UI_COL[t]) : VC(235, 235, 255);
     int32_t on = vs.vu[t] * 24 / 1000, pk = vs.pk[t] * 24 / 1000, f, k;
-    vis_box(cx, cy, 12, 100, RGB(24, 6, 46), RGB(14, 2, 30), RGB(30, 8, 56), c);
+    vis_box(cx, cy, 12.0f, 100.0f, VC(24, 6, 46), VC(14, 2, 30), VC(30, 8, 56), c);
     for (f = 0; f < 24; f++) {
-        uint16_t col = f < on ? (f >= 22 ? RGB(255, 60, 50) : f >= 18 ? RGB(255, 200, 40) : c) : RGB(40, 14, 64);
-        int32_t y = cy - f * 25 / 6 - 1;
-        if (y + 7 < -cv_oy || y - 1 >= 120 - cv_oy)
+        uint32_t col = f < on ? (f >= 22 ? VC(255, 60, 50) : f >= 18 ? VC(255, 200, 40) : c) : VC(40, 14, 64);
+        f32 y = cy - (f32)(f * 25) / 6.0f - 1.0f;
+        if (y + 7.0f < (f32)(-vg.oy) || y - 1.0f >= (f32)(vg.h - vg.oy))
             continue;                               /* (not in this band) */
         if (f == pk && pk >= on && pk > 0)
-            col = 0xFFFFu;
-        for (k = 0; k < 3; k++) {                   /* three windows on each face, two px high */
-            int32_t u0 = k * 4 + 1, u1 = k * 4 + 3;
-            uint16_t sh = f < on || col == 0xFFFFu ? vis_mix(0, col, 179) : col;
-            cv_line(cx - 12 + u0, y + u0 / 2, cx - 12 + u1, y + u1 / 2, col);
-            cv_line(cx - 12 + u0, y + u0 / 2 - 1, cx - 12 + u1, y + u1 / 2 - 1, col);
-            cv_line(cx + u0, y + 6 - u0 / 2, cx + u1, y + 6 - u1 / 2, sh);
-            cv_line(cx + u0, y + 5 - u0 / 2, cx + u1, y + 5 - u1 / 2, sh);
+            col = VW;
+        vg_mode(VG_MAX);
+        for (k = 0; k < 3; k++) {                   /* three windows on each face */
+            f32 u0 = (f32)(k * 4 + 1), u1 = (f32)(k * 4 + 3);
+            uint32_t sh = f < on || col == VW ? vg_scale(col, 0.7f) : col;
+            vg_line(cx - 12.0f + u0, y + u0 * 0.5f - 0.5f, cx - 12.0f + u1, y + u1 * 0.5f - 0.5f, 1.6f, col, 1.0f);
+            vg_line(cx + u0, y + 5.5f - u0 * 0.5f, cx + u1, y + 5.5f - u1 * 0.5f, 1.6f, sh, 1.0f);
         }
+        vg_mode(VG_PAINT);
     }
+    vg_mode(VG_ADD);
+    vg_glow(cx, cy - 100.0f, 10.0f + (f32)vs.vu[t] * 0.02f, c, 0.15f + (f32)vs.vu[t] * 0.0005f);
+    vg_mode(VG_PAINT);
 }
-/* DENSE CITY: a line of the ground's grid, from (x0, y0) down 1 px a row and 2 across (dir -1 left, 1 right): only the
- * rows below the horizon and in this band, only on the screen */
-UI_SMALL static void vis_grid_iso(int32_t x0, int32_t y0, int32_t dir, uint16_t c)
+/* DENSE CITY: a line of the ground's grid, from (x0, y0) down 1 px a row and 2 across (dir -1 left, 1 right), below the
+ * horizon */
+UI_SMALL static void vis_grid_iso(f32 x0, f32 y0, f32 dir, uint32_t c)
 {
-    int32_t y = y0 > 105 ? y0 : 105;
-    if (y < -cv_oy)
-        y = -cv_oy;
-    for (; y < 120 - cv_oy; y++) {
-        int32_t x = x0 + dir * 2 * (y - y0);
-        if (x >= -1 && x < 240)
-            cv_rect(x, y, 2, 1, c);
-    }
+    f32 ya = vg_maxf(y0, 105.0f);
+    vg_line(x0 + dir * 2.0f * (ya - y0), ya, x0 + dir * 2.0f * (241.0f - y0), 241.0f, 1.0f, c, 0.8f);
 }
 /* DENSE CITY: a packed block at night, isometric; the eight tracks' towers and the master's in a zigzag (none hides
  * another), lit floors = the level, the peak floor white; searchlights behind sweep with the beat */
@@ -692,27 +800,28 @@ UI_SMALL static void vis_city(void)
     static const int8_t SPOT[9][3] = {{0, 4, 0}, {0, 3, 1}, {1, 3, 2}, {1, 2, 3}, {2, 2, NTRK}, {2, 1, 4}, {3, 1, 5},
                                       {3, 0, 6}, {4, 0, 7}};
     int32_t k, s, gx;
-    vis_sky(0, 104, RGB(10, 0, 30), RGB(110, 20, 90));
+    vg_vgrad(0, 105, VC(10, 0, 30), VC(110, 20, 90));
     vis_stars(50u, 54u, 5u);
+    vg_mode(VG_ADD);
     for (k = 0; k < 2; k++) {                       /* the searchlights */
-        int32_t bx = k ? 170 : 70;
-        uint32_t a = 768u + (uint32_t)((isin(vs.drv + (uint32_t)k * 261u) * 80) >> 15);
-        int32_t ex = bx + ((icos(a) * 260) >> 15), ey = 144 + ((isin(a) * 260) >> 15);
-        int32_t ox = (-isin(a) * 14) >> 15, oy = (icos(a) * 14) >> 15;
-        const int32_t px[3] = {VQ(bx), VQ(ex + ox), VQ(ex - ox)}, py[3] = {VQ(144), VQ(ey + oy), VQ(ey - oy)};
-        vis_poly(px, py, 3u, vis_mix(RGB(110, 20, 90), 0xFFFFu, 41));
-        cv_line(bx, 144, ex, ey, vis_mix(RGB(110, 20, 90), 0xFFFFu, 77));
+        f32 bx = k ? 170.0f : 70.0f, an = 0.75f + 0.078f * vg_sin((f32)vs.drv / 1024.0f + (f32)k * 0.255f);
+        f32 ex = bx + 260.0f * vg_cos(an), ey = 144.0f + 260.0f * vg_sin(an);
+        vg_beam(bx, 144.0f, ex, ey, 4.0f, 34.0f, VC(255, 220, 255), 0.4f, 0.0f, 1.0f);
+        vg_beam(bx, 144.0f, ex, ey, 1.5f, 6.0f, VW, 0.35f, 0.0f, 1.0f);
     }
-    for (k = 0; k < 4; k++)
-        cv_rect(0, 104 - k * 3, 240, 1, vis_mix(RGB(110, 20, 90), RGB(255, 80, 170), 64 - k * 13));
-    cv_rect(0, 104, 240, 136, V_FLOOR);
+    vg_beam(-20.0f, 104.0f, 260.0f, 104.0f, 14.0f, 14.0f, VC(255, 80, 170), 0.45f, 0.45f, 1.0f);
+    vg_mode(VG_PAINT);
+    vg_vgrad(105, 240, VFLOOR, VC(4, 0, 10));
+    vg_mode(VG_ADD);
     for (k = -3; k < 9; k++) {                      /* the ground's grid, below the horizon */
-        vis_grid_iso(120 + (k + 3) * 25, 124 + (k - 4) * 25 / 2, -1, RGB(90, 16, 90));
-        vis_grid_iso(120 - (k + 3) * 25, 124 + (k - 4) * 25 / 2, 1, RGB(90, 16, 90));
+        vis_grid_iso(120.0f + (f32)((k + 3) * 25), 124.0f + (f32)((k - 4) * 25) * 0.5f, -1.0f, VC(90, 16, 90));
+        vis_grid_iso(120.0f - (f32)((k + 3) * 25), 124.0f + (f32)((k - 4) * 25) * 0.5f, 1.0f, VC(90, 16, 90));
     }
+    vg_mode(VG_PAINT);
     for (s = -6; s <= 12; s++)                      /* the block, back to front */
         for (gx = -3; gx <= 6; gx++) {
-            int32_t gy = s - gx, d = gx - gy, cx = 120 + d * 25, cy = 124 + s * 25 / 2, t = -1, h, f;
+            int32_t gy = s - gx, d = gx - gy, t = -1, h, f;
+            f32 cx = 120.0f + (f32)(d * 25), cy = 124.0f + (f32)(s * 25) * 0.5f;
             uint32_t r = (uint32_t)(gx * 16 + gy + 100) * 2654435761u;
             if (gy < -3 || gy > 6 || d < -5 || d > 5)
                 continue;
@@ -723,21 +832,24 @@ UI_SMALL static void vis_city(void)
                 vis_tower(cx, cy, (uint32_t)t);
             } else if (s >= -2 && s <= 3) {         /* the city behind, its windows lit here and there */
                 h = 18 + (int32_t)(vis_rnd(&r) % 45u) + (3 - s) * 4;
-                if (cx > 60 && cx < 180 && h > cy - 58)
-                    h = cy - 58 > 8 ? cy - 58 : 8;
-                vis_box(cx, cy, 12, h, RGB(20, 6, 40), RGB(12, 2, 26), RGB(28, 8, 50), RGB(70, 24, 100));
+                if (cx > 60.0f && cx < 180.0f && (f32)h > cy - 58.0f)
+                    h = cy - 58.0f > 8.0f ? (int32_t)(cy - 58.0f) : 8;
+                vis_box(cx, cy, 12.0f, (f32)h, VC(20, 6, 40), VC(12, 2, 26), VC(28, 8, 50), VC(70, 24, 100));
+                vg_mode(VG_ADD);
                 for (f = 0; f < h / 7; f++)
                     for (k = 0; k < 6; k++)
                         if (vis_rnd(&r) % 100u < 18u) {
-                            int32_t u = (k % 3) * 4 + 2, wx = k < 3 ? cx - 12 + u : cx + u;
-                            cv_rect(wx, (k < 3 ? cy + u / 2 : cy + 6 - u / 2) - f * 7 - 5, 1, 2,
-                                    k & 1 ? RGB(255, 190, 90) : (k & 2 ? RGB(120, 200, 255) : RGB(255, 110, 180)));
+                            f32 u = (f32)((k % 3) * 4 + 2), wx = k < 3 ? cx - 12.0f + u : cx + u;
+                            vg_rect(wx, (k < 3 ? cy + u * 0.5f : cy + 6.0f - u * 0.5f) - (f32)(f * 7) - 5.0f, 1.0f, 2.0f,
+                                    k & 1 ? VC(255, 190, 90) : (k & 2 ? VC(120, 200, 255) : VC(255, 110, 180)), 0.9f);
                         }
+                vg_mode(VG_PAINT);
             } else if (s >= 5 && s <= 7) {          /* low buildings in front, some with a neon sign */
                 h = 5 + (int32_t)(vis_rnd(&r) % 6u);
-                vis_box(cx, cy, 12, h, RGB(26, 8, 48), RGB(16, 4, 32), RGB(36, 12, 62), RGB(80, 30, 110));
+                vis_box(cx, cy, 12.0f, (f32)h, VC(26, 8, 48), VC(16, 4, 32), VC(36, 12, 62), VC(80, 30, 110));
                 if (vis_rnd(&r) & 1u)
-                    cv_line(cx - 10, cy + 1 - h / 2, cx - 3, cy + 4 - h / 2, vis_rnd(&r) & 1u ? V_PINK : V_CYAN);
+                    vg_neon(cx - 10.0f, cy + 1.0f - (f32)h * 0.5f, cx - 3.0f, cy + 4.5f - (f32)h * 0.5f, 1.0f,
+                            vis_rnd(&r) & 1u ? VPINK : VCYAN, 1.0f);
             }
         }
     for (k = 0; k < 9; k++) {                       /* the labels */
@@ -764,65 +876,73 @@ UI_SMALL static uint32_t vis_keygeo(uint32_t k, int32_t *x, int32_t *wd, int32_t
  * (the wall facing the middle and, below eye level, the roof: to (120, 96)), the black keys' flat in the gaps */
 UI_SMALL static void vis_keytower(uint32_t k)
 {
-    int32_t x, wd, h, y, it = vs.key[k];
-    uint32_t blk = vis_keygeo(k, &x, &wd, &h), lit = it > 5;
-    uint16_t c = UI_COL[vs.keyt[k] % NTRK];
-    int32_t x1 = x + wd, top = 200 - h;
-    uint16_t fr = lit ? vis_mix(0, c, 115 + it * 115 / 255) : blk ? RGB(8, 0, 20) : RGB(22, 6, 44);
-    uint16_t sd = lit ? vis_mix(0, fr, 154) : blk ? RGB(16, 4, 34) : RGB(32, 10, 58);
-    uint16_t rf = lit ? vis_mix(fr, 0xFFFFu, 64) : blk ? RGB(30, 10, 54) : RGB(52, 20, 86);
-    uint16_t ed = lit ? vis_mix(c, 0xFFFFu, it * 102 / 255) : blk ? RGB(50, 14, 70) : RGB(70, 24, 100);
-#define VB(p, e) (VQ(p) + VQ((e) - (p)) * 51 / 256)          /* towards the vanishing point by a fifth */
+    int32_t xi, wdi, hi;
+    uint32_t blk = vis_keygeo(k, &xi, &wdi, &hi), lit = vs.key[k] > 5;
+    f32 it = (f32)vs.key[k] / 255.0f, x = (f32)xi, wd = (f32)wdi, x1 = x + wd, top = 200.0f - (f32)hi, y;
+    uint32_t c = vg_565(UI_COL[vs.keyt[k] % NTRK]);
+    uint32_t fr = lit ? vg_scale(c, 0.45f + it * 0.45f) : blk ? VC(8, 0, 20) : VC(22, 6, 44);
+    uint32_t sd = lit ? vg_scale(fr, 0.6f) : blk ? VC(16, 4, 34) : VC(32, 10, 58);
+    uint32_t rf = lit ? vg_mix(fr, VW, 0.25f) : blk ? VC(30, 10, 54) : VC(52, 20, 86);
+    uint32_t ed = lit ? vg_mix(c, VW, it * 0.4f) : blk ? VC(50, 14, 70) : VC(70, 24, 100);
+#define VB(p, e) ((p) + ((e) - (p)) * 0.2f)        /* towards the vanishing point by a fifth */
     if (!blk) {
-        int32_t sx = x + x1 < 240 ? x1 : x;
-        vis_quad(VQ(sx), VQ(200), VQ(sx), VQ(top), VB(sx, 120), VB(top, 96), VB(sx, 120), VB(200, 96), sd);
-        for (y = top + 6; y < 196; y += 7)
-            cv_pset(sx + (120 - sx) * 51 / 512, y + (96 - y) * 51 / 512, lit ? vis_mix(c, 0xFFFFu, it * 77 / 255) : RGB(50, 20, 80));
-        if (top > 96)
-            vis_quad(VQ(x), VQ(top), VQ(x1), VQ(top), VB(x1, 120), VB(top, 96), VB(x, 120), VB(top, 96), rf);
+        f32 sx = x + x1 < 240.0f ? x1 + 0.5f : x - 0.5f;
+        vg_quad(sx, 200.0f, sx, top - 0.5f, VB(sx, 120.0f), VB(top - 0.5f, 96.0f), VB(sx, 120.0f), VB(200.0f, 96.0f), sd, 1.0f);
+        vg_mode(VG_ADD);
+        for (y = top + 6.0f; y < 196.0f; y += 7.0f)
+            vg_disc(sx + (120.0f - sx) * 0.1f, y + (96.0f - y) * 0.1f, 0.6f, lit ? vg_mix(c, VW, it * 0.3f) : VC(50, 20, 80), 0.8f);
+        vg_mode(VG_PAINT);
+        if (top > 96.0f)
+            vg_quad(x - 0.5f, top - 0.5f, x1 + 0.5f, top - 0.5f, VB(x1 + 0.5f, 120.0f), VB(top - 0.5f, 96.0f), VB(x - 0.5f, 120.0f),
+                    VB(top - 0.5f, 96.0f), rf, 1.0f);
     }
-    cv_rect(x, top, wd + 1, 200 - top, fr);
-    cv_rect(x, top, wd + 1, 1, blk ? rf : ed);
-    cv_rect(x, top, 1, 200 - top, ed);
-    cv_rect(x1, top, 1, 200 - top, blk ? sd : ed);
+    vg_rect(x, top, wd + 1.0f, 200.0f - top, fr, 1.0f);
+    vg_mode(VG_MAX);
+    vg_line(x, top, x1, top, 1.0f, blk ? rf : ed, 1.0f);
+    vg_line(x, top, x, 200.0f, 1.0f, ed, 1.0f);
+    vg_line(x1, top, x1, 200.0f, 1.0f, blk ? sd : ed, 1.0f);
+    vg_mode(VG_PAINT);
     if (!blk) {
         uint32_t s = k * 131u;
-        for (y = top + 6; y < 196; y += 7) {
+        vg_mode(VG_ADD);
+        for (y = top + 6.0f; y < 196.0f; y += 7.0f) {
             uint32_t on = lit || vis_rnd(&s) % 10u < 7u;
-            uint16_t wc = lit ? vis_mix(c, 0xFFFFu, it / 2) : RGB(70, 30, 100);
+            uint32_t wc = lit ? vg_mix(c, VW, it * 0.5f) : VC(70, 30, 100);
             if (on)
-                cv_pset(x + 3, y, wc), cv_pset(x1 - 3, y, wc);
+                vg_rect(x + 3.0f, y, 1.0f, 1.0f, wc, 0.9f), vg_rect(x1 - 3.0f, y, 1.0f, 1.0f, wc, 0.9f);
         }
+        vg_mode(VG_PAINT);
     }
-    if (it > 153)
-        cv_rect(x, top - 2, wd + 1, 3, 0xFFFFu);
+    if (it > 0.6f) {
+        vg_mode(VG_ADD);
+        vg_glow(x + wd * 0.5f, top, wd * 1.6f, c, it * 0.6f);
+        vg_rect(x, top - 1.5f, wd + 1.0f, 3.0f, VW, (it - 0.6f) * 2.5f);
+        vg_mode(VG_PAINT);
+    }
 }
 /* KEY CITY: the skyline as two octaves of keys: a note lights its tower in its track's colour, beaming into the sky and
  * shining on the wet street; a drum track's hits light the street lights */
 UI_SMALL static void vis_keycity(void)
 {
     static const uint8_t WPC[7] = {0, 2, 4, 5, 7, 9, 11};
-    int32_t k, i, y, x, wd, h;
-    vis_sky(0, 200, RGB(4, 0, 18), RGB(60, 10, 70));
+    int32_t k, i, x, wd, h;
+    vg_vgrad(0, 201, VC(4, 0, 18), VC(60, 10, 70));
     vis_stars(70u, 140u, 64u);
-    cv_rect(0, 200, 240, 40, RGB(6, 0, 16));
-    vis_grid(200, 0u, 4, 30, RGB(110, 20, 110));
+    vg_vgrad(200, 240, VC(10, 0, 24), VC(4, 0, 12));
+    vis_grid(200.0f, 0.0f, 4, 30.0f, VC(110, 20, 110), 0.8f);
+    vg_mode(VG_ADD);
     for (k = 0; k < 24; k++) {                      /* the beams and the reflections of the lit towers */
-        int32_t it = vs.key[k], top, cx, hw;
-        uint16_t c = UI_COL[vs.keyt[k] % NTRK];
-        if (it <= 5)
+        f32 it = (f32)vs.key[k] / 255.0f, top, cx;
+        uint32_t c = vg_565(UI_COL[vs.keyt[k] % NTRK]);
+        if (vs.key[k] <= 5)
             continue;
         vis_keygeo((uint32_t)k, &x, &wd, &h);
-        top = 200 - h, cx = x + wd / 2;
-        for (y = top - 2; y >= 0; y -= 2) {
-            int32_t q = (top - y) * 256 / top, f = (256 - q) * (256 - q) / 256;
-            hw = wd / 4 + 1 + q * 5 / 256;
-            cv_rect(cx - hw, y, 2 * hw + 1, 2, vis_mix(RGB(14, 2, 32), c, it * 141 / 255 * f / 256));
-            cv_rect(cx - 1, y, 3, 2, vis_mix(RGB(14, 2, 32), vis_mix(c, 0xFFFFu, 128), it * 204 / 255 * (256 - q) / 256));
-        }
-        for (y = 202; y < 238; y += 3)
-            cv_rect(x + 2, y, wd - 3, 1, vis_mix(RGB(6, 0, 16), c, it * 102 / 255 * (40 - (y - 200)) / 40));
+        top = 200.0f - (f32)h, cx = (f32)x + (f32)wd * 0.5f;
+        vg_beam(cx, top, cx, -4.0f, (f32)wd * 0.6f, (f32)wd * 0.6f + 12.0f, c, it * 0.55f, 0.0f, 1.0f);
+        vg_beam(cx, top, cx, -4.0f, 2.0f, 3.0f, vg_mix(c, VW, 0.5f), it * 0.8f, 0.0f, 1.0f);
+        vg_beam(cx, 201.0f, cx, 239.0f, (f32)wd, (f32)wd * 0.6f, c, it * 0.45f, 0.0f, 0.6f);
     }
+    vg_mode(VG_PAINT);
     for (i = 0; i < 7; i++) {                       /* the white keys' towers, the outer ones first */
         vis_keytower(WPC[i]);
         vis_keytower(12u + WPC[6 - i]);
@@ -830,23 +950,51 @@ UI_SMALL static void vis_keycity(void)
     for (k = 0; k < 24; k++)
         if ((0x54Au >> (k % 12)) & 1u)
             vis_keytower((uint32_t)k);
+    vg_mode(VG_ADD);
     for (i = 0; i < 2; i++)                         /* the street lights: the drum tracks */
         for (k = 0; k < 4; k++) {
-            int32_t lx = 10 + k * 60 + i * 30;
-            uint16_t c = UI_COL[vs.drumt[i] % NTRK];
-            if (vs.drum[i] > 128)
-                vis_ellipse(lx, 219, 6, 6, vis_mix(RGB(6, 0, 16), c, 150));
-            vis_ellipse(lx, 219, 3, 3, vis_mix(0, c, 77 + vs.drum[i] * 178 / 255));
+            f32 lx = (f32)(10 + k * 60 + i * 30), d = (f32)vs.drum[i] / 255.0f;
+            uint32_t c = vg_565(UI_COL[vs.drumt[i] % NTRK]);
+            vg_glow(lx, 219.0f, 6.0f + 12.0f * d, c, 0.2f + 0.5f * d);
+            vg_disc(lx, 219.0f, 2.5f, vg_mix(c, VW, d * 0.5f), 0.4f + 0.6f * d);
         }
+    vg_mode(VG_PAINT);
 }
 
+/* the band just drawn (screen rows y0..), to the panel: only its strips of 8 rows that changed since the last frame,
+ * each run of them in one transfer */
+UI_SMALL static void vis_send(uint32_t y0)
+{
+    uint32_t s, n = cv_h / 8u, run = 0, s0 = 0;
+    for (s = 0; s <= n; s++) {
+        int dirty = 0;
+        if (s < n) {
+            const uint32_t *w = (const uint32_t *)(const void *)&cv_px[s * 8u * 240u];
+            uint32_t i, hsum = 2166136261u, k = y0 / 8u + s;
+            for (i = 0; i < 8u * 240u / 2u; i++)
+                hsum = (hsum ^ w[i]) * 16777619u;
+            hsum |= 1u;                             /* (0 is "unknown") */
+            dirty = vis_sum[k] != hsum;
+            vis_sum[k] = hsum;
+        }
+        if (dirty && !run)
+            s0 = s, run = 1;
+        if (!dirty && run) {
+            lcd_blit(0, y0 + s0 * 8u, 240, (s - s0) * 8u, cv_px + s0 * 8u * 240u);
+            run = 0;
+        }
+    }
+}
 /* the visualiser, every other frame: the update, then both bands */
-UI_SMALL static void vis_draw(void)
+__attribute__((noinline)) UI_SMALL static void vis_draw(void)
 {
     uint32_t pass;
     if (!vis_shown_last || ui.force) {
+        uint32_t k;
         vis_shown_last = 1;
         lcd_clear();
+        for (k = 0; k < 30u; k++)
+            vis_sum[k] = 0;                         /* (the panel shows none of it now) */
     } else if (ui.frame & 1u) {
         return;
     }
@@ -854,6 +1002,7 @@ UI_SMALL static void vis_draw(void)
     for (pass = 0; pass < 2u; pass++) {
         cv_begin(240, 120, C_BLACK);
         cv_oy = -(int32_t)(pass * 120u);
+        vg_begin();
         switch (vis_style % VIS_N) {
         case 0: if (VIS_HAS(0)) vis_palms(); break;
         case 1: if (VIS_HAS(1)) vis_drive(); break;
@@ -883,7 +1032,7 @@ UI_SMALL static void vis_draw(void)
             }
         }
         cv_oy = 0;
-        cv_blit(0, pass * 120u);
+        vis_send(pass * 120u);
     }
     if (vis_name_t)
         vis_name_t--;
