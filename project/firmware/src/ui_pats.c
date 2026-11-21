@@ -160,9 +160,6 @@ UI_SMALL static void pats_key(uint32_t k)
     fmt_int(b + 8, w + 1);
     ui_say(b, song.playing ? " NEXT" : "");
 }
-UI_SMALL static uint32_t page_pos(uint32_t *n);      /* (ui_draw.c) */
-UI_SMALL static int32_t page_nb(int32_t d);
-UI_SMALL static const char *page_name(uint32_t i);
 /* the head (1.9.7): line 1 what it is about, left and right; line 2 what OCT+ and OCT- do here (before: the title in
  * large type, the OCT line at the bottom, where the page's tabs are now as on the other pages: pats_foot) */
 UI_SMALL static void pats_head(const char *r1, uint16_t c1, const char *r2, uint16_t c2)
@@ -212,10 +209,7 @@ UI_SMALL static void pats_pic(int32_t x, int32_t y, int32_t w, int32_t h, uint64
  * dot a page of the family, this one lit, as on the other SEQ pages (ui_draw.c draw_foot) */
 UI_SMALL static void pats_foot(const char *const *L, char (*v)[8])
 {
-    uint32_t k, n, i, at = page_pos(&n);
-    int32_t pv = page_nb(-1), nx = page_nb(1);
-    const char *nm = page_name(ui.page);
-    int32_t w = text_w(&FONT_S, nm) + 12, x = 120 - w / 2;
+    uint32_t k;
     cv_begin(240, 52, C_BLACK);
     if (ui.msg_t) {
         cv_rect(0, 2, 240, 30, C_WHITE);
@@ -228,14 +222,7 @@ UI_SMALL static void pats_foot(const char *const *L, char (*v)[8])
                     ui.hot_t && ui.hot_col == k ? C_WHITE : UI_G4);
         }
     }
-    cv_rect(x, 34, w, 16, UI_G1);
-    cv_text(x + 6, 34, &FONT_S, nm, C_WHITE);
-    if (pv >= 0)
-        cv_text(4, 34, &FONT_S, page_name((uint32_t)pv), UI_G3);
-    if (nx >= 0)
-        ui_text_r(34, page_name((uint32_t)nx), UI_G3);
-    for (i = 0; n > 1u && i < n; i++)
-        cv_rect(120 - (int32_t)n * 3 + (int32_t)i * 6 + 1, 50, 3, 2, i + 1u == at ? C_WHITE : C_DIM);
+    page_tabs(34);
     cv_blit(0, 188);
 }
 /* when the change asked for happens: "next in 3 beats", "at loop end" (playing), else "" */
@@ -723,14 +710,16 @@ UI_SMALL static void chords_screen_draw(void)
     previous = ui.msg_t ? ~sig : sig;
     cv_begin(240, 42, C_BLACK);                  /* the head: the key and scale asked for, when (42 rows: the two over the list too) */
     cv_glow(20, 38);                             /* (1.1.0) SYNTHWAVE: a glow over the rule */
-    cv_text(4, 4, &FONT_L, "CHORDS", C_WHITE);
+    /* (1.9.7) line 1: the key and scale asked for, when; line 2: what OCT+ and OCT- do (before: CHORDS in large type;
+     * the page's tabs are at the bottom now, as on the other pages) */
     str_cpy(b, N_HKEY[(uint32_t)clamp(song.g[G_HKEY], 0, 11)], 4);
     str_cpy(b + str_len(b), " ", 2);
     str_cpy(b + str_len(b), N_SCALE[(uint32_t)clamp(song.g[G_HSCL], 0, NSCALES - 1)], 6);
-    ui_text_r(4, b, UI_COL[2]);
+    cv_text(4, 4, &FONT_S, b, UI_COL[2]);
     str_cpy(b, "q ", 3);
     str_cpy(b + 2, QN[(uint32_t)clamp(song.g[G_HQ], 0, 2)], 6);
-    ui_text_r(20, b, UI_G3);
+    ui_text_r(4, b, UI_G3);
+    cv_text(4, 20, &FONT_S, "oct+ follow  oct- progression", UI_G4);
     cv_rule(0, 39, 240, UI_G1);
     cv_blit(0, 0);
     cv_begin(240, 124, C_BLACK);                 /* the chord now, the progression, the tracks */
@@ -763,9 +752,7 @@ UI_SMALL static void chords_screen_draw(void)
         cv_text(x + 16, 105, &FONT_S, is_drum(&trk[k]) ? " " : FL[f], k == sel ? C_BLACK : f ? C_WHITE : UI_G3);
     }
     cv_blit(0, 42);
-    lcd_fill(0, 166, 240, 36, C_BLACK);          /* (1.1.0) the rows under the tracks: what the page before drew there
-                                                  * (a graph, SYNTHWAVE's floor on FOLLOW) went on showing */
-    cv_begin(240, 38, C_BLACK);                  /* the knobs, or a message */
+    cv_begin(240, 36, C_BLACK);                  /* the knobs, or a message (1.9.7: up, under the tracks) */
     if (ui.msg_t) {
         cv_rect(0, 4, 240, 30, C_WHITE);
         ui_text_mid(11, ui.msg, C_BLACK);
@@ -778,6 +765,9 @@ UI_SMALL static void chords_screen_draw(void)
         fmt_int(v[3], (int32_t)n);
         knob_strip(L, v);
     }
+    cv_blit(0, 166);
+    cv_begin(240, 38, C_BLACK);                  /* (1.9.7) the page's tabs, as on the other pages */
+    page_tabs(19);
     cv_blit(0, 202);
 }
 UI_SMALL static void chords_screen_input(uint32_t pressed, uint32_t home)

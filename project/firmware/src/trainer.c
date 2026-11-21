@@ -1413,8 +1413,7 @@ UI_SMALL static void tr_act(const tr_card_t *c, char *b, uint32_t n)
 #define TR_MQ_W 236
 #define TR_MQ_HOLD 1200u
 #define TR_MQ_PX 25u
-static int32_t tr_mq_w = TR_MQ_W;                  /* (the line's room: less beside the screen's name, trainer_draw) */
-UI_SMALL static int32_t tr_mq_over(const char *s) { return text_w(&FONT_S, s) + 2 - tr_mq_w; }
+UI_SMALL static int32_t tr_mq_over(const char *s) { return text_w(&FONT_S, s) + 2 - TR_MQ_W; }
 UI_SMALL static uint32_t tr_mq_len(const char *s)
 {
     int32_t over = tr_mq_over(s);
@@ -1441,8 +1440,7 @@ UI_SMALL static void trainer_draw(void)
     const tr_card_t *c = tr_card();
     const tr_level_t *L;
     uint32_t el, sig, phase, h = lcd_clip_y, two = h > H_HEAD, mel = 0, own = 0, go;
-    int32_t o1, o2, tw;
-    const char *tag;
+    int32_t o1, o2;
     char b[48], act[48];
     uint16_t col;
     if (!c || ui.menu == 3u || !h)
@@ -1503,19 +1501,12 @@ UI_SMALL static void trainer_draw(void)
         str_cpy(b, "NICE!", sizeof b);
         col = RGB(90, 240, 150);
     }
-    /* (1.9.7) the band covers the title of SONG and CHORDS: their name at the right of line 1 (PATTERNS, CHAIN and
-     * SCENES show theirs in their tabs at the bottom) */
-    tag = two && !ui.menu && ui.layer == LY_PLAY && !ui.hold_kind && !rec_wait && !ft_on && !vis_shown() &&
-          (on_song_page() || on_chords_page()) ? cur_page()->title : "";
-    tw = tag[0] ? text_w(&FONT_S, tag) + 12 : 0;
     sig = str_hash(phase * 7919u + tr.card * 131u + tr.lvl * 31u + h, b);
     if (two)
-        sig = str_hash(str_hash(sig, act), tag);
+        sig = str_hash(sig, act);
     if (sig != tr.mq_sig)                           /* (other text: a scroll from its start) */
         tr.mq_sig = sig, tr.mq_t0 = fm1_ms;
-    tr_mq_w = TR_MQ_W - tw;
     o1 = tr_marquee(b, own ? mel : fm1_ms - tr.mq_t0);
-    tr_mq_w = TR_MQ_W;
     o2 = two ? tr_marquee(act, fm1_ms - tr.mq_t0) : 0;
     sig += (uint32_t)o1 * 2654435761u + (uint32_t)o2 * 40503u;
     if (sig == tr.sig)
@@ -1524,11 +1515,6 @@ UI_SMALL static void trainer_draw(void)
     lcd_clip_y = 0;
     cv_begin(240, h, C_BLACK);
     cv_text(2 - o1, 1, &FONT_S, b, col);
-    if (tw) {
-        cv_rect(240 - (int32_t)tw, 0, (int32_t)tw, 18, C_BLACK);
-        cv_rect(240 - (int32_t)tw + 3, 2, 1, 14, C_LINE);   /* (a rule: the name apart from the scrolling line) */
-        cv_text(240 - (int32_t)tw + 7, 1, &FONT_S, tag, UI_G4);
-    }
     if (two)
         cv_text(2 - o2, 19, &FONT_S, act, tr.ok ? C_DIM : C_HI);
     cv_rect(0, (int32_t)h - 2, 240, 2, C_LINE);

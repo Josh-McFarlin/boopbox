@@ -519,7 +519,7 @@ The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of 
 
 To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
-As on the other pages, the bottom line of PATTERNS, CHAIN and SCENES shows the page in a box between the page before and the page after it (1.9.7). The top of the screen shows the track and what OCT+ and OCT− do there.
+As on the other pages, the bottom line of PATTERNS, CHAIN, SCENES and SONG (and of CHORDS, on SEL) shows the page in a box between the page before and the page after it (1.9.7). The top of the screen shows the track (SONG: the mode and the tempo; CHORDS: the key) and what OCT+ and OCT− do there.
 
 ### Beats from the keys (1.9)
 

@@ -32,9 +32,9 @@ Also fixed in BoopBox:
   new scale from the drum track's own scale, which never changes. Now it takes it from a synth track, and each detent
   goes to the next scale.
 
-- **PATTERNS, CHAIN and SCENES show their page tabs at the bottom**, as the other SEQ pages do: the page in a box
-  between the page before and after it, and a dot for each page. What OCT+ and OCT- do is now at the top, under the
-  track.
+- **SONG, PATTERNS, CHAIN, SCENES and CHORDS show their page tabs at the bottom**, as the other pages do: the page in a
+  box between the page before and after it, and a dot for each page of its button. Their name in large type at the top
+  is gone. What OCT+ and OCT- do is now at the top, under the track (SONG: the mode and the tempo; CHORDS: the key).
 - **White keys 9–16 launch scenes on the SCENES page only.** On PATTERNS and CHAIN they now do nothing, so a stray key
   no longer changes every track from a page about one. The PATTERNS screen no longer has a keyboard strip (it showed
   the same as the tiles); its eight tiles are taller.
@@ -47,8 +47,8 @@ Changed in BoopBox Trainer:
   SEQ pages), not *HOLD SEQ + SAVE, SELECT LEFT ×2*.
 - **The coach changes tracks from the HOME screen only.** When a step needs another track, it says *TAP HOME* first,
   then *TURN ALGORITHM TO TRACK 4*, then the way back to the step's screen.
-- **The screen's name shows on SONG and CHORDS.** The coach covers their title, so their name now shows in grey at
-  the right of the coach's first line. PATTERNS, CHAIN and SCENES show theirs in the page tabs at the bottom.
+- **The screen's name shows on SONG, PATTERNS, CHAIN, SCENES and CHORDS.** The coach covers their header, but their
+  name is now in the page tabs at the bottom of the screen.
 
 Projects, presets, settings and the trainer's progress from 1.9.6 open as before.
 
