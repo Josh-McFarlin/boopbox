@@ -12,9 +12,9 @@ The current release is 1.9.3. The app is 579,200 B, and 2,364 B of the 581,564 B
 | --- | --- | --- |
 | F1 `minsize` on the control path | Applied in 1.3.1 | Commit 63e3700. `CTL_SMALL` in `core.h`. |
 | F2 `.data` initializers to `.bss` | Applied in 1.3.1, except `punch` | Commit 63e3700. `drums`, `lim_dac`, `lim_usb` and `tx` are in `.bss`. |
-| F3 `param_desc_t` 20 -> 12 B | Open | `core.h` still has `int16_t min, max, def` and the `unit` pointer |
+| F3 `param_desc_t` 20 -> 12 B | Applied after 1.9.8 (branch `visualizer-aa`) | `core.h`: `int8_t min`, `uint8_t max`, `int8_t def`, the unit in `fmt`'s upper nibble (`FU`, `desc_fmt()`, `desc_unit()`). Proxy: constants −2,050 B |
 | F4 the font as raw 1-bit glyphs | Applied in 1.8.0 (the compact variant: 70 glyphs) | Commit 2bb11f0. `FONT_S_DATA` is 1,120 B of constants. `font_fill` is empty. |
-| F5 shared flash driver helpers in `.ram_text` | Open | `fm1_flash.h` helpers are still `RAMINL` (`always_inline`). `tools/build.py` still refuses every `call` in `.ram_text`. |
+| F5 shared flash driver helpers in `.ram_text` | Applied after 1.9.8 (branch `visualizer-aa`), not yet built with the JieLi toolchain | `fm1_flash.h` `RAMHLP`; `tools/build.py check()` allows a call in `.ram_text` only to a target in `[_rt_start, _ft_start)`. Proxy `.ram_text` 4,954 -> 1,590 B |
 | F6 UI helpers | Partly applied | 1.3.1: `lcd_clear`, `ui_text_r`, `ui_text_mid`, `knob_strip`, the lazy ramp in `cv_text`. 1.8.0: the 4-bit path of `cv_text` went with F4. Open: `BANK` and `ICON_MAP` packing, uppercase literals. |
 | F7 small trims | Partly applied in 1.3.1. The rest is dropped. | Applied: `lk_slot`, `ota_show`, `cpu1_supplies`. Kept as diagnostics: the USB counters and `stack_paint`. |
 | F8 drum kits stored once | Applied in 1.7.0 | Commit af66cc2. `DS_SND` (242 sounds) and `DS_KITS`. |
@@ -188,7 +188,7 @@ For `drums`, the least expensive form needs no init code. `drum_set()` stores `s
 
 ### 3.3 `param_desc_t` 20 -> 12 bytes: −2,036 B (F3)
 
-**Status: open.**
+**Status: applied after 1.9.8.** Every descriptor of 1.9.8 fits (the compiler refuses one that does not); `PE` lost its `int16_t` cast so that a list of more than 256 names fails to compile instead of wrapping.
 
 `core.h:40` holds a label pointer, `fmt`, three `int16_t` (min, max, def), a names pointer and a unit pointer. This is 20 B x 259 descriptors (`TP` 71, `GP` 63, 12 x 8 engine EDIT entries, `INS_DESC`, `ESYNC`, `PS`, `DRUM_MIX`). The count of 259 is from 1.3.0. OBERVAVE (1.7.0) added an engine table.
 
@@ -223,7 +223,7 @@ The three screen-render tests (`song_ui`, `vis_styles`, `ui_pages`) gave 96 of 9
 
 ### 3.5 The flash driver in `.ram_text`: −3,364 B proxy, about −1.5..−2 KB real (F5)
 
-**Status: open.** The helpers in `fm1_flash.h` are still `RAMINL` (`always_inline`). The `check()` of `tools/build.py` still refuses every `call` in `.ram_text`.
+**Status: applied after 1.9.8, as described below; first check it on a real build.** The new `check()` reads each call's target with the ROM check's regex. If the pi32v2 `objdump` writes a call another way, every call is refused and the build stops: it does not pass unsafe code.
 
 `fm1_flash.h:83-150` has the helpers `fl_cs`, `fl_tx`, `fl_rx`, `fl_addr`, `fl_rdsr`, `fl_wren`, `fl_enter`, `fl_exit` and `fl_wait_ready`. They are `always_inline`. Thus each of the five `RAMFN` entry points has its own copies. These entry points are `fl_prog_ram`, `fl_erase4k_ram`, `fl_read_ram`, `fl_status_ram` and `fl_jedec_ram`. `fl_tx` occurs about twelve times in each of them, through `fl_addr`.
 

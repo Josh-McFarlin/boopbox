@@ -311,6 +311,16 @@ hostsim() {
     env TRACKS=build/tracks_demo "$OUT/hostsim" 0 0 1 "$OUT/tracks.wav"
 }
 run "DSP render (ANALOG preset 0); TRACKS: 4-track pattern, live recording, voice budget, engine switch, cost" hostsim
+desc_fit() {   # F3: every parameter descriptor fits its 8-bit fields, and none has a seventh field (core.h param_desc_t)
+    clang --target=riscv32-unknown-elf -march=rv32imc -ffreestanding -nostdinc -isystem "$(clang -print-resource-dir)/include" \
+        -fsyntax-only -Wno-everything -Werror=constant-conversion -Werror=excess-initializers \
+        -Ifirmware/hal -Ifirmware/src -Ibuild/gen firmware/src/felucca.c
+}
+if command -v clang >/dev/null; then
+    run "parameter descriptors: ranges fit 8 bits, no unit field (F3)" desc_fit
+else
+    note "== SKIPPED (no clang): parameter descriptors fit 8 bits"; skipped=$((skipped + 1))
+fi
 run "scales: white-key mapping and note lifecycle" cc_run scale_test "$G" tests/scale_test.c
 run "eight tracks: all at once on their own lengths, the shared voice budget, two drum tracks, kinds, arenas, STUT, MIDI CH5..8" \
     cc_run tracks8_test "-DARENA_STATS $GH" tests/tracks8_test.c

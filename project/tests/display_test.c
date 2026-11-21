@@ -71,7 +71,7 @@ int main(void)
     int32_t v;
     for (f = 0; f < 4u; f++)
         for (v = 0; v < 128; v++) {
-            param_desc_t d = {"X", FMT[f], 0, 127, 0, 0, 0};
+            param_desc_t d = {"X", FMT[f], 0, 127, 0, 0};
             char a[16] = {0}, b[16] = {0};
             const char *ua = "", *ub = "";
             old_format(FMT[f], v, a, &ua);

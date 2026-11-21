@@ -58,13 +58,26 @@ enum {
     F_FILT                      /* -64..63: the DJ filter, LP <- OFF -> HP */
 };
 
+/* F3 (docs/memory-savings-analysis.md): 12 bytes, not 20. Every range fits 8 bits (min -128..0, max 0..255, def
+ * -128..127: the compiler refuses one that does not, tests/run_tests.sh builds with -Werror=constant-conversion), and
+ * the few units live in fmt's upper nibble (FU) instead of a pointer of their own */
+enum { U_NONE, U_CT, U_ST, U_HZ };
+#define FU(f, u) ((f) | (u) << 4)       /* a format with a unit: FU(F_INT, U_CT) */
 typedef struct {
     const char *label;
-    uint8_t fmt;
-    int16_t min, max, def;
+    uint8_t fmt;                /* F_* | U_* << 4: desc_fmt(), desc_unit() */
+    int8_t min;
+    uint8_t max;
+    int8_t def;
     const char *const *names;   /* F_ENUM */
-    const char *unit;           /* F_INT / F_ENUM optional unit */
 } param_desc_t;
+_Static_assert(F_FILT < 16, "the formats fit fmt's lower nibble");
+static inline uint32_t desc_fmt(const param_desc_t *d) { return d->fmt & 15u; }
+static inline const char *desc_unit(const param_desc_t *d)   /* 0: none */
+{
+    static const char *const U[4] = {0, "ct", "st", "Hz"};
+    return U[d->fmt >> 4 & 3u];
+}
 
 enum {                          /* per-track parameters */
     P_LEVEL,

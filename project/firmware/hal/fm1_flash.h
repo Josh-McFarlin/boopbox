@@ -15,6 +15,10 @@
 
 #define RAMFN  __attribute__((section(".ram_text"), noinline, used))
 #define RAMINL static inline __attribute__((always_inline))
+/* F5 (docs/memory-savings-analysis.md): the helpers the entry points share, once in RAM instead of inlined into each
+ * of them. A call from .ram_text to .ram_text is safe with the flash off (the stack is in RAM, the helpers call
+ * nothing outside .ram_text); tools/build.py check() allows exactly those calls and refuses any other */
+#define RAMHLP static __attribute__((section(".ram_text"), noinline))
 
 /* XIP (0x02xxxxxx) -> RAM (0x01C0xxxx) is beyond the 23-bit call range:
  * call RAM code through a pointer the compiler cannot fold back. */
@@ -48,7 +52,7 @@ RAMINL void fl_csync(void) { __asm__ volatile("csync" ::: "memory"); }
 RAMINL void fl_cache_idle(void) { while (!(CACHE_CON & 0x4000u)) ; }
 RAMINL void fl_delay(uint32_t n) { volatile uint32_t i = n; while (i--) ; }
 
-RAMINL void fl_cs(int high)
+RAMHLP void fl_cs(int high)
 {
     PORTD_DIR &= ~1u;
     if (high) PORTD_OUT |= 1u; else PORTD_OUT &= ~1u;
@@ -63,13 +67,13 @@ RAMINL int fl_spi_wait(void)
     SPI0_CON |= 0x4000u;
     return n ? 0 : -1;
 }
-RAMINL void fl_tx(uint8_t b)
+RAMHLP void fl_tx(uint8_t b)
 {
     SPI0_CON |= 8u; SPI0_CON &= ~0x1000u;
     SPI0_BUF = b; fl_spi_wait();
     SPI0_CON &= ~8u;
 }
-RAMINL uint8_t fl_rx(void)
+RAMHLP uint8_t fl_rx(void)
 {
     uint8_t v;
     SPI0_CON |= 8u; SPI0_CON |= 0x1000u;
@@ -78,11 +82,11 @@ RAMINL uint8_t fl_rx(void)
     SPI0_CON &= ~8u;
     return v;
 }
-RAMINL void fl_addr(uint32_t a) { fl_tx((uint8_t)(a >> 16)); fl_tx((uint8_t)(a >> 8)); fl_tx((uint8_t)a); }
-RAMINL uint8_t fl_rdsr(uint8_t cmd) { uint8_t v; fl_cs(0); fl_tx(cmd); v = fl_rx(); fl_cs(1); return v; }
-RAMINL void fl_wren(void) { fl_cs(0); fl_tx(0x06); fl_cs(1); }
+RAMHLP void fl_addr(uint32_t a) { fl_tx((uint8_t)(a >> 16)); fl_tx((uint8_t)(a >> 8)); fl_tx((uint8_t)a); }
+RAMHLP uint8_t fl_rdsr(uint8_t cmd) { uint8_t v; fl_cs(0); fl_tx(cmd); v = fl_rx(); fl_cs(1); return v; }
+RAMHLP void fl_wren(void) { fl_cs(0); fl_tx(0x06); fl_cs(1); }
 
-RAMINL int fl_enter(fl_saved_t *s)
+RAMHLP int fl_enter(fl_saved_t *s)
 {
     uint32_t mode;
     fl_cache_idle();
@@ -100,7 +104,7 @@ RAMINL int fl_enter(fl_saved_t *s)
     fl_csync();
     return 0;
 }
-RAMINL void fl_exit(const fl_saved_t *s)
+RAMHLP void fl_exit(const fl_saved_t *s)
 {
     SPI0_CON = s->spi_con;
     IOMAP_CON0 |= 0x20u;
@@ -120,7 +124,7 @@ RAMINL void fl_inval(uint32_t off, uint32_t len)
         fl_cache_idle();
     }
 }
-RAMINL int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
+RAMHLP int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
 {
     uint32_t t0 = T4_CNT, dt;
     for (;;) {

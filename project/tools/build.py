@@ -257,11 +257,23 @@ def check(img, syms, dis, rt):
         errors.append(f"_start is not at {APP_XIP:#x}")
     if img[:4] != bytes.fromhex("04818000"):
         errors.append(f"image starts with {img[:4].hex()}, not the entry stub")
-    rt_calls = [ln for ln in rt.splitlines() if re.search(r"\bcall\b", ln)]
-    if rt_calls:                    # RAM code runs with the flash off: no calls into XIP
-        errors.append(f".ram_text contains calls: {rt_calls[:3]}")
+    # RAM code runs with the flash off: no calls into XIP. A call to a target inside .ram_text itself is safe (the flash
+    # driver's shared helpers, fm1_flash.h RAMHLP: F5 of docs/memory-savings-analysis.md); .fast_text is not, it may
+    # call into XIP. Every other call, and any call whose target cannot be read (through a register), is refused.
+    rt_lo, rt_hi = (re.search(r"^([0-9a-f]+) .*\s" + n + r"$", syms, re.M) for n in ("_rt_start", "_ft_start"))
+    rt_calls, rt_bad = 0, []
+    for ln in rt.splitlines():
+        if not re.search(r"\bcall\b", ln):
+            continue
+        rt_calls += 1
+        t = re.search(r"call -?\d+ <[^:>]*: ([0-9a-f]+) >", ln)
+        if not (t and rt_lo and rt_hi and int(rt_lo.group(1), 16) <= int(t.group(1), 16) < int(rt_hi.group(1), 16)):
+            rt_bad.append(ln.strip())
+    if rt_bad:
+        errors.append(f".ram_text calls outside .ram_text: {rt_bad[:3]}")
     else:
-        notes.append(f".ram_text: {len([ln for ln in rt.splitlines() if LINE.match(ln)])} insns, no calls")
+        notes.append(f".ram_text: {len([ln for ln in rt.splitlines() if LINE.match(ln)])} insns, "
+                     f"{rt_calls} calls, all inside it")
     def addr(n):
         mm = re.search(r"^([0-9a-f]+) .*\s" + n + r"$", syms, re.M)
         return int(mm.group(1), 16) if mm else None
