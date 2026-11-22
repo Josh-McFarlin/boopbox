@@ -13,6 +13,14 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.9
+
+**Fixed: holding REC to clear a track now clears its whole chain.** When the track had a chain, holding REC cleared
+only the pattern that was playing, and the other patterns of the chain played on. Now every pattern in the chain is
+cleared too. The chain itself stays, so you can record new patterns into it. Undo (EDIT + OCT−) brings back the
+pattern that was playing, but not the other patterns of the chain. Projects, presets and settings from 1.9.8 open
+as before.
+
 ## 1.9.8
 
 **Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask

@@ -104,7 +104,7 @@ Other controls:
 | --- | --- |
 | **PLAY** | start / stop all the tracks (works inside all layers) |
 | **REC** | playing: record now / stop · stopped: arm (the first note starts) · free take: close the loop |
-| hold **REC** | clear the selected track (a ring fills. Hold for ~2 s. If you let go before, nothing happens) |
+| hold **REC** | clear the selected track and every pattern of its chain (a ring fills. Hold for ~2 s. If you let go before, nothing happens) |
 | **SAVE** | on TRACKS or DRUMS: the SONG screen · on other pages: the SAVE pages (USER, SECTION, TOOLS) |
 | hold **SEQ** + tap **SAVE** | the **SCENES** page, from all pages and tracks |
 | **EDIT + OCT− / OCT+** | undo / redo |
@@ -232,7 +232,7 @@ A change of sound (PRESETS, a user preset) never changes the key, the chord mode
 ## Undo, clear, save, autosave
 
 - **Undo / redo:** hold EDIT and press OCT− / OCT+. Undo has one level: the last recording pass, erase, clear, step edit or pattern edit. Redo reverses the undo.
-- **Clear a track:** hold REC. After 0.7 s, BoopBox cancels the press and a ring fills. Hold for ~1.3 s more, and BoopBox clears the selected track (*TRACK 2 CLEARED*). If you let go before, nothing happens. Undo brings the track back.
+- **Clear a track:** hold REC. After 0.7 s, BoopBox cancels the press and a ring fills. Hold for ~1.3 s more, and BoopBox clears the selected track (*TRACK 2 CLEARED*). If the track has a chain, BoopBox also clears every pattern in the chain. The chain itself stays. If you let go before, nothing happens. Undo brings back the pattern that plays, but not the other patterns of the chain.
 - **Save:** SAVE + keys 5–8 save the loop into section A–D. SAVE → SECTION also has SECT, ERASE, LOAD and SAVE.
 - **Autosave:** when the transport is stopped and you touch nothing for 2.5 s, BoopBox keeps the working project in flash (at most every 20 s). At power-on, BoopBox comes back exactly as you left it.
 - **New loop:** SAVE → TOOLS → NEW (turn to GO). Every track of the working loop goes back to its power-on sound, with empty patterns. BoopBox keeps the sections A–D.

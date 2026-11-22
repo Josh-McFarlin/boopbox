@@ -596,6 +596,20 @@ int main(int argc, char **argv)
     check(trk[0].step[3].n == 1, "EDIT + OCT-: the cleared track back");
     press(B_REC); frames(60); release(B_REC);         /* let go before the end: nothing */
     check(trk[0].step[3].n == 1 && !rec_wait, "REC let go before the end: nothing cleared");
+    {                                                 /* a chain: every pattern of it cleared, another track's kept */
+        static const uint8_t CH[3] = {0, 1, 2};
+        fm1_irq_off();
+        trk[1].step[0].n = 1, trk[1].step[0].note[0] = 60, trk[1].step[0].time = ST_NOTE;
+        pb_store(0, 1); pb_store(0, 2); pb_store(0, 5); pb_store(1, 1);
+        steps_clear(&trk[1]);
+        pat_chain_set(&trk[0], CH, 3);
+        fm1_irq_on();
+        check(pb_used(0) == 0x26u && pb_used(1) == 0x2u, "patterns 2, 3, 6 of track 1 kept, 2 of track 2");
+        press(B_REC); frames(140); release(B_REC);
+        check(!trk[0].step[3].n && pb_used(0) == 0x20u && pb_used(1) == 0x2u && trk[0].pat_nchain == 3u,
+              "REC held, a chain: its patterns cleared (6, not in it, kept; track 2's kept; the chain kept)");
+        fm1_irq_off(); pat_reset_all(); fm1_irq_on();
+    }
 
     /* ---- SAVE: tap = the song page; held = the SONG layer (live sections, SONG REC) */
     go_home(); frame();

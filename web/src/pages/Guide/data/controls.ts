@@ -140,7 +140,7 @@ export const CONTROLS: Record<string, Control> = {
     name: 'REC',
     kind: 'button',
     tap: 'Playing: record the selected track now / stop recording. Stopped: arm (rec ready). In a free take: close the loop. In a count-in: cancel.',
-    hold: 'About 2 s: clear the selected track. A ring fills; let go before it is full and nothing happens.',
+    hold: 'About 2 s: clear the selected track, with every pattern of its chain. A ring fills; let go before it is full and nothing happens.',
   },
   WHITE: {
     name: 'White keys',
