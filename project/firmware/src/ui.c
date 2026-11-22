@@ -10,6 +10,7 @@ static void arrangement_save(void);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
 static void project_erase(uint32_t slot);        /* SAVE > PROJECT > ERASE (2.6) */
+static int sections_clear(void);                 /* SAVE > CLEAR > SONG: A..D empty, the default song (project.c) */
 static int project_used(uint32_t slot);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
 static int up_arp_of(uint32_t k, int16_t *a);   /* (2.7.1) user preset k's arp, MODE … ORDER: upreset.c */

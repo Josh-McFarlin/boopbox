@@ -62,6 +62,7 @@ static int project_used(uint32_t i) { return i < 2; }
 static void project_save(uint32_t i) { (void)i; saves++; ui_message("SAVED"); }
 static void project_load(uint32_t i) { (void)i; loads++; }
 static void project_erase(uint32_t i) { (void)i; erases++; ui_message("ERASED"); }
+static int sections_clear(void) { return 0; }
 static void arrangement_save(void) {}
 static uint32_t arrangement_ready(void) { return 3; }
 static void arrangement_apply(uint32_t s) { (void)s; }

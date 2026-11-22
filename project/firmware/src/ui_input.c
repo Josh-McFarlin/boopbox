@@ -559,6 +559,19 @@ UI_SMALL static void project_new(void)
     ui.force = 1;
 }
 
+/* SAVE > CLEAR > SONG: the whole song at once, as TOOLS > NEW and an ERASE of each section A..D: a new working loop,
+ * the four sections empty, the default song order, loop mode. Stopped only (a flash erase stops the audio ~50 ms); no
+ * undo. The FM-1's settings, user presets, kits and samples stay */
+UI_SMALL static void song_clear(void)
+{
+    if (song.playing || transport_req) {
+        ui_message("STOP THE SONG FIRST");
+        return;
+    }
+    project_new();
+    ui_message(sections_clear() ? "ERASE ERROR" : "SONG CLEARED");
+}
+
 static int knob_capture(uint32_t id, int32_t v, int32_t was);
 UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
 {
@@ -635,7 +648,7 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
     if (!v)
         return;
     if (pg->scope == SC_GLOBAL && (id == G_LOAD || id == G_SAVE || id == G_CLRSEQ || id == G_INITSND || id == G_NEWPRJ ||
-                                   id == G_KIND) && ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
+                                   id == G_KIND || id == G_CLRSONG) && ui.arm != id) {                                   /* one detent arms, a second one within ~1.5 s acts */
         *vp = 0;
         ui.arm = (uint8_t)id;
         ui.arm_t = 90;
@@ -685,6 +698,10 @@ UI_SMALL static void edit_param(uint32_t slot, int32_t steps)
 #endif
         project_new();
         ui_message("NEW LOOP, A-D KEPT");
+        break;
+    case G_CLRSONG:
+        *vp = 0;
+        song_clear();
         break;
     default:
         break;

@@ -44,7 +44,7 @@ static const icon_map_t ICON_MAP[] = {
     {"DAMP", ICON_DAMP}, {"CRT", ICON_RATE}, {"CDP", ICON_MOD}, {"MIDI", ICON_MIDI},
     {"SYNC", ICON_TEMPO}, {"ROUT", ICON_MIX}, {"CPU", ICON_CHIP}, {"SLOT", ICON_SAVE}, {"SECT", ICON_SAVE},
     {"LOAD", ICON_LOAD}, {"SAVE", ICON_SAVE}, {"ENG", ICON_WAVE}, {"CLRSQ", ICON_CLEAR},
-    {"INIT", ICON_CLEAR}, {"ERASE", ICON_CLEAR}, {"CH", ICON_MIDI}, {"LEVEL", ICON_LEVEL},
+    {"INIT", ICON_CLEAR}, {"ERASE", ICON_CLEAR}, {"SONG", ICON_CLEAR}, {"CH", ICON_MIDI}, {"LEVEL", ICON_LEVEL},
     {"OUT", ICON_MIDI}, {"IN", ICON_MIDI}, {"CH1", ICON_MIDI}, {"CH2", ICON_MIDI}, {"CH3", ICON_MIDI}, {"CH4", ICON_MIDI},   /* (2.6:
                                                                  * GLO > MIDI, MIDI 2) */
     {"OTHER", ICON_MIDI}, {"BEND", ICON_TUNE},

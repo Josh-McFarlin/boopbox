@@ -459,6 +459,27 @@ UI_SMALL static void project_save(uint32_t slot)
     ui_message("SAVED (RAM)");
 }
 
+/* the slot empty, in flash and in RAM (the caller checks the transport is stopped): 0 ok, 1 a flash error (the slot
+ * as it was) */
+UI_SMALL static int project_wipe(uint32_t slot)
+{
+    slot &= 3u;
+#if FELUCCA_FLASH
+    if (flash_ok && st_save(OBJ_PROJECT0 + slot, &proj_slot[slot], 0))
+        return 1;
+#endif
+    fm1_irq_off();
+    memset(&proj_slot[slot], 0, sizeof proj_slot[slot]);
+    sec_dirty &= (uint8_t)~(1u << slot);
+    if (live_sec == (int8_t)slot)
+        live_sec = -1;
+#if FELUCCA_ARRANGER
+    if (arr_drop_scene(&arrangement, slot))
+        song_dirty = 1;                                     /* (saved with the settings, when quiet) */
+#endif
+    fm1_irq_on();
+    return 0;
+}
 /* SAVE > PROJECT > ERASE (SLOOP 2.6, after a YouTube comment): the slot (section A..D) empty again. In flash as the
  * editor's restore leaves an empty slot (project_restore): an object of no bytes, which proj_fetch reads as no
  * project. The song's steps that played that section are taken out (the default song if none is left),
@@ -473,23 +494,30 @@ UI_SMALL static void project_erase(uint32_t slot)
         ui_say("EMPTY SECTION ", SEC_NAME[slot]);
         return;
     }
-#if FELUCCA_FLASH
-    if (flash_ok && st_save(OBJ_PROJECT0 + slot, &proj_slot[slot], 0)) {
+    if (project_wipe(slot)) {
         ui_message("ERASE ERROR");
         return;
     }
-#endif
-    fm1_irq_off();
-    memset(&proj_slot[slot], 0, sizeof proj_slot[slot]);
-    sec_dirty &= (uint8_t)~(1u << slot);
-    if (live_sec == (int8_t)slot)
-        live_sec = -1;
-#if FELUCCA_ARRANGER
-    if (arr_drop_scene(&arrangement, slot))
-        song_dirty = 1;                                     /* (saved with the settings, when quiet) */
-#endif
-    fm1_irq_on();
     ui_say("ERASED SECTION ", SEC_NAME[slot]);
+}
+/* SAVE > CLEAR > SONG (ui_input.c song_clear): every used section A..D empty, as ERASE leaves one, and the song order
+ * the default A B C D with no loop region, in loop mode (no section to play). Stopped only (the caller checks). The
+ * song is written with the settings when quiet. 0 ok, else how many sections a flash error kept */
+UI_SMALL static int sections_clear(void)
+{
+    uint32_t s;
+    int bad = 0;
+    for (s = 0; s < 4u; s++)
+        if (proj_ok(&proj_slot[s]) && project_wipe(s))
+            bad++;
+#if FELUCCA_ARRANGER
+    fm1_irq_off();
+    arr_defaults(&arrangement);
+    arrangement_enabled = 0;
+    fm1_irq_on();
+    song_dirty = 1;
+#endif
+    return bad;
 }
 
 /* a project into the working one: the transport stops, everything sounding is released */

@@ -223,6 +223,7 @@ static const param_desc_t GP[G_COUNT] = {
     [G_PFXL] = PE("LATCH", N_ONOFF, 0),           /* latched, quantized */
     [G_PFXQ] = PE("Q", N_PFXQ, 0),
     [G_KIND] = PE("KIND", N_GO, 0),               /* TOOLS: the selected track SYNTH <-> DRUM (a GO button) */
+    [G_CLRSONG] = PE("SONG", N_GO, 0),            /* CLEAR: the loop, sections A..D and the song order (a GO button) */
 };
 
 /* the globals that are settings of the FM-1, not of a project: a NEW project and a load leave them */
@@ -547,6 +548,7 @@ static const page_t PAGES[] = {
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"SECTION", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {G_SLOT, 0xFF, G_LOAD, G_SAVE}},   /* ("PROJECT" before 2.7) */   /* (KNOB 2: ERASE, 2.6: ui_input.c) */
     {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_NONE, {G_CLRSEQ, G_INITSND, G_KIND, G_NEWPRJ}},   /* (KIND: synth <-> drum track) */
+    {"CLEAR", FAM_SAVE, SC_GLOBAL, GR_NONE, {G_CLRSONG, 0xFF, 0xFF, 0xFF}},   /* the whole song at once (ui_input.c song_clear) */
     {"ARP", FAM_ARP, SC_TRACK, GR_NONE, {P_AMODE, P_ARATE, P_AOCT, P_AGATE}},   /* (2.7.2: its values large, as ARP 2:
                                                        * GR_ARP was never drawn, the middle stayed empty) */
     {"ARP 2", FAM_ARP, SC_TRACK, GR_NONE, {P_ASWING, P_APROB, P_AHOLD, P_AORDER}},

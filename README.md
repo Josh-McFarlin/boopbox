@@ -88,7 +88,7 @@ Each item links to the section of the guide that gives the full details.
 - **Sounds.** There are 223 level-matched presets on thirteen engines. The engines include analog, 4-op FM, 6-op FM with DX7 patches, physical models, noise, and the OBERVAVE polysynth. You get 32 slots for your own presets. [Guide §17](GUIDE.md#17-the-sounds-and-the-thirteen-engines)
 - **Recording.** Press REC and play. BoopBox records on top of each pass (overdub) and corrects the delay of the keys. In free mode, the length of your first loop sets the tempo. [Guide §8](GUIDE.md#8-recording)
 - **Sequencer.** Each track has 64 steps, with its own length and division. Each step can have parameter locks, micro timing and fill conditions. [Guide §10](GUIDE.md#10-the-step-sequencer-steps-nudge-locks-fills)
-- **Songs.** Save up to four sections (A–D) and play them live on the next bar. You can record the song as you play it. [Guide §14](GUIDE.md#14-song-mode-sections-chains-songs)
+- **Songs.** Save up to four sections (A–D) and play them live on the next bar. You can record the song as you play it, and clear the whole song in one action. [Guide §14](GUIDE.md#14-song-mode-sections-chains-songs)
 - **Effects.** There are 27 punch-in effects that stay in time with the tempo. The master has DUST, DUCK, a DJ filter, a limiter and a TEXTURE bed. [Guide §18](GUIDE.md#18-effects-master-punch-in-per-track)
 - **Your own samples.** Four slots of about 7.4 s each. The CHOP tool in the web editor cuts a recording of any length into parts. [Guide §23](GUIDE.md#23-your-own-samples-and-drum-kits)
 - **MIDI.** USB MIDI in and out, the TRS MIDI IN jack, MIDI clock in, CCs, NRPN and MIDI LEARN. With USB HOST, a USB-MIDI keyboard can play BoopBox. [Guide §21](GUIDE.md#21-midi)

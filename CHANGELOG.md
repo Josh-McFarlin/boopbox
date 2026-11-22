@@ -13,6 +13,16 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**Clear the whole song in one action.** A new SAVE page, **CLEAR**, comes after TOOLS (SELECT walks USER, SECTION,
+TOOLS, CLEAR). Turn **SONG** (KNOB 1) to GO, with the song stopped: BoopBox makes a new loop (as TOOLS → NEW), erases
+the sections A–D and sets the song order back to A B C D, in loop mode (*SONG CLEARED*). Before, this took NEW and four
+section erases. Your user presets, kits, samples and the settings of the FM-1 do not change. There is no undo: if you
+are not sure, export the song in the editor first ([Guide §13](GUIDE.md#13-undo-clear-save-sections-autosave)).
+
+Projects, presets and settings from 1.9.8 open as before. A project saved by this version opens on 1.9.8 too.
+
 ## 1.9.8
 
 **Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask
