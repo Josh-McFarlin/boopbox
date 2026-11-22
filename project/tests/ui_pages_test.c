@@ -2849,6 +2849,7 @@ int main(int argc, char **argv)
         ok &= song_clears == was + 1u && !strcmp(ui.msg, "SONG CLEARED") && song.g[G_BPM] == GP[G_BPM].def &&
               trk[0].step[0].time != ST_NOTE;
         check(ok, "SAVE > CLEAR > SONG (two detents): a new loop, the sections cleared, SONG CLEARED");
+        frames(2);                                      /* (NEW's stop request handled first) */
         song.playing = 1;
         encs[panel.enc[EN_K1]] = 1; frame(); encs[panel.enc[EN_K1]] = 1; frame();
         check(song_clears == was + 1u && !strcmp(ui.msg, "STOP THE SONG FIRST"), "SAVE > CLEAR > SONG while playing: refused");
