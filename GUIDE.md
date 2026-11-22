@@ -166,7 +166,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | Control | Tap / turn | Hold |
 | --- | --- | --- |
 | **PLAY** | start / stop all tracks (in song mode: play the song). This works inside every layer | — |
-| **REC** | playing: record now / stop recording · stopped: arm (*rec ready*) · free take: close the loop · count-in: cancel | ~2 s: **clear the selected track**, with every pattern of its chain. A ring fills. If you let go before the ring is full, nothing occurs |
+| **REC** | playing: record now / stop recording · stopped: arm (*rec ready*) · free take: close the loop · count-in: cancel | ~2 s: **clear the selected track**, with its chain and every pattern in it. A ring fills. If you let go before the ring is full, nothing occurs |
 | **SAVE** | on TRACKS or DRUMS: the **SONG** screen · on the SONG screen: save the song · on all other screens: the **SAVE pages** | the **song layer** (sections A–D, chain, song mode, SONG REC) |
 | **HOME** | the **TRACKS** screen · on TRACKS: the **visualiser** (HOME again closes it) | 0.7 s: the **menu** (SCREEN, LIGHTS, AUDIO, KEYS, SEQ, SYSTEM). To leave the menu, hold HOME again |
 | **ENV** | ENV pages (ENV, ENV DEST) | — |
@@ -658,7 +658,7 @@ A muted track fades out in a few milliseconds. It plays no new notes. Its patter
 | Action | How |
 | --- | --- |
 | **Undo / redo** | **EDIT + OCT−** / **EDIT + OCT+**. One level: the last recording pass, erase, clear, step or pattern edit |
-| **Clear the selected track** | **hold REC** approximately 2 s. After 0.7 s, a ring fills. If you let go before the ring is full, nothing happens. If the track has a chain, every pattern in the chain is cleared too (the chain itself stays). Undo brings back the pattern that plays, but not the other patterns of the chain |
+| **Clear the selected track** | **hold REC** approximately 2 s. After 0.7 s, a ring fills. If you let go before the ring is full, nothing happens. If the track has a chain, the chain and every pattern in it are cleared too. Undo brings back the pattern that plays, but not the chain or its other patterns |
 | **Clear the pattern** | SAVE → TOOLS → **CLRSQ** (GO) |
 | **Reset the sound** | SAVE → TOOLS → **INIT** (GO): the defaults and first preset of the engine |
 | **Synth ↔ drum track** | SAVE → TOOLS → **KIND** (GO): the selected track becomes a drum track or a synth track (*NOW A DRUM TRACK*). Its pattern is cleared. You cannot undo this. You can also use KNOB 1 in the [sound browser](#the-sound-browser) |

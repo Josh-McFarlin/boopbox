@@ -15,7 +15,7 @@ export const REC_STATES: [state: string, what: string][] = [
   ],
   [
     'Hold REC ~2 s',
-    'Clears the selected track, with every pattern of its chain. A ring fills; let go early and nothing happens. Undo brings back the pattern that plays.',
+    'Clears the selected track, with its chain and every pattern in it. A ring fills; let go early and nothing happens. Undo brings back the pattern that plays.',
   ],
 ]
 

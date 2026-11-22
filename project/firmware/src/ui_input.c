@@ -1135,8 +1135,8 @@ UI_SMALL static void rec_knobs(void)
 }
 
 /* REC: acts on the press (no lag). Held 0.7 s the press is undone and a ring fills: held on to the
- * end, the selected track is cleared, with every pattern of its chain (EDIT + OCT- brings back the one playing); let
- * go before, nothing happens.
+ * end, the selected track is cleared, with its chain and every pattern of it (EDIT + OCT- brings back the one playing);
+ * let go before, nothing happens.
  * (SAVE is the SONG layer: ui_layers.c; tapped, layer_tap) */
 UI_SMALL static void holds_input(uint32_t pressed, uint32_t now_ms)
 {
@@ -1170,11 +1170,13 @@ UI_SMALL static void holds_input(uint32_t pressed, uint32_t now_ms)
         undo_mark(t, (undo_sess += 4u) | 3u);
         fm1_irq_off();
         track_defaults_steps(t);
-        {                                                 /* and every pattern of its chain (the bank's: no undo) */
+        {                                                 /* and its chain: every pattern of it (the bank's: no undo)
+                                                           * and its slots (PLAY on / off kept) */
             uint32_t c;
             for (c = 0; c < t->pat_nchain; c++)
                 if (CH_PAT(t->pat_chain[c]) != t->pat)
                     pb_drop(ui.hold_trk % NTRK, CH_PAT(t->pat_chain[c]));
+            pat_chain_set(t, t->pat_chain, 0);
         }
         t->nheld = 0;                                     /* and the latched arp chord */
         t->arp_phys = 0;

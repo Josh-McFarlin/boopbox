@@ -606,8 +606,8 @@ int main(int argc, char **argv)
         fm1_irq_on();
         check(pb_used(0) == 0x26u && pb_used(1) == 0x2u, "patterns 2, 3, 6 of track 1 kept, 2 of track 2");
         press(B_REC); frames(140); release(B_REC);
-        check(!trk[0].step[3].n && pb_used(0) == 0x20u && pb_used(1) == 0x2u && trk[0].pat_nchain == 3u,
-              "REC held, a chain: its patterns cleared (6, not in it, kept; track 2's kept; the chain kept)");
+        check(!trk[0].step[3].n && pb_used(0) == 0x20u && pb_used(1) == 0x2u && trk[0].pat_nchain == 0u,
+              "REC held, a chain: the chain and its patterns cleared (6, not in it, kept; track 2's kept)");
         fm1_irq_off(); pat_reset_all(); fm1_irq_on();
     }
 

@@ -16,9 +16,9 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 ## 1.9.9
 
 **Fixed: holding REC to clear a track now clears its whole chain.** When the track had a chain, holding REC cleared
-only the pattern that was playing, and the other patterns of the chain played on. Now every pattern in the chain is
-cleared too. The chain itself stays, so you can record new patterns into it. Undo (EDIT + OCT−) brings back the
-pattern that was playing, but not the other patterns of the chain. Projects, presets and settings from 1.9.8 open
+only the pattern that was playing, and the other patterns of the chain played on. Now the chain and every pattern in
+it are cleared too. Undo (EDIT + OCT−) brings back the pattern that was playing, but not the chain or its other
+patterns. Projects, presets and settings from 1.9.8 open
 as before.
 
 ## 1.9.8
