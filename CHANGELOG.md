@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.9.11
 
 **The CLEAR page tells you how to clear.** SAVE → CLEAR showed only *SONG --*, and nothing said that you must turn
 KNOB 1 two times. The lower half of the page now says *TURN KNOB 1 RIGHT TWICE*, what the clear does and that there

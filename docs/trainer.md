@@ -7,7 +7,7 @@ lesson step asks for, the coach goes to the next lesson step.
 All other functions are as in BoopBox. Every screen, button, knob and key works the same. Thus, what you learn in the
 trainer also works in BoopBox.
 
-This page is correct for BoopBox Trainer 1.9.10.
+This page is correct for BoopBox Trainer 1.9.11.
 
 ## The levels
 
