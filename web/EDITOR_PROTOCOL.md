@@ -519,8 +519,8 @@ before a `RELOAD` of the same pass.
   The device holds only one incoming SysEx frame.
 - **Following the device.** With v2 firmware, `WATCH` and `PING` (above). Older firmware pushes
   nothing (no reply to `PING`): poll `DUMP` about every 300–500 ms while the page is visible.
-- **Port.** The device's MIDI port is named "BoopBox" (USB 1209:0001; SLOOP and Felucca named it "Felucca": a
-  tool that looks for the FM-1 by name should accept both, as `web/fm1ota.js` FM1_PORT does). Updates use the same
+- **Port.** The device's MIDI port is named "BoopBox FM-1" (USB 1209:0001; BoopBox up to 1.9.9 named it "BoopBox",
+  SLOOP and Felucca "Felucca": a tool that looks for the FM-1 by name should accept all of them, as `web/fm1ota.js` FM1_PORT does). Updates use the same
   port with other SysEx (the `F0 22 24 35 …` keys, `00 59 …` frames); never send those
   from the editor. Since SLOOP 2.3 (after Felucca 1.0) the same USB device also has an audio input
   ("Felucca", 44.1 kHz stereo; bcdDevice 3.11): the MIDI port and this protocol are unchanged, and both

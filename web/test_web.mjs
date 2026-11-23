@@ -4452,7 +4452,10 @@ sys.stdout.buffer.write(b"".join(raw[i * 48:i * 48 + 47] for i in range(20)) + r
     pkg,
   )
   ok(eq(logicalImage(raw), logical), 'fm1pkg.js logicalImage')
-  ok(/^FM-1_(2667[01](\d{6})?|9\d\d)$/.test(productOf(raw)), 'fm1pkg.js productOf')
+  ok(
+    /^FM-1_(2667[01](\d{6})?|9\d\d)$/.test(productOf(raw)),
+    'fm1pkg.js productOf',
+  )
 }
 
 /* ------------------------------------------------- update protocol (fm1ota.js) --- */
@@ -4771,6 +4774,11 @@ async function updater() {
       pn(acc(['USB-MIDI', 'X0X FM-1', 'BoopBox'])) ===
         'BoopBox/BoopBox,X0X FM-1/X0X FM-1,USB-MIDI/USB-MIDI',
       'editor: BoopBox first, then FM-1, then generic names',
+    )
+    ok(
+      pn(acc(['USB-MIDI', 'X0X FM-1', 'BoopBox FM-1'])) ===
+        'BoopBox FM-1/BoopBox FM-1,X0X FM-1/X0X FM-1,USB-MIDI/USB-MIDI',
+      'editor: the port "BoopBox FM-1" first, then FM-1, then generic names',
     )
     ok(
       pn(acc(['Arturia KeyStep Pro', 'loopMIDI Port'])) === '',

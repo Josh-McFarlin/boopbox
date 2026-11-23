@@ -53,7 +53,7 @@ const IS_OTA = (id: Identity) => /^ota-/i.test(id.model)
 // the update loader of BoopBox / SLOOP / Felucca packages ("ota-FM-1_9XX"). A device left in the update mode of another
 // firmware (the stock updater's loader) is never written: its loader may lay the image out differently.
 export const OUR_LOADER = (id: Identity) => /^ota-FM-1_9\d\d$/i.test(id.text)
-// the MIDI ports the installer may probe (never other gear): the FM-1 under BoopBox ("BoopBox"), under SLOOP /
+// the MIDI ports the installer may probe (never other gear): the FM-1 under BoopBox ("BoopBox FM-1", "BoopBox" up to 1.9.9), under SLOOP /
 // Felucca ("Felucca"), under CLIPPER ("Clipper", its sister firmware), under a firmware named after itself ("SLOOP"),
 // the update loaders ("BoopBox Update", "Felucca Update"), and
 // the names Windows / macOS give the stock firmware
