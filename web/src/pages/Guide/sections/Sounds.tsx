@@ -11,7 +11,7 @@ export default function Sounds() {
       <div className="flex flex-wrap gap-x-10 gap-y-8">
         <figure className="m-0 w-full max-w-[320px] min-w-0 flex-[1_1_260px]">
           <Screen
-            src={shot('pages/save-presets')}
+            src={shot('pages/browser-presets')}
             alt="The sound browser: the engines on the left, their sounds on the right"
             color="blue"
           />

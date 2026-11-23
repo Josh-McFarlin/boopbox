@@ -981,7 +981,7 @@ UI_SMALL static uint32_t page_pos(uint32_t *n)
     uint32_t i, k = 0;
     *n = 0;
     for (i = 0; i < NPAGES; i++)
-        if (PAGES[i].fam == pg->fam && (i == ui.page || (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG &&
+        if (PAGES[i].fam == pg->fam && (i == ui.page || (page_shown(&PAGES[i]) &&
                                                          PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_HARM))) {
             (*n)++;
             if (i == ui.page)
@@ -1004,7 +1004,7 @@ UI_SMALL static int32_t page_nb(int32_t d)
     uint32_t fam = cur_page()->fam;
     int32_t i = (int32_t)ui.page + d;
     for (; i >= 0 && i < (int32_t)NPAGES && PAGES[i].fam == fam; i += d)
-        if (page_shown(&PAGES[i]) && PAGES[i].scope != SC_SONG && PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_HARM)
+        if (page_shown(&PAGES[i]) && PAGES[i].scope != SC_DRUM && PAGES[i].scope != SC_HARM)
             return i;
     return -1;
 }

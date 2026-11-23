@@ -87,7 +87,7 @@ A version tag shows the release that added a feature. *(1.8)* and other 1.x tags
 | --- | --- | --- |
 | **PLAY** | button | start / stop all the tracks |
 | **REC** | button | record (tap), clear the track (hold) |
-| **SAVE** | button | song layer (hold), song screen / save pages (tap) |
+| **SAVE** | button | song layer (hold), SAVE pages (tap) |
 | **HOME** | button | TRACKS screen, visualiser (tap), menu (hold), lock a layer |
 | **ENV** | button | envelope pages |
 | **LFO** | button | LFO pages |
@@ -167,7 +167,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | --- | --- | --- |
 | **PLAY** | start / stop all tracks (in song mode: play the song). This works inside every layer | — |
 | **REC** | playing: record now / stop recording · stopped: arm (*rec ready*) · free take: close the loop · count-in: cancel | ~2 s: **clear the selected track**. A ring fills. If you let go before the ring is full, nothing occurs |
-| **SAVE** | on TRACKS or DRUMS: the **SONG** screen · on the SONG screen: save the song · on all other screens: the **SAVE pages** | the **song layer** (sections A–D, chain, song mode, SONG REC) |
+| **SAVE** | the **SAVE pages** (USER, SECTION, TOOLS), on every screen (1.9.9: on TRACKS and DRUMS too) · on the SONG page: save the song · in the sound browser: keep the sound | the **song layer** (sections A–D, chain, song mode, SONG REC) |
 | **HOME** | the **TRACKS** screen · on TRACKS: the **visualiser** (HOME again closes it) | 0.7 s: the **menu** (SCREEN, LIGHTS, AUDIO, KEYS, SEQ, SYSTEM). To leave the menu, hold HOME again |
 | **ENV** | ENV pages (ENV, ENV DEST) | — |
 | **LFO** | LFO pages (LFO, LFO DEST) | — |
@@ -175,7 +175,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | **SEL** | SEL pages (SEL, SEL 2, HARMONY, FOLLOW, then the CHORDS screen) | key / chord layer |
 | **EDIT** | EDIT pages (EDIT 1, EDIT 2, FILTER on ANALOG, VOICE, VOICE 2) · with the drum track: the **DRUMS** screen's **kit** page. Tap again: kit ↔ **sound** · on the NOTES page: delete the note | erase layer |
 | **ARP** | ARP pages (ARP, ARP 2) | note-repeat layer |
-| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer |
+| **SEQ** | SEQ pages (NOTES, TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG) · with the drum track: the **DRUMS** grid in place of NOTES, then the same pages (from kit or sound: the grid) | step layer |
 | **GLO** | GLO pages (GLOBAL, MASTER, DRUMS, TEXTURE, TEXTURE 2) | mix layer (the bank of four shown: 1–4 or 5–8) |
 | **OCT− / OCT+** | synth track: octave down / up (−3 … +3) · both together: octave 0 | drum track: **ghost** (OCT−) / **hard** (OCT+) hits while held |
 | **ALGORITHM** | select the track, on every screen except SONG (its loop start) and the sound browser (its sounds). On DRUMS, a synth track goes to its NOTES. On NOTES, a drum track goes to its DRUMS grid (1.4.2). Inside a layer, it waits. Not during a free take | — |
@@ -257,7 +257,7 @@ The DRUMS screen has three pages: grid, kit and (2.7) sound. The pages are in tw
 
 - When the drum track is selected, a tap on **SEQ** opens the **grid**. The grid is the first SEQ page of the drum track, in place of
   NOTES. SEQ again (or **SELECT** right) goes on through the other SEQ pages: **TIMING**, **PLAY**, **PATTERNS**,
-  **CHAIN** and **SCENES**. Then it goes to the SONG screen, exactly as from the NOTES page of a synth track.
+  **CHAIN**, **SCENES** and **SONG**, exactly as from the NOTES page of a synth track.
 - When the drum track is selected, a tap on **EDIT** opens the **kit**. EDIT again (or **SELECT**) switches kit ↔ **sound**.
   SEQ from the kit page or the sound page goes back to the grid.
 
@@ -275,7 +275,7 @@ The bottom line of the screen shows the page in a box between the page before an
 | **black keys** (2.7.1) | select the sound, silently: F#3 KICK / KICK 2 · G#3 SNARE / SNARE 2 · A#3 RIM · C#4 CLAP · D#4 HAT / PEDAL · F#4 OPEN HAT · G#4 LOW TOM / HI TOM · A#4 CRASH · C#5 RIDE · D#5 SHAKER / CONGA · F#5 COWBELL (the same key again: the other sound of its pair). The black key of the selected sound is lit |
 | **OCT− / OCT+** (2.7.1) | the page of steps: 1–16, 17–32, 33–48, 49–64 (in a loop, up to the length of the track). Up to 2.7: the first four black keys |
 | **PRESETS** | the kit |
-| **SAVE** | the SONG screen |
+| **SAVE** | the SAVE pages (1.9.9. Before, the SONG page) |
 | **HOME** | back to TRACKS |
 
 **Kit page** — 16 pads that flash on every hit. The keys play the pads.
@@ -377,7 +377,7 @@ This table shows all seven layers:
 | **SEQ** | steps | steps 1–16 of the page | SOUND / NOTE | DIV | SWING | LENGTH | SEQ pages |
 | **SEL** | key | the key of the song | CHORD | SCALE | KEYS | TRANSPOSE | SEL pages |
 | **GLO** | mix | 1–4 mute · 5–8 solo · 9 fill · 10 fill bar · 16 tap tempo | level 1 | level 2 | level 3 | level 4 | GLO pages |
-| **SAVE** | song | 1–4 play A–D · 5–8 save A–D · 13 loop / song · 14 SONG REC · 16 song screen | — | — | — | — | song screen / SAVE pages |
+| **SAVE** | song | 1–4 play A–D · 5–8 save A–D · 13 loop / song · 14 SONG REC · 16 song screen | — | — | — | — | SAVE pages |
 
 ### FX — punch
 
@@ -515,9 +515,9 @@ EDIT + OCT− / OCT+ undo and redo the edits, as before. Not while you record or
 
 **The DRUMS grid has the same sheet** (2.7.2). On the grid, **OCT+ held** opens it for the hit of the KNOB 1 sound on the KNOB 2 step. The rows are **RATCHET** (x1 … x4), **NUDGE** and **FILL** (of the step: every sound in it), **MOVE** (KNOB 2), **COPY** (OCT+: to the next step) and **DELETE** (OCT+). OCT− closes the sheet. If you tap OCT+, it still turns the page of steps.
 
-The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes the **SONG** screen. On those three pages, the keys are pads: white keys 1–8 are the patterns of the track. On SCENES, keys 9–16 launch the scenes; on PATTERNS and CHAIN they do nothing (1.9.7) ([the details](docs/groovebox-controls.md#patterns)).
+The **TIMING** page (tap SEQ again, called PATTERN before) holds the **LEN** of the pattern. It also holds the **DIV**, **SWG** (swing) and **GATE** (how long each note lasts) of the track. Tap SEQ again for the **PLAY** page (the play direction and the random seed). Then come **PATTERNS** (the eight patterns of the track as pads), **CHAIN** (the playlist of patterns of the track) and **SCENES** (the pattern of every track at once, for the parts of the song). Then comes **SONG**, the last SEQ page. On PATTERNS, CHAIN and SCENES, the keys are pads: white keys 1–8 are the patterns of the track. On SCENES, keys 9–16 launch the scenes; on PATTERNS and CHAIN they do nothing (1.9.7) ([the details](docs/groovebox-controls.md#patterns)).
 
-To get to PATTERNS, CHAIN or SCENES, tap **SEQ**, then turn **SELECT**: it walks NOTES to SCENES in both directions. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
+To get to PATTERNS, CHAIN, SCENES or SONG, tap **SEQ**, then turn **SELECT**: it walks NOTES to SONG in both directions (1.9.9: SONG too). From NOTES, SONG is six taps of SEQ. If you tap SEQ from any other page, it always starts on NOTES. On the drum track, SEQ opens the [DRUMS grid](#the-drums-screen) in place of NOTES. TIMING, PLAY, PATTERNS, CHAIN, SCENES and SONG work the same.
 
 As on the other pages, the bottom line of PATTERNS, CHAIN, SCENES and SONG (and of CHORDS, on SEL) shows the page in a box between the page before and the page after it (1.9.7). The top of the screen is the status bar of every page (play, tempo, the track's sound and number, battery). The line under it shows what OCT+ and OCT− do there for 4 seconds after the page opens, then what the page is about: how full the pattern store is, whether the chain plays, the scenes' quantize, SONG's mode and loop, the key on CHORDS. CHAIN shows all 16 slots at once.
 
@@ -675,9 +675,9 @@ A–D are not four songs. **To keep several songs**, save an editor **Backup** f
 
 **Settings of the FM-1** (SYNC, MIDI OUT, IN, the lights, the menu settings, and the MODE, START and QUANT of the REC screen) are not part of a section. When you load a section or use NEW, these settings never change.
 
-### The SAVE pages (SAVE tapped, not on TRACKS or DRUMS)
+### The SAVE pages (SAVE tapped)
 
-The SAVE pages open at **USER**. SELECT walks USER, SECTION and TOOLS. (The sounds are in the [sound browser](#the-sound-browser): turn PRESETS.)
+Tap SAVE on any screen (1.9.9: TRACKS and DRUMS too). The SAVE pages open at **USER**. SELECT (or SAVE again) walks USER, SECTION and TOOLS. The bottom line shows only these three. (The sounds are in the [sound browser](#the-sound-browser): turn PRESETS. Before 1.9.9, the bottom line of USER showed the browser as the page before it.)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
@@ -707,7 +707,7 @@ The FM-1 holds **one song**: up to **16 steps** of **4 sections, A–D**. Each s
 
 ### The SONG screen
 
-To open it, use **SAVE tapped on TRACKS** (or on DRUMS), or **SAVE + key 16**. The screen shows the chain, and you can edit the chain by hand:
+SONG is the last SEQ page. To open it, tap **SEQ** until you see SONG (from NOTES: six taps), turn **SELECT** right from SCENES, or use **SAVE + key 16**. (Before 1.9.9, SAVE tapped on TRACKS opened it. Now that tap opens the SAVE pages.) The screen shows the chain, and you can edit the chain by hand:
 
 | Control | Does |
 | --- | --- |
@@ -1435,9 +1435,9 @@ If the official firmware starts with strange settings or a scrambled display, it
 | hold REC ~2 s | clear the selected track |
 | tap HOME | TRACKS · on TRACKS: visualiser |
 | hold HOME | menu |
-| tap SAVE | on TRACKS: SONG screen · on other screens: SAVE pages |
+| tap SAVE | SAVE pages (USER, SECTION, TOOLS) · on SONG: save the song |
 | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
-| tap SEQ, then turn SELECT | PATTERNS, CHAIN, SCENES (the SEQ pages after PLAY) |
+| tap SEQ, then turn SELECT | PATTERNS, CHAIN, SCENES, SONG (the SEQ pages after PLAY) |
 | white keys 1–8, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) |
 | white keys 9–16, on SCENES | launch scenes 1–8 |
 | tap SEQ / EDIT, drum track | DRUMS grid (again: TIMING, PLAY, PATTERNS, CHAIN, SCENES) / kit (again: sound) |

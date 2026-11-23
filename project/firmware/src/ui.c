@@ -820,8 +820,6 @@ UI_SMALL static uint32_t family_next(uint32_t fam)   /* the page a tap of the fa
         i = page_first(fam);                            /* (1.7) from another button: always its first page, so the
                                                         * taps to a page are always the same (not the page last used) */
     }
-    if (PAGES[i].graph == GR_BROWSE && i + 1u < NPAGES && PAGES[i + 1u].fam == fam)
-        i++;                                            /* (the browser: PRESETS opens it, SAVE closes it) */
     return i;
 }
 UI_SMALL static void open_family(uint32_t fam)
@@ -831,8 +829,9 @@ UI_SMALL static void open_family(uint32_t fam)
 }
 
 /* SELECT on a page: the previous / next page of its family, as tapping the button again but both ways,
- * stopping at the ends. Not the screens of their own (SONG, DRUMS, CHORDS) nor a family of one page (TRACKS):
- * 0 then, and SELECT is the tempo there. (1.7) PATTERNS is one of the SEQ pages here: NOTES, TIMING, PLAY, PATTERNS
+ * stopping at the ends. Not the screens of their own (DRUMS, CHORDS) nor a family of one page (TRACKS):
+ * 0 then, and SELECT is the tempo there. (1.9.9) SONG is the last SEQ page here, after SCENES (it was a screen of its
+ * own: SCENES' tabs led nowhere). (1.7) PATTERNS is one of the SEQ pages here: NOTES, TIMING, PLAY, PATTERNS
  * (on the drum track the grid is its NOTES: ui_studio.c drum_screen_input walks on from it) */
 UI_SMALL static int page_walk(int32_t s)
 {
@@ -840,10 +839,10 @@ UI_SMALL static int page_walk(int32_t s)
     uint32_t i, fam = pg->fam, n = 0;
     int32_t cur = -1, to;
     uint8_t idx[16];                               /* (2.7: GLO has 9 pages with MIDI 3) */
-    if (ui.home || pg->scope == SC_SONG || pg->scope == SC_DRUM || pg->scope == SC_HARM)
+    if (ui.home || pg->scope == SC_DRUM || pg->scope == SC_HARM)
         return 0;
     for (i = 0; i < NPAGES && n < 16u; i++) {
-        if (PAGES[i].fam != fam || PAGES[i].scope == SC_SONG || PAGES[i].scope == SC_DRUM ||
+        if (PAGES[i].fam != fam || PAGES[i].scope == SC_DRUM ||
             PAGES[i].scope == SC_HARM || !page_shown(&PAGES[i]))
             continue;
         if (i == ui.page)

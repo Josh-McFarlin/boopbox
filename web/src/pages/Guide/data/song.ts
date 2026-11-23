@@ -16,6 +16,6 @@ export const SONG_STEPS: [title: string, text: string][] = [
   ],
   [
     'Play it back',
-    'SAVE + key 13 switches loop / song. In song mode PLAY plays the whole song. Edit it by hand on the SONG screen (tap SAVE on TRACKS).',
+    'SAVE + key 13 switches loop / song. In song mode PLAY plays the whole song. Edit it by hand on the SONG page (the last SEQ page, or SAVE + key 16).',
   ],
 ]

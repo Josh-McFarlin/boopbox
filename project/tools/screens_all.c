@@ -18,7 +18,7 @@ static void put(const char *group, const char *name, const char *title, const ch
 }
 
 static const char *const FAM_NAME[FAM_COUNT] = {"HOME", "ENV", "LFO", "FX", "SEL", "EDIT", "GLO", "SAVE", "ARP", "SEQ",
-                                                "TRK", "MIDI"};
+                                                "TRK", "MIDI", "BROWSER"};
 
 static void show_page(uint32_t j)                   /* page j of PAGES, as the buttons open it */
 {

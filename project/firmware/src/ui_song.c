@@ -6,6 +6,7 @@ static uint32_t song_store_t;   /* when REC or OCT+ asked for its confirmation (
 UI_SMALL static int on_song_page(void) { return !ui.home && cur_page()->scope == SC_SONG; }
 UI_SMALL static uint32_t page_pos(uint32_t *n);      /* (ui_draw.c) */
 UI_SMALL static int32_t page_nb(int32_t d);
+UI_SMALL static int page_walk(int32_t s);             /* (ui.c) */
 UI_SMALL static const char *page_name(uint32_t i);
 /* (1.9.7) the page's tab between its neighbours (what SELECT brings), and a dot a page of the family, this one lit, at
  * row y of the canvas (18 rows): the bottom line of SONG, PATTERNS, CHAIN, SCENES and CHORDS, as ui_draw.c draw_foot's */
@@ -228,6 +229,7 @@ UI_SMALL static void song_screen_input(uint32_t pressed, uint32_t home)
         fm1_irq_on();
         ui_message("LOOP STARTS HERE");
     }
-    /* Unused encoders have no hidden action on this screen. */
-    panel_enc(EN_SELECT);
+    /* (1.9.9) SELECT: the SEQ pages (left: SCENES), as on them (REC READY, a take: the tempo, ui_input.c) */
+    if ((steps = panel_enc(EN_SELECT)) != 0 && !rec_wait && !ft_on)
+        page_walk(steps);
 }
