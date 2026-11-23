@@ -28,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # web/package.json: node >= 22.18 (on 20, npm ci fails and the site does not build)
 
       - name: Check the changelog for each new binary
         env:
