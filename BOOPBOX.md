@@ -51,6 +51,7 @@ Version tags show the release that added a feature. *(1.8)* and other 1.x tags a
 The FM-1 restarts and shows the BoopBox logo. An update keeps your projects, presets, samples, kits and settings. The editor is at [editor/](https://boopbox.replit.app/editor/) (or **`project/scripts/OPEN-EDITOR.bat`**).
 
 - **BoopBox Trainer** is a second firmware. It teaches you three songs on the FM-1 itself, with a coach on the screen. All other functions work as in BoopBox. To switch back, install the other firmware ([the trainer](docs/trainer.md)).
+- **Another FM-1 firmware** (SLOOP, for example): its installer finds the FM-1 by the MIDI port name **BoopBox FM-1**. BoopBox up to 1.9.9 named the port *BoopBox*, and other installers said *FM-1 not found*: install the newest BoopBox first.
 - **No FM-1 at hand?** [The emulator](https://boopbox.replit.app/emu/) runs the real firmware in the browser, with a drawing of the FM-1 on the page. [The home page](https://boopbox.replit.app/) shows what BoopBox does.
 
 ## Sixty seconds to a beat

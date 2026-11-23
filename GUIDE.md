@@ -1,6 +1,6 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="project/assets/logo/boopbox-logo.png"><img src="project/assets/logo/boopbox-logo-black.png" alt="BoopBox" width="420"></picture></p>
 
-# BoopBox 1.9.9 — The Complete Guide
+# BoopBox 1.9.10 — The Complete Guide
 
 This guide gives all the functions of BoopBox in one place: every button, every combination and every page. Read it from the top the first time. Then use it as a reference. The [cheat sheet](#26-cheat-sheet) at the end gives every combination on one page.
 
@@ -1401,6 +1401,13 @@ A backup from SLOOP does not restore into BoopBox (the editor refuses it before 
 | An install stopped half-way | The FM-1 waits in update mode. Press **INSTALL** again |
 | Buttons or knobs do the wrong thing | Hold **OCT− + OCT+** while you switch on. Or go to HOME menu → SYSTEM → HARDWARE CALIBRATION |
 | A developer needs UBOOT | While stopped, hold **OCT− + OCT+** for 5 s (*UPDATE MODE IN 3…*). To cancel, release the buttons |
+
+### Installing another FM-1 firmware
+
+The installers of other FM-1 firmwares (SLOOP, for example) find the FM-1 by the name of its MIDI port. BoopBox names
+it **BoopBox FM-1**. BoopBox up to 1.9.9 named it *BoopBox*, and those installers did not find it (*FM-1 not found*):
+install the newest BoopBox first, then the other firmware. If the name on the computer stays *BoopBox* (Windows keeps
+the name it saw first), remove the FM-1 in Device Manager and plug it in again.
 
 ### Going back to the official firmware
 

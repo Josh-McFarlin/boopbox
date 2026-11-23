@@ -13,6 +13,17 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.10
+
+**Other FM-1 installers find BoopBox again.** The FM-1's MIDI port is now named **BoopBox FM-1** (it was *BoopBox*).
+Installers of other FM-1 firmwares, such as [SLOOP's](https://github.com/isod89/sloop-fm1), look only at MIDI ports
+with *FM-1*, *Felucca* or *SLOOP* in the name, so they skipped the port *BoopBox* and said *FM-1 not found*. BoopBox's
+own installer and editor find both names. If a music app or a MIDI routing remembers the port as *BoopBox*, choose
+*BoopBox FM-1* again. Windows can keep the old name of the port until you remove the FM-1 in Device Manager and plug
+it in again.
+
+Nothing else changed. Projects, presets, samples and settings from 1.9.9 open as before.
+
 ## 1.9.9
 
 **BoopBox's identity no longer changes with the version.** BoopBox now reports `FM-1_26670` and BoopBox Trainer
