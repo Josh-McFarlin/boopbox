@@ -112,7 +112,7 @@ When something is wrong, the hint tells you what is wrong and how to correct it.
 
 **The page card.** A lesson step that needs a screen (the SONG page, the NOTES page, the drum grid, the FX page, the
 HOME screen and others) checks that you are on it. When you are not, the coach shows a card of its own in place of the
-step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP SAVE* or *TAP HOME, THEN TAP SAVE*.
+step: *GO TO THE SONG PAGE* in amber, and only the way there, for example *TAP SEQ UNTIL YOU SEE SONG* (1.9.9; before, *TAP SAVE*) or *TAP SEQ UNTIL YOU SEE NOTES*.
 The button to press blinks. When you get to that screen, the card goes and the step shows again from its headline.
 The card does not count as a step: the step numbers and the progress bar stay the same.
 

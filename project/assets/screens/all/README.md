@@ -57,7 +57,7 @@ Every page of the page table (params.c PAGES), on track 1 (ANALOG); DRUMS on the
 | MIDI > MIDI 3 | [`pages/midi-midi-3.png`](pages/midi-midi-3.png) | page 30 of 48 |
 | MIDI > MIDI 4 | [`pages/midi-midi-4.png`](pages/midi-midi-4.png) | page 31 of 48 |
 | MIDI > SYSTEM | [`pages/midi-system.png`](pages/midi-system.png) | page 32 of 48 |
-| SAVE > PRESETS | [`pages/save-presets.png`](pages/save-presets.png) | page 33 of 48 |
+| BROWSER > PRESETS | [`pages/browser-presets.png`](pages/browser-presets.png) | page 33 of 48 |
 | SAVE > USER | [`pages/save-user.png`](pages/save-user.png) | page 34 of 48 |
 | SAVE > SECTION | [`pages/save-section.png`](pages/save-section.png) | page 35 of 48 |
 | SAVE > TOOLS | [`pages/save-tools.png`](pages/save-tools.png) | page 36 of 48 |

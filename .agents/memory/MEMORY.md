@@ -4,3 +4,4 @@
 - [Mobile Web Audio activation](mobile-web-audio-activation.md) — resume the emulator audio context synchronously from the user's tap, before loading firmware or worklets.
 - [Replit WASM build environment](replit-wasm-build-environment.md) — match the raw Nix Clang to its wrapper and install Python build libraries as language packages.
 - [Replit site hosting](replit-site-hosting.md) — Replit is the public website host; keep generated site output build-only and retain docs and firmware inputs.
+- [Version bumps](version-bumps.md) — never bump the firmware version or add a release unless the maintainer asks; changelog entries go under Unreleased.

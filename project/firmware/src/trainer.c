@@ -155,12 +155,11 @@ UI_SMALL static int tr_keys_ok(void)
 {
     return !ui.menu && !on_pats_page() && !on_chords_page() && !on_song_page() && !on_drum_page();
 }
-UI_SMALL static int tr_to_song(void)                /* the SONG page: SAVE from HOME's screen */
+UI_SMALL static int tr_to_song(void)                /* the SONG page: the last SEQ page (1.9.9: not SAVE any more) */
 {
     if (!ui.menu && ui.layer == LY_PLAY && on_song_page())
         return 1;
-    return tr_home_ok() ? tr_goto("THE SONG PAGE", "TAP SAVE", B_SAVE) :
-                          tr_goto("THE SONG PAGE", "TAP HOME, THEN TAP SAVE", B_HOME);
+    return tr_goto("THE SONG PAGE", "TAP SEQ UNTIL YOU SEE SONG", B_SEQ);
 }
 UI_SMALL static int tr_menu_closed(void)            /* the step's menu (OCT+ held on NOTES / the grid): closed */
 {
@@ -648,14 +647,14 @@ UI_SMALL static void tr_algo_say(uint32_t k)        /* "TURN ALGORITHM TO TRACK 
     tr_say("TURN ALGORITHM TO TRACK ", "");
     tr_num((int32_t)k + 1);
 }
-/* (1.9.7) the way to a page of the three (PV_*): TAP SEQ, then SELECT through the SEQ pages to it. On a SEQ page that
- * SELECT walks (NOTES .. SCENES; the drum grid, NOTES' place) only SELECT, its way; elsewhere SEQ first (from another
- * button its first page; on SONG, which SELECT does not walk, the next: the first again) */
+/* (1.9.7) the way to a page of the three (PV_*): TAP SEQ, then SELECT through the SEQ pages to it. On a SEQ page
+ * (NOTES .. SONG, 1.9.9: SELECT walks SONG too; the drum grid, NOTES' place) only SELECT, its way; elsewhere SEQ first
+ * (from another button its first page) */
 UI_SMALL static int tr_on_seq_walk(void)
 {
     const page_t *pg = cur_page();
     return !ui.menu && ui.layer == LY_PLAY && !ui.home &&
-           ((pg->fam == FAM_SEQ && pg->scope != SC_SONG) || (on_drum_page() && !drum_page));
+           (pg->fam == FAM_SEQ || (on_drum_page() && !drum_page));
 }
 UI_SMALL static int tr_to_view(uint32_t view)
 {

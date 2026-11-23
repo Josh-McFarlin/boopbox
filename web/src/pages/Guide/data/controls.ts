@@ -113,7 +113,7 @@ export const CONTROLS: Record<string, Control> = {
     name: 'SAVE',
     kind: 'button',
     layer: 'SAVE',
-    tap: 'On TRACKS or DRUMS: the SONG screen. On SONG: saves the song. Elsewhere: the SAVE pages (USER, SECTION, TOOLS, CLEAR). In the sound browser: keeps the sound.',
+    tap: 'The SAVE pages (USER, SECTION, TOOLS, CLEAR), on every screen. On SONG: saves the song. In the sound browser: keeps the sound.',
     hold: 'The SONG layer: play or save sections A–D, a quick chain, loop / song mode, SONG REC.',
   },
   ARP: {
@@ -127,7 +127,7 @@ export const CONTROLS: Record<string, Control> = {
     name: 'SEQ',
     kind: 'button',
     layer: 'SEQ',
-    tap: 'The SEQ pages: NOTES (or the DRUMS grid), TIMING, PLAY, PATTERNS, CHAIN, SCENES, then the SONG screen.',
+    tap: 'The SEQ pages: NOTES (or the DRUMS grid), TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG. SELECT walks them both ways.',
     hold: 'The STEPS layer: the white keys are the 16 steps of the page. Held + SAVE tapped: the SCENES page.',
   },
   PLAY: {

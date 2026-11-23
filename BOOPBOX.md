@@ -96,7 +96,7 @@ The **SCENES** page has its own shortcut: hold **SEQ** and tap **SAVE**. On PATT
 | **SEQ** — *steps* | steps 1–16 of the page. With a step held: OCT+ sets its fill condition (normal · fill only · no fill), OCT− clears its nudge, locks and condition | SOUND / NOTE · DIV · SWING · LENGTH. With a step held: SOUND / NOTE · LEVEL · RATCHET · NUDGE (PRESETS: the lock, ALGORITHM: its parameter) | SEQ pages: NOTES (drums: the grid), TIMING, PLAY, PATTERNS, CHAIN, SCENES, SONG |
 | **SEL** — *key* (between FX and ENV, not the SELECT knob) | the key of the song | CHORD · SCALE · KEYS · TRANSPOSE | SEL pages |
 | **GLO** — *mix* | 1–4 mute · 5–8 solo (the bank shown: tracks 1–4 or 5–8) · 9 **fill** while held · 10 **fill bar** (the next bar) · 16 tap tempo | the four levels of the bank | GLO pages |
-| **SAVE** — *song* | 1–4 play section A–D (on the next bar. Two or more tapped while SAVE stays held: a **chain** of them, looped) · 5–8 save the loop into A–D · 13 loop / song · 14 SONG REC · 16 the song screen | — | TRACKS: the SONG screen · other pages: the SAVE pages |
+| **SAVE** — *song* | 1–4 play section A–D (on the next bar. Two or more tapped while SAVE stays held: a **chain** of them, looped) · 5–8 save the loop into A–D · 13 loop / song · 14 SONG REC · 16 the song screen | — | the SAVE pages |
 
 Other controls:
 
@@ -105,7 +105,7 @@ Other controls:
 | **PLAY** | start / stop all the tracks (works inside all layers) |
 | **REC** | playing: record now / stop · stopped: arm (the first note starts) · free take: close the loop |
 | hold **REC** | clear the selected track (a ring fills. Hold for ~2 s. If you let go before, nothing happens) |
-| **SAVE** | on TRACKS or DRUMS: the SONG screen · on other pages: the SAVE pages (USER, SECTION, TOOLS, CLEAR) |
+| **SAVE** | the SAVE pages (USER, SECTION, TOOLS, CLEAR), on every page (1.9.9) |
 | hold **SEQ** + tap **SAVE** | the **SCENES** page, from all pages and tracks |
 | **EDIT + OCT− / OCT+** | undo / redo |
 | **ALGORITHM** | select the track, 1–8, on every page except the sound browser (there: its sounds). The header shows the track |
@@ -406,7 +406,7 @@ A song has up to 16 steps of 4 sections, **A–D**. Each section holds every tra
 3. **Record the song as you play it:** press SAVE + key **14** (*rec*). From the next bar, BoopBox writes into the song every section that you play and how many bars it plays. To end, press SAVE + key 14 again, or STOP. The screen shows *SONG PARTS 5*. BoopBox saves the song automatically when you stop.
 4. **Play it back:** SAVE + key **13** switches *loop* / *song*. In song mode, **PLAY** plays the whole song and stops at the end. After that, your loop is back.
 
-The **SONG screen** (tap SAVE on TRACKS, or SAVE + key 16) shows the chain, and you can edit it there. **KNOB 1** selects the step, **KNOB 2** its section, **KNOB 3** its bars and **KNOB 4** the number of steps. **REC** stores the loop into the section of the step. **SAVE** (tap) saves the chain. **OCT−** switches loop / song. **OCT+ twice** loads a section.
+The **SONG page** (the last SEQ page: tap SEQ until you see it, or SAVE + key 16) shows the chain, and you can edit it there. **KNOB 1** selects the step, **KNOB 2** its section, **KNOB 3** its bars and **KNOB 4** the number of steps. **REC** stores the loop into the section of the step. **SAVE** (tap) saves the chain. **OCT−** switches loop / song. **OCT+ twice** loads a section.
 
 ## The web editor
 
