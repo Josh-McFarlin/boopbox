@@ -65,7 +65,7 @@ const box = (b) =>
 
 const wide = boxes.filter((b) => b.head.length > 3);
 const narrow = boxes.filter((b) => b.head.length <= 3);
-const logo = readFileSync(`${REPO}/project/assets/logo/boopbox-logo.png`).toString("base64");
+const logo = readFileSync(`${REPO}/project/assets/logo/boopbox-logo-black.png`).toString("base64");
 
 const html = (size) => `<!doctype html><html><head><meta charset="utf-8"><style>
   @page { size: A4 landscape; margin: 0; }

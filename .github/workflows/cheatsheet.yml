@@ -13,7 +13,7 @@ on:
       - 'GUIDE.md'
       - 'project/firmware/src/ui.c'
       - 'project/tools/make_cheatsheet.mjs'
-      - 'project/assets/logo/boopbox-logo.png'
+      - 'project/assets/logo/boopbox-logo-black.png'
       - 'docs/boopbox-cheat-sheet.pdf'
       - '.github/workflows/cheatsheet.yml'
 

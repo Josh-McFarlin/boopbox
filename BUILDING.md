@@ -104,10 +104,14 @@ Code makes the logo, the icon atlas and the icons of the web app. These files ar
 If you change the drawing code, write the files again:
 
 ```
-python3 project/tools/gen_logo.py --assets project/assets/logo   # boopbox-logo/icon .svg/.png, boopbox-splash.png
+python3 project/tools/gen_logo.py --assets project/assets/logo   # boopbox-logo(-black)/icon .svg/.png, boopbox-splash.png
 python3 project/tools/gen_logo.py --web web                      # icon-192.png, icon-512.png, icon-maskable-512.png
 python3 project/tools/gen_icon_art.py                            # project/assets/icons.png (--preview OUT.png: 8x, labelled)
 ```
+
+The two logos have no background: `boopbox-logo` (white outline and word) is for dark pages, `boopbox-logo-black` (black)
+for light pages and print (the cheat sheet). The README and the guides show the one that suits GitHub's theme (`<picture>`).
+The icon and the splash keep their black square.
 
 The build makes the boot splash itself (`project/build/gen/boopbox_logo.h`) from `project/tools/gen_logo.py`.
 

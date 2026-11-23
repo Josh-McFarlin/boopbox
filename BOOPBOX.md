@@ -1,4 +1,4 @@
-<p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="480"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="project/assets/logo/boopbox-logo.png"><img src="project/assets/logo/boopbox-logo-black.png" alt="BoopBox" width="480"></picture></p>
 
 # BoopBox 1.9.1
 
