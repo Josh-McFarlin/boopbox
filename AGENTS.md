@@ -43,6 +43,7 @@ your own judgement, even when a change is large. The maintainer decides when the
 
 ## The package identity
 
-The identity is `FM-1_2667` + the build digit + the version (`identity()` in `project/tools/build.py`; BUILDING.md
-explains it). The Firmware Hub needs it to be unique, so do not change the `2667` prefix. Do not change the loader's
+The identity is `FM-1_2667` + the build digit: `FM-1_26670` BoopBox, `FM-1_26671` the Trainer, the same in every
+version (`identity()` in `project/tools/build.py`; BUILDING.md explains it). The Firmware Hub needs it to be unique and
+takes `FM-1_` with 3 to 8 digits only, so do not change the `2667` prefix and do not add the version to it. Do not change the loader's
 `ota-FM-1_900` either: hosts resume an interrupted update by that name.
