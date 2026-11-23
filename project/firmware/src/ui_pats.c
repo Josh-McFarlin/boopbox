@@ -629,7 +629,7 @@ UI_SMALL static void pats_screen_input(uint32_t pressed, uint32_t home)
         sel_tempo(s);                                /* (the REC screen, a take: SELECT the tempo, as on every page) */
     } else if (s && page_walk(s) && !on_pats_page())
         return;                                      /* (1.7) SELECT: the SEQ pages, as on NOTES, TIMING, PLAY (left
-                                                      * from PATTERNS: PLAY; SCENES is the last of them) */
+                                                      * from PATTERNS: PLAY; right from SCENES: SONG, the last) */
     view = pats_view();
     if ((s = panel_enc(EN_ALGO)) != 0 && !ft_on) {   /* (ALGORITHM picks the track here too, as on TRACKS) */
         track_select((uint32_t)clamp((int32_t)song.sel + s, 0, NTRK - 1));

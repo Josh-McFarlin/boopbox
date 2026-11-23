@@ -26,8 +26,9 @@ UI_SMALL static void led_put(uint8_t *nl, uint32_t id, int on)
 }
 
 static const uint8_t FAM_BTN[FAM_COUNT] = {B_HOME, B_ENV, B_LFO, B_FX, B_SCL, B_EDIT, B_GLO, B_SAVE,
-                                           B_ARP, B_SEQ, B_HOME, B_GLO};   /* button of each page family (TRACKS: HOME;
-                                                                     * 1.2: the MIDI setup lights GLO) */
+                                           B_ARP, B_SEQ, B_HOME, B_GLO, B_SAVE};   /* button of each page family (TRACKS:
+                                                                     * HOME; 1.2: the MIDI setup lights GLO; 1.9.9: the
+                                                                     * browser SAVE, which closes it) */
 
 UI_SMALL static uint32_t cur_fam(void) { return ui.home ? FAM_HOME : cur_page()->fam; }
 UI_SMALL static uint32_t cur_btn(void)                      /* the button of the screen shown */
@@ -918,15 +919,12 @@ UI_SMALL static void layer_tap(uint32_t layer)
     case LY_MIX:
         open_family(FAM_GLO);
         break;
-    case LY_SONG:                                         /* SAVE tapped: TRACKS -> the song, else the SAVE pages */
+    case LY_SONG:                                         /* SAVE tapped: the SAVE pages (1.9.9: from TRACKS and DRUMS
+                                                           * too; SONG is the last SEQ page, and SAVE held + key 16) */
         if (!ui.home && cur_page()->graph == GR_BROWSE)
             br_close(1);                                  /* the sound browser: the sound browsed to kept, closed */
         else if (on_song_page())
             arrangement_save();
-        else if (!ui.home && cur_page()->scope == SC_TRK)
-            studio_open(SC_SONG);
-        else if (on_drum_page())
-            studio_open(SC_SONG);
         else
             open_family(FAM_SAVE);
         break;

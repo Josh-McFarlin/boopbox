@@ -21,6 +21,13 @@ static void check(int ok, const char *what)
 /* ---------------------------------------------------------------- helpers: a person at the panel --- */
 static void slow(uint32_t e, int32_t s) { turn(e, s); frames(4); }   /* (detents 80 ms apart: no knob acceleration) */
 static void home(void) { tap(B_HOME); frames(2); if (vis_shown()) tap(B_HOME); }
+static void song_page(void)                         /* (1.9.9) the SONG page: SEQ tapped until it shows (the last SEQ page) */
+{
+    uint32_t g;
+    home();
+    for (g = 0; g < 9u && !on_song_page(); g++)
+        tap(B_SEQ);
+}
 static void algo_to(uint32_t k)
 {
     uint32_t guard = 20;
@@ -590,7 +597,7 @@ static void do_card(const tr_card_t *c)
         } else if (PAGES[c->p].scope == SC_PATS)
             pats_screen();
         else if (PAGES[c->p].scope == SC_SONG)
-            tap(B_SAVE);
+            song_page();
         else
             open_page(c->btn, PAGES[c->p].title);
         break;
@@ -660,10 +667,10 @@ static void do_card(const tr_card_t *c)
             home();
             frames(3);
             slow(EN_K4, 1);
-            check(!tr_goal(c) && !strcmp(tr.go, "GO TO THE SONG PAGE") && !strcmp(tr.hint, "TAP SAVE") &&
-                  tr.btn == B_SAVE && arrangement.count == was, "the song's steps from HOME: the page card, TAP SAVE");
+            check(!tr_goal(c) && !strcmp(tr.go, "GO TO THE SONG PAGE") && !strcmp(tr.hint, "TAP SEQ UNTIL YOU SEE SONG") &&
+                  tr.btn == B_SEQ && arrangement.count == was, "the song's steps from HOME: the page card, TAP SEQ (1.9.9)");
         }
-        if (!on_song_page()) { home(); tap(B_SAVE); }
+        if (!on_song_page()) song_page();
         while (arrangement.count != d[0] && g--)
             slow(EN_K4, arrangement.count < d[0] ? 1 : -1);
         if (c->flags & 1u)
@@ -682,7 +689,7 @@ static void do_card(const tr_card_t *c)
         break;
     }
     case TG_SONGMODE:
-        if (!on_song_page()) { home(); tap(B_SAVE); }
+        if (!on_song_page()) song_page();
         if (!arrangement_enabled)
             tap(B_OCTDN);
         if (!song.playing)
@@ -867,7 +874,7 @@ static int wrong_screen(uint32_t w)                 /* 0: this state cannot be m
         break;
     case 31: seq_save(); slow(EN_SELECT, -1); slow(EN_SELECT, -1); slow(EN_K3, 1); return pats_arm == 1u;
     case 32: seq_save(); tap(B_OCTDN); return pats_arm == 3u;
-    case 33: if (song.playing) return 0; tap(B_SAVE); tap(B_OCTUP); return on_song_page() && song_load_armed;
+    case 33: if (song.playing) return 0; song_page(); tap(B_OCTUP); return on_song_page() && song_load_armed;
     case 34: case 35:                                     /* (a synth track's NOTES: the lock strip; zoomed) */
         if (is_drum(TSEL))
             return 0;
@@ -1340,7 +1347,7 @@ int main(int argc, char **argv)
             home();
             frames(5);
             if (w == 0u) pats_screen();
-            else if (w == 1u) tap(B_SAVE);
+            else if (w == 1u) song_page();
             else open_page(B_SCL, "CHORDS");
             frames(10);
             for (y = 40; y < 42u; y++)

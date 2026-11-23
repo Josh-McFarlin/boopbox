@@ -457,7 +457,7 @@ def level3():
     L.saved("D", "SAVE IT AS D", "HOLD SAVE, PRESS KEY 8")
     L.mutes(set(A["_mute"]) | {4}, "SECTION A: THE INTRO", "HOLD GLO: ONLY THE PIANO ON")
     L.saved("A", "SAVE IT AS A", "HOLD SAVE, PRESS KEY 5")
-    L.page("SONG", "SEQ", "THE SONG", "TAP HOME, THEN TAP SAVE", btn="SAVE")
+    L.page("SONG", "SEQ", "THE SONG", "TAP SEQ UNTIL YOU SEE SONG")
     L.song_entries(s.song, "SEVEN PARTS", "TURN KNOB 4 TO 7 STEPS", count_only=True)
     L.song_entries(s.song, "A4 B4 C8 D8 B4 C8 A4", "KNOB 1 STEP, 2 PART, 3 BARS")
     L.songmode("PLAY THE SONG", "OCT-: SONG MODE, THEN PLAY")

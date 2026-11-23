@@ -480,6 +480,8 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
 enum { FAM_HOME, FAM_ENV, FAM_LFO, FAM_FX, FAM_SCL, FAM_EDIT, FAM_GLO, FAM_SAVE, FAM_ARP, FAM_SEQ, FAM_TRK,
        FAM_MIDI,                 /* (1.2) the MIDI and sync setup: out of GLO's pages, opened from MENU > SEQ > MIDI
                                   * SETTINGS; SELECT walks them, GLO lit */
+       FAM_BROWSE,               /* (1.9.9) the sound browser, a page of its own (not one of the SAVE pages: their tabs
+                                  * and SELECT showed it); PRESETS opens it, SAVE lit as the way to close it */
        FAM_COUNT };
 enum { SC_TRACK, SC_GLOBAL, SC_ENGINE, SC_STEP, SC_TRK, SC_SONG, SC_DRUM,
        SC_PATT,                  /* SC_PATT: the selected track's pattern settings that are not parameters (PS_*) */
@@ -543,7 +545,7 @@ static const page_t PAGES[] = {
     {"MIDI 4", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_FXCH, G_DRMAP, G_RMCH, G_CLKOUT}},   /* the punch-in FX over MIDI, ... */
     {"SYSTEM", FAM_MIDI, SC_GLOBAL, GR_NONE, {G_SYNC, G_INFO, 0xFF, 0xFF}},   /* the clock it follows, USB (1.2: IN and
                                                                            * OUT on MIDI 3 only) */
-    {"PRESETS", FAM_SAVE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
+    {"PRESETS", FAM_BROWSE, SC_GLOBAL, GR_BROWSE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* browser: PRESETS knob / KNOB 1 */
     {"USER", FAM_SAVE, SC_GLOBAL, GR_USER, {0xFF, 0xFF, 0xFF, 0xFF}},       /* user presets: SLOT LOAD ERASE SAVE */
     {"SECTION", FAM_SAVE, SC_GLOBAL, GR_SLOTS, {G_SLOT, 0xFF, G_LOAD, G_SAVE}},   /* ("PROJECT" before 2.7) */   /* (KNOB 2: ERASE, 2.6: ui_input.c) */
     {"TOOLS", FAM_SAVE, SC_GLOBAL, GR_NONE, {G_CLRSEQ, G_INITSND, G_KIND, G_NEWPRJ}},   /* (KIND: synth <-> drum track) */

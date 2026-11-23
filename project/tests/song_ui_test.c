@@ -41,6 +41,7 @@ static void song_restore(void) {}
 /* (ui_draw.c) the page's tabs: its name, its neighbours, its place among its button's pages */
 static uint32_t page_pos(uint32_t *n) { *n = 1; return 1; }
 static int32_t page_nb(int32_t d) { (void)d; return -1; }
+static int page_walk(int32_t s) { (void)s; return 0; }
 static const char *page_name(uint32_t i) { return PAGES[i].title; }
 static void press(uint32_t b) {song_screen_input(1u<<panel.btn[b],0);}
 

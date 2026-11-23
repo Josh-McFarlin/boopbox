@@ -6,7 +6,7 @@
 import type React from 'react'
 import type { ReactNode } from 'react'
 
-import sounds from '../../../../project/assets/screens/all/pages/save-presets.png'
+import sounds from '../../../../project/assets/screens/all/pages/browser-presets.png'
 import editorShot from '../../../../project/assets/screens/editor-sound.png'
 import chords from '../../../../project/assets/screens/fm1/chords.png'
 import drums from '../../../../project/assets/screens/fm1/drums.png'

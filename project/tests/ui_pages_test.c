@@ -597,7 +597,7 @@ int main(int argc, char **argv)
     press(B_REC); frames(60); release(B_REC);         /* let go before the end: nothing */
     check(trk[0].step[3].n == 1 && !rec_wait, "REC let go before the end: nothing cleared");
 
-    /* ---- SAVE: tap = the song page; held = the SONG layer (live sections, SONG REC) */
+    /* ---- SAVE: tap = the SAVE pages (1.9.9: TRACKS too); held = the SONG layer (live sections, SONG REC) */
     go_home(); frame();
     song.playing = 0; live_sec = -1; live_req = -1; srec = 0; arrangement_enabled = 0;
     press(B_SAVE); frames(24); check(ui.layer == LY_SONG, "SAVE held: the song layer");   /* (2.8.3: after 0.35 s) */
@@ -635,7 +635,26 @@ int main(int argc, char **argv)
     key(key_of_white(12)); check(arrangement_enabled == 0u, "again: loop mode");
     release(B_SAVE);
     check(!on_song_page() && saves == 0, "SAVE held and let go: no song page, no save");
-    tap(B_SAVE); check(on_song_page(), "SAVE tapped on TRACKS: the song page");
+    tap(B_SAVE);
+    check(!ui.home && cur_page()->fam == FAM_SAVE && !strcmp(cur_page()->title, "USER") && !on_song_page(),
+          "SAVE tapped on TRACKS (1.9.9): the SAVE pages from USER, not the song");
+    {   /* (1.9.9) the SAVE pages: USER, SECTION, TOOLS, three; the browser not one of them (its tab, SELECT) */
+        uint32_t n, k = page_pos(&n);
+        int ok = k == 1u && n == 3u && page_nb(-1) < 0 && !strcmp(PAGES[page_nb(1)].title, "SECTION");
+        encs[panel.enc[EN_SELECT]] = -1; frame();
+        ok &= !strcmp(cur_page()->title, "USER");
+        encs[panel.enc[EN_SELECT]] = 1; frame(); encs[panel.enc[EN_SELECT]] = 1; frame();
+        ok &= !strcmp(cur_page()->title, "TOOLS") && page_pos(&n) == 3u && n == 3u && page_nb(1) < 0;
+        tap(B_SAVE);
+        ok &= !strcmp(cur_page()->title, "USER");            /* (SAVE again, round: USER, not the browser) */
+        check(ok, "SAVE pages (1.9.9): USER 1/3, SECTION, TOOLS 3/3; SELECT left on USER stays; no PRESETS tab");
+    }
+    song.sel = TRK_DRUM; studio_open(SC_DRUM); frames(2);
+    tap(B_SAVE);
+    check(!on_song_page() && !strcmp(cur_page()->title, "USER"), "SAVE tapped on DRUMS (1.9.9): the SAVE pages");
+    song.sel = 0; go_home(); frame();
+    press(B_SAVE); frames(24); key(key_of_white(15)); release(B_SAVE); frames(2);
+    check(on_song_page(), "SAVE held + key 16: the song page");
     ui.force = 1; frame(); ppm("page-song");
 
     /* ---- the drum screen */
@@ -937,7 +956,7 @@ int main(int argc, char **argv)
             check(ok, "MENU > COLOR (2.7): your theme after MONO, by its name; its colours, background and the tracks'; bit 30");
         }
         {   /* 2.7: the page counter counts the pages SELECT walks (1.7: SEQ: NOTES 1/4, TIMING 2/4, PLAY 3/4, PATTERNS 4/4;
-             * SONG not counted) */
+             * 1.9.9: SONG counted, the last SEQ page) */
             uint32_t n, k1, n1, k2, n2, k3 = 0, n3 = 0, k4 = 0, n4 = 0, menu0 = ui.menu, sel0 = ui.menu_sel;
             int ok = 1;
             ui.menu = 0; go_home(); frame();
@@ -949,15 +968,16 @@ int main(int argc, char **argv)
             k2 = page_pos(&n2);
             open_family(FAM_SEQ); frame();            /* SEQ again: PLAY (the direction, the seed) */
             ok &= !strcmp(PAGES[ui.page].title, "PLAY");
-            ok &= page_pos(&n) == 3u && n == 6u;
+            ok &= page_pos(&n) == 3u && n == 7u;
             open_family(FAM_SEQ); frame();            /* SEQ again: PATTERNS (1.7: one of the pages SELECT walks) */
             ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_PADS;
             k4 = page_pos(&n4);
             open_family(FAM_SEQ); frame();            /* SEQ again: CHAIN, then SCENES */
-            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_CHAIN && page_pos(&n) == 5u;
+            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_CHAIN && page_pos(&n) == 5u && n == 7u;
             open_family(FAM_SEQ); frame();
-            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_SCENES && page_pos(&n) == 6u;
-            open_family(FAM_SEQ); frame();            /* SEQ again: the SONG screen (its own) */
+            ok &= PAGES[ui.page].scope == SC_PATS && pats_view() == PV_SCENES && page_pos(&n) == 6u &&
+                  !strcmp(PAGES[page_nb(1)].title, "SONG");
+            open_family(FAM_SEQ); frame();            /* SEQ again: the SONG page (1.9.9: the last SEQ page) */
             if (PAGES[ui.page].scope == SC_SONG)
                 k3 = page_pos(&n3);
             open_family(FAM_SEQ); frame();            /* (round to STEP again: SEQ opens there, as before) */
@@ -966,11 +986,10 @@ int main(int argc, char **argv)
             (void)page_pos(&n);                       /* GLO: its five pages (1.2: the MIDI setup a family of its own) */
             go_home(); frame();
             ui.menu = (uint8_t)menu0, ui.menu_sel = (uint8_t)sel0, ui.force = 1; frame();
-            ok &= k1 == 1u && n1 == 6u && k2 == 2u && n2 == 6u && k4 == 4u && n4 == 6u && k3 == 7u && n3 == 7u && n == 5u;
-                                                      /* (SONG: 7/7, the screen shown counts) */
+            ok &= k1 == 1u && n1 == 7u && k2 == 2u && n2 == 7u && k4 == 4u && n4 == 7u && k3 == 7u && n3 == 7u && n == 5u;
             if (!ok)
                 printf("ui:   counter: NOTES %u/%u TIMING %u/%u PATTERNS %u/%u SONG %u/%u GLO /%u\n", k1, n1, k2, n2, k4, n4, k3, n3, n);
-            check(ok, "page counter: as SELECT walks them: NOTES 1/6 .. PATTERNS 4/6, CHAIN 5/6, SCENES 6/6 (SONG not counted)");
+            check(ok, "page counter: as SELECT walks them: NOTES 1/7 .. PATTERNS 4/7, CHAIN 5/7, SCENES 6/7, SONG 7/7 (1.9.9)");
         }
         {   /* 2.7: a sound loaded under a running arp keeps it (settings and the notes it holds); arp OFF: the preset's */
             track_t *t = &trk[0];
@@ -1292,9 +1311,11 @@ int main(int argc, char **argv)
         SEL(9);
         check(!strcmp(PT(), "VOICE 2"), "SELECT on EDIT: up to VOICE 2");
         tap(B_SEQ); SEL(9);
-        check(!strcmp(PT(), "SCENES"), "SELECT on SEQ: NOTES <-> .. PLAY <-> PATTERNS <-> CHAIN <-> SCENES, not into the SONG screen");
-        SEL(-3);
-        check(!strcmp(PT(), "PLAY"), "SELECT left from SCENES: CHAIN, PATTERNS, then PLAY");
+        check(on_song_page(), "SELECT on SEQ: NOTES <-> .. PLAY <-> PATTERNS <-> CHAIN <-> SCENES <-> SONG (1.9.9)");
+        SEL(1);
+        check(on_song_page(), "SELECT right on SONG: stays (the last SEQ page)");
+        SEL(-4);
+        check(!strcmp(PT(), "PLAY"), "SELECT left from SONG: SCENES, CHAIN, PATTERNS, then PLAY");
         tap(B_ENV);
         check(!strcmp(PT(), "ENV"), "the button still opens its family");
         tap(B_ENV);
@@ -1414,7 +1435,7 @@ int main(int argc, char **argv)
         for (i = 0; i < 2u; i++) { encs[panel.enc[EN_SELECT]] = -1; frame(); }
         check(on_drum_page() && drum_page == 0u, "drum track, PLAY: SELECT left twice: TIMING, then the grid");
         tap(B_SAVE);
-        check(on_song_page(), "drum grid: SAVE alone tapped: still SONG");
+        check(!on_song_page() && cur_page()->fam == FAM_SAVE, "drum grid: SAVE alone tapped: the SAVE pages (1.9.9)");
         song.sel = (uint8_t)sel0; go_home(); frame();
         #undef PT
     }

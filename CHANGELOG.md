@@ -13,6 +13,25 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## 1.9.9
+
+**A tap on SAVE always opens the SAVE pages.** On TRACKS and on the DRUMS screen, a tap on SAVE used to open the
+SONG screen. It now opens the SAVE pages (USER, SECTION, TOOLS), as it does on every other page. SELECT, or SAVE again,
+goes from one to the next. On the SONG page, a tap on SAVE still saves the song. In the sound browser, it still keeps
+the sound.
+
+**SONG is the last SEQ page.** To open it, tap SEQ until you see SONG (from NOTES, six taps), or hold SAVE and press
+key 16. SELECT now goes from SCENES to SONG and back, so the SCENES tab that pointed to SONG now goes there.
+
+**The sound browser is no longer one of the SAVE pages.** The bottom line of USER showed PRESETS as the page before
+it, and the browser showed USER as the page after it. SELECT went left from USER into the browser, but could not go
+back. The SAVE pages now show only USER, SECTION and TOOLS. The browser still opens with PRESETS, and SAVE (keep the
+sound) or HOME (put back the old sound) still closes it.
+
+The trainer's level 3 now says *TAP SEQ UNTIL YOU SEE SONG* to get to the SONG page.
+
+Projects, presets and settings from 1.9.8 open as before.
+
 ## 1.9.8
 
 **Pattern changes and scenes land on the beat in the [jam rooms](https://boopbox.replit.app/rooms/).** When you ask
