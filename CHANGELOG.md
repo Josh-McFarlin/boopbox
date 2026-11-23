@@ -13,7 +13,7 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## 1.9.9
+## Unreleased
 
 **A tap on SAVE always opens the SAVE pages.** On TRACKS and on the DRUMS screen, a tap on SAVE used to open the
 SONG screen. It now opens the SAVE pages (USER, SECTION, TOOLS), as it does on every other page. SELECT, or SAVE again,
