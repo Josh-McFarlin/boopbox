@@ -503,6 +503,15 @@ UI_SMALL static void step_edit(uint32_t slot, int32_t steps)
         if (step_on(st)) {
             uint32_t was = note_span(t, ui.cursor), n;   /* (2.8.3: under later notes too, POLY) */
             note_mark();
+            if (steps < 0 && was == 1u) {                /* left past 1: LEN 0 deletes the note, as EDIT does (a chord's
+                                                          * others stay). A fast turn down stops at 1 first; one undo */
+                fm1_irq_off();
+                note_del(t, ui.cursor, k);
+                fm1_irq_on();
+                cursor_fix();
+                ui_message("NOTE DELETED");
+                break;
+            }
             fm1_irq_off();
             n = note_span_set(t, ui.cursor, (uint32_t)clamp((int32_t)was + steps, 1, NSTEP));
             fm1_irq_on();
@@ -973,6 +982,22 @@ UI_SMALL static int ly_quiet(void)
         ly_quiet_t = 0;
     return ly_quiet_t != 0;
 }
+/* SEQ pressed on the NOTES page or the DRUMS grid: the SEQ layer opens on the page of steps that holds
+ * the cursor (the note under edit, the grid's step), so its key is there to tap */
+UI_SMALL static void step_page_follow(void)
+{
+    uint32_t cur;
+    if (ui.home || ui.menu)
+        return;
+    if (cur_page()->scope == SC_STEP && !is_drum(TSEL))
+        cur = ui.cursor;
+    else if (on_drum_page() && !drum_page && is_drum(TSEL) && DFOC == TSEL)
+        cur = drum_cursor;
+    else
+        return;
+    if (cur < trk_len(TSEL))
+        ui.step_page = (uint8_t)(cur / 16u);
+}
 /* the layers, once a frame: which one is held (or locked), the taps on release, its keys and knobs.
  * Returns 1 while one is held or locked (the page does not take the knobs then) */
 UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_t home)
@@ -995,6 +1020,8 @@ UI_SMALL static int layers_input(uint32_t note_edges, uint32_t *pressed, uint32_
         if (d && !down[l]) {
             t0[l] = now;
             used[l] = (uint8_t)((eat & ly_bit[l]) != 0u);  /* (the press that unlocked: not a tap) */
+            if (l == LY_STEP)
+                step_page_follow();
             if (l == LY_SONG && (fm1_in.buttons & ly_bit[LY_STEP]) && !used[l]) {
                 used[l] = 1;                              /* (1.9.7) SEQ held + SAVE: nothing (1.7-1.9.6: the SCENES
                                                            * page; the way is SEQ, then SELECT). Neither is a tap */

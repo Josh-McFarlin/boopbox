@@ -430,7 +430,7 @@ The 16 white keys are the 16 steps of the current page. The lit steps play.
 | **SEQ + empty step** | sets it at once. Drums: with the sound that the screen shows (KNOB 1, or the last pad you hit). Synths: with the note or chord you played last (on the keys, or a MIDI keyboard: 2.6) |
 | **SEQ + set step (tap)** | clears it (with its nudge, locks and fill condition) |
 | **SEQ + several step keys held** | edit them together |
-| **SEQ + first four black keys** or **SEQ + OCT− / OCT+** (no step held) | the page: steps 1–16, 17–32, 33–48, 49–64 (up to the length of the track). (2.7.1) On the drum track, only OCT− / OCT+ select the page. There, the black keys pick the sound |
+| **SEQ + first four black keys** or **SEQ + OCT− / OCT+** (no step held) | the page: steps 1–16, 17–32, 33–48, 49–64 (up to the length of the track). When you press SEQ on the NOTES page or the DRUMS grid, the layer opens on the page of the cursor (the note under edit, the grid's step), so its key is there to tap. (2.7.1) On the drum track, only OCT− / OCT+ select the page. There, the black keys pick the sound |
 | **SEQ + a black key** (drum track, 2.7.1) | the **sound** that the steps are for, silently, as on the DRUMS grid (F#3 KICK / KICK 2 … F#5 COWBELL). The same key again picks its pair. With **SEQ + HOME** (locked), both hands are free: the black keys pick the sound, and the white keys are its steps |
 | **SEQ + KNOB 1** (no step held) | the **sound** (drums, heard with DRUM PREVIEW ON, 2.7.1) / **note** to set |
 | **SEQ + KNOB 2** | **DIV**: 1/4, 1/8, 1/16, 1/32, 8T, 16T, 1/2, 1BAR, 2BAR |
@@ -504,7 +504,7 @@ There are three ways to enter steps:
 | **keys** | the keys that you press together become the step under edit (POLY: up to 4 notes. MONO, LEG and UNI: the last one). In chord mode, a key writes its whole chord, CHORD+ changes included. When you let go of all keys, the edit moves on to the next step. (2.7.1) With MENU → SEQ → **STEP ADVANCE OFF**, it stays, and the next keys write the same step again, for a chord tried twice · **a MIDI keyboard** too (2.6): the notes it plays together on the selected track (the track its channel plays, MIDI) become the step, as they sound. If it plays on the channel of another track while stopped, the screen shows *MIDI PLAYS TRACK n* (and when you record: see REC) |
 | KNOB 1 **NOTE** | goes from note to note: the notes of a chord one by one, then the next step. It also goes to the empty steps, so you can put a note there. The TIEs of a note are its length, not stops |
 | KNOB 2 **PITCH** | the pitch of that note (the other notes of a chord stay). An empty step gets your last note |
-| KNOB 3 **LEN** | how many steps the note lasts. Longer turns the steps after it into TIEs. Shorter turns its last TIEs back into RESTs. (2.8.3) On a POLY track, the note goes on **under the notes after it**: a long bass under a melody. Each note keeps its own length (up to 4 notes a step: *STEP FULL: 4 NOTES*). The note stops at the end of the pattern (*END OF PATTERN*). It also stops at the same pitch played again, or at a step with ratchets or a slide (*NOTE AHEAD*). It also stops on a MONO, LEGATO or UNISON sound, which plays one note at a time (*MONO: SET VOICE POLY*: VOICE page, VCE = POLY) |
+| KNOB 3 **LEN** | how many steps the note lasts. Turn it left past 1 (LEN 0) to delete the note, as EDIT does (*NOTE DELETED*. A fast turn stops at 1 first). Longer turns the steps after it into TIEs. Shorter turns its last TIEs back into RESTs. (2.8.3) On a POLY track, the note goes on **under the notes after it**: a long bass under a melody. Each note keeps its own length (up to 4 notes a step: *STEP FULL: 4 NOTES*). The note stops at the end of the pattern (*END OF PATTERN*). It also stops at the same pitch played again, or at a step with ratchets or a slide (*NOTE AHEAD*). It also stops on a MONO, LEGATO or UNISON sound, which plays one note at a time (*MONO: SET VOICE POLY*: VOICE page, VCE = POLY) |
 | KNOB 4 **FORCE** | **GHOST**, **SOFT**, **NORM**, **HARD**, then **ACC** (the accent of the step, for its whole chord) |
 | **PRESETS** | the zoom: 8, 16 (when the page opens), 32 or 64 steps on the screen (the page with the note under edit) |
 | **EDIT (tap)** | deletes the note under edit. A chord keeps its other notes. Its last note takes the step and its TIEs |
@@ -1523,6 +1523,7 @@ To print it: [boopbox-cheat-sheet.pdf](docs/boopbox-cheat-sheet.pdf) has these t
 | tempo-synced envelope / LFO | ENV DEST → ESYNC · LFO → LFO 2 → SYNC |
 | ANALOG band-pass / high-pass | EDIT → FILTER → TYPE |
 | the length of a note in steps | SEQ → NOTES page, KNOB 3 on the note (LEN) |
+| delete a note | SEQ + its step · NOTES: EDIT (tap) or LEN to 0 |
 | drum mutes | EDIT + a black key, then the keys of the sounds |
 | a beat from the keys | drum track: SEQ → PLAY page, hold white keys |
 | patterns, chain, scenes | tap SEQ, then turn SELECT past PLAY |

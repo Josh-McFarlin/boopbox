@@ -265,7 +265,12 @@ export const PAGES: PageGroup[] = [
       [
         'NOTES',
         'pages/seq-notes',
-        ['NOTE cursor', 'PITCH', 'LEN in steps', 'FORCE: GHOST … ACC'],
+        [
+          'NOTE cursor',
+          'PITCH',
+          'LEN in steps (0: delete)',
+          'FORCE: GHOST … ACC',
+        ],
         "A piano roll of the track. Hold OCT+ for the note's sheet: slide, nudge, fill, move, copy, delete, locks.",
       ],
       [

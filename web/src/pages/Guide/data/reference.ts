@@ -52,6 +52,7 @@ export const WHERE: [lookingFor: string, where: string][] = [
   ['clear the whole song', 'SAVE → CLEAR → SONG'],
   ['synth ↔ drum track', 'SAVE → TOOLS → KIND · KNOB 1 in the sound browser'],
   ['the length of a note', 'SEQ → NOTES page, KNOB 3 on the note'],
+  ['delete a note', 'SEQ + its step · NOTES: EDIT (tap) or LEN to 0'],
   ['parameter locks', 'hold SEQ, hold a step, turn PRESETS'],
   ['fills', 'SEQ + step + OCT+ (condition) · GLO + key 9 / 10 (play a fill)'],
   ['drum mutes', 'EDIT + a black key, then the keys of the sounds'],

@@ -168,7 +168,7 @@ export const LAYERS: Layer[] = [
       ['step + ALGORITHM', 'which parameter the lock is on'],
       ['step + OCT+', 'fill condition: FILL ONLY, NO FILL'],
       ['step + OCT−', 'clear nudge, locks and condition'],
-      ['OCT− / OCT+', 'the page of steps'],
+      ['OCT− / OCT+', 'the page of steps (it opens on the NOTES cursor)'],
       ['black keys (drums)', 'pick the sound the steps are for'],
       ['SAVE (tap)', 'the SCENES page'],
     ],

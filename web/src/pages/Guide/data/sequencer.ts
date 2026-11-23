@@ -19,7 +19,7 @@ export const SEQ_CARDS: [title: string, text: string][] = [
   ],
   [
     'The NOTES page',
-    "Tap SEQ on a synth track. KNOB 1 note · 2 pitch · 3 length · 4 force. Hold OCT+ for the note's sheet: slide, nudge, fill, move, copy, delete, locks.",
+    "Tap SEQ on a synth track. KNOB 1 note · 2 pitch · 3 length (left past 1: delete) · 4 force. Hold SEQ there and the steps open on the note's page. Hold OCT+ for the note's sheet: slide, nudge, fill, move, copy, delete, locks.",
   ],
   [
     'Divisions',

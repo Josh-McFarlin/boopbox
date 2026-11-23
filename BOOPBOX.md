@@ -188,7 +188,7 @@ Hold ARP and hold a key. The key repeats on the grid at the **RATE** of KNOB 1: 
 
 ### SEQ — steps (step sequencer)
 
-The 16 white keys are the 16 steps of the page. The lit steps play. The first four black keys (F#3, G#3, A#3, C#4) or **OCT− / OCT+** select page 1–4 (steps 1–16, 17–32, 33–48, 49–64, up to the LENGTH of the track).
+The 16 white keys are the 16 steps of the page. The lit steps play. The first four black keys (F#3, G#3, A#3, C#4) or **OCT− / OCT+** select page 1–4 (steps 1–16, 17–32, 33–48, 49–64, up to the LENGTH of the track). Pressed on the NOTES page or the DRUMS grid, SEQ opens on the page of the cursor.
 
 - **An empty step:** press its key. BoopBox sets the step immediately. Drums: the step gets the sound shown (KNOB 1 selects it, or the last pad that you played). Synths: the step gets the note or chord that you played last (on the keys, or on a MIDI keyboard from 2.6).
 - **A set step:** tap its key to clear the step (with its nudge, locks and fill condition). To edit the step and keep it, hold its key and turn a knob. **KNOB 1** sets the sound (drums) / note (synths). **KNOB 2 LEVEL** sets ghost, soft, norm or hard (on a synth step, 2.6: **VEL**, its velocity 1–127). **KNOB 3 RATCHET** sets x1–x4. **KNOB 4 NUDGE** sets the nudge. **PRESETS** sets a parameter lock, and **ALGORITHM** selects the parameter. **OCT+** changes its fill condition. To edit several steps together, hold their keys. **OCT−** with a step held clears its nudge, locks and condition.
