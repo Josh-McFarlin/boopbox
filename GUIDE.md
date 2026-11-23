@@ -1429,6 +1429,8 @@ If the official firmware starts with strange settings or a scrambled display, it
 
 ## 26. Cheat sheet
 
+To print it: [boopbox-cheat-sheet.pdf](docs/boopbox-cheat-sheet.pdf) has these tables on one page.
+
 ### Buttons alone
 
 | Do | Result |

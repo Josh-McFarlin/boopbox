@@ -4,6 +4,7 @@
   "kinds": ["groove"],
   "play": "https://boopbox.replit.app/emu/",
   "editor": "https://boopbox.replit.app/editor/",
+  "cheat": "https://github.com/Josh-McFarlin/boopbox/blob/main/docs/boopbox-cheat-sheet.pdf",
   "image": "project/assets/screens/fm1/tracks-1-4.png",
   "color": "#00E6FF",
   "sounds": "licensed: Versilian Studios VSCO-2 CE and VCSL, Sonic Pi (CC0 1.0); Greg Sullivan's Wurlitzer EP200 samples, CC BY 3.0"

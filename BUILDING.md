@@ -121,6 +121,12 @@ page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser)
 screen and one contact sheet for each group. Its `README.md` lists them. Both draw in SYNTHWAVE, the palette that the FM-1 starts
 with. To draw in a different palette, use `--palette N` (gfx.c `PALETTES`).
 
+`node project/tools/make_cheatsheet.mjs` makes the one-page cheat sheet, `docs/boopbox-cheat-sheet.pdf`, from the cheat sheet
+in GUIDE.md (section 26) and the version in `project/firmware/src/ui.c` (Playwright and Chromium, as above). Change the tables in
+GUIDE.md, not the PDF. The script makes the text smaller until all of it fits on one A4 landscape page, and fails if it does
+not fit at 5.5 pt. The same input gives the same file. On each pull request into `main`, CI
+(`.github/workflows/cheatsheet.yml`) makes the PDF again and commits it to the PR's branch if it changed.
+
 To compare a change, first copy that gallery to a different folder. Then run `project/tools/make_before_after.py BEFORE AFTER OUT.png`.
 This script puts every screen of the two galleries side by side in one image (the UX review's, `docs/ux-review/`).
 

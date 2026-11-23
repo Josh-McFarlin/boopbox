@@ -8,7 +8,7 @@ You can use your own samples. BoopBox has ghost notes and ratchets, parameter lo
 
 BoopBox is free and open source (GPL-3.0). It is based on [SLOOP](https://github.com/isod89/sloop-fm1) by isod89. SLOOP is based on [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita / Hügelton Instruments.
 
-> **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide. It gives every button, key combination, layer, page and editor page. It also has a [one-page cheat sheet](GUIDE.md#26-cheat-sheet).
+> **Looking for one control?** [GUIDE.md](GUIDE.md) is the complete guide. It gives every button, key combination, layer, page and editor page. It also has a [one-page cheat sheet](GUIDE.md#26-cheat-sheet) ([PDF, to print](docs/boopbox-cheat-sheet.pdf)).
 
 Version tags show the release that added a feature. *(1.8)* and other 1.x tags are BoopBox releases ([CHANGELOG.md](CHANGELOG.md)). *(2.6)* and other 2.x tags are SLOOP releases ([SLOOP's repository](https://github.com/isod89/sloop-fm1)).
 

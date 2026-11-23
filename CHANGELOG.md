@@ -13,6 +13,11 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**A cheat sheet to print.** [docs/boopbox-cheat-sheet.pdf](docs/boopbox-cheat-sheet.pdf) puts every button, layer and
+combination of the guide's cheat sheet on one A4 page.
+
 ## 1.9.9
 
 **Clear the whole song in one action.** A new SAVE page, **CLEAR**, comes after TOOLS (SELECT walks USER, SECTION,
