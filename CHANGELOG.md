@@ -15,6 +15,12 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## 1.9.9
 
+**BoopBox's identity no longer changes with the version.** BoopBox now reports `FM-1_26670` and BoopBox Trainer
+`FM-1_26671`, in this version and every one after it. 1.9.8 reported `FM-1_26670010908`, and
+[The Firmware Hub](https://thefirmwarehub.com) refused it: an identity there is `FM-1_` and 3 to 8 digits. Installing,
+updating from 1.9.8 and going back work as before, and an interrupted update still resumes
+([BUILDING.md](BUILDING.md#build)).
+
 **Clear the whole song in one action.** A new SAVE page, **CLEAR**, comes after TOOLS (SELECT walks USER, SECTION,
 TOOLS, CLEAR). Turn **SONG** (KNOB 1) to GO, with the song stopped: BoopBox makes a new loop (as TOOLS → NEW), erases
 the sections A–D and sets the song order back to A B C D, in loop mode (*SONG CLEARED*). Before, this took NEW and four

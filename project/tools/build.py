@@ -50,20 +50,21 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = None                      # package identity (identity(): FM-1_2667 + build + version), set in main()
+PRODUCT = None                      # package identity (identity(): FM-1_2667 + build), set in main()
 VERSION = None                      # FELUCCA_VERSION for release builds (default: firmware/src/ui.c)
 
 
 def identity(version, trainer=False):
-    """the package identity for BoopBox X.Y.Z: FM-1_2667 (BOOP on a phone keypad, BoopBox's own prefix, used by no
-    other firmware on The Firmware Hub), one digit for the build (0 BoopBox, 1 BoopBox Trainer), then X, Y and Z, two
-    digits each: 1.9.7 -> FM-1_26670010907, its Trainer FM-1_26671010907. A suffix (-beta) is not part of it. The
-    update loader keeps its own name (ota-FM-1_900, firmware/loader/loader.c), so hosts that resume an interrupted
-    update of a Felucca-family loader (ota-FM-1_9NN) still resume ours"""
+    """the package identity of BoopBox: FM-1_2667 (BOOP on a phone keypad, BoopBox's own prefix, used by no other
+    firmware on The Firmware Hub), then one digit for the build: FM-1_26670 BoopBox, FM-1_26671 BoopBox Trainer. It is
+    the same in every version: The Firmware Hub takes FM-1_ and 3 to 8 digits only, so the version does not fit in it
+    (1.9.8 and the first 1.9.9 packages carried it, FM-1_26670010908, and the hub refused them). The version is only
+    checked here. The update loader keeps its own name (ota-FM-1_900, firmware/loader/loader.c), so hosts that resume
+    an interrupted update of a Felucca-family loader (ota-FM-1_9NN) still resume ours"""
     m = re.fullmatch(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{1,2}))?(?:-[A-Za-z0-9.]+)?", version.strip().lower())
     if not m:
         raise SystemExit(f"version {version!r}: use X.Y.Z or X.Y.Z-suffix (X, Y and Z up to two digits each)")
-    return "FM-1_2667%d%02d%02d%02d" % (1 if trainer else 0, int(m[1]), int(m[2]), int(m[3] or 0))
+    return "FM-1_2667%d" % (1 if trainer else 0)
 
 
 def toolchain():
@@ -350,7 +351,7 @@ def main():
     global PRODUCT, VERSION, OUT, GEN, LDR
     ap = argparse.ArgumentParser()
     ap.add_argument("--release", metavar="X.Y.Z", help="release build: version string BOOPBOX X.Y.Z, identity "
-                                                       "FM-1_2667 + build + XXYYZZ (identity())")
+                                                       "FM-1_2667 + build (identity())")
     ap.add_argument("--trainer", action="store_true",
                     help="the TRAINER build (FELUCCA_TRAINER=1: the lessons; no web editor, three sample sets fewer), "
                          "into build/trainer-fw/, its package felucca-trainer[-X.Y.Z].fwsc")

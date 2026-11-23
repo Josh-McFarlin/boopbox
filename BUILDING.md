@@ -54,10 +54,11 @@ gives `BOOPBOX 1.2.0-BETA`.
 
 **The package identity** is the name the FM-1 reports over USB and the first bytes of the `.fwsc` carry. BoopBox's is
 `FM-1_2667` (BOOP on a phone keypad, used by no other firmware on [The Firmware Hub](https://thefirmwarehub.com)),
-then one digit for the build (`0` BoopBox, `1` BoopBox Trainer), then the version, two digits each: 1.2.0 is
-`FM-1_26670010200`, its Trainer `FM-1_26671010200`. A suffix such as `-beta` is not part of it
-(`identity()` in `project/tools/build.py`). The update loader keeps the name `ota-FM-1_900`, so installers that resume an
-interrupted update of a Felucca-family loader resume BoopBox's too. Releases before 1.9.8 used `FM-1_9XY`.
+then one digit for the build: `FM-1_26670` is BoopBox and `FM-1_26671` is BoopBox Trainer, in every version
+(`identity()` in `project/tools/build.py`). The version is not part of it: The Firmware Hub takes `FM-1_` and 3 to 8
+digits only. 1.9.8 carried the version too (`FM-1_26670010908`), and the hub refused it. The update loader keeps the
+name `ota-FM-1_900`, so installers that resume an interrupted update of a Felucca-family loader resume BoopBox's too.
+Releases before 1.9.8 used `FM-1_9XY`.
 
 Build options (environment, `0` or `1`). The defaults are in `project/firmware/src/felucca.c`:
 
