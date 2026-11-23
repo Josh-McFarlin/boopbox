@@ -226,6 +226,9 @@ When a PR that adds a new firmware binary merges into `main`, GitHub publishes a
    To change that part, edit `.github/release-install.md`.
    A version with a suffix (`1.3.0-beta`) is a pre-release. A PR without a new binary releases nothing.
    A version that already has a release also releases nothing.
+5. If the release run after the merge failed, fix the cause on `main`, then run it by hand: Actions → *Release on
+   merge* → *Run workflow* on `main`, with the version (`1.9.9`) and, for the link in the notes, the number of the PR
+   that added the binary. It releases the binary that is on `main` already, from the commit it runs on.
 
 ## The browser emulator
 

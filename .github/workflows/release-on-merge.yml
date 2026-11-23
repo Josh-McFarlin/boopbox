@@ -10,6 +10,11 @@
 # A version with a suffix (1.3.0-beta) is published as a pre-release. A PR
 # without a new binary publishes nothing, and neither does a binary whose
 # version has a release already.
+#
+# It can also be run by hand (Actions > Release on merge > Run workflow) for a
+# version whose binary is on main already, for example when the run after the
+# merge failed: give the version (1.9.9) and, for the link in the notes, the
+# number of the PR that added it. It releases from the commit it runs on.
 name: Release on merge
 
 on:
@@ -18,6 +23,16 @@ on:
     branches: [main]
     paths:
       - 'project/firmware/releases/*.fwsc'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version to release (its project/firmware/releases/boopbox-X.Y.Z.fwsc must be on this branch)'
+        required: true
+        type: string
+      pr:
+        description: 'The number of the PR that added it (for the link in the notes; optional)'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -28,25 +43,42 @@ concurrency:
 
 jobs:
   release:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    env:
+      # the commit released: the merge commit, or (run by hand) the commit the run is on
+      RELEASE_SHA: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
     steps:
       - name: Check out the merge commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ env.RELEASE_SHA }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22   # web/package.json: node >= 22.18 (on 20, npm ci fails and the site does not build)
 
       - name: Find the new firmware binary
         id: fw
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT: ${{ github.event_name }}
+          IN_VERSION: ${{ inputs.version }}
         run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            # Run by hand: the version given, its binary on this commit
+            if ! printf '%s' "$IN_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+              echo "::error::'$IN_VERSION' is not a version such as 1.9.9 or 1.3.0-beta"
+              exit 1
+            fi
+            added="project/firmware/releases/boopbox-$IN_VERSION.fwsc"
+            if [ ! -f "$added" ]; then
+              echo "::error::$added is not on this commit"
+              exit 1
+            fi
+          else
           # Newly added binaries only: a path move is not a new firmware release.
           added=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" \
             --jq '.[] | select(.status == "added") | .filename' \
@@ -55,6 +87,7 @@ jobs:
             echo "::notice::No new project/firmware/releases/boopbox-X.Y.Z.fwsc in this PR: no release"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
           fi
           if [ "$(echo "$added" | wc -l)" -gt 1 ]; then
             echo "::warning::This PR adds several binaries; releasing the highest version"
@@ -116,12 +149,16 @@ jobs:
         env:
           FILE: ${{ steps.fw.outputs.file }}
           VER: ${{ steps.fw.outputs.version }}
-          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          SHA: ${{ env.RELEASE_SHA }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
+          case "$PR_NUMBER" in *[!0-9]*) PR_NUMBER= ;; esac   # (run by hand: a number, or nothing)
+          if [ -n "$PR_NUMBER" ] && [ -z "$PR_URL" ]; then
+            PR_URL="https://github.com/$GITHUB_REPOSITORY/pull/$PR_NUMBER"
+          fi
           name=$(basename "$FILE")
           hash=$(sha256sum "$FILE" | cut -d' ' -f1)
           {
@@ -129,6 +166,10 @@ jobs:
             echo
             if python3 project/tools/changelog_section.py "$VER" --repo "$GITHUB_REPOSITORY" --ref "$SHA"; then
               :
+            elif [ -z "$PR_TITLE" ]; then
+              # Run by hand: no PR text to fall back on
+              echo "::error file=CHANGELOG.md::no '## $VER' section in CHANGELOG.md" >&2
+              exit 1
             else
               # The PR check should prevent this; release anyway, with the PR's text
               echo "::warning file=CHANGELOG.md::no '## $VER' section: the release notes are the PR's description" >&2
@@ -151,8 +192,10 @@ jobs:
             echo
             echo "All files: \`SHA256SUMS.txt\` (check with \`sha256sum -c SHA256SUMS.txt\`)."
             echo
-            echo "---"
-            echo "From #$PR_NUMBER: $PR_URL"
+            if [ -n "$PR_NUMBER" ]; then
+              echo "---"
+              echo "From #$PR_NUMBER: $PR_URL"
+            fi
           } > "$RUNNER_TEMP/notes.md"
 
       - name: Create the release
@@ -161,7 +204,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VER: ${{ steps.fw.outputs.version }}
           TAG: ${{ steps.fw.outputs.tag }}
-          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          SHA: ${{ env.RELEASE_SHA }}
         run: |
           assets=("$RUNNER_TEMP"/assets/*)
           flags=()
