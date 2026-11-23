@@ -165,7 +165,7 @@ run "drum lanes, kit audio, metronome, record arm, free take" cc_run studio_drum
 run "sequencer 2.0: no drift, ratchets, roll, erase / undo, ghost / hard, chords, mute / solo, nudge, locks" \
     cc_run seq2_test "$G" tests/seq2_test.c
 run "2.8.3: a note held under others (live, recorded, overdubbed), MIDI in overflow" cc_run hold_rec_test "$G" tests/hold_rec_test.c
-run "2.8.3: SEQ > NOTES, LEN under later notes, MONO / STEP FULL, shorter, delete" cc_run len_test "$GH" tests/len_test.c
+run "2.8.3: SEQ > NOTES, LEN under later notes, MONO / STEP FULL, shorter, delete, LEN 0, SEQ follows the cursor" cc_run len_test "$GH" tests/len_test.c
 run "visualiser with some styles built in (FELUCCA_VIS_STYLES): opened, SELECT, each draws" \
     cc_run vis_styles_test "$GH" tests/vis_styles_test.c "$OUT"
 run "2.8.3: drum voices on a busy beat, every kit: no kick cut by another sound" cc_run drum_steal_test "$G" tests/drum_steal_test.c

@@ -214,6 +214,31 @@ int main(void)
     melody(t);
     n = note_span_set(t, 6, 6);
     check(n == 6 && t->step[8].time == ST_TIE && t->step[11].time == ST_TIE && t->step[12].time == ST_REST, "nothing ahead: plain TIEs, as before");
+    /* KNOB 3 LEN to 0 deletes the note (as EDIT); a fast turn down stops at 1 first; undo brings it back */
+    melody(t);
+    ui.home = 0; ui.menu = 0; ui.sheet = 0;
+    ui.page = (uint8_t)page_scope(SC_STEP);
+    cursor_set(4); ui.note_k = 0;                   /* D2, LEN 2 */
+    step_edit(2, -5);
+    check(step_on(&t->step[4]) && note_span(t, 4) == 1, "LEN: a fast turn down stops at 1, the note stays");
+    step_edit(2, -1);
+    check(!step_on(&t->step[4]) && t->step[2].n == 1 && t->step[6].n == 1, "LEN: one more left from 1 deletes it, the others stay");
+    undo_swap(0);
+    check(step_on(&t->step[4]) && t->step[4].note[0] == 50 && note_span(t, 4) == 2, "LEN 0: undo brings the note back at LEN 2");
+    t->step[4].note[1] = 55; t->step[4].n = 2;      /* a chord: only the note under edit goes */
+    cursor_set(4); ui.note_k = 1;
+    step_edit(2, -1); step_edit(2, -1);
+    check(t->step[4].n == 1 && t->step[4].note[0] == 50, "LEN 0 on a chord: its other note stays");
+    /* SEQ pressed on NOTES: the layer opens on the page of the note under edit */
+    t->p[P_SLEN] = 64;
+    put(t, 40, 60, 0);
+    cursor_set(40);
+    ui.step_page = 0;
+    step_page_follow();
+    check(ui.step_page == 2, "SEQ on NOTES: the steps' page is the cursor's (step 41: page 3)");
+    ui.home = 1; ui.step_page = 0;
+    step_page_follow();
+    check(ui.step_page == 0, "SEQ from HOME: the page stays");
     printf("len: %d failed\n", fails);
     return fails;
 }

@@ -13,6 +13,14 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+- **SEQ opens on the cursor's page.** Hold SEQ on the NOTES page or the DRUMS grid, and the white keys show the page of
+  steps (1–16 … 49–64) that holds the cursor. The key of the note under edit is lit and ready to tap, also on a 64-step
+  track. Before, SEQ opened on the page it showed last.
+- **LEN to 0 deletes a note.** On the NOTES page, turn KNOB 3 (LEN) left past 1 to delete the note under edit, as a tap
+  on EDIT does. A chord keeps its other notes. A fast turn stops at 1 first, and EDIT + OCT− brings the note back.
+
 ## 1.9.10
 
 **Other FM-1 installers find BoopBox again.** The FM-1's MIDI port is now named **BoopBox FM-1** (it was *BoopBox*).
