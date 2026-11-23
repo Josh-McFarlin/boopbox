@@ -22,7 +22,8 @@ effects) is not finished until the text and the pictures that describe it match.
    `Guide/data/`), the installer, the editor and the emulator. A page or control that changed on the FM-1 often also
    changes in the web editor and in the guide page's text.
 4. **The pictures.** The screenshots are made by code, not by hand (BUILDING.md has the details). Make them again
-   when a screen they show has changed:
+   only when you changed code that changes what a screen shows (the FM-1 display or the web editor). A change that
+   does not touch the UI, for example to sound, timing or docs only, does not need new screenshots:
    - `python3 project/tools/make_screens.py`: the README sheets and `project/assets/screens/fm1/` (the website uses
      these, and so does the hub card).
    - `python3 project/tools/make_all_screens.py`: every screen, in `project/assets/screens/all/`.
