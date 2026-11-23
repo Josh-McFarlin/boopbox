@@ -394,6 +394,12 @@ export const PAGES: PageGroup[] = [
         ],
         'All four are GO values.',
       ],
+      [
+        'CLEAR',
+        'pages/save-clear',
+        ['SONG clear the whole song', '—', '—', '—'],
+        'SONG (GO), stopped: a new loop, sections A–D empty, the default song order. No undo.',
+      ],
     ],
   },
   {

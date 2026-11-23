@@ -49,6 +49,7 @@ export const WHERE: [lookingFor: string, where: string][] = [
   ['undo / redo', 'EDIT + OCT− / EDIT + OCT+'],
   ['clear a track', 'hold REC about 2 s'],
   ['new loop', 'SAVE → TOOLS → NEW'],
+  ['clear the whole song', 'SAVE → CLEAR → SONG'],
   ['synth ↔ drum track', 'SAVE → TOOLS → KIND · KNOB 1 in the sound browser'],
   ['the length of a note', 'SEQ → NOTES page, KNOB 3 on the note'],
   ['parameter locks', 'hold SEQ, hold a step, turn PRESETS'],

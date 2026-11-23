@@ -136,6 +136,7 @@ enum {                          /* global parameters */
                                  * SEL: the selected track; DRUMS; SYNTHS), LATCH (an effect stays when its key is let go), Q (it
                                  * starts on the next 1/16, 1/8, 1/4 or bar; OFF: at once). The project's */
     G_KIND,                     /* SAVE > TOOLS > KIND (a GO button, ui_input.c): the selected track a SYNTH <-> DRUM track */
+    G_CLRSONG,                  /* SAVE > CLEAR > SONG (a GO button, ui_input.c song_clear): the whole song at once */
     G_COUNT
 };
 

@@ -113,7 +113,7 @@ export const CONTROLS: Record<string, Control> = {
     name: 'SAVE',
     kind: 'button',
     layer: 'SAVE',
-    tap: 'The SAVE pages (USER, SECTION, TOOLS), on every screen. On SONG: saves the song. In the sound browser: keeps the sound.',
+    tap: 'The SAVE pages (USER, SECTION, TOOLS, CLEAR), on every screen. On SONG: saves the song. In the sound browser: keeps the sound.',
     hold: 'The SONG layer: play or save sections A–D, a quick chain, loop / song mode, SONG REC.',
   },
   ARP: {

@@ -65,6 +65,8 @@ static int project_used(uint32_t i) { return i < 2; }
 static void project_save(uint32_t i) { (void)i; saves++; ui_message("SAVED"); }
 static void project_load(uint32_t i) { (void)i; loads++; }
 static void project_erase(uint32_t i) { (void)i; erases++; ui_message("ERASED"); }
+static uint32_t song_clears;
+static int sections_clear(void) { song_clears++; return 0; }
 static void arrangement_save(void) {}
 static uint32_t arrangement_ready(void) { return 3; }
 static void arrangement_apply(uint32_t s) { (void)s; }
@@ -638,16 +640,19 @@ int main(int argc, char **argv)
     tap(B_SAVE);
     check(!ui.home && cur_page()->fam == FAM_SAVE && !strcmp(cur_page()->title, "USER") && !on_song_page(),
           "SAVE tapped on TRACKS (1.9.9): the SAVE pages from USER, not the song");
-    {   /* (1.9.9) the SAVE pages: USER, SECTION, TOOLS, three; the browser not one of them (its tab, SELECT) */
+    {   /* (1.9.9) the SAVE pages: USER, SECTION, TOOLS, CLEAR, four; the browser not one of them (its tab, SELECT) */
         uint32_t n, k = page_pos(&n);
-        int ok = k == 1u && n == 3u && page_nb(-1) < 0 && !strcmp(PAGES[page_nb(1)].title, "SECTION");
+        int ok = k == 1u && n == 4u && page_nb(-1) < 0 && !strcmp(PAGES[page_nb(1)].title, "SECTION");
         encs[panel.enc[EN_SELECT]] = -1; frame();
         ok &= !strcmp(cur_page()->title, "USER");
         encs[panel.enc[EN_SELECT]] = 1; frame(); encs[panel.enc[EN_SELECT]] = 1; frame();
-        ok &= !strcmp(cur_page()->title, "TOOLS") && page_pos(&n) == 3u && n == 3u && page_nb(1) < 0;
+        ok &= !strcmp(cur_page()->title, "TOOLS") && page_pos(&n) == 3u && n == 4u &&
+              !strcmp(PAGES[page_nb(1)].title, "CLEAR");
+        encs[panel.enc[EN_SELECT]] = 1; frame();
+        ok &= !strcmp(cur_page()->title, "CLEAR") && page_pos(&n) == 4u && page_nb(1) < 0;
         tap(B_SAVE);
         ok &= !strcmp(cur_page()->title, "USER");            /* (SAVE again, round: USER, not the browser) */
-        check(ok, "SAVE pages (1.9.9): USER 1/3, SECTION, TOOLS 3/3; SELECT left on USER stays; no PRESETS tab");
+        check(ok, "SAVE pages (1.9.9): USER 1/4, SECTION, TOOLS, CLEAR 4/4; SELECT left on USER stays; no PRESETS tab");
     }
     song.sel = TRK_DRUM; studio_open(SC_DRUM); frames(2);
     tap(B_SAVE);
@@ -2852,6 +2857,28 @@ int main(int argc, char **argv)
             if (!is_drum(&trk[k])) { song.sel = (uint8_t)k; frame(); select_engine(TRK_DEF[k][1]); }
         frames(2);
         song.sel = 0; go_home(); frame();
+    }
+    {   /* SAVE > CLEAR > SONG: a GO (two detents): the working loop new and the sections cleared; refused playing */
+        uint32_t ok, was;
+        transport_req = 2; frames(2);
+        go_home(); frame();
+        open_family(FAM_SAVE); frame();
+        while (strcmp(PAGES[ui.page].title, "CLEAR")) { open_family(FAM_SAVE); frame(); }
+        ok = PAGES[ui.page].id[0] == G_CLRSONG;
+        trk[0].step[0].time = ST_NOTE; trk[0].step[0].n = 1; song.g[G_BPM] = 133;
+        was = song_clears;
+        encs[panel.enc[EN_K1]] = 1; frame();
+        ok &= ui.arm == G_CLRSONG && song_clears == was && song.g[G_BPM] == 133;   /* (one detent arms) */
+        encs[panel.enc[EN_K1]] = 1; frame();
+        ok &= song_clears == was + 1u && !strcmp(ui.msg, "SONG CLEARED") && song.g[G_BPM] == GP[G_BPM].def &&
+              trk[0].step[0].time != ST_NOTE;
+        check(ok, "SAVE > CLEAR > SONG (two detents): a new loop, the sections cleared, SONG CLEARED");
+        frames(2);                                      /* (NEW's stop request handled first) */
+        song.playing = 1;
+        encs[panel.enc[EN_K1]] = 1; frame(); encs[panel.enc[EN_K1]] = 1; frame();
+        check(song_clears == was + 1u && !strcmp(ui.msg, "STOP THE SONG FIRST"), "SAVE > CLEAR > SONG while playing: refused");
+        song.playing = 0; transport_req = 2; frames(2);
+        go_home(); frame();
     }
     {   /* FX > PERF: TARGET, LATCH, Q of the punch-in FX */
         uint32_t ok;

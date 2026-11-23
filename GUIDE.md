@@ -1,6 +1,6 @@
 <p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
 
-# BoopBox 1.9.8 — The Complete Guide
+# BoopBox 1.9.9 — The Complete Guide
 
 This guide gives all the functions of BoopBox in one place: every button, every combination and every page. Read it from the top the first time. Then use it as a reference. The [cheat sheet](#26-cheat-sheet) at the end gives every combination on one page.
 
@@ -167,7 +167,7 @@ The layers are **FX** (punch-in effects), **EDIT** (erase), **ARP** (note repeat
 | --- | --- | --- |
 | **PLAY** | start / stop all tracks (in song mode: play the song). This works inside every layer | — |
 | **REC** | playing: record now / stop recording · stopped: arm (*rec ready*) · free take: close the loop · count-in: cancel | ~2 s: **clear the selected track**. A ring fills. If you let go before the ring is full, nothing occurs |
-| **SAVE** | the **SAVE pages** (USER, SECTION, TOOLS), on every screen (1.9.9: on TRACKS and DRUMS too) · on the SONG page: save the song · in the sound browser: keep the sound | the **song layer** (sections A–D, chain, song mode, SONG REC) |
+| **SAVE** | the **SAVE pages** (USER, SECTION, TOOLS, CLEAR), on every screen (1.9.9: on TRACKS and DRUMS too) · on the SONG page: save the song · in the sound browser: keep the sound | the **song layer** (sections A–D, chain, song mode, SONG REC) |
 | **HOME** | the **TRACKS** screen · on TRACKS: the **visualiser** (HOME again closes it) | 0.7 s: the **menu** (SCREEN, LIGHTS, AUDIO, KEYS, SEQ, SYSTEM). To leave the menu, hold HOME again |
 | **ENV** | ENV pages (ENV, ENV DEST) | — |
 | **LFO** | LFO pages (LFO, LFO DEST) | — |
@@ -665,6 +665,7 @@ A muted track fades out in a few milliseconds. It plays no new notes. Its patter
 | **New loop** | SAVE → TOOLS → **NEW** (GO): every track of your working loop goes back to its power-on sound, with empty patterns, at 90 BPM. *NEW LOOP, A-D KEPT*: the saved sections do not change. In song mode, stop the song first. Undo brings back only the pattern of the last track. If you are not sure, save a section first |
 | **Save the loop as a section** | **SAVE + key 5–8** (A–D) |
 | **Save / load a section** | SAVE → SECTION: **SECT** A–D, **LOAD** (GO), **SAVE** (GO) |
+| **Clear the whole song** | SAVE → CLEAR: **SONG** on KNOB 1 (GO), with the song stopped. This is NEW and an ERASE of each section in one action: a new working loop, sections A–D *EMPTY*, the default song A B C D, and loop mode (*SONG CLEARED*). Your user presets, kits, samples and the settings of the FM-1 do not change. There is no undo. If you are not sure, export the song in the editor first (Save & load → **Export this song**) |
 | **Erase a saved section** (2.6) | SAVE → SECTION: **SECT** A–D, **ERASE** on KNOB 2 (GO), with the song stopped. The slot is *EMPTY* again, and its section key goes dark. BoopBox takes out the steps of the song that played the section. The other steps keep their order. If no steps are left, the song is the default song A B C D. Your working loop does not change. There is no undo. If you are not sure, save the section into another slot first |
 | **Save a sound** | SAVE → USER: **SLOT** (1–32), **SAVE** (GO) |
 | **Autosave** | automatic. When the transport is stopped and you touch nothing for 2.5 s, BoopBox keeps the working project in flash (at most every 20 s). At power-on, BoopBox comes back exactly as you left it |
@@ -677,13 +678,14 @@ A–D are not four songs. **To keep several songs**, save an editor **Backup** f
 
 ### The SAVE pages (SAVE tapped)
 
-Tap SAVE on any screen (1.9.9: TRACKS and DRUMS too). The SAVE pages open at **USER**. SELECT (or SAVE again) walks USER, SECTION and TOOLS. The bottom line shows only these three. (The sounds are in the [sound browser](#the-sound-browser): turn PRESETS. Before 1.9.9, the bottom line of USER showed the browser as the page before it.)
+Tap SAVE on any screen (1.9.9: TRACKS and DRUMS too). The SAVE pages open at **USER**. SELECT (or SAVE again) walks USER, SECTION, TOOLS and CLEAR. The bottom line shows only these four. (The sounds are in the [sound browser](#the-sound-browser): turn PRESETS. Before 1.9.9, the bottom line of USER showed the browser as the page before it.)
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- |
 | **USER** | **SLOT** 1–32 | **LOAD** (GO) | **ERASE** (GO) | **SAVE** (GO) |
 | **SECTION** | **SECT** A–D | **ERASE** (GO, 2.6) | **LOAD** (GO) | **SAVE** (GO) |
 | **TOOLS** | **CLRSQ** (GO) | **INIT** (GO) | **KIND** (GO) | **NEW** (GO) |
+| **CLEAR** | **SONG** (GO): clear the whole song | — | — | — |
 
 <a id="favourites"></a>**Favourites (2.7).** To add a sound to your favourites, turn KNOB 4 right in the sound browser (*FAV ADDED*). You can have up to 16 favourites. They come first in the SYNTH list of the browser (**FAV**), in the order you added them. To remove a favourite, turn KNOB 4 left. A user preset can be a favourite too.
 
@@ -695,7 +697,7 @@ GO: one click shows *TURN AGAIN: SAVE* (or LOAD…). A second click within appro
 
 ## 14. Song mode: sections, chains, songs
 
-The FM-1 holds **one song**: up to **16 steps** of **4 sections, A–D**. Each section holds every track (sounds, patterns, kit). SAVE → SECTION shows them. For more songs, keep one editor backup file for each song.
+The FM-1 holds **one song**: up to **16 steps** of **4 sections, A–D**. Each section holds every track (sounds, patterns, kit). SAVE → SECTION shows them. For more songs, keep one editor backup file for each song. To start again from nothing, SAVE → CLEAR → **SONG** clears the loop, A–D and the order in one action.
 
 ### Make it live, by playing
 
@@ -801,6 +803,7 @@ If you tap SEQ more times, it also opens the SONG screen. If you tap SEL more ti
 | **SAVE** | **USER** | SLOT 1–32 | LOAD (GO) | ERASE (GO) | SAVE (GO) |
 | | **SECTION** | SECT A–D | ERASE (GO) | LOAD (GO) | SAVE (GO) |
 | | **TOOLS** | CLRSQ: clear the pattern (GO) | INIT: reset the sound (GO) | KIND: synth ↔ drum track (GO) | NEW loop (GO) |
+| | **CLEAR** | SONG: clear the whole song, the loop and A–D (GO) | — | — | — |
 
 Notes:
 
@@ -868,7 +871,7 @@ The browser stays open until you close it (1.4.2):
   its settings. A change of TYPE cleared the pattern: HOME puts back the sound, not the pattern.
 - Any other button goes to its usual place and keeps the sound you are on.
 
-The browser closes to the screen that it opened from. If you tap SAVE elsewhere, it opens the SAVE pages at **USER** (USER, SECTION, TOOLS).
+The browser closes to the screen that it opened from. If you tap SAVE elsewhere, it opens the SAVE pages at **USER** (USER, SECTION, TOOLS, CLEAR).
 The browser belongs to the PRESETS knob. MIDI Program Change counts the list in the KIND order, as before.
 
 To start from the defaults of the engine, select SAVE → TOOLS → **INIT**.
@@ -1435,7 +1438,7 @@ If the official firmware starts with strange settings or a scrambled display, it
 | hold REC ~2 s | clear the selected track |
 | tap HOME | TRACKS · on TRACKS: visualiser |
 | hold HOME | menu |
-| tap SAVE | SAVE pages (USER, SECTION, TOOLS) · on SONG: save the song |
+| tap SAVE | SAVE pages (USER, SECTION, TOOLS, CLEAR) · on SONG: save the song |
 | tap ENV, LFO, FX, SEL, EDIT, ARP, SEQ, GLO | their first page (again: next page) |
 | tap SEQ, then turn SELECT | PATTERNS, CHAIN, SCENES, SONG (the SEQ pages after PLAY) |
 | white keys 1–8, on PATTERNS, CHAIN, SCENES | the patterns of the track (CHAIN: into the chain) |
@@ -1479,7 +1482,7 @@ If the official firmware starts with strange settings or a scrambled display, it
 | OCT− + OCT+ held at power-on | hardware calibration |
 | OCT− + OCT+ held 5 s, stopped | update mode (UBOOT) |
 | EDIT + OCT− / OCT+ | undo / redo |
-| GO values (LOAD, SAVE, ERASE, NEW, CLRSQ, INIT) | one click arms (*TURN AGAIN: …*). A second click within ~1.5 s acts |
+| GO values (LOAD, SAVE, ERASE, NEW, CLRSQ, INIT, SONG) | one click arms (*TURN AGAIN: …*). A second click within ~1.5 s acts |
 | SAVE + key 5–8 on a used section | press again within 3 s |
 | SONG screen: REC on a used section · OCT+ | press again within 3 s |
 
@@ -1516,6 +1519,7 @@ If the official firmware starts with strange settings or a scrambled display, it
 | patterns, chain, scenes | tap SEQ, then turn SELECT past PLAY |
 | the key and chords of the song | SEL → HARMONY · the CHORDS screen |
 | synth ↔ drum track | SAVE → TOOLS → KIND · KNOB 1 in the sound browser |
+| clear the whole song | SAVE → CLEAR → SONG |
 | key velocity, aftertouch, USB HOST | hold HOME → KEYS |
 | lights, colours, USB audio level | hold HOME (menu) |
 | the version | hold HOME → SYSTEM → ABOUT |

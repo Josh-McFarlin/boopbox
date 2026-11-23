@@ -3,13 +3,14 @@
 /* Felucca user interface. Four columns map to KNOB 1..4. Rendering is lazy:
  * every element remembers what it last drew and is redrawn only on change. */
 #ifndef FELUCCA_VERSION
-#define FELUCCA_VERSION "BOOPBOX 1.9.8"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
+#define FELUCCA_VERSION "BOOPBOX 1.9.9"  /* the beat machine firmware for the FM-1 (based on SLOOP 2.8.3 and Felucca; 2.8.4 fixes) */
 #endif
 static void project_save(uint32_t slot);
 static void arrangement_save(void);
 static void panel_setup(void);
 static void project_load(uint32_t slot);
 static void project_erase(uint32_t slot);        /* SAVE > PROJECT > ERASE (2.6) */
+static int sections_clear(void);                 /* SAVE > CLEAR > SONG: A..D empty, the default song (project.c) */
 static int project_used(uint32_t slot);
 static int up_used(uint32_t k);              /* user presets: upreset.c */
 static int up_arp_of(uint32_t k, int16_t *a);   /* (2.7.1) user preset k's arp, MODE … ORDER: upreset.c */

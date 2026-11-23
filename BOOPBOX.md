@@ -105,7 +105,7 @@ Other controls:
 | **PLAY** | start / stop all the tracks (works inside all layers) |
 | **REC** | playing: record now / stop · stopped: arm (the first note starts) · free take: close the loop |
 | hold **REC** | clear the selected track (a ring fills. Hold for ~2 s. If you let go before, nothing happens) |
-| **SAVE** | the SAVE pages (USER, SECTION, TOOLS), on every page (1.9.9) |
+| **SAVE** | the SAVE pages (USER, SECTION, TOOLS, CLEAR), on every page (1.9.9) |
 | hold **SEQ** + tap **SAVE** | the **SCENES** page, from all pages and tracks |
 | **EDIT + OCT− / OCT+** | undo / redo |
 | **ALGORITHM** | select the track, 1–8, on every page except the sound browser (there: its sounds). The header shows the track |
@@ -236,6 +236,7 @@ A change of sound (PRESETS, a user preset) never changes the key, the chord mode
 - **Save:** SAVE + keys 5–8 save the loop into section A–D. SAVE → SECTION also has SECT, ERASE, LOAD and SAVE.
 - **Autosave:** when the transport is stopped and you touch nothing for 2.5 s, BoopBox keeps the working project in flash (at most every 20 s). At power-on, BoopBox comes back exactly as you left it.
 - **New loop:** SAVE → TOOLS → NEW (turn to GO). Every track of the working loop goes back to its power-on sound, with empty patterns. BoopBox keeps the sections A–D.
+- **Clear the whole song:** SAVE → CLEAR → SONG (GO), with the song stopped. In one action, BoopBox makes a new loop (as NEW), erases the sections A–D and sets the song back to A B C D, in loop mode (*SONG CLEARED*). User presets, kits, samples and settings stay. There is no undo.
 - **Synth ↔ drum track:** SAVE → TOOLS → KIND (GO). The selected track changes kind, and BoopBox clears its pattern.
 
 ## Master: DUST, DUCK, FILT (and TEXTURE)

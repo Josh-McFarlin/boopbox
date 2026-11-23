@@ -13,10 +13,16 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
-## Unreleased
+## 1.9.9
+
+**Clear the whole song in one action.** A new SAVE page, **CLEAR**, comes after TOOLS (SELECT walks USER, SECTION,
+TOOLS, CLEAR). Turn **SONG** (KNOB 1) to GO, with the song stopped: BoopBox makes a new loop (as TOOLS → NEW), erases
+the sections A–D and sets the song order back to A B C D, in loop mode (*SONG CLEARED*). Before, this took NEW and four
+section erases. Your user presets, kits, samples and the settings of the FM-1 do not change. There is no undo: if you
+are not sure, export the song in the editor first ([Guide §13](GUIDE.md#13-undo-clear-save-sections-autosave)).
 
 **A tap on SAVE always opens the SAVE pages.** On TRACKS and on the DRUMS screen, a tap on SAVE used to open the
-SONG screen. It now opens the SAVE pages (USER, SECTION, TOOLS), as it does on every other page. SELECT, or SAVE again,
+SONG screen. It now opens the SAVE pages (USER, SECTION, TOOLS, CLEAR), as it does on every other page. SELECT, or SAVE again,
 goes from one to the next. On the SONG page, a tap on SAVE still saves the song. In the sound browser, it still keeps
 the sound.
 
@@ -25,12 +31,12 @@ key 16. SELECT now goes from SCENES to SONG and back, so the SCENES tab that poi
 
 **The sound browser is no longer one of the SAVE pages.** The bottom line of USER showed PRESETS as the page before
 it, and the browser showed USER as the page after it. SELECT went left from USER into the browser, but could not go
-back. The SAVE pages now show only USER, SECTION and TOOLS. The browser still opens with PRESETS, and SAVE (keep the
+back. The SAVE pages now show only USER, SECTION, TOOLS and CLEAR. The browser still opens with PRESETS, and SAVE (keep the
 sound) or HOME (put back the old sound) still closes it.
 
 The trainer's level 3 now says *TAP SEQ UNTIL YOU SEE SONG* to get to the SONG page.
 
-Projects, presets and settings from 1.9.8 open as before.
+Projects, presets and settings from 1.9.8 open as before. A project saved by this version opens on 1.9.8 too.
 
 ## 1.9.8
 
