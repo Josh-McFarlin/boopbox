@@ -665,7 +665,7 @@ A muted track fades out in a few milliseconds. It plays no new notes. Its patter
 | **New loop** | SAVE → TOOLS → **NEW** (GO): every track of your working loop goes back to its power-on sound, with empty patterns, at 90 BPM. *NEW LOOP, A-D KEPT*: the saved sections do not change. In song mode, stop the song first. Undo brings back only the pattern of the last track. If you are not sure, save a section first |
 | **Save the loop as a section** | **SAVE + key 5–8** (A–D) |
 | **Save / load a section** | SAVE → SECTION: **SECT** A–D, **LOAD** (GO), **SAVE** (GO) |
-| **Clear the whole song** | SAVE → CLEAR: **SONG** on KNOB 1 (GO), with the song stopped. This is NEW and an ERASE of each section in one action: a new working loop, sections A–D *EMPTY*, the default song A B C D, and loop mode (*SONG CLEARED*). Your user presets, kits, samples and the settings of the FM-1 do not change. There is no undo. If you are not sure, export the song in the editor first (Save & load → **Export this song**) |
+| **Clear the whole song** | SAVE → CLEAR: turn **SONG** (KNOB 1) right two times within approximately 1.5 s, with the song stopped. The page shows these steps. This is NEW and an ERASE of each section in one action: a new working loop, sections A–D *EMPTY*, the default song A B C D, and loop mode (*SONG CLEARED*). Your user presets, kits, samples and the settings of the FM-1 do not change. There is no undo. If you are not sure, export the song in the editor first (Save & load → **Export this song**) |
 | **Erase a saved section** (2.6) | SAVE → SECTION: **SECT** A–D, **ERASE** on KNOB 2 (GO), with the song stopped. The slot is *EMPTY* again, and its section key goes dark. BoopBox takes out the steps of the song that played the section. The other steps keep their order. If no steps are left, the song is the default song A B C D. Your working loop does not change. There is no undo. If you are not sure, save the section into another slot first |
 | **Save a sound** | SAVE → USER: **SLOT** (1–32), **SAVE** (GO) |
 | **Autosave** | automatic. When the transport is stopped and you touch nothing for 2.5 s, BoopBox keeps the working project in flash (at most every 20 s). At power-on, BoopBox comes back exactly as you left it |
@@ -685,7 +685,7 @@ Tap SAVE on any screen (1.9.9: TRACKS and DRUMS too). The SAVE pages open at **U
 | **USER** | **SLOT** 1–32 | **LOAD** (GO) | **ERASE** (GO) | **SAVE** (GO) |
 | **SECTION** | **SECT** A–D | **ERASE** (GO, 2.6) | **LOAD** (GO) | **SAVE** (GO) |
 | **TOOLS** | **CLRSQ** (GO) | **INIT** (GO) | **KIND** (GO) | **NEW** (GO) |
-| **CLEAR** | **SONG** (GO): clear the whole song | — | — | — |
+| **CLEAR** | **SONG** (GO): clear the whole song. The lower half of the page tells how: *TURN KNOB 1 RIGHT TWICE* (armed: *TURN AGAIN NOW TO CLEAR* · playing: *STOP THE SONG FIRST*) | — | — | — |
 
 <a id="favourites"></a>**Favourites (2.7).** To add a sound to your favourites, turn KNOB 4 right in the sound browser (*FAV ADDED*). You can have up to 16 favourites. They come first in the SYNTH list of the browser (**FAV**), in the order you added them. To remove a favourite, turn KNOB 4 left. A user preset can be a favourite too.
 

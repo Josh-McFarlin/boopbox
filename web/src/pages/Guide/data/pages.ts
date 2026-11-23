@@ -398,7 +398,7 @@ export const PAGES: PageGroup[] = [
         'CLEAR',
         'pages/save-clear',
         ['SONG clear the whole song', '—', '—', '—'],
-        'SONG (GO), stopped: a new loop, sections A–D empty, the default song order. No undo.',
+        'SONG (GO): stop the song, then turn KNOB 1 right two times (the page says so). A new loop, sections A–D empty, the default song order. No undo.',
       ],
     ],
   },

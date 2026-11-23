@@ -514,6 +514,8 @@ UI_SMALL static uint32_t graph_signature(void)
     if (!ui.home && big_page(pg))                    /* the big values: as the columns show them */
         for (i = 0; i < 4u; i++)
             h = str_hash(str_hash(str_hash(h ^ ui.big_c[i] * 31u, ui.big_v[i]), ui.big_l[i]), ui.big_u[i]);
+    if (!ui.home && pg->fam == FAM_SAVE && pg->id[0] == G_CLRSONG)   /* (SAVE > CLEAR's hint: armed, playing) */
+        h ^= (ui.arm == G_CLRSONG) * 0x9E37u + (song.playing || transport_req) * 0x7F4Au;
     if (ui.home)
         return h ^ (ui.frame / 2u);                  /* scope: redraw every other frame */
     h ^= (uint32_t)pg->graph * 131u + TSEL->eng_req + song.sel * 7777u;
@@ -854,6 +856,26 @@ UI_SMALL static void graph_scope(uint16_t c)
 /* SLOOP 2.4: a page without a graph (EDIT, VOICE, the DEST pages, GLOBAL, MASTER, SYSTEM...): its values
  * large in the empty space, 2 x 2 as the knobs (KNOB 1 2 / KNOB 3 4), the one turned in white; one value
  * alone (FILTER) across the width. The columns (draw_columns, drawn first) fill ui.big_* */
+/* SAVE > CLEAR: the page is one GO value, and nothing on it said that KNOB 1 must turn twice. The lower half tells
+ * it, and what the clear does; armed (one turn made) or with the song playing, its first line says what comes next */
+UI_SMALL static int clear_page(void)
+{
+    return cur_page()->fam == FAM_SAVE && cur_page()->id[0] == G_CLRSONG;   /* (the ids of the track pages overlap) */
+}
+UI_SMALL static void clear_hint(void)
+{
+    int playing = song.playing || transport_req;
+    cv_rule(6, 0, 228, C_LINE);
+    if (playing)
+        ui_text_mid(14, "stop the song first", C_AMB);
+    else if (ui.arm == G_CLRSONG)
+        ui_text_mid(14, "turn again now to clear", C_WHITE);
+    else
+        ui_text_mid(14, "turn KNOB 1 right twice", C_HI);
+    ui_text_mid(40, "clears the loop and A-D", C_DIM);
+    ui_text_mid(62, "no undo, presets stay", C_DIM);
+}
+
 UI_SMALL static void graph_big(void)
 {
     uint32_t c, n = 0, low = ui.big_l[2][0] || ui.big_l[3][0], band;
@@ -867,6 +889,11 @@ UI_SMALL static void graph_big(void)
             cv_rule(6, 0, 228, C_LINE);
         if (n > 1u && (!band || low))
             cv_rect(119, band ? 8 : 6, 1, 74, C_LINE);
+        if (band && clear_page()) {                     /* SAVE > CLEAR: how to clear, in the empty half */
+            clear_hint();
+            cv_blit(0, 22u + band * 88u);
+            continue;
+        }
         if (band && pal_neon && (n == 1u || !low)) {    /* (SYNTHWAVE: the empty half a floor to the horizon) */
             neon_floor(n == 1u ? 12 : 1, 86);
             if (n == 1u)

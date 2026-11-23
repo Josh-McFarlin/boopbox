@@ -13,6 +13,13 @@ Links are relative to the repository root; the release notes make them absolute.
 Version tags such as *(2.6)* in the guides mark the SLOOP release that brought a
 feature; SLOOP's own history is in [its repository](https://github.com/isod89/sloop-fm1).
 
+## Unreleased
+
+**The CLEAR page tells you how to clear.** SAVE → CLEAR showed only *SONG --*, and nothing said that you must turn
+KNOB 1 two times. The lower half of the page now says *TURN KNOB 1 RIGHT TWICE*, what the clear does and that there
+is no undo. After the first turn it says *TURN AGAIN NOW TO CLEAR*. While the song plays, it says *STOP THE SONG
+FIRST*. Projects, presets and settings are not changed.
+
 ## 1.9.10
 
 **Other FM-1 installers find BoopBox again.** The FM-1's MIDI port is now named **BoopBox FM-1** (it was *BoopBox*).
