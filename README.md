@@ -1,4 +1,4 @@
-<p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="project/assets/logo/boopbox-logo.png"><img src="project/assets/logo/boopbox-logo-black.png" alt="BoopBox" width="420"></picture></p>
 
 <p align="center"><b>A live groovebox firmware for the M-VAVE FM-1 — for any style.</b><br>
 Free and open source (GPL-3.0). A fork of <a href="https://github.com/isod89/sloop-fm1">SLOOP</a> by isod89, which is based on <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita / Hügelton Instruments.</p>
@@ -145,7 +145,7 @@ Before you go back, save a backup with the BoopBox web editor.
 11. Hold **FX** and press a key for a punch-in effect.
 12. If you make a mistake, hold **EDIT** and press **OCT−** to undo it.
 
-Next, read [the guide](GUIDE.md). Its [cheat sheet](GUIDE.md#26-cheat-sheet) shows every combination on one page.
+Next, read [the guide](GUIDE.md). Its [cheat sheet](GUIDE.md#26-cheat-sheet) shows every combination on one page (also [as a PDF to print](docs/boopbox-cheat-sheet.pdf)).
 
 ## Compatibility
 

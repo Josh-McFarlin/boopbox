@@ -104,10 +104,14 @@ Code makes the logo, the icon atlas and the icons of the web app. These files ar
 If you change the drawing code, write the files again:
 
 ```
-python3 project/tools/gen_logo.py --assets project/assets/logo   # boopbox-logo/icon .svg/.png, boopbox-splash.png
+python3 project/tools/gen_logo.py --assets project/assets/logo   # boopbox-logo(-black)/icon .svg/.png, boopbox-splash.png
 python3 project/tools/gen_logo.py --web web                      # icon-192.png, icon-512.png, icon-maskable-512.png
 python3 project/tools/gen_icon_art.py                            # project/assets/icons.png (--preview OUT.png: 8x, labelled)
 ```
+
+The two logos have no background: `boopbox-logo` (white outline and word) is for dark pages, `boopbox-logo-black` (black)
+for light pages and print (the cheat sheet). The README and the guides show the one that suits GitHub's theme (`<picture>`).
+The icon and the splash keep their black square.
 
 The build makes the boot splash itself (`project/build/gen/boopbox_logo.h`) from `project/tools/gen_logo.py`.
 
@@ -120,6 +124,12 @@ mock mode (Playwright and Chromium). Before you run it, build the pages: `cd web
 page, the EDIT pages of every engine, the layers, REC, the menu, the visualiser). It writes into `project/assets/screens/all/` one PNG for each
 screen and one contact sheet for each group. Its `README.md` lists them. Both draw in SYNTHWAVE, the palette that the FM-1 starts
 with. To draw in a different palette, use `--palette N` (gfx.c `PALETTES`).
+
+`node project/tools/make_cheatsheet.mjs` makes the one-page cheat sheet, `docs/boopbox-cheat-sheet.pdf`, from the cheat sheet
+in GUIDE.md (section 26) and the version in `project/firmware/src/ui.c` (Playwright and Chromium, as above). Change the tables in
+GUIDE.md, not the PDF. The script makes the text smaller until all of it fits on one A4 landscape page, and fails if it does
+not fit at 5.5 pt. The same input gives the same file. On each pull request into `main`, CI
+(`.github/workflows/cheatsheet.yml`) makes the PDF again and commits it to the PR's branch if it changed.
 
 To compare a change, first copy that gallery to a different folder. Then run `project/tools/make_before_after.py BEFORE AFTER OUT.png`.
 This script puts every screen of the two galleries side by side in one image (the UX review's, `docs/ux-review/`).

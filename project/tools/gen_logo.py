@@ -7,7 +7,9 @@ ui_shade); and the wordmark "boopbox" in Pixelify Sans Bold, the website's font,
 Both are pixel grids (ICON_ART, GLYPHS), drawn as squares: crisp at any whole-pixel scale.
 
   tools/gen_logo.py OUT.h          firmware boot splash (RLE, 16-colour palette, RGB565) and the wordmark (1 bit a pixel)
-  tools/gen_logo.py --assets DIR   boopbox-logo.svg/png, boopbox-icon.svg/png, boopbox-splash.png
+  tools/gen_logo.py --assets DIR   boopbox-logo.svg/png (white, for dark pages), boopbox-logo-black.svg/png (black, for
+                                   light pages and print), boopbox-icon.svg/png, boopbox-splash.png
+The two logos have no background (transparent); the icon and the splash keep their black square.
   tools/gen_logo.py --web DIR      the web app's icons: icon-192.png, icon-512.png, icon-maskable-512.png
 """
 import re
@@ -91,24 +93,24 @@ WORD_W = GADV * (len(WORD) - 1) + GW                # the word's width in glyph 
 
 
 # ---- drawing: a grid's pixels as runs of one colour ----------------------------------------------------------------
-def runs(art, dx=0):
-    """[(colour, x, y, length)] of a grid of characters ('.' empty)"""
+def runs(art, dx=0, ink=WHITE):
+    """[(colour, x, y, length)] of a grid of characters ('.' empty); ink: the colour of '#' (the outline, the word)"""
     out = []
     for y, row in enumerate(art):
         for m in re.finditer(r"([^.])\1*", row):
-            out.append((COLOUR.get(m.group(1), WHITE), dx + m.start(), y, m.end() - m.start()))
+            out.append((ink if m.group(1) == "#" else COLOUR.get(m.group(1), ink), dx + m.start(), y, m.end() - m.start()))
     return out
 
 
-def icon_runs():
-    return runs(ICON_ART)
+def icon_runs(ink=WHITE):
+    return runs(ICON_ART, ink=ink)
 
 
-def word_runs():
+def word_runs(ink=WHITE):
     """the word's runs, y from the ascender's top"""
     out = []
     for i, ch in enumerate(WORD):
-        out += runs(GLYPHS[ch], i * GADV)
+        out += runs(GLYPHS[ch], i * GADV, ink)
     return out
 
 
@@ -124,14 +126,14 @@ LOGO_W, LOGO_H = 2 * LOGO_M + IW + LOGO_GAP + WORD_W, 2 * LOGO_M + IH
 WORD_Y = LOGO_M + (5 + IH) // 2 - (XROWS + 1) // 2 - ASC    # (the body: rows 5..IH-1)
 
 
-def render(kind, W, H, p=None, bg=BLACK, pad=0.0):
+def render(kind, W, H, p=None, bg=BLACK, pad=0.0, ink=WHITE):
     """kind "h": the logo, p image pixels a grid pixel; "v": the icon over the word (the boot splash); "i": the icon
-    alone, centred, as big as fits in (1 - pad) of the square"""
-    im = Image.new("RGB", (W, H), bg)
+    alone, centred, as big as fits in (1 - pad) of the square. bg None: transparent (RGBA); ink: the outline and word"""
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)) if bg is None else Image.new("RGB", (W, H), bg)
     d = ImageDraw.Draw(im)
     if kind == "h":
-        draw(d, icon_runs(), LOGO_M * p, LOGO_M * p, p)
-        draw(d, word_runs(), (LOGO_M + IW + LOGO_GAP) * p, WORD_Y * p, p)
+        draw(d, icon_runs(ink), LOGO_M * p, LOGO_M * p, p)
+        draw(d, word_runs(ink), (LOGO_M + IW + LOGO_GAP) * p, WORD_Y * p, p)
     elif kind == "v":
         pi, pw = 4, max(1, (W - 16) // WORD_W)
         draw(d, icon_runs(), (W - IW * pi) // 2, 0, pi)
@@ -150,18 +152,19 @@ def svg_paths(rs, ox, oy, p):
     return [f'<path d="{"".join(v)}" fill="{HEX(c)}"/>' for c, v in by.items()]
 
 
-def svg(kind):
+def svg(kind, ink=WHITE, bg=BLACK):
+    """bg None: no background rectangle (transparent)"""
     P = 8
     if kind == "h":
         W, H = LOGO_W * P, LOGO_H * P
-        body = (svg_paths(icon_runs(), LOGO_M * P, LOGO_M * P, P) +
-                svg_paths(word_runs(), (LOGO_M + IW + LOGO_GAP) * P, WORD_Y * P, P))
+        body = (svg_paths(icon_runs(ink), LOGO_M * P, LOGO_M * P, P) +
+                svg_paths(word_runs(ink), (LOGO_M + IW + LOGO_GAP) * P, WORD_Y * P, P))
     else:
         W = H = max(IW, IH) * P
-        body = svg_paths(icon_runs(), (W - IW * P) // 2, (H - IH * P) // 2, P)
+        body = svg_paths(icon_runs(ink), (W - IW * P) // 2, (H - IH * P) // 2, P)
+    back = "" if bg is None else f'<rect width="{W}" height="{H}" fill="{"#000" if bg == BLACK else HEX(bg)}"/>\n'
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" '
-            f'aria-label="BoopBox" shape-rendering="crispEdges">\n<rect width="{W}" height="{H}" fill="#000"/>\n' +
-            "\n".join(body) + "\n</svg>\n")
+            f'aria-label="BoopBox" shape-rendering="crispEdges">\n{back}' + "\n".join(body) + "\n</svg>\n")
 
 
 # ---- firmware splash ---------------------------------------------------------------------------
@@ -226,9 +229,11 @@ def splash_header(path):
 def assets(out):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "boopbox-logo.svg").write_text(svg("h"))
+    (out / "boopbox-logo.svg").write_text(svg("h", bg=None))
+    (out / "boopbox-logo-black.svg").write_text(svg("h", ink=BLACK, bg=None))
     (out / "boopbox-icon.svg").write_text(svg("i"))
-    render("h", LOGO_W * 16, LOGO_H * 16, 16).save(out / "boopbox-logo.png")
+    render("h", LOGO_W * 16, LOGO_H * 16, 16, bg=None).save(out / "boopbox-logo.png")
+    render("h", LOGO_W * 16, LOGO_H * 16, 16, bg=None, ink=BLACK).save(out / "boopbox-logo-black.png")
     render("i", 512, 512).save(out / "boopbox-icon.png")
     render("v", SPLASH_W, SPLASH_H).resize((SPLASH_W * 2, SPLASH_H * 2), Image.NEAREST).save(out / "boopbox-splash.png")
     print(f"logo: assets in {out}")

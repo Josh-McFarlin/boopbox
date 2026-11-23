@@ -10,16 +10,24 @@ effects) is not finished until the text and the pictures that describe it match.
 
 1. **The guides.** [GUIDE.md](GUIDE.md) (the complete guide) and [BOOPBOX.md](BOOPBOX.md) (the manual). Also the feature
    list in [README.md](README.md).
-2. **The website.** The pages are in `web/src/pages/`: the home page, the visual guide (`Guide/sections/`,
+2. **The cheat sheet.** The one-page PDF `docs/boopbox-cheat-sheet.pdf` is made from the cheat sheet in
+   [GUIDE.md](GUIDE.md) (section 26: one `###` heading and one table for each box) and the version in `ui.c`. When a
+   button, combination, layer, page name or "where is" answer changes, update those tables in the same change. Do not
+   edit the PDF. Make it again with `node project/tools/make_cheatsheet.mjs` (Playwright and Chromium) and commit it;
+   on a pull request into `main`, CI (`.github/workflows/cheatsheet.yml`) makes it again and commits it if it changed.
+   It must fit on one A4 landscape page: the script shrinks the text down to 5.5 pt and fails if that is not enough.
+   Then make the tables shorter (short words, `·` between items) instead of adding a second page. Look at the result
+   (for example `pdftoppm -png`) when you add rows or a box: a box with more than 12 rows can break across columns.
+3. **The website.** The pages are in `web/src/pages/`: the home page, the visual guide (`Guide/sections/`,
    `Guide/data/`), the installer, the editor and the emulator. A page or control that changed on the FM-1 often also
    changes in the web editor and in the guide page's text.
-3. **The pictures.** The screenshots are made by code, not by hand (BUILDING.md has the details). Make them again
+4. **The pictures.** The screenshots are made by code, not by hand (BUILDING.md has the details). Make them again
    when a screen they show has changed:
    - `python3 project/tools/make_screens.py`: the README sheets and `project/assets/screens/fm1/` (the website uses
      these, and so does the hub card).
    - `python3 project/tools/make_all_screens.py`: every screen, in `project/assets/screens/all/`.
    - `node project/tools/make_editor_screens.mjs`: the web editor's screenshots (build `web/` first).
-4. **The Firmware Hub card.** [fmhub.json](fmhub.json) is BoopBox's card on The Firmware Hub
+5. **The Firmware Hub card.** [fmhub.json](fmhub.json) is BoopBox's card on The Firmware Hub
    (thefirmwarehub.com). The hub reads it from `main` every three hours. Keep it true:
    - `what`: what this version is and does, in plain English. 20 to 300 characters, with no links, HTML, code or the
      characters `<` `>` `{` `}` and backticks. Update it when a feature or a number in it changes.
@@ -28,12 +36,13 @@ effects) is not finished until the text and the pictures that describe it match.
    - `sounds`: where every sample in the repository and the package comes from. When you add, remove or replace
      samples, update this line, and also [LICENSING.md](LICENSING.md) and [CREDITS.md](CREDITS.md). Do not write this
      line on your own judgement: ask the maintainer, who answers for it.
-   - `play` and `editor`: update them if the emulator or editor moves.
+   - `play` and `editor`: update them if the emulator or editor moves. `cheat` is the cheat sheet PDF on `main`:
+     update it if the PDF moves.
    - Use only the fields the hub allows: `what`, `author`, `kinds`, `play`, `editor`, `cheat`, `image`, `color`,
      `sounds`, `smk37`. Any other field makes the hub ignore the whole file. The full rules are at
      <https://thefirmwarehub.com/fmhub.md>.
    - Check that the JSON is valid: `python3 -m json.tool fmhub.json`.
-5. **The changelog.** A release needs a `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md) (CI checks it). Until
+6. **The changelog.** A release needs a `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md) (CI checks it). Until
    the maintainer asks for a release, write new entries under `## Unreleased`.
 
 ## The version number

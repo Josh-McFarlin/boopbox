@@ -1,0 +1,72 @@
+# The one-page cheat sheet PDF (docs/boopbox-cheat-sheet.pdf), made again each time a pull request into main
+# is opened or updated. Its source is the cheat sheet in GUIDE.md ("## 26. Cheat sheet") and the version in
+# project/firmware/src/ui.c; project/tools/make_cheatsheet.mjs lays it out. When the PDF changes, this job
+# commits it to the PR's branch. (A commit made with the workflow's token does not start the workflows again.)
+# A PR from a fork cannot be written to: there the job fails if the PDF is out of date, with the command to run.
+name: Cheat sheet
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths:
+      - 'GUIDE.md'
+      - 'project/firmware/src/ui.c'
+      - 'project/tools/make_cheatsheet.mjs'
+      - 'project/assets/logo/boopbox-logo-black.png'
+      - 'docs/boopbox-cheat-sheet.pdf'
+      - '.github/workflows/cheatsheet.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cheatsheet-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the PR's branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright and Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw"
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save --no-package-lock playwright@1.49.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          sudo apt-get install -y fonts-dejavu-core
+
+      - name: Make the cheat sheet
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node project/tools/make_cheatsheet.mjs
+
+      - name: Commit the PDF if it changed
+        env:
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if git diff --quiet -- docs/boopbox-cheat-sheet.pdf && [ -z "$(git status --porcelain -- docs/boopbox-cheat-sheet.pdf)" ]; then
+            echo "The cheat sheet PDF is up to date."
+            exit 0
+          fi
+          if [ "$SAME_REPO" != "true" ]; then
+            echo "::error file=docs/boopbox-cheat-sheet.pdf::the cheat sheet PDF is out of date: run 'node project/tools/make_cheatsheet.mjs' and commit docs/boopbox-cheat-sheet.pdf"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/boopbox-cheat-sheet.pdf
+          git commit -m "Cheat sheet PDF: made again from GUIDE.md"
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "### The cheat sheet PDF changed and was committed to this PR" >> "$GITHUB_STEP_SUMMARY"

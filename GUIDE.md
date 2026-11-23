@@ -1,4 +1,4 @@
-<p align="center"><img src="project/assets/logo/boopbox-logo.png" alt="BoopBox" width="420"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="project/assets/logo/boopbox-logo.png"><img src="project/assets/logo/boopbox-logo-black.png" alt="BoopBox" width="420"></picture></p>
 
 # BoopBox 1.9.9 — The Complete Guide
 
@@ -1428,6 +1428,8 @@ If the official firmware starts with strange settings or a scrambled display, it
 ---
 
 ## 26. Cheat sheet
+
+To print it: [boopbox-cheat-sheet.pdf](docs/boopbox-cheat-sheet.pdf) has these tables on one page.
 
 ### Buttons alone
 

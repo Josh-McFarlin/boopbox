@@ -11,6 +11,7 @@ files are grouped under `project/`. Technical notes may use paths such as
 
 - [Architecture](groovebox-architecture.md)
 - [Controls](groovebox-controls.md)
+- [Cheat sheet (PDF, one page; made from GUIDE.md by `project/tools/make_cheatsheet.mjs`)](boopbox-cheat-sheet.pdf)
 - [Performance and release-package measurements](groovebox-performance.md)
 - [Status](groovebox-status.md)
 - [Storage](groovebox-storage.md)
