@@ -33,7 +33,13 @@ effects) is not finished until the text and the pictures that describe it match.
      `sounds`, `smk37`. Any other field makes the hub ignore the whole file. The full rules are at
      <https://thefirmwarehub.com/fmhub.md>.
    - Check that the JSON is valid: `python3 -m json.tool fmhub.json`.
-5. **The changelog.** A release needs a `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md) (CI checks it).
+5. **The changelog.** A release needs a `## X.Y.Z` section in [CHANGELOG.md](CHANGELOG.md) (CI checks it). Until
+   the maintainer asks for a release, write new entries under `## Unreleased`.
+
+## The version number
+
+Do not change the firmware version (`FELUCCA_VERSION` in `project/firmware/src/ui.c`) or add a release package on
+your own judgement, even when a change is large. The maintainer decides when the version goes up and says so.
 
 ## The package identity
 
