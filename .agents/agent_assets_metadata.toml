@@ -14,3 +14,45 @@ mtime_ms = 1794848310743
 storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:ce832f97-6fbd-4bbd-ab18-149a21fcc715/986fc48c-7032-4937-9738-ae2ff2fd531c/6579d6f2-f9a8-400a-a105-4b96c9050592"
 storage_version_token = "1794848433893703"
 content_type = "image/png"
+
+[[outputs]]
+id = "UKHEMnLtp_78O1-jWw_s6"
+uri = "file://.local/outputs/daily-visitors.chart.html"
+type = "text"
+title = "Daily website visitors"
+description = "Approximate daily unique sessions for the past seven days."
+logical_id = "1f372dbe-6ad4-4b49-b779-c537a01066ce"
+content_hash = "sha256:5832c13db41185093a55586b150b2ed69c4fc692b481583653ef7a04618732d4"
+size = 3281
+mtime_ms = 1795456213781
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:ce832f97-6fbd-4bbd-ab18-149a21fcc715/1f372dbe-6ad4-4b49-b779-c537a01066ce/adf8bde2-cd7c-47f3-9d48-34df7fd9ae37"
+storage_version_token = "1795456214175985"
+content_type = "text/html;profile=replit-chart"
+
+[[outputs]]
+id = "kFb7eGYIEhbPB5aAskj8j"
+uri = "file://.local/outputs/visitor-sources.chart.html"
+type = "text"
+title = "Where website visitors came from"
+description = "Approximate visitor counts by referral source for the past seven days."
+logical_id = "b9dd8e23-66ac-42d9-afbc-77626ec2c4b0"
+content_hash = "sha256:1dd0b43ed91407b8366c95cebfbf1714d485b980ae4aa8d806795afc5071dfe7"
+size = 3057
+mtime_ms = 1795456215333
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:ce832f97-6fbd-4bbd-ab18-149a21fcc715/b9dd8e23-66ac-42d9-afbc-77626ec2c4b0/90af5021-7812-4d1f-a960-bb5e4b3f2550"
+storage_version_token = "1795456215566386"
+content_type = "text/html;profile=replit-chart"
+
+[[outputs]]
+id = "TVyfsI5CzZHn1McZjXhjk"
+uri = "file://.local/outputs/install-funnel.chart.html"
+type = "text"
+title = "Firmware install funnel"
+description = "Pageview sessions that proceeded to a firmware install start within 30 minutes."
+logical_id = "eb03f021-cc9e-4239-bcf9-715f1d9af951"
+content_hash = "sha256:e66f3796d36d210ddb99eb695b85668ab48d833d7dc73ab72da15aae11cbe626"
+size = 2811
+mtime_ms = 1795456216729
+storage_uri = "gcs://replit-rams-assets-worf/rams/assets/repl:ce832f97-6fbd-4bbd-ab18-149a21fcc715/eb03f021-cc9e-4239-bcf9-715f1d9af951/204ef6c2-4f7b-447c-8612-bf3f03f4d313"
+storage_version_token = "1795456216938737"
+content_type = "text/html;profile=replit-chart"
