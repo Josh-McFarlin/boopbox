@@ -40,7 +40,7 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
 #define ED_PROTO 14u                                   /* the protocol version INFO ends with */
 #define ED_PATS 78u
 
-static uint8_t ed_out[600];
+static uint8_t ed_out[1024];                          /* the longest reply: NAMES of OBERVAVE (70 presets), 704 B */
 static uint32_t ed_n;
 
 UI_SMALL static void ed_begin(uint32_t cmd)
