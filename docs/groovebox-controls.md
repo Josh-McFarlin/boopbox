@@ -55,7 +55,8 @@ Tracks 5–8 have a shade of the colors of tracks 1–4. On a dark theme the sha
 is darker. Thus each track has its own color.
 
 On the TRACKS screen, the section letter (A–D) is on the row of the beat lights, to the right of the four lights
-(1.9.3). It does not cover *LOOP*, *SONG* or the bar.beat counter.
+(1.9.3). It does not cover *LOOP*, *SONG* or the bar.beat counter. In song mode it follows the song order: it
+changes to the next section when the song moves on.
 
 ### LEVEL of a synth track (1.9.2)
 

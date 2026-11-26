@@ -272,7 +272,11 @@ UI_SMALL static void studio_tracks_draw(void)
 {
     static uint32_t head, rows[4], footer, bank_was = 0xFFu;
     uint32_t i, j, base = TRK_BANK(song.sel);
-    int32_t sect = song.playing && live_sec >= 0 ? live_sec : (int32_t)song.g[G_SLOT] - 1;   /* (2.7.2) the section playing */
+    /* (2.7.2) the section playing: in song mode the song order's entry (arranger_scene.c loads it without live_sec),
+     * else the one last jumped to, loaded or stored */
+    int32_t sect = song.playing && arrangement_clock.running && arrangement_clock.index < arrangement.count
+                       ? (int32_t)arrangement.entry[arrangement_clock.index].scene
+                       : song.playing && live_sec >= 0 ? live_sec : (int32_t)song.g[G_SLOT] - 1;
     if (base != bank_was)
         ui.force = 1;                                   /* (the other bank: every row again) */
     bank_was = base;

@@ -733,7 +733,7 @@ You can edit the settings of the song only while it is stopped (*STOP FIRST*). A
 
 | Screen | How to get there | What it shows · what the knobs do |
 | --- | --- | --- |
-| **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat. Each track shows its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** A coloured **A–D** badge next to the title shows which section plays. Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track, and on a muted track it unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
+| **TRACKS** | tap **HOME** | the performance view: tempo, swing, transport, bar.beat. Each track shows its sound, steps, playhead, mute / solo / rec badges and level. **(2.8)** A coloured **A–D** badge next to the title shows which section plays (in song mode, the section of the song order that plays now). Dials: KNOB 1 **swing** (global) · KNOB 2 **level** (selected track, and on a muted track it unmutes it) · KNOB 3 **steps** (its length) · KNOB 4 **pan** |
 | **Visualiser** | tap **HOME** on TRACKS | full-screen visualiser, six styles. See [The visualiser](#19-the-visualiser) |
 | **Layer** | hold a layer button | 16 tiles (the white keys) and the four dials, in the colour of the layer |
 | **DRUMS** (grid / kit / sound) | tap **SEQ** (grid) or **EDIT** (kit) with the drum track | see [The DRUMS screen](#the-drums-screen) |

@@ -20,6 +20,9 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
   track. Before, SEQ opened on the page it showed last.
 - **LEN to 0 deletes a note.** On the NOTES page, turn KNOB 3 (LEN) left past 1 to delete the note under edit, as a tap
   on EDIT does. A chord keeps its other notes. A fast turn stops at 1 first, and EDIT + OCT− brings the note back.
+- **TRACKS: the section letter follows song mode.** In song mode, the A–D letter next to the title now shows the
+  section of the song order that plays. Before, it stayed on the section you last loaded or played live (often A) while
+  the song went on to B, C and D.
 
 ## 1.9.10
 
