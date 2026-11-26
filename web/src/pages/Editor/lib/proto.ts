@@ -979,7 +979,16 @@ const parse: Parsers = {
     const r = new Reader(a)
     const o: NamesReply = { engine: r.b(), names: [], titles: [] }
     const n = r.b()
-    for (let i = 0; i < n; i++) o.names.push(r.s())
+    /* BoopBox up to 1.9.10 cut a reply at 600 bytes: OBERVAVE's 70 names end early (and its page titles are
+       lost). Keep the names that came, number the rest, so the editor still connects */
+    for (let i = 0; i < n; i++) {
+      try {
+        o.names.push(r.s())
+      } catch {
+        while (o.names.length < n) o.names.push(`PRESET ${o.names.length + 1}`)
+        return o
+      }
+    }
     o.titles = []
     try {
       o.titles.push(r.s(), r.s())

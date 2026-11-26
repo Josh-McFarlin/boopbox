@@ -219,6 +219,31 @@ async function editorMock() {
     rc === 0 && si.slots[1].zones === 1 && si.slots[1].name === 'TEST',
     'editor: sample upload (CRC checked by the mock)',
   )
+  /* BoopBox up to 1.9.10 cut a reply at 600 bytes: NAMES of OBERVAVE (70) ended in the middle of a name, and
+     connecting stopped with "short reply". The names that came are kept, the rest numbered, no titles */
+  {
+    const full = [12, 5]
+    for (const s of [
+      'ALPHA',
+      'BRAVO',
+      'CHARLIE',
+      'DELTA',
+      'ECHO',
+      'PROGRAM',
+      'FILTER',
+    ])
+      full.push(...[...s].map((c) => c.charCodeAt(0)), 0)
+    const cut = full.slice(0, 2 + 6 + 6 + 3) /* ALPHA, BRAVO, then "CHA" */
+    const a = E.parse[E.CMD.NAMES](full),
+      b = E.parse[E.CMD.NAMES](cut)
+    ok(
+      a.names.join() === 'ALPHA,BRAVO,CHARLIE,DELTA,ECHO' &&
+        a.titles.join() === 'PROGRAM,FILTER' &&
+        b.names.join() === 'ALPHA,BRAVO,PRESET 3,PRESET 4,PRESET 5' &&
+        b.titles.length === 0,
+      'editor: NAMES cut short (1.9.10, 600 B) still connects',
+    )
+  }
   /* 2.7: a file's loop (Samples page): LOOP+TAIL's points on rising zero crossings, the zone looped = 2 (held), the
      decoder's state at the loop start; LOOP the whole file; ONE SHOT as before */
   {

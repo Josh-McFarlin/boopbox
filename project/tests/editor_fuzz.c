@@ -577,7 +577,7 @@ static void boot(void)
 
 
 /* ---- MODE 4: every command over every engine / track / id / step at the edges, deterministic; a reply that fills
- * ed_out (cut short) is reported */
+ * ed_out (cut short) is a failure: ed_b drops what does not fit, and the editor's parser stops at the cut ("short reply") */
 static uint32_t cut_replies;
 static void xcmd(uint32_t cmd, const uint8_t *a, uint32_t na)
 {
@@ -665,6 +665,8 @@ static void exhaustive(void)
             if (id % 16 == 0) aud(8);
         }
     printf("exhaustive: %u replies cut short\n", cut_replies);
+    if (cut_replies)
+        fail("a reply longer than ed_out (cut short)");
 }
 
 

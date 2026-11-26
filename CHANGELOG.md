@@ -15,6 +15,10 @@ feature; SLOOP's own history is in [its repository](https://github.com/isod89/sl
 
 ## Unreleased
 
+- **Fixed: the web editor could not connect ("short reply").** The FM-1 cut every reply to the editor at 600 bytes, and
+  the list of OBERVAVE's 70 preset names is 704 bytes. The editor stopped while it read the list, before the
+  version or anything else showed. The FM-1 now sends replies up to 1024 bytes. The editor also connects to 1.9.10:
+  it keeps the 58 names that come and shows the last 12 as "PRESET 59" to "PRESET 70" until the FM-1 has this fix.
 - **SEQ opens on the cursor's page.** Hold SEQ on the NOTES page or the DRUMS grid, and the white keys show the page of
   steps (1–16 … 49–64) that holds the cursor. The key of the note under edit is lit and ready to tap, also on a 64-step
   track. Before, SEQ opened on the page it showed last.
